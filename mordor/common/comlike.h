@@ -62,6 +62,7 @@ class CUnknown : virtual public IUnknown
 {
 public:
     CUnknown();
+    virtual ~CUnknown();
 
     unsigned long STDMETHODCALLTYPE AddRef();
     unsigned long STDMETHODCALLTYPE Release();

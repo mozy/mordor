@@ -26,6 +26,10 @@ CUnknown::CUnknown()
     m_refCount = 1;
 }
 
+CUnknown::~CUnknown()
+{
+}
+
 unsigned long
 CUnknown::AddRef()
 {
