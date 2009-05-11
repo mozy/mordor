@@ -284,18 +284,16 @@ extern "C" { int getEbx(); }
 #endif
 
 #ifdef _MSC_VER
+#ifdef ASM_X86_WINDOWS
 static
 void
 __declspec(naked)  __cdecl
 fiber_switchContext(void **oldsp, void *newsp)
 {
-#ifdef ASM_X86_64_WINDOWS
-#elif defined(ASM_X86_WINDOWS)
     __asm {
         // save current stack state
         push ebp;
         mov ebp, esp;
-        push eax;
         push dword ptr FS:[0];
         push dword ptr FS:[4];
         push dword ptr FS:[8];
@@ -321,8 +319,8 @@ fiber_switchContext(void **oldsp, void *newsp)
 
         ret;
     }
-#endif
 }
+#endif
 #endif
 
 static
@@ -330,7 +328,21 @@ void
 initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)())
 {
 #ifdef ASM_X86_64_WINDOWS
-#   error Platform not supported
+    push(sp, (size_t)entryPoint);     // RIP
+    push(sp, 0xffffffffffffffffull);  // RBP
+    push(sp, 0x0000000000000000ull);  // RBX
+    push(sp, 0x0000000000000000ull);  // RSI
+    push(sp, 0x0000000000000000ull);  // RDI
+    push(sp, 0x0000000000000000ull);  // R12
+    push(sp, 0x0000000000000000ull);  // R13
+    push(sp, 0x0000000000000000ull);  // R14
+    push(sp, 0x0000000000000000ull);  // R15
+    push(sp, 0x00001f8001df0000ull);  // MXCSR (32 bits), x87 control (16 bits), (unused)
+    // XMM6:15
+    for (int i = 6; i <= 15; ++i) {
+        push(sp, 0x0000000000000000ull);
+        push(sp, 0x0000000000000000ull);
+    };
 #elif defined(ASM_X86_WINDOWS)
     push(sp, (size_t)entryPoint);     // EIP
     push(sp, 0xffffffff);             // EBP

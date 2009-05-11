@@ -30,7 +30,7 @@ static void fiberProc2()
 int main()
 {
     Fiber mainFiber;
-    Fiber a(&fiberProc, 8192);
+    Fiber a(&fiberProc, 131072);
     g_mainFiber = &mainFiber;
     g_a = &a;
     assert(g_mainFiber->state() == Fiber::EXEC);
