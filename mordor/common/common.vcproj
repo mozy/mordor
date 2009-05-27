@@ -326,6 +326,10 @@
 				RelativePath=".\semaphore.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\streams\stream.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -358,6 +362,10 @@
 			</File>
 			<File
 				RelativePath=".\semaphore.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\stream.h"
 				>
 			</File>
 			<File
