@@ -338,12 +338,20 @@
 				RelativePath=".\streams\stream.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\streams\transfer.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\atomic.h"
+				>
+			</File>
 			<File
 				RelativePath=".\streams\buffer.h"
 				>
@@ -378,6 +386,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\stream.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\transfer.h"
 				>
 			</File>
 			<File

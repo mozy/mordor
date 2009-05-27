@@ -1,8 +1,8 @@
 // Copyright (c) 2009 - Decho Corp.
 
-#include <cassert>
-
 #include "buffer.h"
+
+#include <cassert>
 
 Buffer::DataBuf::DataBuf()
 : m_start(NULL), m_length(0)
