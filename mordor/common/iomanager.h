@@ -7,6 +7,7 @@
 #ifdef WINDOWS
 #include "iomanager_iocp.h"
 typedef IOManagerIOCP IOManager;
+typedef AsyncEventIOCP AsyncEvent;
 #endif
 
 #endif

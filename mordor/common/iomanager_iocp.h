@@ -13,7 +13,7 @@
 #error IOManagerIOCP is Windows only
 #endif
 
-struct AsyncEvent
+struct AsyncEventIOCP
 {
     BOOL ret;
     OVERLAPPED overlapped;
@@ -31,7 +31,7 @@ public:
     IOManagerIOCP(int threads = 1, bool useCaller = true);
 
     void registerFile(HANDLE handle);
-    void registerEvent(AsyncEvent *e);
+    void registerEvent(AsyncEventIOCP *e);
     
 protected:
     void idle();
@@ -39,7 +39,7 @@ protected:
 
 private:
     HANDLE m_hCompletionPort;
-    std::map<OVERLAPPED *, AsyncEvent*> m_pendingEvents;
+    std::map<OVERLAPPED *, AsyncEventIOCP*> m_pendingEvents;
     boost::mutex m_mutex;
 };
 

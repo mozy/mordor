@@ -23,7 +23,7 @@ IOManagerIOCP::registerFile(HANDLE handle)
 }
 
 void
-IOManagerIOCP::registerEvent(AsyncEvent *e)
+IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
 {
     assert(e);
     assert(Scheduler::getThis());
@@ -60,10 +60,10 @@ IOManagerIOCP::idle()
             // throwExceptionFromLastError();
         }
 
-        AsyncEvent *e;
+        AsyncEventIOCP *e;
         {
             boost::mutex::scoped_lock lock(m_mutex);
-            std::map<OVERLAPPED *, AsyncEvent *>::iterator it =
+            std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
                 m_pendingEvents.find(overlapped);
             assert(it != m_pendingEvents.end());
             e = it->second;
