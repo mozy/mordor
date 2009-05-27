@@ -311,6 +311,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\iomanager_iocp.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\scheduler.cpp"
 				>
 			</File>
@@ -330,6 +334,14 @@
 			</File>
 			<File
 				RelativePath=".\fiber.h"
+				>
+			</File>
+			<File
+				RelativePath=".\iomanager.h"
+				>
+			</File>
+			<File
+				RelativePath=".\iomanager_iocp.h"
 				>
 			</File>
 			<File
