@@ -5,9 +5,11 @@
 #include <cassert>
 #include <string>
 
+#include <boost/noncopyable.hpp>
+
 #include "buffer.h"
 
-class Stream
+class Stream : boost::noncopyable
 {
 public:
     enum CloseType {
