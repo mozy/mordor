@@ -27,7 +27,7 @@ static void fiberProc2()
     printf("In fiber again\n");
 }
 
-int main()
+/*int main()
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr a(new Fiber(&fiberProc, 65536 * 6));
@@ -57,3 +57,4 @@ int main()
     printf("finished\n");
     return 0;
 }
+*/

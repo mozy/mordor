@@ -57,12 +57,16 @@ private:
     static boost::thread_specific_ptr<Fiber> t_fiber;
     boost::mutex m_mutex;
     std::list<Fiber::ptr> m_fibers;
+    Fiber::ptr m_rootFiber;
     ThreadPool m_threads;
     bool m_stopping;
 };
 
 class WorkerPool : public Scheduler
 {
+public:
+    WorkerPool(int threads = 1, bool useCaller = true);
+
 protected:
     void idle();
     void tickle();

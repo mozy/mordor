@@ -311,6 +311,10 @@
 				RelativePath=".\fiber_tests.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\fibers.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

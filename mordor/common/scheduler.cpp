@@ -15,7 +15,7 @@ void
 ThreadPool::start()
 {
     for (size_t i = 0; i < m_size; ++i) {
-        boost::thread(m_proc);
+        boost::thread thread(m_proc);
     }
 }
 
@@ -25,12 +25,16 @@ ThreadPool::size()
     return m_size;
 }
 
-boost::thread_specific_ptr<Scheduler> Scheduler::t_scheduler(NULL);
-boost::thread_specific_ptr<Fiber> Scheduler::t_fiber(NULL);
+static void delete_nothing_scheduler(Scheduler* f) {}
+static void delete_nothing(Fiber* f) {}
+
+boost::thread_specific_ptr<Scheduler> Scheduler::t_scheduler(&delete_nothing_scheduler);
+boost::thread_specific_ptr<Fiber> Scheduler::t_fiber(&delete_nothing);
 
 Scheduler::Scheduler(int threads, bool useCaller)
     : m_threads(boost::bind(&Scheduler::run, this),
-                useCaller ? threads - 1 : threads)
+                useCaller ? threads - 1 : threads),
+      m_stopping(false)
 {
     if (useCaller)
         assert(threads >= 1);
@@ -38,7 +42,8 @@ Scheduler::Scheduler(int threads, bool useCaller)
         --threads;
         assert(getThis() == NULL);
         t_scheduler.reset(this);
-        t_fiber.reset(new Fiber(boost::bind(&Scheduler::run, this), 65536));
+        m_rootFiber.reset(new Fiber(boost::bind(&Scheduler::run, this), 65536));
+        t_fiber.reset(m_rootFiber.get());
     }
     m_threads.start();
 }
@@ -103,7 +108,7 @@ Scheduler::run()
         f.reset(new Fiber());
     }
     t_fiber.reset(Fiber::getThis().get());
-    Fiber idleFiber(boost::bind(&Scheduler::idle, this), 65536 * 4);
+    Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this), 65536 * 4));
     while (true) {
         Fiber::ptr f;
         {
@@ -129,12 +134,16 @@ Scheduler::run()
             }
             continue;
         }
-        if (idleFiber.state() == Fiber::TERM) {
+        if (idleFiber->state() == Fiber::TERM) {
             return;
         }
-        idleFiber.call();
+        idleFiber->call();
     }
 }
+
+WorkerPool::WorkerPool(int threads, bool useCaller)
+    : Scheduler(threads, useCaller)
+{}
 
 void
 WorkerPool::idle()
