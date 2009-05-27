@@ -35,69 +35,55 @@ static void freeStack(void *stack, size_t stacksize);
 static void initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)());
 extern "C" { void fiber_switchContext(void **oldsp, void *newsp); }
 
-#ifdef WINDOWS
-static DWORD g_tls;
-#elif defined(POSIX)
-static pthread_key_t g_tls;
-#endif
 static size_t g_pagesize;
 
 struct Initializer {
     Initializer()
     {
 #ifdef WINDOWS
-        g_tls = TlsAlloc();
         SYSTEM_INFO info;
         GetSystemInfo(&info);
         g_pagesize = info.dwPageSize;
 #elif defined(POSIX)
-        int rc = pthread_key_create(&g_tls, NULL);
-        assert(rc == 0);
         g_pagesize = 4096;
-#endif
-    }
-
-    ~Initializer()
-    {
-#ifdef WINDOWS
-        TlsFree(g_tls);
-#elif defined(POSIX)
-        pthread_key_delete(g_tls);
 #endif
     }
 };
 
 static Initializer g_init;
 
+static void delete_nothing(Fiber* f) {}
+
+boost::thread_specific_ptr<Fiber> Fiber::t_fiber(&delete_nothing);
+
 Fiber::Fiber()
 {
     assert(!getThis());
-    m_fn = NULL;
     m_state = EXEC;
     m_stacksize = 0;
-    m_outer = m_terminateOuter = m_yielder = NULL;
     m_sp = NULL;
     setThis(this);
 }
 
-Fiber::Fiber(void (*fn)(), size_t stacksize)
+Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
 {
-    assert(fn);
+    assert(dg);
     stacksize += g_pagesize - 1;
     stacksize -= stacksize % g_pagesize;
-    m_fn = fn;
+    m_dg = dg;
     m_state = HOLD;
     m_stacksize = stacksize;
-    m_outer = m_terminateOuter = m_yielder = NULL;
     allocStack(&m_stack, &m_sp, &m_stacksize);
     initStack(m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
 }
 
 Fiber::~Fiber()
 {
-    if (!m_fn) {
+    if (!m_dg) {
         assert(m_state == EXEC);
-        assert(getThis() == this);
+        ptr cur = getThis();
+        assert(cur);
+        assert(cur.get() == this);
         setThis(NULL);
     } else {
         assert(m_state == TERM);
@@ -108,40 +94,34 @@ Fiber::~Fiber()
 void
 Fiber::reset()
 {
-    assert(m_fn);
+    assert(m_dg);
     assert(m_state == TERM);
     initStack(m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = HOLD;
 }
 
 void
-Fiber::reset(void (*fn)())
+Fiber::reset(boost::function<void ()> dg)
 {
-    assert(m_fn);
+    assert(m_dg);
     assert(m_state == TERM);
-    m_fn = fn;
+    m_dg = dg;
     initStack(m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = HOLD;
 }
 
-Fiber*
+Fiber::ptr
 Fiber::getThis()
 {
-#ifdef WINDOWS
-    return (Fiber*)TlsGetValue(g_tls);
-#elif defined(POSIX)
-    return (Fiber*)pthread_getspecific(g_tls);
-#endif
+    if (t_fiber.get())
+        return t_fiber->shared_from_this();
+    return ptr();
 }
 
 void
 Fiber::setThis(Fiber* f)
 {
-#ifdef WINDOWS
-    TlsSetValue(g_tls, f);
-#elif defined(POSIX)
-    pthread_setspecific(g_tls, f);
-#endif
+    t_fiber.reset(f);
 }
 
 void
@@ -149,18 +129,19 @@ Fiber::call()
 {
     assert(m_state == HOLD);
     assert(!m_outer);
-    Fiber* cur = getThis();
+    ptr cur = getThis();
     assert(cur);
+    assert(cur.get() != this);
     setThis(this);
     m_outer = cur;
     m_state = EXEC;
     fiber_switchContext(&cur->m_sp, m_sp);
-    setThis(cur);
+    setThis(cur.get());
     assert(cur->m_yielder);
-    assert(cur->m_yielder == this);
+    assert(cur->m_yielder.get() == this);
     cur->m_yielder->m_state = cur->m_yielderNextState;
-    cur->m_yielder = NULL;
-    m_outer = NULL;
+    cur->m_yielder.reset();
+    m_outer.reset();
 }
 
 void
@@ -172,7 +153,7 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate)
 void
 Fiber::yield()
 {
-    Fiber* cur = getThis();
+    ptr cur = getThis();
     assert(cur);
     assert(cur->m_state == EXEC);
     assert(cur->m_outer);
@@ -181,7 +162,7 @@ Fiber::yield()
     fiber_switchContext(&cur->m_sp, cur->m_outer->m_sp);
     if (cur->m_yielder) {
         cur->m_yielder->m_state = cur->m_yielderNextState;
-        cur->m_yielder = NULL;
+        cur->m_yielder.reset();
     }
 }
 
@@ -195,32 +176,38 @@ void
 Fiber::yieldTo(bool yieldToCallerOnTerminate, bool terminateMe)
 {
     assert(m_state == HOLD);
-    Fiber* cur = getThis();
+    ptr cur = getThis();
     assert(cur);
     setThis(this);
     if (yieldToCallerOnTerminate)
-        m_terminateOuter = cur;
+        m_terminateOuter = cur->shared_from_this();
     m_state = EXEC;
     m_yielder = cur;
     m_yielderNextState = terminateMe ? TERM : HOLD;
-    fiber_switchContext(&cur->m_sp, m_sp);
-    setThis(cur);
+    Fiber *curp = cur.get();
+    // Relinguish our reference
+    if (terminateMe) {
+        cur.reset();
+    }
+    fiber_switchContext(&curp->m_sp, m_sp);
+    assert(!terminateMe);
+    setThis(cur.get());
     if (cur->m_yielder) {
         cur->m_yielder->m_state = cur->m_yielderNextState;
-        cur->m_yielder = NULL;
+        cur->m_yielder.reset();
     }
 }
 
 void
 Fiber::entryPoint()
 {
-    Fiber* cur = getThis();
+    ptr cur = getThis();
     assert(cur);
     if (cur->m_yielder) {
         cur->m_yielder->m_state = cur->m_yielderNextState;
-        cur->m_yielder = NULL;
+        cur->m_yielder.reset();
     }
-    cur->m_fn();
+    cur->m_dg();
 
     if (cur->m_terminateOuter && !cur->m_outer) {
         cur->m_terminateOuter->yieldTo(false, true);
@@ -228,7 +215,9 @@ Fiber::entryPoint()
     assert(cur->m_outer);
     cur->m_outer->m_yielder = cur;
     cur->m_outer->m_yielderNextState = Fiber::TERM;
-    fiber_switchContext(&cur->m_sp, cur->m_outer->m_sp);
+    Fiber* curp = cur.get();
+    cur.reset();
+    fiber_switchContext(&curp->m_sp, curp->m_outer->m_sp);
 }
 
 static
@@ -294,6 +283,8 @@ fiber_switchContext(void **oldsp, void *newsp)
         // save current stack state
         push ebp;
         mov ebp, esp;
+        // save exception handler and stack
+        // info in the TIB
         push dword ptr FS:[0];
         push dword ptr FS:[4];
         push dword ptr FS:[8];
@@ -314,7 +305,6 @@ fiber_switchContext(void **oldsp, void *newsp)
         pop dword ptr FS:[8];
         pop dword ptr FS:[4];
         pop dword ptr FS:[0];
-        pop eax;
         pop ebp;
 
         ret;
@@ -328,6 +318,9 @@ void
 initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)())
 {
 #ifdef ASM_X86_64_WINDOWS
+    // Shadow space (4 registers + return address)
+    for (int i = 0; i < 5; ++i)
+        push(sp, 0x0000000000000000ull);
     push(sp, (size_t)entryPoint);     // RIP
     push(sp, 0xffffffffffffffffull);  // RBP
     push(sp, 0x0000000000000000ull);  // RBX
@@ -346,10 +339,9 @@ initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)())
 #elif defined(ASM_X86_WINDOWS)
     push(sp, (size_t)entryPoint);     // EIP
     push(sp, 0xffffffff);             // EBP
-    push(sp, 0x00000000);             // EAX
-    push(sp, 0xffffffff);             // FS:[0]
-    push(sp, (size_t)stack + stacksize);// FS:[4]
-    push(sp, (size_t)stack);          // FS:[8]
+    push(sp, 0xffffffff);             // Exception handler
+    push(sp, (size_t)stack + stacksize);// Stack base
+    push(sp, (size_t)stack);          // Stack top
     push(sp, 0x00000000);             // EBX
     push(sp, 0x00000000);             // ESI
     push(sp, 0x00000000);             // EDI

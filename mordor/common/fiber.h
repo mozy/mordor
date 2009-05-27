@@ -7,9 +7,16 @@
 #include <stddef.h>
 #endif
 
-class Fiber
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/thread/tss.hpp>
+
+class Fiber : public boost::enable_shared_from_this<Fiber>
 {
 public:
+    typedef boost::shared_ptr<Fiber> ptr;
+
     enum State
     {
         HOLD,
@@ -20,13 +27,13 @@ public:
 public:
     // Default constructor gets the currently executing fiber
     Fiber();
-    Fiber(void (*fn)(), size_t stacksize = 0);
+    Fiber(boost::function<void ()> dg, size_t stacksize = 0);
     ~Fiber();
 
     void reset();
-    void reset(void (*fn)());
+    void reset(boost::function<void ()> dg);
 
-    static Fiber* getThis();
+    static ptr getThis();
 
     void call();
     void yieldTo(bool yieldToCallerOnTerminate = true);
@@ -36,15 +43,17 @@ public:
 
 private:
     void yieldTo(bool yieldToCallerOnTerminate, bool terminateMe);
-    static void setThis(Fiber* f);
+    static void setThis(Fiber *f);
     static void entryPoint();
 
 private:
-    void (*m_fn)();
+    boost::function<void ()> m_dg;
     void *m_stack, *m_sp;
     size_t m_stacksize;
     State m_state, m_yielderNextState;
-    Fiber *m_outer, *m_terminateOuter, *m_yielder;
+    ptr m_outer, m_terminateOuter, m_yielder;
+
+    static boost::thread_specific_ptr<Fiber> t_fiber;
 };
 
 #endif // __FIBER_H__

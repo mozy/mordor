@@ -11,7 +11,7 @@ fiber_switchContext proc
   push 		R15
   sub		RSP, 0A8h
   stmxcsr	[RSP+0A4h]
-  fstcw		[RSP+0A0h]  
+  fnstcw	[RSP+0A0h]  
   movdqu    [RSP+90h], XMM6
   movdqu    [RSP+80h], XMM7
   movdqu    [RSP+70h], XMM8
@@ -22,7 +22,6 @@ fiber_switchContext proc
   movdqu    [RSP+20h], XMM13
   movdqu    [RSP+10h], XMM14
   movdqu    [RSP], XMM15
-  fwait;
 
   mov  		[RCX], RSP
   mov  		RSP, RDX

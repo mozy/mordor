@@ -29,29 +29,29 @@ static void fiberProc2()
 
 int main()
 {
-    Fiber mainFiber;
-    Fiber a(&fiberProc, 131072);
-    g_mainFiber = &mainFiber;
-    g_a = &a;
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr a(new Fiber(&fiberProc, 65536 * 6));
+    g_mainFiber = mainFiber.get();
+    g_a = a.get();
     assert(g_mainFiber->state() == Fiber::EXEC);
     assert(g_a->state() == Fiber::HOLD);
     printf("In main\n");
-    a.call();
+    a->call();
     assert(g_mainFiber->state() == Fiber::EXEC);
     assert(g_a->state() == Fiber::HOLD);
     printf("in main again\n");
-    a.call();
+    a->call();
     assert(g_mainFiber->state() == Fiber::EXEC);
     assert(g_a->state() == Fiber::TERM);
     printf("finished\n");
-    a.reset(&fiberProc2);
+    a->reset(&fiberProc2);
     assert(g_mainFiber->state() == Fiber::EXEC);
     assert(g_a->state() == Fiber::HOLD);
-    a.yieldTo();
+    a->yieldTo();
     assert(g_mainFiber->state() == Fiber::EXEC);
     assert(g_a->state() == Fiber::HOLD);
     printf("in main again\n");
-    a.yieldTo();
+    a->yieldTo();
     assert(g_mainFiber->state() == Fiber::EXEC);
     assert(g_a->state() == Fiber::TERM);
     printf("finished\n");
