@@ -319,6 +319,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\streams\file.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\handle.cpp"
 				>
 			</File>
@@ -362,6 +366,10 @@
 			</File>
 			<File
 				RelativePath=".\fiber.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\file.h"
 				>
 			</File>
 			<File

@@ -2,6 +2,29 @@
 
 #include "handle.h"
 
+HandleStream::HandleStream()
+: m_ioManager(NULL),
+  m_pos(0),
+  m_hFile(INVALID_HANDLE_VALUE),
+  m_own(false)
+{}
+
+void
+HandleStream::init(HANDLE hFile, bool own)
+{
+    assert(hFile != NULL);
+    assert(hFile != INVALID_HANDLE_VALUE);
+    m_hFile = hFile;
+    m_own = own;
+}
+
+void
+HandleStream::init(IOManagerIOCP *ioManager, HANDLE hFile, bool own)
+{
+    init(hFile, own);
+    m_ioManager = ioManager;
+}
+
 HandleStream::HandleStream(HANDLE hFile, bool own)
 : m_ioManager(NULL), m_hFile(hFile), m_own(own)
 {

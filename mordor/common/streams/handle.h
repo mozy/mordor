@@ -9,6 +9,10 @@
 
 class HandleStream : public Stream
 {
+protected:
+    HandleStream();
+    void init(HANDLE hFile, bool own = true);
+    void init(IOManagerIOCP *ioManager, HANDLE hFile, bool own = true);
 public:
     HandleStream(HANDLE hFile, bool ownHandle = true);
     HandleStream(IOManagerIOCP *ioManager, HANDLE hFile, bool own = true);
