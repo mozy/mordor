@@ -254,7 +254,7 @@ Buffer::readBufs(size_t len) const
 }
 
 const Buffer::DataBuf
-Buffer::readBuf(size_t len)
+Buffer::readBuf(size_t len) const
 {
     assert(len <= readAvailable());
     if (readAvailable() == 0) {
@@ -265,24 +265,26 @@ Buffer::readBuf(size_t len)
     if (m_bufs.front().readAvailable() >= len) {
         return m_bufs.front().readBuf().slice(0, len);
     }
-    // try to avoid allocation (breaks const-ness)
+    // Breaking constness!
+    Buffer* _this = const_cast<Buffer*>(this);
+    // try to avoid allocation
     if (m_writeIt != m_bufs.end() && m_writeIt->writeAvailable() >= readAvailable()) {
         copyOut(m_writeIt->writeBuf().m_start, readAvailable());
         Data newBuf = Data(m_writeIt->writeBuf().slice(0, readAvailable()));
-        m_bufs.clear();
-        m_bufs.push_back(newBuf);
-        m_writeAvailable = 0;
-        m_writeIt = m_bufs.end();
+        _this->m_bufs.clear();
+        _this->m_bufs.push_back(newBuf);
+        _this->m_writeAvailable = 0;
+        _this->m_writeIt = _this->m_bufs.end();
         invariant();
         return newBuf.readBuf().slice(0, len);
     }
     Data newBuf = Data(readAvailable());
     copyOut(newBuf.writeBuf().m_start, readAvailable());
     newBuf.produce(readAvailable());
-    m_bufs.clear();
-    m_bufs.push_back(newBuf);
-    m_writeAvailable = 0;
-    m_writeIt = m_bufs.end();
+    _this->m_bufs.clear();
+    _this->m_bufs.push_back(newBuf);
+    _this->m_writeAvailable = 0;
+    _this->m_writeIt = _this->m_bufs.end();
     invariant();
     return newBuf.readBuf().slice(0, len);
 }

@@ -57,7 +57,7 @@ public:
     void consume(size_t len);
 
     std::vector<const DataBuf> readBufs(size_t len = ~0) const;
-    const DataBuf readBuf(size_t len); // Not const, because could internally reallocate
+    const DataBuf readBuf(size_t len) const;
     std::vector<DataBuf> writeBufs(size_t len = ~0);
     DataBuf writeBuf(size_t len);
 
