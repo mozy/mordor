@@ -6,7 +6,7 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
 {
     NativeHandle handle;
 #ifdef WINDOWS
-    DWORD access;
+    DWORD access = 0;
     if (flags & READ)
         access |= GENERIC_READ;
     if (flags & WRITE)

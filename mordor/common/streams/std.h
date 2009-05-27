@@ -2,7 +2,7 @@
 #define __STD_H__
 // Copyright (c) 2009 - Decho Corp.
 
-#include "version.h"
+#include "common/version.h"
 
 #ifdef WINDOWS
 #include "handle.h"

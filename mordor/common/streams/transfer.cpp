@@ -4,7 +4,7 @@
 
 #include <boost/bind.hpp>
 
-#include "scheduler.h"
+#include "common/scheduler.h"
 #include "stream.h"
 
 static void read(Stream *src, Buffer *buffer, size_t len, size_t *result)
@@ -56,6 +56,7 @@ void transferStream(Stream *src, Stream *dst, long long toTransfer,
         return;
 
     std::vector<boost::function<void ()> > dgs;
+    dgs.resize(2);
     while (*totalRead < toTransfer || toTransfer == -1) {
         writeBuffer = readBuffer;
         if (readBuffer == &buf1)

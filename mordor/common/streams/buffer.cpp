@@ -118,6 +118,7 @@ Buffer::Data::invariant() const
 
 Buffer::Buffer()
 {
+    m_readAvailable = m_writeAvailable = 0;
     m_writeIt = m_bufs.end();
     invariant();
 }
