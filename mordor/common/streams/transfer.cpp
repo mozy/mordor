@@ -46,7 +46,7 @@ void transferStream(Stream *src, Stream *dst, long long toTransfer,
     readBuffer = &buf1;
     todo = chunkSize;
     if (toTransfer != -1 && toTransfer - *totalRead < (long long)todo)
-        todo = toTransfer;
+        todo = (size_t)toTransfer;
     read(src, readBuffer, todo, &readResult);
     *totalRead += readResult;
     if (readResult == 0 && toTransfer != -1) {
@@ -64,7 +64,7 @@ void transferStream(Stream *src, Stream *dst, long long toTransfer,
             readBuffer = &buf1;
         todo = chunkSize;
         if (toTransfer != -1 && toTransfer - *totalRead < (long long)todo)
-            todo = toTransfer;
+            todo = (size_t)toTransfer;
         dgs[0] = boost::bind(&read, src, readBuffer, todo, &readResult);
         dgs[1] = boost::bind(&write, dst, writeBuffer, totalWritten);
         parallel_do(dgs);

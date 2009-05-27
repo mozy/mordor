@@ -14,7 +14,7 @@ typedef FDStream NativeStream;
 typedef int NativeHandle;
 #endif
 
-class FileStream : NativeStream
+class FileStream : public NativeStream
 {
 public:
 #ifdef WINDOWS
