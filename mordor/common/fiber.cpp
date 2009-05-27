@@ -323,6 +323,8 @@ initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)())
         push(sp, 0x0000000000000000ull);
     push(sp, (size_t)entryPoint);     // RIP
     push(sp, 0xffffffffffffffffull);  // RBP
+    push(sp, (size_t)stack + stacksize);// Stack base
+    push(sp, (size_t)stack);          // Stack top
     push(sp, 0x0000000000000000ull);  // RBX
     push(sp, 0x0000000000000000ull);  // RSI
     push(sp, 0x0000000000000000ull);  // RDI
