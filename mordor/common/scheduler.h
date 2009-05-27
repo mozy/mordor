@@ -75,42 +75,10 @@ private:
     Semaphore m_semaphore;
 };
 
+void
+parallel_do(const std::vector<boost::function<void ()> > &dgs);
+
 /*
-static
-void
-parallel_do_impl(boost::function<void ()> dg, size_t &completed,
-    size_t total, Scheduler *scheduler, Fiber::ptr caller)
-{
-    dg();
-    if (atomicIncrement(completed) == total) {
-        scheduler->schedule(caller);
-    }
-}
-
-void
-parallel_do(const std::vector<boost::function<void ()> > &dgs)
-{
-    size_t completed = 0;
-    Scheduler *scheduler = Scheduler::getThis();
-    Fiber::ptr caller = Fiber::getThis();
-    std::vector<boost::function<void ()> >::const_iterator it;
-
-    if (scheduler == NULL) {
-        for(it = dgs.begin(); it != dgs.end(); ++it) {
-            (*it)();
-        }
-        return;
-    }
-
-    for(it = dgs.begin(); it != dgs.end(); ++it) {
-        Fiber::ptr f(new Fiber(boost::bind(&parallel_do_impl, *it,
-            boost::ref(completed), dgs.size(), scheduler, caller),
-            8192));
-        scheduler->schedule(f);
-    }
-    scheduler->yieldTo();
-}
-
 template<class T>
 static
 void
