@@ -295,6 +295,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\exception.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\fiber.cpp"
 				>
 			</File>
@@ -366,6 +370,10 @@
 			</File>
 			<File
 				RelativePath=".\comlike.h"
+				>
+			</File>
+			<File
+				RelativePath=".\exception.h"
 				>
 			</File>
 			<File

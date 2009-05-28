@@ -5,6 +5,8 @@
 
 #include <cassert>
 
+//#define NATIVE_WINDOWS_FIBERS
+
 #ifdef WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -30,10 +32,14 @@
 #endif
 
 static void push(void **sp, size_t v);
-static void allocStack(void **stack, void **sp, size_t *stacksize);
+static void allocStack(void **stack, void **sp, size_t *stacksize, void (*entryPoint)());
 static void freeStack(void *stack, size_t stacksize);
 static void initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)());
-extern "C" { void fiber_switchContext(void **oldsp, void *newsp); }
+extern "C"
+#ifdef NATIVE_WINDOWS_FIBERS
+static
+#endif
+void fiber_switchContext(void **oldsp, void *newsp);
 
 static size_t g_pagesize;
 
@@ -63,6 +69,9 @@ Fiber::Fiber()
     m_stacksize = 0;
     m_sp = NULL;
     setThis(this);
+#ifdef NATIVE_WINDOWS_FIBERS
+    m_sp = ConvertThreadToFiber(NULL);
+#endif
 }
 
 Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
@@ -73,7 +82,7 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
     m_dg = dg;
     m_state = HOLD;
     m_stacksize = stacksize;
-    allocStack(&m_stack, &m_sp, &m_stacksize);
+    allocStack(&m_stack, &m_sp, &m_stacksize, &Fiber::entryPoint);
     initStack(m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
 }
 
@@ -85,6 +94,9 @@ Fiber::~Fiber()
         assert(cur);
         assert(cur.get() == this);
         setThis(NULL);
+#ifdef NATIVE_WINDOWS_FIBERS
+        ConvertFiberToThread();
+#endif
     } else {
         assert(m_state == TERM);
         freeStack(m_stack, m_stacksize);
@@ -229,15 +241,28 @@ push(void **sp, size_t v)
     *(size_t**)sp = ssp;
 }
 
+#ifdef NATIVE_WINDOWS_FIBERS
+static VOID CALLBACK native_fiber_entryPoint(PVOID lpParameter)
+{
+    void (*entryPoint)() = (void (*)())lpParameter;
+    entryPoint();
+}
+#endif
+
 static
 void
-allocStack(void **stack, void **sp, size_t *stacksize)
+allocStack(void **stack, void **sp, size_t *stacksize, void (*entryPoint)())
 {
     assert(stack);
     assert(sp);
     if (*stacksize == 0)
         *stacksize = g_pagesize;
-#ifdef WINDOWS
+#ifdef NATIVE_WINDOWS_FIBERS
+    *sp = *stack = CreateFiber(*stacksize, &native_fiber_entryPoint, entryPoint);
+    if (!*stack) {
+        assert(false);
+    }
+#elif defined(WINDOWS)
     *stack = VirtualAlloc(NULL, *stacksize + g_pagesize, MEM_RESERVE, PAGE_NOACCESS);
     if (!*stack) {
         assert(false);
@@ -258,7 +283,9 @@ static
 void
 freeStack(void *stack, size_t stacksize)
 {
-#ifdef WINDOWS
+#ifdef NATIVE_WINDOWS_FIBERS
+    DeleteFiber(stack);
+#elif defined(WINDOWS)
     VirtualFree(stack, 0, MEM_RELEASE);
 #elif defined(POSIX)
     munmap(stack, stacksize);
@@ -272,6 +299,13 @@ extern "C" { int getEbx(); }
 #endif
 #endif
 
+#ifdef NATIVE_WINDOWS_FIBERS
+extern "C" static void
+fiber_switchContext(void **oldsp, void *newsp)
+{
+    SwitchToFiber(newsp);
+}
+#else
 #ifdef _MSC_VER
 #ifdef ASM_X86_WINDOWS
 static
@@ -312,12 +346,14 @@ fiber_switchContext(void **oldsp, void *newsp)
 }
 #endif
 #endif
+#endif
 
 static
 void
 initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)())
 {
-#ifdef ASM_X86_64_WINDOWS
+#ifdef NATIVE_WINDOWS_FIBERS
+#elif defined(ASM_X86_64_WINDOWS)
     // Shadow space (4 registers + return address)
     for (int i = 0; i < 5; ++i)
         push(sp, 0x0000000000000000ull);

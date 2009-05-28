@@ -2,6 +2,8 @@
 
 #include "file.h"
 
+#include "common/exception.h"
+
 FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlags)
 {
     NativeHandle handle;
@@ -42,7 +44,7 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
     handle = open(filename.c_str(), oflags, 0777);
 #endif
     if (handle == (NativeHandle)-1) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
     init(handle);
     m_supportsRead = !!(flags & READ);

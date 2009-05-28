@@ -4,6 +4,7 @@
 
 #include <boost/bind.hpp>
 
+#include "common/exception.h"
 #include "common/scheduler.h"
 #include "stream.h"
 
@@ -50,7 +51,7 @@ void transferStream(Stream *src, Stream *dst, long long toTransfer,
     read(src, readBuffer, todo, &readResult);
     *totalRead += readResult;
     if (readResult == 0 && toTransfer != -1) {
-        // throw UnexpectedEofException();
+        throw UnexpectedEofError();
     }
     if (readResult == 0)
         return;
@@ -70,7 +71,7 @@ void transferStream(Stream *src, Stream *dst, long long toTransfer,
         dgs[1] = boost::bind(&write, dst, writeBuffer, totalWritten);
         parallel_do(dgs);
         if (readResult == 0 && toTransfer != -1) {
-        // throw UnexpectedEofException();
+            throw UnexpectedEofError();
         }
         if (readResult == 0)
             return;

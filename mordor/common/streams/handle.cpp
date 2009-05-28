@@ -2,6 +2,8 @@
 
 #include "handle.h"
 
+#include "common/exception.h"
+
 HandleStream::HandleStream()
 : m_ioManager(NULL),
   m_pos(0),
@@ -58,7 +60,7 @@ HandleStream::close(CloseType type)
     assert(type == BOTH);
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
         if (!CloseHandle(m_hFile)) {
-            // throwExceptionFromLastError();
+            throwExceptionFromLastError();
         }
         m_hFile = INVALID_HANDLE_VALUE;
     }
@@ -88,7 +90,7 @@ HandleStream::read(Buffer *b, size_t len)
             return 0;
         }
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
-            // throwExceptionFromLastError();
+            throwExceptionFromLastError();
         }
         Scheduler::getThis()->yieldTo();
         if (!m_readEvent.ret &&
@@ -96,7 +98,7 @@ HandleStream::read(Buffer *b, size_t len)
             return 0;
         }
         if (!m_readEvent.ret) {
-            // throwExceptionFromLastError(m_readEvent.lastError);
+            throwExceptionFromLastError(m_readEvent.lastError);
         }
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
@@ -109,7 +111,7 @@ HandleStream::read(Buffer *b, size_t len)
         return 0;
     }
     if (!ret) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
     b->produce(read);
     return read;
@@ -135,11 +137,11 @@ HandleStream::write(const Buffer *b, size_t len)
     BOOL ret = WriteFile(m_hFile, buf.m_start, (DWORD)len, &written, overlapped);
     if (m_ioManager) {
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
-            // throwExceptionFromLastError();
+            throwExceptionFromLastError();
         }
         Scheduler::getThis()->yieldTo();
         if (!m_writeEvent.ret) {
-            // throwExceptionFromLastError(m_writeEvent.lastError);
+            throwExceptionFromLastError(m_writeEvent.lastError);
         }
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
@@ -148,7 +150,7 @@ HandleStream::write(const Buffer *b, size_t len)
         return m_writeEvent.numberOfBytes;
     }
     if (!ret) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
     return written;
 }
@@ -161,19 +163,19 @@ HandleStream::seek(long long offset, Anchor anchor)
             switch (anchor) {
                 case BEGIN:
                     if (offset < 0) {
-                        // throw IllegalArgumentException();
+                        throw std::invalid_argument("resulting offset is negative");
                     }
                     return m_pos = offset;
                 case CURRENT:
                     if (m_pos + offset < 0) {
-                        // throw IllegalArgumentException();
+                        throw std::invalid_argument("resulting offset is negative");
                     }
                     return m_pos += offset;
                 case END:
                     {
                         long long end = size();
                         if (end + offset < 0) {
-                            // throw IllegalArgumentException();
+                            throw std::invalid_argument("resulting offset is negative");
                         }
                         return m_pos = end + offset;
                     }
@@ -188,7 +190,7 @@ HandleStream::seek(long long offset, Anchor anchor)
     long long pos;
     if (!SetFilePointerEx(m_hFile, *(LARGE_INTEGER*)&offset,
         (LARGE_INTEGER*)&pos, (DWORD)anchor)) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
     return pos;
 }
@@ -198,7 +200,7 @@ HandleStream::size()
 {
     long long size;
     if (!GetFileSizeEx(m_hFile, (LARGE_INTEGER*)&size)) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
     return size;
 }
@@ -212,6 +214,6 @@ HandleStream::truncate(long long size)
     DWORD lastError = GetLastError();
     seek(pos, BEGIN);
     if (!ret) {
-        // throwExceptionFromLastError(lastError);
+        throwExceptionFromLastError(lastError);
     }
 }

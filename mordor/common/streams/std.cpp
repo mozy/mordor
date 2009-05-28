@@ -2,15 +2,17 @@
 
 #include "std.h"
 
+#include "common/exception.h"
+
 StdinStream::StdinStream()
 {
 #ifdef WINDOWS
     HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
     if (hStdIn == INVALID_HANDLE_VALUE) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
     if (hStdIn == NULL) {
-        // throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
     }
     init(hStdIn);
 #else
@@ -23,10 +25,10 @@ StdoutStream::StdoutStream()
 #ifdef WINDOWS
     HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hStdOut == INVALID_HANDLE_VALUE) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
     if (hStdOut == NULL) {
-        // throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
     }
     init(hStdOut);
 #else
@@ -39,10 +41,10 @@ StderrStream::StderrStream()
 #ifdef WINDOWS
     HANDLE hStdErr = GetStdHandle(STD_ERROR_HANDLE);
     if (hStdErr == INVALID_HANDLE_VALUE) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
     if (hStdErr == NULL) {
-        // throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
     }
     init(hStdErr);
 #else
