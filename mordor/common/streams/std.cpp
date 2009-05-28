@@ -14,7 +14,7 @@ StdinStream::StdinStream()
     if (hStdIn == NULL) {
         throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
     }
-    init(hStdIn);
+    init(hStdIn, false);
 #else
     init(STDIN_FILENO, false);
 #endif
@@ -30,7 +30,7 @@ StdoutStream::StdoutStream()
     if (hStdOut == NULL) {
         throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
     }
-    init(hStdOut);
+    init(hStdOut, false);
 #else
     init(STDOUT_FILENO, false);
 #endif
@@ -46,7 +46,7 @@ StderrStream::StderrStream()
     if (hStdErr == NULL) {
         throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
     }
-    init(hStdErr);
+    init(hStdErr, false);
 #else
     init(STDERR_FILENO, false);
 #endif
