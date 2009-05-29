@@ -21,6 +21,7 @@ namespace HTTP
         OPTIONS,
         TRACE
     };
+    extern const char *methods[];
 
     enum Status
     {
@@ -81,7 +82,7 @@ namespace HTTP
 
     struct caseinsensitiveless
     {
-        bool operator()(const std::string& lhs, const std::string& rhs)
+        bool operator()(const std::string& lhs, const std::string& rhs) const
         {
             return stricmp(lhs.c_str(), rhs.c_str()) < 0;
         }

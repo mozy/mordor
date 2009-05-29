@@ -43,7 +43,7 @@ static std::ostream& serialize(std::ostream& os, const HTTP::StringSet& set)
     return os;
 }
 
-static const char *methods[] = {
+const char *methods[] = {
     "GET",
     "HEAD",
     "POST",

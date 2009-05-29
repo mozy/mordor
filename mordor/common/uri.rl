@@ -52,7 +52,7 @@ static std::string escape(const std::string& str, const std::string& allowedChar
     return result;
 }
 
-static std::string unescape(const std::string& str)
+std::string unescape(const std::string& str)
 {
     std::string result = str;
 
