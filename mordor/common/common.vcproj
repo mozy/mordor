@@ -295,6 +295,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\buffered.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\comlike.cpp"
 				>
 			</File>
@@ -347,11 +351,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.cpp"
+				RelativePath=".\socket.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
+				RelativePath=".\streams\socket.cpp"
 				>
 			</File>
 			<File
@@ -381,6 +385,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\buffered.h"
+				>
+			</File>
+			<File
 				RelativePath=".\comlike.h"
 				>
 			</File>
@@ -394,6 +402,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\file.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\filter.h"
 				>
 			</File>
 			<File
