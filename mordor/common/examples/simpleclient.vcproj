@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="cat"
-	ProjectGUID="{05A7ECD4-456F-43FE-9CEA-68213832E9AD}"
-	RootNamespace="cat"
+	Name="simpleclient"
+	ProjectGUID="{EAD0A645-D849-44FA-82B5-74A1055AE3AA}"
+	RootNamespace="simpleclient"
 	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
@@ -44,6 +44,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../.."
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -114,6 +115,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../.."
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
@@ -184,6 +186,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../.."
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -255,6 +258,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../.."
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
@@ -308,7 +312,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\cat.cpp"
+				RelativePath=".\simpleclient.cpp"
 				>
 			</File>
 		</Filter>

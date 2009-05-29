@@ -15,6 +15,8 @@
 
 struct AsyncEventIOCP
 {
+    AsyncEventIOCP();
+
     BOOL ret;
     OVERLAPPED overlapped;
     DWORD numberOfBytes;

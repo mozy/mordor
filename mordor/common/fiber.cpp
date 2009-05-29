@@ -8,7 +8,6 @@
 //#define NATIVE_WINDOWS_FIBERS
 
 #ifdef WINDOWS
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #else
 #include <sys/mman.h>
@@ -43,8 +42,8 @@ void fiber_switchContext(void **oldsp, void *newsp);
 
 static size_t g_pagesize;
 
-struct Initializer {
-    Initializer()
+struct FiberInitializer {
+    FiberInitializer()
     {
 #ifdef WINDOWS
         SYSTEM_INFO info;
@@ -56,7 +55,7 @@ struct Initializer {
     }
 };
 
-static Initializer g_init;
+static FiberInitializer g_init;
 
 static void delete_nothing(Fiber* f) {}
 

@@ -49,7 +49,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;"
+				AdditionalIncludeDirectories=".."
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -113,7 +114,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
+				AdditionalIncludeDirectories=".."
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -178,7 +180,8 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
+				AdditionalIncludeDirectories=".."
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
@@ -243,7 +246,8 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
+				AdditionalIncludeDirectories=".."
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
@@ -343,6 +347,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\std.cpp"
 				>
 			</File>
@@ -402,6 +410,10 @@
 			</File>
 			<File
 				RelativePath=".\semaphore.h"
+				>
+			</File>
+			<File
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File

@@ -1,15 +1,22 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "iomanager_iocp.h"
+
 #include <cassert>
 
-#include "iomanager_iocp.h"
+#include "exception.h"
+
+AsyncEventIOCP::AsyncEventIOCP()
+{
+    memset(this, 0, sizeof(AsyncEventIOCP));
+}
 
 IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
     if (!m_hCompletionPort) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
 }
 
@@ -18,7 +25,7 @@ IOManagerIOCP::registerFile(HANDLE handle)
 {
     HANDLE hRet = CreateIoCompletionPort(handle, m_hCompletionPort, 0, 0);
     if (hRet != m_hCompletionPort) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
 }
 
@@ -57,7 +64,7 @@ IOManagerIOCP::idle()
             continue;
         }
         if (!ret && overlapped == NULL) {
-            // throwExceptionFromLastError();
+            throwExceptionFromLastError();
         }
 
         AsyncEventIOCP *e;
@@ -83,6 +90,6 @@ void
 IOManagerIOCP::tickle()
 {
     if (!PostQueuedCompletionStatus(m_hCompletionPort, 0, ~0, NULL)) {
-        // throwExceptionFromLastError();
+        throwExceptionFromLastError();
     }
 }
