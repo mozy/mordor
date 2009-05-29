@@ -343,6 +343,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ragel.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\scheduler.cpp"
 				>
 			</File>
@@ -368,6 +372,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\transfer.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\uri.cpp"
 				>
 			</File>
 		</Filter>
@@ -421,6 +429,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ragel.h"
+				>
+			</File>
+			<File
 				RelativePath=".\scheduler.h"
 				>
 			</File>
@@ -449,10 +461,54 @@
 				>
 			</File>
 			<File
+				RelativePath=".\uri.h"
+				>
+			</File>
+			<File
 				RelativePath=".\version.h"
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\uri.rl"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="$(SolutionDir)ragel.exe $(InputFileName) -G2 -o $(InputName).cpp"
+					Outputs="$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|x64"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="$(SolutionDir)ragel.exe $(InputFileName) -G2 -o $(InputName).cpp"
+					Outputs="$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="$(SolutionDir)ragel.exe $(InputFileName) -G2 -o $(InputName).cpp"
+					Outputs="$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="$(SolutionDir)ragel.exe $(InputFileName) -G2 -o $(InputName).cpp"
+					Outputs="$(InputName).cpp"
+				/>
+			</FileConfiguration>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
