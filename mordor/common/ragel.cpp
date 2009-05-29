@@ -18,13 +18,12 @@ RagelParser::run(const std::string& str)
     exec();
 
     if (error()) {
-        throw RagelException("Error in parser.");
+        return;
     }
     if (p == pe) {
         return;
     } else {
         init();
-        throw RagelException("Incomplete parse.");
     }
 }
 
@@ -33,7 +32,7 @@ RagelParser::run(Stream *stream)
 {
     init();
     Buffer b;
-    while (!complete()) {
+    while (!complete() && !error()) {
         // TODO: limit total amount read
         size_t read = stream->read(&b, 65536);
         if (read == 0) {
@@ -43,19 +42,11 @@ RagelParser::run(Stream *stream)
             for (size_t i = 0; i < bufs.size(); ++i) {
                 size_t consumed = run((const char*)bufs[i].m_start, bufs[i].m_length, false);
                 b.consume(consumed);
-                if (error())
-                    throw RagelException("Error in parser.");
-                if (complete())
+                if (error() || complete())
                     break;
             }
         }
-        if (error())
-            throw RagelException("Error in parser.");
-        if (complete())
-            break;
     }
-    if (!complete())
-        throw RagelException("Incomplete parse.");
     BufferedStream *buffered = dynamic_cast<BufferedStream *>(stream);
     if (buffered) {
         buffered->unread(&b, b.readAvailable());

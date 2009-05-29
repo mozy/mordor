@@ -88,7 +88,7 @@ struct URI
     bool fragmentDefined() const { return m_fragmentDefined; }
     void fragmentDefined(bool d) { if (!d) m_fragment.clear(); m_fragmentDefined = d; }
 
-    bool isDefined() { return m_schemeDefined || authority.hostDefined() ||
+    bool isDefined() const { return m_schemeDefined || authority.hostDefined() ||
         !path.isEmpty() || m_queryDefined || m_fragmentDefined; }
 
     std::string toString() const;

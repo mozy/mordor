@@ -7,14 +7,6 @@
 
 class Stream;
 
-class RagelException : public std::runtime_error
-{
-public:
-    RagelException(const std::string& msg)
-        : std::runtime_error(msg)
-    {}
-};
-
 class RagelParser
 {
 public:

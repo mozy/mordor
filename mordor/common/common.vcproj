@@ -339,6 +339,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\http.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\iomanager_iocp.cpp"
 				>
 			</File>
@@ -355,11 +359,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
+				RelativePath=".\streams\socket.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.cpp"
+				RelativePath=".\socket.cpp"
 				>
 			</File>
 			<File
@@ -421,6 +425,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\http.h"
+				>
+			</File>
+			<File
 				RelativePath=".\iomanager.h"
 				>
 			</File>
@@ -441,11 +449,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
