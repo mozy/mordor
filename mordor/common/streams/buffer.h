@@ -18,8 +18,14 @@ public:
         DataBuf slice(size_t start, size_t length = ~0);
         const DataBuf slice(size_t start, size_t length = ~0) const;
 
+        // Match the layout of WSABUF
+#ifdef WINDOWS
+        unsigned int m_length;
         void*  m_start;
-        size_t m_length;
+#else
+        void*  m_start;
+        unsigned int m_length;
+#endif
     private:
         boost::shared_array<unsigned char> m_array;
     };

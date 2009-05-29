@@ -10,6 +10,7 @@ Buffer::DataBuf::DataBuf()
 
 Buffer::DataBuf::DataBuf(size_t length)
 {
+    assert(length <= 0xffffffff);
     m_array.reset(new unsigned char[length]);
     m_start = m_array.get();
     m_length = length;
@@ -18,6 +19,7 @@ Buffer::DataBuf::DataBuf(size_t length)
 Buffer::DataBuf
 Buffer::DataBuf::slice(size_t start, size_t length)
 {
+    assert(length <= 0xffffffff);
     if (length == ~0) {
         length = m_length - start;
     }
@@ -33,6 +35,7 @@ Buffer::DataBuf::slice(size_t start, size_t length)
 const Buffer::DataBuf
 Buffer::DataBuf::slice(size_t start, size_t length) const
 {
+    assert(length <= 0xffffffff);
     if (length == ~0) {
         length = m_length - start;
     }
