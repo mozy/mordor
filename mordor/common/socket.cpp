@@ -263,14 +263,8 @@ Socket::close()
 size_t
 Socket::send(const void *buf, size_t len, int flags)
 {
-    if (!m_ioManager) {
-        int rc = ::send(m_sock, (const char*)buf, len, flags);
-        if (rc == -1) {
-            throwExceptionFromLastError();
-        }
-        return rc;
-    } else {
 #ifdef WINDOWS
+    if (m_ioManager) {
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
         wsabuf.len = len;
@@ -285,32 +279,157 @@ Socket::send(const void *buf, size_t len, int flags)
             throwExceptionFromLastError(m_sendEvent.lastError);
         }
         return m_sendEvent.numberOfBytes;
-#else
-        int rc = ::send(m_sock, buf, len, flags);
-        while (rc == -1 && errno == EAGAIN) {
+    } else
+#endif
+    {
+        int rc = ::send(m_sock, (const char*)buf, len, flags);
+#ifndef WINDOWS
+        while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(&m_sendEvent);
             Scheduler::getThis()->yieldTo();
-            int rc = ::send(m_sock, buf, len, flags);
+            rc = ::send(m_sock, buf, len, flags);
         }
+#endif
         if (rc == -1) {
             throwExceptionFromLastError();
         }
         return rc;
-#endif
     }
+}
+
+size_t
+Socket::send(const iovec *bufs, size_t len, int flags)
+{
+#ifdef WINDOWS
+    if (m_ioManager) {
+        m_ioManager->registerEvent(&m_sendEvent);
+        int ret = WSASend(m_sock, (LPWSABUF)bufs, len, NULL, flags,
+            &m_sendEvent.overlapped, NULL);
+        if (ret && GetLastError() != WSA_IO_PENDING) {
+            throwExceptionFromLastError();
+        }
+        Scheduler::getThis()->yieldTo();
+        if (!m_sendEvent.ret) {
+            throwExceptionFromLastError(m_sendEvent.lastError);
+        }
+        return m_sendEvent.numberOfBytes;
+    } else {
+        DWORD sent;
+        if (WSASend(m_sock, (LPWSABUF)bufs, len, &sent, flags,
+            NULL, NULL)) {
+            throwExceptionFromLastError();
+        }
+        return sent;
+    }
+#else
+    msghdr msg;
+    memset(&msg, 0, sizeof(msghdr));
+    msg.msg_iov = (iovec*)bufs;
+    msg.msg_iovlen = len;
+    int rc = ::sendmsg(m_sock, &msg, flags);
+    while (m_ioManager && rc == -1 && errno == EAGAIN) {
+        m_ioManager->registerEvent(&m_sendEvent);
+        Scheduler::getThis()->yieldTo();
+        rc = ::sendmsg(m_sock, &msg, flags);
+    }
+    if (rc == -1) {
+        throwExceptionFromLastError();
+    }
+    return rc;
+#endif
+}
+
+size_t
+Socket::sendTo(const void *buf, size_t len, int flags, const Address *to)
+{
+    assert(to->family() == family());
+#ifdef WINDOWS
+    if (m_ioManager) {
+        WSABUF wsabuf;
+        wsabuf.buf = (char*)buf;
+        wsabuf.len = len;
+        m_ioManager->registerEvent(&m_sendEvent);
+        int ret = WSASendTo(m_sock, &wsabuf, 1, NULL, flags,
+            to->name(), to->nameLen(),
+            &m_sendEvent.overlapped, NULL);
+        if (ret && GetLastError() != WSA_IO_PENDING) {
+            throwExceptionFromLastError();
+        }
+        Scheduler::getThis()->yieldTo();
+        if (!m_sendEvent.ret) {
+            throwExceptionFromLastError(m_sendEvent.lastError);
+        }
+        return m_sendEvent.numberOfBytes;
+    } else
+#endif
+    {
+        int rc = ::sendto(m_sock, (const char*)buf, len, flags, to->name(), to->nameLen());
+#ifndef WINDOWS
+        while (m_ioManager && rc == -1 && errno == EAGAIN) {
+            m_ioManager->registerEvent(&m_sendEvent);
+            Scheduler::getThis()->yieldTo();
+            rc = ::sendto(m_sock, buf, len, flags, to->name(), to->nameLen());
+        }
+#endif
+        if (rc == -1) {
+            throwExceptionFromLastError();
+        }
+        return rc;
+    }
+}
+
+size_t
+Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address *to)
+{
+    assert(to->family() == family());
+#ifdef WINDOWS
+    if (m_ioManager) {
+        m_ioManager->registerEvent(&m_sendEvent);
+        int ret = WSASendTo(m_sock, (LPWSABUF)bufs, len, NULL, flags,
+            to->name(), to->nameLen(),
+            &m_sendEvent.overlapped, NULL);
+        if (ret && GetLastError() != WSA_IO_PENDING) {
+            throwExceptionFromLastError();
+        }
+        Scheduler::getThis()->yieldTo();
+        if (!m_sendEvent.ret) {
+            throwExceptionFromLastError(m_sendEvent.lastError);
+        }
+        return m_sendEvent.numberOfBytes;
+    } else {
+        DWORD sent;
+        if (WSASendTo(m_sock, (LPWSABUF)bufs, len, &sent, flags,
+            to->name(), to->nameLen(),
+            NULL, NULL)) {
+            throwExceptionFromLastError();
+        }
+        return sent;
+    }
+#else
+    msghdr msg;
+    memset(&msg, 0, sizeof(msghdr));
+    msg.msg_iov = (iovec*)bufs;
+    msg.msg_iovlen = len;
+    msg.msg_name = (sockaddr*)to->name();
+    msg.msg_namelen = to->nameLen();
+    int rc = ::sendmsg(m_sock, &msg, flags);
+    while (m_ioManager && rc == -1 && errno == EAGAIN) {
+        m_ioManager->registerEvent(&m_sendEvent);
+        Scheduler::getThis()->yieldTo();
+        rc = ::sendmsg(m_sock, &msg, flags);
+    }
+    if (rc == -1) {
+        throwExceptionFromLastError();
+    }
+    return rc;
+#endif
 }
 
 size_t
 Socket::receive(void *buf, size_t len, int flags)
 {
-    if (!m_ioManager) {
-        int rc = ::recv(m_sock, (char*)buf, len, flags);
-        if (rc == -1) {
-            throwExceptionFromLastError();
-        }
-        return rc;
-    } else {
 #ifdef WINDOWS
+    if (m_ioManager) {
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
         wsabuf.len = len;
@@ -324,22 +443,170 @@ Socket::receive(void *buf, size_t len, int flags)
         if (!m_receiveEvent.ret) {
             throwExceptionFromLastError(m_receiveEvent.lastError);
         }
-        return m_sendEvent.numberOfBytes;
-#else
-        int rc = ::recv(m_sock, buf, len, flags);
-        while (rc == -1 && errno == EAGAIN) {
+        return m_receiveEvent.numberOfBytes;
+    } else
+#endif
+    {
+        int rc = ::recv(m_sock, (char*)buf, len, flags);
+#ifndef WINDOWS
+        while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(&m_receiveEvent);
             Scheduler::getThis()->yieldTo();
-            int rc = ::recv(m_sock, buf, len, flags);
+            rc = ::recv(m_sock, buf, len, flags);
         }
+#endif
         if (rc == -1) {
             throwExceptionFromLastError();
         }
         return rc;
-#endif
     }
 }
 
+size_t
+Socket::receive(iovec *bufs, size_t len, int flags)
+{
+#ifdef WINDOWS
+    if (m_ioManager) {
+        m_ioManager->registerEvent(&m_receiveEvent);
+        int ret = WSARecv(m_sock, bufs, len, NULL, (LPDWORD)&flags,
+            &m_receiveEvent.overlapped, NULL);
+        if (ret && GetLastError() != WSA_IO_PENDING) {
+            throwExceptionFromLastError();
+        }
+        Scheduler::getThis()->yieldTo();
+        if (!m_receiveEvent.ret) {
+            throwExceptionFromLastError(m_receiveEvent.lastError);
+        }
+        return m_receiveEvent.numberOfBytes;
+    } else {
+        DWORD received;
+        if (WSARecv(m_sock, bufs, len, &received, (LPDWORD)&flags,
+            NULL, NULL)) {
+            throwExceptionFromLastError();
+        }
+        return received;
+    }
+#else
+    msghdr msg;
+    memset(&msg, 0, sizeof(msghdr));
+    msg.msg_iov = bufs;
+    msg.msg_iovlen = len;
+    int rc = ::recvmsg(m_sock, &msg, flags);
+    while (m_ioManager && rc == -1 && errno == EAGAIN) {
+        m_ioManager->registerEvent(&m_receiveEvent);
+        Scheduler::getThis()->yieldTo();
+        rc = ::recvmsg(m_sock, &msg, flags);
+    }
+    if (rc == -1) {
+        throwExceptionFromLastError();
+    }
+    return rc;
+#endif
+}
+
+size_t
+Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
+{
+    assert(from->family() == family());
+#ifdef WINDOWS
+    WSABUF wsabuf;
+    wsabuf.buf = (char*)buf;
+    wsabuf.len = len;
+    int namelen = from->nameLen();
+    if (m_ioManager) {        
+        m_ioManager->registerEvent(&m_sendEvent);        
+        int ret = WSARecvFrom(m_sock, &wsabuf, 1, NULL, (LPDWORD)flags,
+            from->name(), &namelen,
+            &m_sendEvent.overlapped, NULL);
+        if (ret && GetLastError() != WSA_IO_PENDING) {
+            throwExceptionFromLastError();
+        }
+        Scheduler::getThis()->yieldTo();
+        if (!m_sendEvent.ret) {
+            throwExceptionFromLastError(m_sendEvent.lastError);
+        }
+        return m_sendEvent.numberOfBytes;
+    } else {
+        DWORD sent;
+        if (WSARecvFrom(m_sock, &wsabuf, 1, &sent, (LPDWORD)flags,
+            from->name(), &namelen,
+            NULL, NULL)) {
+            throwExceptionFromLastError();
+        }
+        return sent;
+    }
+#else
+    msghdr msg;
+    memset(&msg, 0, sizeof(msghdr));
+    iovec iov;
+    iov.iov_base = buf;
+    iov.iov_len = len;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_name = from->name();
+    msg.msg_namelen = from->nameLen();
+    int rc = ::recvmsg(m_sock, &msg, flags);
+    while (m_ioManager && rc == -1 && errno == EAGAIN) {
+        m_ioManager->registerEvent(&m_sendEvent);
+        Scheduler::getThis()->yieldTo();
+        rc = ::recvmsg(m_sock, &msg, flags);
+    }
+    if (rc == -1) {
+        throwExceptionFromLastError();
+    }
+    *flags = msg.msg_flags;
+    return rc;
+#endif
+}
+
+size_t
+Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
+{
+    assert(from->family() == family());
+#ifdef WINDOWS
+    int namelen = from->nameLen();
+    if (m_ioManager) {
+        m_ioManager->registerEvent(&m_sendEvent);
+        int ret = WSARecvFrom(m_sock, bufs, len, NULL, (LPDWORD)flags,
+            from->name(), &namelen,
+            &m_sendEvent.overlapped, NULL);
+        if (ret && GetLastError() != WSA_IO_PENDING) {
+            throwExceptionFromLastError();
+        }
+        Scheduler::getThis()->yieldTo();
+        if (!m_sendEvent.ret) {
+            throwExceptionFromLastError(m_sendEvent.lastError);
+        }
+        return m_sendEvent.numberOfBytes;
+    } else {
+        DWORD sent;
+        if (WSARecvFrom(m_sock, bufs, len, &sent, (LPDWORD)flags,
+            from->name(), &namelen,
+            NULL, NULL)) {
+            throwExceptionFromLastError();
+        }
+        return sent;
+    }
+#else
+    msghdr msg;
+    memset(&msg, 0, sizeof(msghdr));
+    msg.msg_iov = bufs;
+    msg.msg_iovlen = len;
+    msg.msg_name = from->name();
+    msg.msg_namelen = from->nameLen();
+    int rc = ::recvmsg(m_sock, &msg, flags);
+    while (m_ioManager && rc == -1 && errno == EAGAIN) {
+        m_ioManager->registerEvent(&m_sendEvent);
+        Scheduler::getThis()->yieldTo();
+        rc = ::recvmsg(m_sock, &msg, flags);
+    }
+    if (rc == -1) {
+        throwExceptionFromLastError();
+    }
+    *flags = msg.msg_flags;
+    return rc;
+#endif
+}
 
 void
 Socket::getOption(int level, int option, void *result, size_t *len)
@@ -355,6 +622,19 @@ Socket::setOption(int level, int option, const void *value, size_t len)
 {
     if (setsockopt(m_sock, level, option, (const char*)value, len)) {
         throwExceptionFromLastError();
+    }
+}
+
+Address *
+Socket::emptyAddress()
+{
+    switch (m_family) {
+        case AF_INET:
+            return new IPv4Address(type(), m_protocol);
+        case AF_INET6:
+            return new IPv6Address(type(), m_protocol);
+        default:
+            return new UnknownAddress(m_family, type(), m_protocol);
     }
 }
 

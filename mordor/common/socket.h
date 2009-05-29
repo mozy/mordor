@@ -48,9 +48,10 @@ public:
 
     size_t receive(void *buf, size_t len, int flags = 0);
     size_t receive(iovec *bufs, size_t len, int flags = 0);
-    size_t receiveFrom(void *buf, size_t len, int *flags, const Address *from);
-    size_t receiveFrom(iovec *bufs, size_t len, int *flags, const Address *from);
+    size_t receiveFrom(void *buf, size_t len, int *flags, Address *from);
+    size_t receiveFrom(iovec *bufs, size_t len, int *flags, Address *from);
 
+    Address *emptyAddress();
     Address *remoteAddress();
     Address *localAddress();
 
@@ -94,6 +95,9 @@ public:
     //IPv4Address(const std::string& addr, int type = 0, int protocol = 0);
     //IPv4Address(const std::string& addr, unsigned short port, int type = 0, int protocol = 0);
 
+    unsigned short port() const { return ntohs(sin.sin_port); }
+    void port(unsigned short p) { sin.sin_port = htons(p); }
+
     const sockaddr *name() const { return (sockaddr*)&sin; }
     sockaddr *name() { return (sockaddr*)&sin; }
     int nameLen() const { return sizeof(sockaddr_in); }
@@ -107,6 +111,9 @@ public:
     IPv6Address(int type = 0, int protocol = 0);
     //IPv6Address(const std::string& addr, int type = 0, int protocol = 0);
     //IPv6Address(const std::string& addr, unsigned short port, int type = 0, int protocol = 0);
+
+    unsigned short port() const { return ntohs(sin.sin6_port); }
+    void port(unsigned short p) { sin.sin6_port = htons(p); }
 
     const sockaddr *name() const { return (sockaddr*)&sin; }
     sockaddr *name() { return (sockaddr*)&sin; }
