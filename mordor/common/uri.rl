@@ -47,8 +47,8 @@ static std::string escape(const std::string& str, const std::string& allowedChar
     if (differed) {
         assert(result.length() > str.length());
     } else {
-		assert(result == str);
-	}
+        assert(result == str);
+    }
     return result;
 }
 
@@ -171,7 +171,7 @@ static std::string unescape(const std::string& str)
     }
     action set_relative
     {
-	    m_path->type = URI::Path::RELATIVE;
+        m_path->type = URI::Path::RELATIVE;
     }
 
     path_abempty = ("/" segment >set_absolute)*;
@@ -292,12 +292,12 @@ private:
 
 URI::URI()
 {
-	reset();
+    reset();
 }
 
 URI::URI(const std::string& uri)
 {
-	*this = uri;
+    *this = uri;
 }
 
 URI&
@@ -305,6 +305,8 @@ URI::operator=(const std::string& uri)
 {
     URIParser parser(*this);
     parser.run(uri);
+    if (parser.error() || !parser.complete())
+        throw std::invalid_argument("uri");
     return *this;    
 }
 
@@ -328,10 +330,10 @@ URI::Authority::Authority()
 
 void
 URI::Authority::normalize(const std::string& defaultHost, bool emptyHostValid,
-	int defaultPort, bool emptyPortValid)
+    int defaultPort, bool emptyPortValid)
 {
     for(size_t i = 0; i < m_host.length(); ++i)
-		m_host[i] = tolower(m_host[i]);
+        m_host[i] = tolower(m_host[i]);
     if (m_port == defaultPort)
         m_port = -1;
     if (m_port == -1 && !emptyPortValid)
@@ -374,6 +376,8 @@ URI::Path::operator=(const std::string& path)
 {
     URIPathParser parser(*this);
     parser.run(path);
+    if (parser.error() || !parser.complete())
+        throw std::invalid_argument("uri");
     return *this;
 }
 
@@ -398,8 +402,8 @@ URI::Path::removeDotComponents()
                 continue;
             }
             if (i + 1 == segments.size()) {
-				segments.resize(segments.size() - 1);
-				segments.back().clear();
+                segments.resize(segments.size() - 1);
+                segments.back().clear();
                 --i;
                 continue;
             }
