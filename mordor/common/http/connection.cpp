@@ -4,6 +4,7 @@
 
 #include "chunked.h"
 #include "common/streams/buffered.h"
+#include "common/streams/notify.h"
 
 HTTP::Connection::Connection(Stream *stream, bool own)
 : m_stream(stream),
@@ -91,21 +92,27 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
                             bool forRead)
 {
     assert(hasMessageBody(general, entity, method, status));
-    Stream **stream;
+    std::auto_ptr<Stream> stream;
     if (forRead) {
-        stream = &m_stream;
+        stream.reset(new FilterStream(m_stream, false));
         // TODO: singleplex it
     } else {
-        stream = &m_stream;
+        stream.reset(new FilterStream(m_stream, false));
         // TODO: singleplex it
     }
-    Stream *baseStream = *stream;
+    Stream *baseStream = stream.get();
     for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
         it != general.transferEncoding.end();
         ++it) {
         if (it->value == "chunked") {
-            *stream = new ChunkedStream(*stream);
-            // TODO: NotifyStream on EOF
+            ChunkedStream *chunked = new ChunkedStream(stream.get());
+            stream.release();
+            stream.reset(chunked);
+            NotifyStream *notify = new NotifyStream(stream.get());
+            stream.release();
+            stream.reset(notify);
+            notify->notifyOnClose = notifyOnEof;
+            notify->notifyOnEof = notifyOnEof;
         } else if (it->value == "deflate") {
             // TODO: ZlibStream
             assert(false);
@@ -120,17 +127,21 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
             assert(false);
         }
     }
-    if (*stream != baseStream) {
-        return *stream;
+    if (stream.get() != baseStream) {
+        return stream.release();
     } else if (entity.contentLength != ~0) {
-        // TODO: NotifyStream on EOF
         // TODO: LimitedStream
-        return *stream;
-    // TODO: } else if (entity.contentType.major == "multipart") { return *stream;
+        NotifyStream *notify = new NotifyStream(stream.get());
+        stream.release();
+        stream.reset(notify);
+        notify->notifyOnClose = notifyOnEof;
+        notify->notifyOnEof = notifyOnEof;
+        return stream.release();
+    // TODO: } else if (entity.contentType.major == "multipart") { return stream.release();
     } else {
         // Delimited by closing the connection
         assert(general.connection.find("close") != general.connection.end());
         // TODO: NotifyStream on EOF
-        return *stream;
+        return stream.release();
     }
 }

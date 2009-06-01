@@ -6,11 +6,10 @@
 
 class FilterStream : public Stream
 {
-protected:
+public:
     FilterStream(Stream *parent, bool own = true)
         : m_parent(parent), m_own(own)
     {}
-public:
     ~FilterStream()
     {
         if (m_own) {

@@ -497,6 +497,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\notify.h"
+				>
+			</File>
+			<File
 				RelativePath=".\http\parser.h"
 				>
 			</File>
