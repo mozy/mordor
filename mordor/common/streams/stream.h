@@ -31,6 +31,7 @@ public:
     virtual bool supportsSeek() { return false; }
     virtual bool supportsSize() { return false; }
     virtual bool supportsTruncate() { return false; }
+    virtual bool supportsFindDelimited() { return false; }
 
     virtual void close(CloseType type = BOTH) {}
     virtual size_t read(Buffer *b, size_t len) { assert(false); return 0; }

@@ -15,6 +15,8 @@ public:
     bool allowPartialReads() { return m_allowPartialReads; }
     void allowPartialReads(bool allowPartialReads) { m_allowPartialReads = allowPartialReads; }
 
+    bool supportsFindDelimited() { return true; }
+
     size_t read(Buffer *b, size_t len);
     size_t write(const Buffer *b, size_t len);
     size_t write(const void *b, size_t len);

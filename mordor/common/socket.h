@@ -88,7 +88,16 @@ private:
     int m_type, m_protocol;
 };
 
-struct IPv4Address : public Address
+struct IPAddress : public Address
+{
+protected:
+    IPAddress(int type = 0, int protocol = 0);
+public:
+    virtual unsigned short port() const = 0;
+    virtual void port(unsigned short p) = 0;
+};
+
+struct IPv4Address : public IPAddress
 {
 public:
     IPv4Address(int type = 0, int protocol = 0);
@@ -105,7 +114,7 @@ private:
     sockaddr_in sin;
 };
 
-struct IPv6Address : public Address
+struct IPv6Address : public IPAddress
 {
 public:
     IPv6Address(int type = 0, int protocol = 0);

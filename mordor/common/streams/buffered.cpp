@@ -63,7 +63,7 @@ BufferedStream::write(const Buffer *b, size_t len)
 size_t
 BufferedStream::write(const void *b, size_t len)
 {
-    m_writeBuffer.reserve(m_bufferSize);
+    m_writeBuffer.reserve(std::max(m_bufferSize, len));
     m_writeBuffer.copyIn(b, len);
     size_t result = flushWrite(len);
     // Partial writes not allowed

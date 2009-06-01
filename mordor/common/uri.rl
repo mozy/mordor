@@ -434,20 +434,29 @@ URI::Path::merge(const Path& rhs)
     }
 }
 
-std::ostream&
-URI::Path::serialize(std::ostream& os, bool schemeless) const
+URI::Path::path_serializer
+URI::Path::serialize(bool schemeless) const
 {
-    if (segments.empty() && type == ABSOLUTE) {
+    path_serializer result;
+    result.p = this;
+    result.schemeless = schemeless;
+    return result;
+}
+
+std::ostream&
+operator<<(std::ostream& os, const URI::Path::path_serializer &p)
+{
+    if (p.p->segments.empty() && p.p->type == URI::Path::ABSOLUTE) {
         return os << "/";
     }
-    for (size_t i = 0; i < segments.size(); ++i) {
-        if (i != 0 || type == ABSOLUTE) {
+    for (size_t i = 0; i < p.p->segments.size(); ++i) {
+        if (i != 0 || p.p->type == URI::Path::ABSOLUTE) {
             os << "/";
         }
-        if (i == 0 && type == RELATIVE && schemeless) {
-            os << escape(segments[i], segment_nc);
+        if (i == 0 && p.p->type == URI::Path::RELATIVE && p.schemeless) {
+            os << escape(p.p->segments[i], segment_nc);
         } else {
-            os << escape(segments[i], pchar);
+            os << escape(p.p->segments[i], pchar);
         }
     }
     return os;
@@ -456,7 +465,7 @@ URI::Path::serialize(std::ostream& os, bool schemeless) const
 std::ostream&
 operator<<(std::ostream& os, const URI::Path& path)
 {
-    return path.serialize(os);
+    return os << path.serialize();
 }
 
 void
@@ -506,7 +515,7 @@ operator<<(std::ostream& os, const URI& uri)
         uri.path.segments.size() > 0 && uri.path.segments.front().empty()) {
         os << "/";
     }
-    uri.path.serialize(os, !uri.schemeDefined());
+    os << uri.path.serialize(!uri.schemeDefined());
     
     if (uri.queryDefined()) {
         os << "?" << escape(uri.query(), query);

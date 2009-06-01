@@ -6,6 +6,8 @@
 
 #include <boost/shared_array.hpp>
 
+#include "common/version.h"
+
 struct Buffer
 {
 public:
@@ -14,6 +16,7 @@ public:
     public:
         DataBuf();
         DataBuf(size_t length);
+//        DataBuf(const DataBuf &copy);
 
         DataBuf slice(size_t start, size_t length = ~0);
         const DataBuf slice(size_t start, size_t length = ~0) const;

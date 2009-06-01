@@ -13,8 +13,8 @@ HTTP::Version
 parseVersion(const char *str)
 {
     HTTP::Version ver;
-    ver.major = atoi(str);
-    ver.minor = atoi(strchr(str, '.') + 1);
+    ver.major = atoi(str + 5);
+    ver.minor = atoi(strchr(str + 5, '.') + 1);
     return ver;
 }
 

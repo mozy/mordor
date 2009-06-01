@@ -299,7 +299,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\chunked.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\http\client.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\comlike.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\http\connection.cpp"
 				>
 			</File>
 			<File
@@ -363,11 +375,43 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
+				RelativePath=".\streams\socket.cpp"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\socket_stream.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\socket_stream.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\socket_stream.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\socket_stream.obj"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\streams\socket.cpp"
+				RelativePath=".\socket.cpp"
 				>
 			</File>
 			<File
@@ -405,7 +449,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\chunked.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http\client.h"
+				>
+			</File>
+			<File
 				RelativePath=".\comlike.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http\connection.h"
 				>
 			</File>
 			<File
@@ -493,7 +549,8 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
+					Description="$(InputFileName)"
+					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
 					AdditionalDependencies=""
 					Outputs="$(InputName).cpp"
 				/>
@@ -503,7 +560,8 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
+					Description="$(InputFileName)"
+					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
 					AdditionalDependencies=""
 					Outputs="$(InputName).cpp"
 				/>
@@ -513,6 +571,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
+					Description="$(InputFileName)"
 					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
 					AdditionalDependencies=""
 					Outputs="$(InputName).cpp"
@@ -523,6 +582,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
+					Description="$(InputFileName)"
 					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
 					AdditionalDependencies=""
 					Outputs="$(InputName).cpp"
@@ -537,7 +597,8 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
+					Description="$(InputFileName)"
+					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
 					Outputs="$(InputName).cpp"
 				/>
 			</FileConfiguration>
@@ -546,7 +607,8 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
+					Description="$(InputFileName)"
+					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
 					Outputs="$(InputName).cpp"
 				/>
 			</FileConfiguration>
@@ -555,6 +617,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
+					Description="$(InputFileName)"
 					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
 					Outputs="$(InputName).cpp"
 				/>
@@ -564,6 +627,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
+					Description="$(InputFileName)"
 					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
 					Outputs="$(InputName).cpp"
 				/>

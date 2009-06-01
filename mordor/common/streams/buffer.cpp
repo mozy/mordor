@@ -16,15 +16,21 @@ Buffer::DataBuf::DataBuf(size_t length)
     m_length = length;
 }
 
+/*Buffer::DataBuf::DataBuf(const DataBuf &copy)
+: m_start(copy.m_start),
+  m_length(copy.m_length),
+  m_array(copy.m_array)
+{}*/
+
 Buffer::DataBuf
 Buffer::DataBuf::slice(size_t start, size_t length)
 {
-    assert(length <= 0xffffffff);
     if (length == ~0) {
         length = m_length - start;
     }
+    assert(length <= 0xffffffff);
     assert(start <= m_length);
-    assert(length - start <= m_length);
+    assert(length + start <= m_length);
     DataBuf result;
     result.m_array = m_array;
     result.m_start = (unsigned char*)m_start + start;
@@ -35,10 +41,10 @@ Buffer::DataBuf::slice(size_t start, size_t length)
 const Buffer::DataBuf
 Buffer::DataBuf::slice(size_t start, size_t length) const
 {
-    assert(length <= 0xffffffff);
     if (length == ~0) {
         length = m_length - start;
     }
+    assert(length <= 0xffffffff);
     assert(start <= m_length);
     assert(length - start <= m_length);
     DataBuf result;
@@ -379,16 +385,26 @@ void
 Buffer::copyIn(const void *data, size_t len)
 {
     invariant();
-    // Split any mixed read/write bufs
-    if (m_writeIt != m_bufs.end() && m_writeIt->readAvailable() != 0) {
-        m_bufs.insert(m_writeIt, Data(m_writeIt->readBuf()));
-        m_writeIt->consume(m_writeIt->readAvailable());
+    
+    while (m_writeIt != m_bufs.end() && len > 0) {
+        size_t todo = std::min(len, m_writeIt->writeAvailable());
+        memcpy(m_writeIt->writeBuf().m_start, data, todo);
+        m_writeIt->produce(todo);
+        m_writeAvailable -= todo;
+        m_readAvailable += todo;
+        data = (unsigned char*)data + todo;
+        len -= todo;
+        if (m_writeIt->writeAvailable() == 0)
+            ++m_writeIt;
+        invariant();
     }
 
-    Data newBuf(len);
-    memcpy(newBuf.writeBuf().m_start, data, len);
-    m_bufs.insert(m_writeIt, newBuf);
-    m_readAvailable += len;
+    if (len > 0) {
+        Data newBuf(len);
+        memcpy(newBuf.writeBuf().m_start, data, len);
+        m_bufs.push_back(newBuf);
+        m_readAvailable += len;
+    }
 
     assert(readAvailable() >= len);
 }

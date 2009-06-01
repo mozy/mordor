@@ -10,6 +10,9 @@
 
 namespace HTTP
 {
+#ifdef DELETE
+#undef DELETE
+#endif
     enum Method
     {
         GET,
@@ -25,6 +28,8 @@ namespace HTTP
 
     enum Status
     {
+        INVALID                          = 0,
+
         CONTINUE                         = 100,
         SWITCHING_PROTOCOL               = 101,
         
@@ -75,9 +80,19 @@ namespace HTTP
     struct Version
     {
         Version() : major(~0), minor(~0) {}
+        Version(unsigned char m, unsigned char n) : major(m), minor(n) {}
 
         unsigned char major;
         unsigned char minor;
+
+        bool operator==(const Version& rhs) const
+        {
+            return major == rhs.major && minor == rhs.minor;
+        }
+        bool operator!=(const Version& rhs) const
+        {
+            return !(*this == rhs);
+        }
     };
 
     struct caseinsensitiveless

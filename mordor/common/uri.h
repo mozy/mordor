@@ -49,6 +49,13 @@ struct URI
     };
     Authority authority;
 
+#ifdef ABSOLUTE
+#undef ABSOLUTE
+#endif
+#ifdef RELATIVE
+#undef RELATIVE
+#endif
+
     struct Path
     {
         enum Type {
@@ -74,7 +81,12 @@ struct URI
 
         std::vector<std::string> segments;
 
-        std::ostream& serialize(std::ostream& os, bool schemeless = false) const;
+        struct path_serializer
+        {
+            const Path *p;
+            bool schemeless;
+        };
+        path_serializer serialize(bool schemeless = false) const;
     };
     Path path;
 
@@ -104,6 +116,7 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const URI::Authority& authority);
 std::ostream& operator<<(std::ostream& os, const URI::Path& path);
+std::ostream& operator<<(std::ostream& os, const URI::Path::path_serializer& path);
 std::ostream& operator<<(std::ostream& os, const URI& uri);
 
 #endif

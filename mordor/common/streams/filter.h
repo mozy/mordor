@@ -26,6 +26,7 @@ public:
     bool supportsSeek() { return m_parent->supportsSeek(); }
     bool supportsSize() { return m_parent->supportsSize(); }
     bool supportsTruncate() { return m_parent->supportsTruncate(); }
+    bool supportsFindDelimited() { return m_parent->supportsFindDelimited(); }
 
     void close(CloseType type = BOTH)
     {
@@ -56,6 +57,8 @@ protected:
     MutatingFilterStream(Stream *parent, bool owns = true)
         : FilterStream(parent, owns)
     {}
+
+    bool supportsFindDelimited() { return false; }
 
 public:
     size_t findDelimited(char delim) { assert(false); return 0; }

@@ -31,7 +31,7 @@ static std::string quote(const std::string& str)
     return result;
 }
 
-static std::ostream& serialize(std::ostream& os, const HTTP::StringSet& set)
+static std::ostream& operator<<(std::ostream& os, const HTTP::StringSet& set)
 {
     for (HTTP::StringSet::const_iterator it(set.begin());
         it != set.end();
@@ -43,7 +43,7 @@ static std::ostream& serialize(std::ostream& os, const HTTP::StringSet& set)
     return os;
 }
 
-const char *methods[] = {
+const char *HTTP::methods[] = {
     "GET",
     "HEAD",
     "POST",
@@ -57,13 +57,13 @@ const char *methods[] = {
 std::ostream& operator<<(std::ostream& os, HTTP::Method m)
 {
     assert(m >= HTTP::GET && m <= HTTP::TRACE);
-    return os << methods[(size_t)m];
+    return os << HTTP::methods[(size_t)m];
 }
 
 std::ostream& operator<<(std::ostream& os, HTTP::Version v)
 {
     assert(v.major != ~0 && v.minor != ~0);
-    return os << "HTTP/" << v.major << "." << v.minor;    
+    return os << "HTTP/" << (int)v.major << "." << (int)v.minor;    
 }
 
 std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine& r)
@@ -80,7 +80,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine& s)
 std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders& g)
 {
     if (!g.connection.empty())
-        os << "Connection: " << serialize(os, g.connection) << "\r\n";
+        os << "Connection: " << g.connection << "\r\n";
     if (!g.transferEncoding.empty()) {
         os << "Transfer-Encoding: ";
         for (HTTP::ParameterizedList::const_iterator it(g.transferEncoding.begin());

@@ -760,8 +760,12 @@ Address::createSocket(IOManager *ioManager)
     return new Socket(ioManager, family(), type(), protocol());
 }
 
-IPv4Address::IPv4Address(int type, int protocol)
+IPAddress::IPAddress(int type, int protocol)
 : Address(type, protocol)
+{}
+
+IPv4Address::IPv4Address(int type, int protocol)
+: IPAddress(type, protocol)
 {
     sin.sin_family = AF_INET;
     sin.sin_port = 0;
@@ -769,7 +773,7 @@ IPv4Address::IPv4Address(int type, int protocol)
 }
 
 IPv6Address::IPv6Address(int type, int protocol)
-: Address(type, protocol)
+: IPAddress(type, protocol)
 {
     sin.sin6_family = AF_INET6;
     sin.sin6_port = 0;
