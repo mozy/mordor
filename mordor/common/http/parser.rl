@@ -46,8 +46,39 @@ unfold(char *p, char *pe)
                 continue;
             }
         }
-        // Remove interior line breaks
-        if (*p == '\r' || *p == '\n') {
+        // Only copy if necessary
+        if (pw != p) {
+            *pw = *p;
+        }
+        ++p; ++pw;
+    }
+    // Remove trailing whitespace
+    do {
+        --pw;
+    } while ((*pw == ' ' || *pw == '\t' || *pw == '\r' || *pw == '\n') && pw >= start);
+    ++pw;
+    return std::string(start, pw - start);
+}
+
+static
+std::string
+unquote(char *p, char *pe)
+{
+    if (pe == p || *p != '"')
+        return std::string(p, pe - p);
+    char *start = p;
+    char *pw = p;
+
+    assert(*p == '"');
+    assert(*(pe - 1) == '"');
+    ++p; ++pw; ++start;
+    --pe;
+    bool escaping = false;
+    while (p < pe) {
+        if (escaping) {
+            escaping = false;
+        } else if (*p == '\\') {
+            escaping = true;
             ++p;
             continue;
         }
@@ -57,11 +88,6 @@ unfold(char *p, char *pe)
         }
         ++p; ++pw;
     }
-    // Remove trailing whitespace (\r and \n already removed)
-    do {
-        --pw;
-    } while ((*pw == ' ' || *pw == '\t') && pw >= start);
-    ++pw;
     return std::string(start, pw - start);
 }
 
@@ -187,7 +213,7 @@ unfold(char *p, char *pe)
     }
     
     action save_parameter_value {
-        (*m_parameters)[m_temp1] = std::string(mark, fpc - mark);
+        (*m_parameters)[m_temp1] = unquote((char*)mark, (char*)fpc);
         mark = NULL;
     }
     
