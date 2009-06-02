@@ -42,6 +42,7 @@ namespace HTTP
         void finish();
 
     private:
+        void doRequest();
         void ensureResponse();
         void requestDone();
         void responseDone();
@@ -65,7 +66,7 @@ namespace HTTP
         ClientConnection(Stream *stream, bool own = true);
         ~ClientConnection();
 
-        ClientRequest::ptr request(Request requestHeaders);
+        ClientRequest::ptr request(const Request &requestHeaders);
     private:
         void scheduleNextRequest(ClientRequest::ptr currentRequest);
         void scheduleNextResponse(ClientRequest::ptr currentRequest);

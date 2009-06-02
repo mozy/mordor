@@ -27,135 +27,10 @@ HTTP::ClientConnection::~ClientConnection()
 }
 
 HTTP::ClientRequest::ptr
-HTTP::ClientConnection::request(Request requestHeaders)
+HTTP::ClientConnection::request(const Request &requestHeaders)
 {
-    RequestLine &requestLine = requestHeaders.requestLine;
-    // 1.0, 1.1, or defaulted
-    assert(requestLine.ver == Version() ||
-           requestLine.ver == Version(1, 0) ||
-           requestLine.ver == Version(1, 1));
-    // Have to request *something*
-    assert(requestLine.uri.isDefined());
-    // Host header required with HTTP/1.1
-    assert(!requestHeaders.request.host.empty() || requestLine.ver != Version(1, 1));
-    // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
-    const ParameterizedList &transferEncoding = requestHeaders.general.transferEncoding;
-    if (!transferEncoding.empty()) {
-        assert(transferEncoding.back().value == "chunked");
-        for (ParameterizedList::const_iterator it(transferEncoding.begin());
-            it + 1 != transferEncoding.end();
-            ++it) {
-            // Only the last one can be chunked
-            assert(it->value != "chunked");
-            // identity is only acceptable in the TE header field
-            assert(it->value != "identity");
-            if (it->value == "gzip" ||
-                it->value == "x-gzip" ||
-                it->value == "deflate") {
-                // Known Transfer-Codings; TODO: just break
-                assert(false);
-            } else if (it->value == "compress" ||
-                it->value == "x-compress") {
-                // Unsupported Transfer-Codings
-                assert(false);
-            } else {
-                // Unknown Transfer-Coding
-                assert(false);
-            }
-        }
-    }
-
-    bool close;
-    // Default HTTP version... 1.1 if possible
-    if (requestLine.ver == Version()) {
-        if (requestHeaders.request.host.empty())
-            requestLine.ver = Version(1, 0);
-        else
-            requestLine.ver = Version(1, 1);
-    }
-    // If not specified, try to keep the connection open
-    StringSet &connection = requestHeaders.general.connection;
-    if (connection.find("close") == connection.end() && requestLine.ver == Version(1, 0)) {
-        connection.insert("Keep-Alive");
-    }
-    // Determine if we're closing the connection after this request
-    if (requestLine.ver == Version(1, 0)) {
-        if (connection.find("Keep-Alive") != connection.end()) {
-            close = false;
-        } else {
-            close = true;
-            connection.insert("close");
-        }
-    } else {
-        if (connection.find("close") != connection.end()) {
-            close = true;
-        } else {
-            close = false;
-        }
-    }
-
     ClientRequest::ptr request(new ClientRequest(this, requestHeaders));
-
-    bool firstRequest;
-    // Put the request in the queue
-    {
-        boost::mutex::scoped_lock lock(m_mutex);
-        invariant();
-        if (!m_allowNewRequests) {
-            throw std::runtime_error("No more requests are possible because the connection was voluntarily closed");
-        }
-        if (*m_responseException.what()) {
-            throw m_requestException;
-        }
-        if (*m_requestException.what()) {
-            throw m_requestException;
-        }
-        firstRequest = m_currentRequest == m_pendingRequests.end();
-        m_pendingRequests.push_back(request);
-        if (firstRequest) {
-            m_currentRequest = m_pendingRequests.end();
-            --m_currentRequest;
-            request->m_inFlight = true;
-        }
-        if (close) {
-            m_allowNewRequests = false;
-        }
-    }
-    // If we weren't the first request in the queue, we have to wait for
-    // another request to schedule us
-    if (!firstRequest) {
-        Scheduler::getThis()->yieldTo();
-        // Check for problems that occurred while we were waiting
-        boost::mutex::scoped_lock lock(m_mutex);
-        invariant();
-        if (*m_responseException.what()) {
-            throw m_requestException;
-        }
-        if (*m_requestException.what()) {
-            throw m_requestException;
-        }
-        request->m_inFlight = true;
-    }
-
-    try {
-        // Do the request
-        std::ostringstream os;
-        os << requestHeaders;
-        std::string str = os.str();
-        m_stream->write(str.c_str(), str.size());
-
-        if (!hasMessageBody(requestHeaders.general, requestHeaders.entity, requestLine.method, INVALID)) {
-            scheduleNextRequest(request);
-        }
-    } catch(...) {
-        boost::mutex::scoped_lock lock(m_mutex);
-        invariant();
-        m_requestException = std::runtime_error("No more requests are possible because a prior request failed");
-        m_currentRequest = m_pendingRequests.erase(m_currentRequest);
-        scheduleAllWaitingRequests();        
-        throw;
-    }
-    
+    request->doRequest();
     return request;
 }
 
@@ -449,6 +324,135 @@ HTTP::ClientRequest::finish()
         }
         assert(m_responseStream);
         transferStream(m_responseStream, NullStream::get());
+    }
+}
+
+void
+HTTP::ClientRequest::doRequest()
+{
+    RequestLine &requestLine = m_request.requestLine;
+    // 1.0, 1.1, or defaulted
+    assert(requestLine.ver == Version() ||
+           requestLine.ver == Version(1, 0) ||
+           requestLine.ver == Version(1, 1));
+    // Have to request *something*
+    assert(requestLine.uri.isDefined());
+    // Host header required with HTTP/1.1
+    assert(!m_request.request.host.empty() || requestLine.ver != Version(1, 1));
+    // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
+    const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
+    if (!transferEncoding.empty()) {
+        assert(transferEncoding.back().value == "chunked");
+        for (ParameterizedList::const_iterator it(transferEncoding.begin());
+            it + 1 != transferEncoding.end();
+            ++it) {
+            // Only the last one can be chunked
+            assert(it->value != "chunked");
+            // identity is only acceptable in the TE header field
+            assert(it->value != "identity");
+            if (it->value == "gzip" ||
+                it->value == "x-gzip" ||
+                it->value == "deflate") {
+                // Known Transfer-Codings; TODO: just break
+                assert(false);
+            } else if (it->value == "compress" ||
+                it->value == "x-compress") {
+                // Unsupported Transfer-Codings
+                assert(false);
+            } else {
+                // Unknown Transfer-Coding
+                assert(false);
+            }
+        }
+    }
+
+    bool close;
+    // Default HTTP version... 1.1 if possible
+    if (requestLine.ver == Version()) {
+        if (m_request.request.host.empty())
+            requestLine.ver = Version(1, 0);
+        else
+            requestLine.ver = Version(1, 1);
+    }
+    // If not specified, try to keep the connection open
+    StringSet &connection = m_request.general.connection;
+    if (connection.find("close") == connection.end() && requestLine.ver == Version(1, 0)) {
+        connection.insert("Keep-Alive");
+    }
+    // Determine if we're closing the connection after this request
+    if (requestLine.ver == Version(1, 0)) {
+        if (connection.find("Keep-Alive") != connection.end()) {
+            close = false;
+        } else {
+            close = true;
+            connection.insert("close");
+        }
+    } else {
+        if (connection.find("close") != connection.end()) {
+            close = true;
+        } else {
+            close = false;
+        }
+    }
+
+    bool firstRequest;
+    // Put the request in the queue
+    {
+        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        m_conn->invariant();
+        if (!m_conn->m_allowNewRequests) {
+            throw std::runtime_error("No more requests are possible because the connection was voluntarily closed");
+        }
+        if (*m_conn->m_responseException.what()) {
+            throw m_conn->m_requestException;
+        }
+        if (*m_conn->m_requestException.what()) {
+            throw m_conn->m_requestException;
+        }
+        firstRequest = m_conn->m_currentRequest == m_conn->m_pendingRequests.end();
+        m_conn->m_pendingRequests.push_back(shared_from_this());
+        if (firstRequest) {
+            m_conn->m_currentRequest = m_conn->m_pendingRequests.end();
+            --m_conn->m_currentRequest;
+            m_inFlight = true;
+        }
+        if (close) {
+            m_conn->m_allowNewRequests = false;
+        }
+    }
+    // If we weren't the first request in the queue, we have to wait for
+    // another request to schedule us
+    if (!firstRequest) {
+        Scheduler::getThis()->yieldTo();
+        // Check for problems that occurred while we were waiting
+        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        m_conn->invariant();
+        if (*m_conn->m_responseException.what()) {
+            throw m_conn->m_requestException;
+        }
+        if (*m_conn->m_requestException.what()) {
+            throw m_conn->m_requestException;
+        }
+        m_inFlight = true;
+    }
+
+    try {
+        // Do the request
+        std::ostringstream os;
+        os << m_request;
+        std::string str = os.str();
+        m_conn->m_stream->write(str.c_str(), str.size());
+
+        if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID)) {
+            m_conn->scheduleNextRequest(shared_from_this());
+        }
+    } catch(...) {
+        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        m_conn->invariant();
+        m_conn->m_requestException = std::runtime_error("No more requests are possible because a prior request failed");
+        m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
+        m_conn->scheduleAllWaitingRequests();        
+        throw;
     }
 }
 
