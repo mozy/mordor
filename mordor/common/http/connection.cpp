@@ -4,6 +4,7 @@
 
 #include "chunked.h"
 #include "common/streams/buffered.h"
+#include "common/streams/limited.h"
 #include "common/streams/notify.h"
 #include "common/streams/singleplex.h"
 
@@ -109,7 +110,6 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
             ChunkedStream *chunked = new ChunkedStream(stream.get());
             stream.release();
             stream.reset(chunked);
-            notifyOnClose = true;
         } else if (it->value == "deflate") {
             // TODO: ZlibStream
             assert(false);
@@ -126,21 +126,17 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
     }
     if (stream.get() != baseStream) {
     } else if (entity.contentLength != ~0) {
-        // TODO: LimitedStream
-        NotifyStream *notify = new NotifyStream(stream.get());
+        LimitedStream *limited = new LimitedStream(stream.get(), entity.contentLength);
         stream.release();
-        stream.reset(notify);
+        stream.reset(limited);
     // TODO: } else if (entity.contentType.major == "multipart") {
     } else {
         // Delimited by closing the connection
-        assert(general.connection.find("close") != general.connection.end());
-        notifyOnClose = true;
     }
     NotifyStream *notify = new NotifyStream(stream.get());
     stream.release();
     stream.reset(notify);
-    if (notifyOnClose)
-        notify->notifyOnClose = notifyOnEof;
+    notify->notifyOnClose = notifyOnEof;
     notify->notifyOnEof = notifyOnEof;
     notify->notifyOnException = notifyOnException;
     return stream.release();

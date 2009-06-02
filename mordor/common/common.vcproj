@@ -374,6 +374,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\limited.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\null.cpp"
 				>
 			</File>
@@ -391,6 +395,10 @@
 			</File>
 			<File
 				RelativePath=".\semaphore.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
 				>
 			</File>
 			<File
@@ -428,10 +436,6 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\socket.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\streams\std.cpp"
@@ -513,6 +517,10 @@
 			</File>
 			<File
 				RelativePath=".\iomanager_iocp.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\limited.h"
 				>
 			</File>
 			<File

@@ -54,7 +54,7 @@ namespace HTTP
         Request m_request;
         Response m_response;
         EntityHeaders m_requestTrailer, m_responseTrailer;
-        bool m_requestDone, m_hasResponse, m_hasTrailer, m_responseDone, m_inFlight, m_cancelled, m_aborted;
+        bool m_requestDone, m_responseDone, m_inFlight, m_cancelled, m_aborted;
         Stream *m_requestStream, *m_responseStream;
     };
 

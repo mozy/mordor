@@ -207,8 +207,6 @@ HTTP::ClientRequest::ClientRequest(ClientConnection *conn, const Request &reques
 : m_conn(conn),
   m_request(request),
   m_requestDone(false),
-  m_hasResponse(false),
-  m_hasTrailer(false),
   m_responseDone(false),
   m_inFlight(false),
   m_cancelled(false),
@@ -275,7 +273,6 @@ HTTP::ClientRequest::responseStream()
 const HTTP::EntityHeaders &
 HTTP::ClientRequest::responseTrailer() const
 {
-    assert(m_hasTrailer);
     return m_responseTrailer;
 }
 
@@ -459,9 +456,10 @@ HTTP::ClientRequest::doRequest()
 void
 HTTP::ClientRequest::ensureResponse()
 {
-    if (m_hasResponse)
+    assert(m_requestDone);
+    assert(!m_inFlight);
+    if (m_responseDone)
         return;
-    m_hasResponse = true;
     bool wait = false;
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
@@ -477,7 +475,8 @@ HTTP::ClientRequest::ensureResponse()
         assert(!m_conn->m_pendingRequests.empty());
         ClientRequest::ptr request = m_conn->m_pendingRequests.front();
         if (request.get() != this) {
-            m_conn->m_waitingResponses.insert(shared_from_this());
+            bool inserted = m_conn->m_waitingResponses.insert(shared_from_this()).second;
+            assert(inserted);
             wait = true;
         } else {
             m_inFlight = true;
@@ -550,6 +549,15 @@ HTTP::ClientRequest::ensureResponse()
             }
         }
 
+        // If the there is a message body, but it's undelimited, make sure we're
+        // closing the connection
+        // TODO: also check for multipart
+        if (Connection::hasMessageBody(m_response.general, m_response.entity,
+            m_request.requestLine.method, m_response.status.status) &&
+            transferEncoding.empty() && m_response.entity.contentLength == ~0) {
+            close = true;
+        }
+
         if (close) {
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
@@ -558,7 +566,7 @@ HTTP::ClientRequest::ensureResponse()
             m_conn->scheduleAllWaitingResponses();
         }
 
-        if (!m_conn->hasMessageBody(m_response.general, m_response.entity,
+        if (!Connection::hasMessageBody(m_response.general, m_response.entity,
             m_request.requestLine.method, m_response.status.status)) {
             m_responseDone = true;
             if (close) {
@@ -603,7 +611,6 @@ HTTP::ClientRequest::responseDone()
             throw std::runtime_error("Error parsing trailer");
         }
         assert(parser.complete());
-        m_hasTrailer = true;
     }
     m_conn->scheduleNextResponse(shared_from_this());
 }
