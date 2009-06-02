@@ -233,8 +233,8 @@ unquote(char *p, char *pe)
         m_parameterizedList = &m_general->transferEncoding;
     }
 
-    Connection = 'Connection:' @set_connection list;
-    Transfer_Encoding = 'Transfer-Encoding:' @set_transfer_encoding parameterizedList;
+    Connection = 'Connection:'i @set_connection list;
+    Transfer_Encoding = 'Transfer-Encoding:'i @set_transfer_encoding parameterizedList;
     
     general_header = Connection | Transfer_Encoding;
     
@@ -242,8 +242,6 @@ unquote(char *p, char *pe)
         m_headerHandled = true;
         m_ulong = &m_entity->contentLength;
     }
-    
-    Content_Length = 'Content-Length:' @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
     
     action set_content_type
     {
@@ -260,11 +258,13 @@ unquote(char *p, char *pe)
 		m_entity->contentType.subtype = std::string(mark, fpc - mark);
 		mark = NULL;
     }
-    
+
     type = token >mark %save_type;
     subtype = token >mark %save_subtype;
     media_type = type'/' subtype (';' parameter)*;
-    Content_Type = 'Content-Type:' @set_content_type LWS* media_type LWS*;
+    
+    Content_Length = 'Content-Length:'i @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
+    Content_Type = 'Content-Type:'i @set_content_type LWS* media_type LWS*;
     
     extension_header = message_header;
 
@@ -287,7 +287,7 @@ unquote(char *p, char *pe)
         m_string = &m_request->request.host;
     }
 
-    Host = 'Host:' @set_host LWS* host (':' port)? >mark %save_string LWS*;
+    Host = 'Host:'i @set_host LWS* host (':' port)? >mark %save_string LWS*;
     
     request_header = Host;
 
@@ -353,7 +353,7 @@ HTTP::RequestParser::exec()
         m_headerHandled = true;
     }
     
-    Location = 'Location:' @set_location LWS* absolute_URI LWS*;
+    Location = 'Location:'i @set_location LWS* absolute_URI LWS*;
     
     response_header = Location;
 
