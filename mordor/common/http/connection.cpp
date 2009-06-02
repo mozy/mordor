@@ -129,7 +129,8 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
         LimitedStream *limited = new LimitedStream(stream.get(), entity.contentLength);
         stream.release();
         stream.reset(limited);
-    // TODO: } else if (entity.contentType.major == "multipart") {
+    } else if (entity.contentType.type == "multipart") {
+        // Getting stream to pass to multipart; self-delimiting
     } else {
         // Delimited by closing the connection
     }

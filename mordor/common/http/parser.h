@@ -14,6 +14,7 @@ namespace HTTP
         std::string *m_string;
         StringSet *m_list;
         ParameterizedList *m_parameterizedList;
+        StringMap *m_parameters;
         unsigned long long *m_ulong;
 
         // Temp storage

@@ -222,6 +222,7 @@ HTTP::ClientRequest::ClientRequest(ClientConnection *conn, const Request &reques
 Stream *
 HTTP::ClientRequest::requestStream()
 {
+    assert(m_request.entity.contentType.type != "multipart");
     if (m_requestStream)
         return m_requestStream;
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
@@ -249,9 +250,10 @@ HTTP::ClientRequest::response()
 bool
 HTTP::ClientRequest::hasResponseBody()
 {
+    ensureResponse();
+    assert(m_response.entity.contentType.type != "multipart");
     if (m_responseStream)
         return true;
-    ensureResponse();
     return Connection::hasMessageBody(m_response.general,
         m_response.entity,
         m_request.requestLine.method,
@@ -552,10 +554,10 @@ HTTP::ClientRequest::ensureResponse()
 
         // If the there is a message body, but it's undelimited, make sure we're
         // closing the connection
-        // TODO: also check for multipart
         if (Connection::hasMessageBody(m_response.general, m_response.entity,
             m_request.requestLine.method, m_response.status.status) &&
-            transferEncoding.empty() && m_response.entity.contentLength == ~0) {
+            transferEncoding.empty() && m_response.entity.contentLength == ~0 &&
+            m_response.entity.contentType.type != "multipart") {
             close = true;
         }
 

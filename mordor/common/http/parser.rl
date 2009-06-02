@@ -177,22 +177,23 @@ unfold(char *p, char *pe)
         ValueWithParameters vp;
         vp.value = std::string(mark, fpc - mark);
         m_parameterizedList->push_back(vp);
+        m_parameters = &m_parameterizedList->back().parameters;
         mark = NULL;
     }
     
-    action save_parameterized_list_attribute {
+    action save_parameter_attribute {
         m_temp1 = std::string(mark, fpc - mark);
         mark = NULL;
     }
     
-    action save_parameterized_list_value {
-        m_parameterizedList->back().parameters[m_temp1] = std::string(mark, fpc - mark);
+    action save_parameter_value {
+        (*m_parameters)[m_temp1] = std::string(mark, fpc - mark);
         mark = NULL;
     }
     
-    attribute = token;
-    value = token | quoted_string;
-    parameter = attribute >mark %save_parameterized_list_attribute '=' value >mark %save_parameterized_list_value;
+    attribute = token >mark %save_parameter_attribute;
+    value = token | quoted_string >mark %save_parameter_value;
+    parameter = attribute '=' value;
     parameterizedListElement = token >mark %save_parameterized_list_element (';' parameter)*;
     parameterizedList = LWS* parameterizedListElement ( LWS* ',' LWS* parameterizedListElement)* LWS*;
     
@@ -218,9 +219,30 @@ unfold(char *p, char *pe)
     
     Content_Length = 'Content-Length:' @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
     
+    action set_content_type
+    {
+		m_headerHandled = true;
+		m_parameters = &m_entity->contentType.parameters;
+    }
+    action save_type
+    {
+		m_entity->contentType.type = std::string(mark, fpc - mark);
+		mark = NULL;
+    }
+    action save_subtype
+    {
+		m_entity->contentType.subtype = std::string(mark, fpc - mark);
+		mark = NULL;
+    }
+    
+    type = token >mark %save_type;
+    subtype = token >mark %save_subtype;
+    media_type = type'/' subtype (';' parameter)*;
+    Content_Type = 'Content-Type:' @set_content_type LWS* media_type LWS*;
+    
     extension_header = message_header;
 
-    entity_header = Content_Length | extension_header;
+    entity_header = Content_Length | Content_Type | extension_header;
 
 }%%
 

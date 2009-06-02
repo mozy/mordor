@@ -113,6 +113,12 @@ namespace HTTP
 
     typedef std::vector<ValueWithParameters> ParameterizedList;
 
+    struct MediaType
+    {
+        std::string type;
+        std::string subtype;
+        StringMap parameters;
+    };
 
     struct RequestLine
     {
@@ -153,6 +159,7 @@ namespace HTTP
         EntityHeaders() : contentLength(~0) {}
 
         unsigned long long contentLength;
+        MediaType contentType;
         StringMap extension;
     };
 
@@ -180,13 +187,16 @@ namespace HTTP
 std::ostream& operator<<(std::ostream& os, HTTP::Method m);
 std::ostream& operator<<(std::ostream& os, HTTP::Status s);
 std::ostream& operator<<(std::ostream& os, HTTP::Version v);
-std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine& r);
-std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine& s);
-std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders& g);
-std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders& r);
-std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders& r);
-std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders& e);
-std::ostream& operator<<(std::ostream& os, const HTTP::Request& r);
-std::ostream& operator<<(std::ostream& os, const HTTP::Response& r);
+std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v);
+std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l);
+std::ostream& operator<<(std::ostream& os, const HTTP::MediaType &m);
+std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r);
+std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine &s);
+std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g);
+std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r);
+std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r);
+std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e);
+std::ostream& operator<<(std::ostream& os, const HTTP::Request &r);
+std::ostream& operator<<(std::ostream& os, const HTTP::Response &r);
 
 #endif

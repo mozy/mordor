@@ -43,6 +43,16 @@ static std::ostream& operator<<(std::ostream& os, const HTTP::StringSet& set)
     return os;
 }
 
+static std::ostream& operator<<(std::ostream& os, const HTTP::StringMap& map)
+{
+    for (HTTP::StringMap::const_iterator it(map.begin());
+        it != map.end();
+        ++it) {
+        os << ";" << it->first << "=" << quote(it->second);
+    }
+    return os;
+}
+
 const char *HTTP::methods[] = {
     "GET",
     "HEAD",
@@ -66,58 +76,71 @@ std::ostream& operator<<(std::ostream& os, HTTP::Version v)
     return os << "HTTP/" << (int)v.major << "." << (int)v.minor;    
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine& r)
+std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v)
+{
+    assert(!v.value.empty());
+    return os << v.value << v.parameters;
+}
+
+std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l)
+{
+    for (HTTP::ParameterizedList::const_iterator it(l.begin());
+        it != l.end();
+        ++it) {
+        if (it != l.begin())
+            os << ", ";
+        os << it->value << it->parameters;
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const HTTP::MediaType &m)
+{
+    assert(!m.type.empty());
+    assert(!m.subtype.empty());
+    return os << m.type << "/" << m.subtype << m.parameters;
+}
+
+std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r)
 {
     return os << r.method << " " << r.uri << " " << r.ver;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine& s)
+std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine &s)
 {
     assert(!s.reason.empty());
     return os << s.ver << " " << (int)s.status << " " << s.reason;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders& g)
+std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)
 {
     if (!g.connection.empty())
         os << "Connection: " << g.connection << "\r\n";
-    if (!g.transferEncoding.empty()) {
-        os << "Transfer-Encoding: ";
-        for (HTTP::ParameterizedList::const_iterator it(g.transferEncoding.begin());
-            it != g.transferEncoding.end();
-            ++it) {
-            if (it != g.transferEncoding.begin())
-                os << ", ";
-            os << it->value;
-            for (HTTP::StringMap::const_iterator it2(it->parameters.begin());
-                it2 != it->parameters.end();
-                ++it2) {
-                os << ":" << it2->first << "=" << quote(it2->second);
-            }
-        }
-        os << "\r\n";
-    }
+    if (!g.transferEncoding.empty())
+        os << "Transfer-Encoding: " << g.transferEncoding << "\r\n";
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders& r)
+std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
 {
     if (!r.host.empty())
         os << "Host: " << r.host << "\r\n";
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders& r)
+std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
 {
     if (r.location.isDefined())
         os << "Location: " << r.location << "\r\n";
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders& e)
+std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e)
 {
     if (e.contentLength != ~0)
         os << "Content-Length: " << e.contentLength << "\r\n";
+    if (!e.contentType.type.empty() && !e.contentType.subtype.empty())
+        os << "Content-Type: " << e.contentType << "\r\n";
     for (HTTP::StringMap::const_iterator it(e.extension.begin());
         it != e.extension.end();
         ++it) {
@@ -126,7 +149,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders& e)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::Request& r)
+std::ostream& operator<<(std::ostream& os, const HTTP::Request &r)
 {
     return os << r.requestLine << "\r\n"
         << r.general
@@ -134,7 +157,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::Request& r)
         << r.entity << "\r\n";
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::Response& r)
+std::ostream& operator<<(std::ostream& os, const HTTP::Response &r)
 {
     return os << r.status << "\r\n"
         << r.general
