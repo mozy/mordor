@@ -45,7 +45,11 @@ void main(int argc, const char *argv[])
         requestHeaders.request.host = uri.authority.host();
         HTTP::ClientRequest::ptr request = conn.request(requestHeaders);
         std::auto_ptr<Stream> responseStream(request->responseStream());
-        transferStream(responseStream.get(), &stdoutStream);
+        try {
+           transferStream(responseStream.get(), &stdoutStream);
+        } catch(...) {
+            request->cancel();
+        }
     } catch (std::exception& ex) {
         std::cerr << "Caught " << typeid(ex).name( ) << ": "
                   << ex.what( ) << std::endl;

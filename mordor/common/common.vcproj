@@ -374,6 +374,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\null.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\parser.cpp"
 				>
 			</File>
@@ -513,6 +517,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\notify.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\null.h"
 				>
 			</File>
 			<File

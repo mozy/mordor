@@ -34,11 +34,11 @@ public:
     virtual bool supportsFindDelimited() { return false; }
 
     virtual void close(CloseType type = BOTH) {}
-    virtual size_t read(Buffer *b, size_t len) { assert(false); return 0; }
-    virtual size_t write(const Buffer *b, size_t len) { assert(false); return 0; }
-    virtual long long seek(long long offset, Anchor anchor) { assert(false); return 0ll; }
-    virtual long long size() { assert(false); return 0ll; }
-    virtual void truncate(long long size) { assert(false); }
+    virtual size_t read(Buffer *b, size_t len) { assert(supportsRead()); return 0; }
+    virtual size_t write(const Buffer *b, size_t len) { assert(supportsWrite()); return len; }
+    virtual long long seek(long long offset, Anchor anchor) { assert(supportsSeek()); return 0ll; }
+    virtual long long size() { assert(supportsSize()); return 0ll; }
+    virtual void truncate(long long size) { assert(supportsTruncate()); }
     virtual void flush() {}
     virtual size_t findDelimited(char delim) { assert(false); return 0; }
 

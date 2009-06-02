@@ -15,22 +15,45 @@ public:
 
     boost::function<void ()> notifyOnClose;
     boost::function<void ()> notifyOnEof;
+    boost::function<void ()> notifyOnException;
 
     void close(CloseType type = BOTH)
     {
-        FilterStream::close(type);
-        if (notifyOnClose) {
-            notifyOnClose();
+        try {
+            FilterStream::close(type);
+        } catch (...) {
+            if (notifyOnException)
+                notifyOnException();
+            throw;
         }
+        if (notifyOnClose)
+            notifyOnClose();
     }
 
     size_t read(Buffer *b, size_t len)
     {
-        size_t result = FilterStream::read(b, len);
-        if (result == 0 && notifyOnEof) {
-            notifyOnEof();
+        size_t result;
+        try {
+            result = FilterStream::read(b, len);
+        } catch(...) {
+            if (notifyOnException)
+                notifyOnException();
+            throw;
         }
+        if (result == 0 && notifyOnEof)
+            notifyOnEof();
         return result;
+    }
+
+    size_t write(const Buffer *b, size_t len)
+    {
+        try {
+            return FilterStream::write(b, len);
+        } catch(...) {
+            if (notifyOnException)
+                notifyOnException();
+            throw;
+        }
     }
 };
 

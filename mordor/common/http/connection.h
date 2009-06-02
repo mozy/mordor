@@ -26,6 +26,7 @@ namespace HTTP
             Method method,
             Status status,
             boost::function<void ()> notifyOnEof,
+            boost::function<void ()> notifyOnException,
             bool forRead);
 
     protected:

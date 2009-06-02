@@ -26,6 +26,15 @@ public:
     bool supportsTruncate() { return m_type == WRITE && FilterStream::supportsTruncate(); }
     bool supportsFindDelimited() { return m_type == READ && FilterStream::supportsFindDelimited(); }
 
+    void close(CloseType type = BOTH)
+    {
+        if (m_type == READ && type & Stream::READ) {
+            FilterStream::close(Stream::READ);
+        } else if (m_type == WRITE && type & Stream::WRITE) {
+            FilterStream::close(Stream::WRITE);
+        }
+    }
+
     size_t read(Buffer *b, size_t len)
     {
         assert(m_type == READ);

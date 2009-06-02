@@ -90,6 +90,7 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
                             Method method,
                             Status status,
                             boost::function<void()> notifyOnEof,
+                            boost::function<void()> notifyOnException,
                             bool forRead)
 {
     assert(hasMessageBody(general, entity, method, status));
@@ -100,6 +101,7 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
         stream.reset(new SingleplexStream(m_stream, SingleplexStream::WRITE, false));
     }
     Stream *baseStream = stream.get();
+    bool notifyOnClose = false;
     for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
         it != general.transferEncoding.end();
         ++it) {
@@ -107,11 +109,7 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
             ChunkedStream *chunked = new ChunkedStream(stream.get());
             stream.release();
             stream.reset(chunked);
-            NotifyStream *notify = new NotifyStream(stream.get());
-            stream.release();
-            stream.reset(notify);
-            notify->notifyOnClose = notifyOnEof;
-            notify->notifyOnEof = notifyOnEof;
+            notifyOnClose = true;
         } else if (it->value == "deflate") {
             // TODO: ZlibStream
             assert(false);
@@ -127,20 +125,23 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
         }
     }
     if (stream.get() != baseStream) {
-        return stream.release();
     } else if (entity.contentLength != ~0) {
         // TODO: LimitedStream
         NotifyStream *notify = new NotifyStream(stream.get());
         stream.release();
         stream.reset(notify);
-        notify->notifyOnClose = notifyOnEof;
-        notify->notifyOnEof = notifyOnEof;
-        return stream.release();
-    // TODO: } else if (entity.contentType.major == "multipart") { return stream.release();
+    // TODO: } else if (entity.contentType.major == "multipart") {
     } else {
         // Delimited by closing the connection
         assert(general.connection.find("close") != general.connection.end());
-        // TODO: NotifyStream on EOF
-        return stream.release();
+        notifyOnClose = true;
     }
+    NotifyStream *notify = new NotifyStream(stream.get());
+    stream.release();
+    stream.reset(notify);
+    if (notifyOnClose)
+        notify->notifyOnClose = notifyOnEof;
+    notify->notifyOnEof = notifyOnEof;
+    notify->notifyOnException = notifyOnException;
+    return stream.release();
 }
