@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioToolFile
+	Name="Ragel Finite State Machine Generator"
+	Version="8.00"
+	>
+	<Rules>
+		<CustomBuildRule
+			Name="Ragel"
+			CommandLine="ragel.exe [AllOptions] [AdditionalOptions] --error-format=msvc [inputs]"
+			Outputs="[$OutputFileName]"
+			FileExtensions="*.rl"
+      ExecutionDescription="Generating finite state machines: [inputs]"
+			>
+			<Properties>
+        <StringProperty
+					Name="OutputFileName"
+					DisplayName="Output File Name"
+					PropertyPageName="Output File"
+					Description="Write output to &lt;file&gt;     (-o &lt;file&gt;)"
+					Switch="-o &quot;[value]&quot;"
+					DefaultValue="$(InputName).cpp"
+				/>
+        <BooleanProperty
+					Name="NoDuplicates"
+					DisplayName="No Duplicate Removal"
+					Description="Do not remove duplicates from action lists     (-d)"
+					Switch="-d"
+					DefaultValue="false"
+				/>
+        <StringProperty
+					Name="IncludePaths"
+					DisplayName="Include Paths"
+					Description="Add &lt;dir&gt; to the list of directories to search for included and imported files     (-I [path])"
+					Switch="-I &quot;[value]&quot;"
+					Delimited="true"
+					Inheritable="true"
+				/>
+        <EnumProperty
+          Name="Minimization"
+          DisplayName="FSM Minimization"
+          Description="Specifies when to perform fsm minimization    (-n, -m, -l, e)"
+          >
+          <Values>
+            <EnumValue
+              Value="1"
+              Switch="-n"
+              DisplayName="Do not perform minimization (-n)"
+            />
+            <EnumValue
+              Value="2"
+              Switch="-m"
+              DisplayName="Minimize at the end of the compilation (-m)"
+            />
+            <EnumValue
+              Value="0"
+              Switch="-l"
+              DisplayName="Minimize after most operations (-l)"
+            />
+            <EnumValue
+              Value="3"
+              Switch="-e"
+              DisplayName="Minimize after every operation (-e)"
+            />
+          </Values>
+        </EnumProperty>
+        <BooleanProperty
+					Name="XML"
+					DisplayName="Emit XML"
+					Description="Run the frontend only: emit XML intermediate format     (-x)"
+					Switch="-x"
+					DefaultValue="false"
+          PropertyPageName="Visualization"
+				/>
+        <BooleanProperty
+					Name="Graphviz"
+					DisplayName="Generate Graphviz"
+					Description="Generate a dot file for Graphviz     (-V)"
+					Switch="-V"
+					DefaultValue="false"
+          PropertyPageName="Visualization"
+				/>
+        <BooleanProperty
+					Name="PrintableCharacters"
+					DisplayName="Display printable characters"
+					Description="Display printable characters on labels     (-p)"
+					Switch="-p"
+					DefaultValue="false"
+          PropertyPageName="Visualization"
+				/>
+        <StringProperty
+          Name="Spec"
+          DisplayName="Spec"
+          Description="FSM specification to output (for graphviz output)    (-S &lt;spec&gt;)"
+          Switch="-S [value]"
+          PropertyPageName="Visualization"
+        />
+        <StringProperty
+          Name="Machine"
+          DisplayName="Machine"
+          Description="Machine definition/instantiation to output (for graphviz output)    (-M &lt;spec&gt;)"
+          Switch="-M [value]"
+          PropertyPageName="Visualization"
+        />
+        <EnumProperty
+          Name="Host"
+          DisplayName="Host Language"
+          PropertyPageName="Code Generation"
+          >
+          <Values>
+            <EnumValue
+              Value="0"
+              Switch="-C"
+              DisplayName="C, C++, Obj-C or Obj-C++ (-C)"
+            />
+            <EnumValue
+              Value="1"
+              Switch="-D"
+              DisplayName="D (-D)"
+            />
+            <EnumValue
+              Value="2"
+              Switch="-J"
+              DisplayName="Java (-J)"
+            />
+            <EnumValue
+              Value="3"
+              Switch="-R"
+              DisplayName="Ruby (-R)"
+            />
+            <EnumValue
+              Value="4"
+              Switch="-A"
+              DisplayName="C# (-A)"
+            />
+          </Values>
+        </EnumProperty>
+        <BooleanProperty
+					Name="InhibitLineDirectives"
+					DisplayName="Inhibit line directives"
+					Description="Inhibit the writing of #line directives (C/D/C#)    (-L)"
+					Switch="-L"
+					DefaultValue="false"
+          PropertyPageName="Code Generation"
+				/>
+        <EnumProperty
+          Name="CodeStyle"
+          DisplayName="code style"
+          PropertyPageName="Code Generation"
+          >
+          <Values>
+            <EnumValue
+              Value="0"
+              Switch="-T0"
+              DisplayName="Table driven FSM (C/D/Java/Ruby/C#) (-T0)"
+            />
+            <EnumValue
+              Value="1"
+              Switch="-T1"
+              DisplayName="Faster table driven FSM (C/D/Ruby/C#) (-T1)"
+            />
+            <EnumValue
+              Value="2"
+              Switch="-F0"
+              DisplayName="Flat table driven FSM (C/D/Ruby/C#) (-F0)"
+            />
+            <EnumValue
+              Value="3"
+              Switch="-F1"
+              DisplayName="Faster flat table driven FSM (C/D/Ruby/C#) (-F1)"
+            />
+            <EnumValue
+              Value="4"
+              Switch="-G0"
+              DisplayName="Goto driven FSM (C/D/C#) (-G0)"
+            />
+            <EnumValue
+              Value="5"
+              Switch="-G1"
+              DisplayName="Faster goto driven FSM (C/D/C#) (-G1)"
+            />
+            <EnumValue
+              Value="6"
+              Switch="-G2"
+              DisplayName="Really fast goto driven FSM (C/D) (-G2)"
+            />
+            <EnumValue
+              Value="7"
+              Switch="-P[$NWaySplit]"
+              DisplayName="N-Way Split really fast goto driven FSM (C/D) (-P&lt;N&gt;)"
+            />
+          </Values>
+        </EnumProperty>
+        <IntegerProperty
+          Name="NWaySplit"
+          DisplayName="N"
+          Description="N for N-Way Split really fast goto driven FSM"
+          PropertyPageName="Code Generation"
+        />
+			</Properties>
+		</CustomBuildRule>
+	</Rules>
+</VisualStudioToolFile>

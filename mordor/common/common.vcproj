@@ -19,6 +19,9 @@
 		<ToolFile
 			RelativePath=".\masm64.rules"
 		/>
+		<ToolFile
+			RelativePath=".\ragel.rules"
+		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
@@ -32,10 +35,13 @@
 				Name="VCPreBuildEventTool"
 			/>
 			<Tool
+				Name="MASM"
+			/>
+			<Tool
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="MASM"
+				Name="Ragel"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -96,10 +102,13 @@
 				Name="VCPreBuildEventTool"
 			/>
 			<Tool
+				Name="MASM"
+			/>
+			<Tool
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="MASM"
+				Name="Ragel"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -162,10 +171,13 @@
 				Name="VCPreBuildEventTool"
 			/>
 			<Tool
+				Name="MASM"
+			/>
+			<Tool
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="MASM"
+				Name="Ragel"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -227,10 +239,13 @@
 				Name="VCPreBuildEventTool"
 			/>
 			<Tool
+				Name="MASM"
+			/>
+			<Tool
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="MASM"
+				Name="Ragel"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -552,44 +567,34 @@
 				Name="Debug|Win32"
 				>
 				<Tool
-					Name="VCCustomBuildTool"
-					Description="$(InputFileName)"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
-					AdditionalDependencies=""
-					Outputs="$(InputName).cpp"
+					Name="Ragel"
+					OutputFileName="http\$(InputName).cpp"
 				/>
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Debug|x64"
 				>
 				<Tool
-					Name="VCCustomBuildTool"
-					Description="$(InputFileName)"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
-					AdditionalDependencies=""
-					Outputs="$(InputName).cpp"
+					Name="Ragel"
+					OutputFileName="http\$(InputName).cpp"
 				/>
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Release|Win32"
 				>
 				<Tool
-					Name="VCCustomBuildTool"
-					Description="$(InputFileName)"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
-					AdditionalDependencies=""
-					Outputs="$(InputName).cpp"
+					Name="Ragel"
+					OutputFileName="http\$(InputName).cpp"
+					CodeStyle="6"
 				/>
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Release|x64"
 				>
 				<Tool
-					Name="VCCustomBuildTool"
-					Description="$(InputFileName)"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
-					AdditionalDependencies=""
-					Outputs="$(InputName).cpp"
+					Name="Ragel"
+					OutputFileName="http\$(InputName).cpp"
+					CodeStyle="6"
 				/>
 			</FileConfiguration>
 		</File>
@@ -597,43 +602,19 @@
 			RelativePath=".\uri.rl"
 			>
 			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-					Description="$(InputFileName)"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
-					Outputs="$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug|x64"
-				>
-				<Tool
-					Name="VCCustomBuildTool"
-					Description="$(InputFileName)"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
-					Outputs="$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
 				Name="Release|Win32"
 				>
 				<Tool
-					Name="VCCustomBuildTool"
-					Description="$(InputFileName)"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
-					Outputs="$(InputName).cpp"
+					Name="Ragel"
+					CodeStyle="6"
 				/>
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Release|x64"
 				>
 				<Tool
-					Name="VCCustomBuildTool"
-					Description="$(InputFileName)"
-					CommandLine="$(SolutionDir)ragel.exe &quot;$(InputDir)$(InputFileName)&quot; -G2 -o &quot;$(InputDir)$(InputName).cpp&quot; --error-format=msvc"
-					Outputs="$(InputName).cpp"
+					Name="Ragel"
+					CodeStyle="6"
 				/>
 			</FileConfiguration>
 		</File>
