@@ -532,11 +532,15 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\streams\singleplex.h"
 				>
 			</File>
 			<File
 				RelativePath=".\socket.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File

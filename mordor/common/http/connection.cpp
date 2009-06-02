@@ -5,6 +5,7 @@
 #include "chunked.h"
 #include "common/streams/buffered.h"
 #include "common/streams/notify.h"
+#include "common/streams/singleplex.h"
 
 HTTP::Connection::Connection(Stream *stream, bool own)
 : m_stream(stream),
@@ -94,11 +95,9 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
     assert(hasMessageBody(general, entity, method, status));
     std::auto_ptr<Stream> stream;
     if (forRead) {
-        stream.reset(new FilterStream(m_stream, false));
-        // TODO: singleplex it
+        stream.reset(new SingleplexStream(m_stream, SingleplexStream::READ, false));
     } else {
-        stream.reset(new FilterStream(m_stream, false));
-        // TODO: singleplex it
+        stream.reset(new SingleplexStream(m_stream, SingleplexStream::WRITE, false));
     }
     Stream *baseStream = stream.get();
     for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
