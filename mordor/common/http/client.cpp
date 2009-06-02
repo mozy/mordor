@@ -207,6 +207,7 @@ HTTP::ClientRequest::ClientRequest(ClientConnection *conn, const Request &reques
 : m_conn(conn),
   m_request(request),
   m_requestDone(false),
+  m_responseHeadersDone(false),
   m_responseDone(false),
   m_inFlight(false),
   m_cancelled(false),
@@ -457,9 +458,9 @@ void
 HTTP::ClientRequest::ensureResponse()
 {
     assert(m_requestDone);
-    assert(!m_inFlight);
-    if (m_responseDone)
+    if (m_responseHeadersDone)
         return;
+    assert(!m_inFlight);
     bool wait = false;
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
@@ -565,6 +566,7 @@ HTTP::ClientRequest::ensureResponse()
             m_conn->scheduleAllWaitingRequests();
             m_conn->scheduleAllWaitingResponses();
         }
+        m_responseHeadersDone = true;
 
         if (!Connection::hasMessageBody(m_response.general, m_response.entity,
             m_request.requestLine.method, m_response.status.status)) {
