@@ -2,7 +2,7 @@
 
 #include "limited.h"
 
-LimitedStream::LimitedStream(Stream *parent, long long size, bool own)
+LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
 : FilterStream(parent, own),
   m_pos(0),
   m_size(size)

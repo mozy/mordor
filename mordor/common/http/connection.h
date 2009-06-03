@@ -4,24 +4,22 @@
 
 #include <boost/function.hpp>
 
+#include "common/streams/stream.h"
 #include "http.h"
-
-class Stream;
 
 namespace HTTP
 {
     class Connection
     {
     protected:
-        Connection(Stream *stream, bool own = true);
-        virtual ~Connection();
+        Connection(Stream::ptr stream);
 
         static bool hasMessageBody(const GeneralHeaders &general,
             const EntityHeaders &entity,
             Method method,
             Status status);
 
-        Stream *getStream(const GeneralHeaders &general,
+        Stream::ptr getStream(const GeneralHeaders &general,
             const EntityHeaders &entity,
             Method method,
             Status status,
@@ -30,8 +28,7 @@ namespace HTTP
             bool forRead);
 
     protected:
-        Stream *m_stream;
-        bool m_own;
+        Stream::ptr m_stream;
     };
 };
 

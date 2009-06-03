@@ -8,32 +8,16 @@
 #include "common/streams/notify.h"
 #include "common/streams/singleplex.h"
 
-HTTP::Connection::Connection(Stream *stream, bool own)
-: m_stream(stream),
-  m_own(own)
+HTTP::Connection::Connection(Stream::ptr stream)
+: m_stream(stream)
 {
     assert(stream);
     assert(stream->supportsRead());
     assert(stream->supportsWrite());
     if (!stream->supportsFindDelimited()) {
-        try {
-            BufferedStream *buffered = new BufferedStream(stream, own);
-            buffered->allowPartialReads(true);
-            m_stream = buffered;
-            m_own = true;
-        } catch (...) {
-            if (own) {
-                delete stream;
-            }
-            throw;
-        }
-    }
-}
-
-HTTP::Connection::~Connection()
-{
-    if (m_own) {
-        delete m_stream;
+        BufferedStream *buffered = new BufferedStream(stream);
+        buffered->allowPartialReads(true);
+        m_stream.reset(buffered);
     }
 }
 
@@ -85,7 +69,7 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
     }
 }
 
-Stream *
+Stream::ptr
 HTTP::Connection::getStream(const GeneralHeaders &general,
                             const EntityHeaders &entity,
                             Method method,
@@ -95,20 +79,19 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
                             bool forRead)
 {
     assert(hasMessageBody(general, entity, method, status));
-    std::auto_ptr<Stream> stream;
+    Stream::ptr stream;
     if (forRead) {
         stream.reset(new SingleplexStream(m_stream, SingleplexStream::READ, false));
     } else {
         stream.reset(new SingleplexStream(m_stream, SingleplexStream::WRITE, false));
     }
-    Stream *baseStream = stream.get();
+    Stream::ptr baseStream(stream);
     bool notifyOnClose = false;
     for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
         it != general.transferEncoding.end();
         ++it) {
         if (it->value == "chunked") {
-            ChunkedStream *chunked = new ChunkedStream(stream.get());
-            stream.release();
+            ChunkedStream *chunked = new ChunkedStream(stream);
             stream.reset(chunked);
         } else if (it->value == "deflate") {
             // TODO: ZlibStream
@@ -124,21 +107,18 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
             assert(false);
         }
     }
-    if (stream.get() != baseStream) {
+    if (stream != baseStream) {
     } else if (entity.contentLength != ~0) {
-        LimitedStream *limited = new LimitedStream(stream.get(), entity.contentLength);
-        stream.release();
-        stream.reset(limited);
+        stream.reset(new LimitedStream(stream, entity.contentLength));
     } else if (entity.contentType.type == "multipart") {
         // Getting stream to pass to multipart; self-delimiting
     } else {
         // Delimited by closing the connection
     }
-    NotifyStream *notify = new NotifyStream(stream.get());
-    stream.release();
+    NotifyStream *notify = new NotifyStream(stream);
     stream.reset(notify);
     notify->notifyOnClose = notifyOnEof;
     notify->notifyOnEof = notifyOnEof;
     notify->notifyOnException = notifyOnException;
-    return stream.release();
+    return stream;
 }

@@ -12,7 +12,7 @@ public:
         WRITE
     };
 
-    SingleplexStream(Stream *parent, Type type, bool own = true)
+    SingleplexStream(Stream::ptr parent, Type type, bool own = true)
         : FilterStream(parent, own),
           m_type(type)
     {

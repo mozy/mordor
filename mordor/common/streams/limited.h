@@ -7,7 +7,7 @@
 class LimitedStream : public FilterStream
 {
 public:
-    LimitedStream(Stream *parent, long long size, bool own = true);
+    LimitedStream(Stream::ptr parent, long long size, bool own = true);
 
     bool supportsSize() { return true; }
     bool supportsTruncate() { return false; }

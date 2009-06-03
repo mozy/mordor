@@ -11,6 +11,7 @@
 
 #include "connection.h"
 #include "common/fiber.h"
+#include "common/streams/stream.h"
 
 class Scheduler;
 
@@ -25,16 +26,16 @@ namespace HTTP
         typedef boost::shared_ptr<ClientRequest> ptr;
 
     private:
-        ClientRequest(ClientConnection *conn, const Request &request);
+        ClientRequest(boost::shared_ptr<ClientConnection> conn, const Request &request);
 
     public:
-        Stream *requestStream();
+        Stream::ptr requestStream();
         EntityHeaders &requestTrailer();
         // Multipart *requestMultipart();
 
         const Response &response();
         bool hasResponseBody();
-        Stream *responseStream();
+        Stream::ptr responseStream();
         // Multipart *responseMultipart();
         const EntityHeaders &responseTrailer() const;
 
@@ -48,23 +49,24 @@ namespace HTTP
         void responseDone();
 
     private:
-        ClientConnection *m_conn;
+        boost::shared_ptr<ClientConnection> m_conn;
         Scheduler *m_scheduler;
         Fiber::ptr m_fiber;
         Request m_request;
         Response m_response;
         EntityHeaders m_requestTrailer, m_responseTrailer;
         bool m_requestDone, m_responseHeadersDone, m_responseDone, m_inFlight, m_cancelled, m_aborted;
-        Stream *m_requestStream, *m_responseStream;
+        Stream::ptr m_requestStream, m_responseStream;
     };
 
-    class ClientConnection : public Connection
+    class ClientConnection : public Connection, public boost::enable_shared_from_this<ClientConnection>
     {
+    public:
+        typedef boost::shared_ptr<ClientConnection> ptr;
     private:
         friend class ClientRequest;
     public:
-        ClientConnection(Stream *stream, bool own = true);
-        ~ClientConnection();
+        ClientConnection(Stream::ptr stream);
 
         ClientRequest::ptr request(const Request &requestHeaders);
     private:

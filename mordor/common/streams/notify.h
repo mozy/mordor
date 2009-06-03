@@ -9,7 +9,7 @@
 class NotifyStream : public FilterStream
 {
 public:
-    NotifyStream(Stream *parent, bool own = true)
+    NotifyStream(Stream::ptr parent, bool own = true)
         : FilterStream(parent, own)
     {}
 

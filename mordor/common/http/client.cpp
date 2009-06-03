@@ -12,24 +12,18 @@
 #include "common/streams/transfer.h"
 #include "parser.h"
 
-HTTP::ClientConnection::ClientConnection(Stream *stream, bool own)
-: Connection(stream, own),
+HTTP::ClientConnection::ClientConnection(Stream::ptr stream)
+: Connection(stream),
   m_currentRequest(m_pendingRequests.end()),
   m_allowNewRequests(true),
   m_requestException(""),
   m_responseException("")
 {}
 
-HTTP::ClientConnection::~ClientConnection()
-{
-    assert(m_pendingRequests.empty());
-    assert(m_waitingResponses.empty());
-}
-
 HTTP::ClientRequest::ptr
 HTTP::ClientConnection::request(const Request &requestHeaders)
 {
-    ClientRequest::ptr request(new ClientRequest(this, requestHeaders));
+    ClientRequest::ptr request(new ClientRequest(shared_from_this(), requestHeaders));
     request->doRequest();
     return request;
 }
@@ -203,7 +197,7 @@ HTTP::ClientConnection::invariant() const
 }
 
 
-HTTP::ClientRequest::ClientRequest(ClientConnection *conn, const Request &request)
+HTTP::ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &request)
 : m_conn(conn),
   m_request(request),
   m_requestDone(false),
@@ -211,15 +205,13 @@ HTTP::ClientRequest::ClientRequest(ClientConnection *conn, const Request &reques
   m_responseDone(false),
   m_inFlight(false),
   m_cancelled(false),
-  m_aborted(false),
-  m_requestStream(NULL),
-  m_responseStream(NULL)
+  m_aborted(false)
 {
     m_scheduler = Scheduler::getThis();
     m_fiber = Fiber::getThis();
 }
 
-Stream *
+Stream::ptr
 HTTP::ClientRequest::requestStream()
 {
     assert(m_request.entity.contentType.type != "multipart");
@@ -261,7 +253,7 @@ HTTP::ClientRequest::hasResponseBody()
 
 }
 
-Stream *
+Stream::ptr
 HTTP::ClientRequest::responseStream()
 {
     if (m_responseStream)
@@ -318,12 +310,11 @@ HTTP::ClientRequest::finish()
     if (!m_requestDone)
         cancel(true);
     if (hasResponseBody()) {
-        std::auto_ptr<Stream> responsePtr;
         if (!m_responseStream) {
-            responsePtr.reset(responseStream());
+            m_responseStream = responseStream();
         }
         assert(m_responseStream);
-        transferStream(m_responseStream, NullStream::get());
+        transferStream(m_responseStream.get(), NullStream::get());
     }
 }
 
@@ -500,7 +491,7 @@ HTTP::ClientRequest::ensureResponse()
     try {
         // Read and parse headers
         ResponseParser parser(m_response);
-        parser.run(m_conn->m_stream);
+        parser.run(m_conn->m_stream.get());
         if (parser.error()) {
             throw std::runtime_error("Error parsing response");
         }
@@ -594,6 +585,7 @@ HTTP::ClientRequest::ensureResponse()
 void
 HTTP::ClientRequest::requestDone()
 {
+    m_requestStream.reset();
     if (!m_request.general.transferEncoding.empty()) {
         std::ostringstream os;
         os << m_requestTrailer;
@@ -606,10 +598,11 @@ HTTP::ClientRequest::requestDone()
 void
 HTTP::ClientRequest::responseDone()
 {
+    m_responseStream.reset();
     if (!m_response.general.transferEncoding.empty()) {
         // Read and parse the trailer
         TrailerParser parser(m_responseTrailer);
-        parser.run(m_conn->m_stream);
+        parser.run(m_conn->m_stream.get());
         if (parser.error()) {
             cancel(true);
             throw std::runtime_error("Error parsing trailer");

@@ -32,20 +32,19 @@ void main(int argc, const char *argv[])
         } else {
             addr->port(80);
         }
-        std::auto_ptr<Socket> s(addresses[0]->createSocket(&ioManager));
+        boost::shared_ptr<Socket> s(addresses[0]->createSocket(&ioManager));
         s->connect(addresses[0].get());
-        SocketStream *stream = new SocketStream(s.get());
-        s.release();
+        Stream::ptr stream(new SocketStream(s));
 
-        HTTP::ClientConnection conn(stream);
+        HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(stream));
         HTTP::Request requestHeaders;
         requestHeaders.requestLine.uri.path = uri.path;
         requestHeaders.general.connection.insert("close");
         requestHeaders.request.host = uri.authority.host();
-        HTTP::ClientRequest::ptr request = conn.request(requestHeaders);
-        std::auto_ptr<Stream> responseStream(request->responseStream());
+        HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+        Stream::ptr responseStream = request->responseStream();
         try {
-           transferStream(responseStream.get(), &stdoutStream);
+           transferStream(request->responseStream().get(), &stdoutStream);
         } catch(...) {
             request->cancel();
             throw;

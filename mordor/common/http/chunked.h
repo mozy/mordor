@@ -9,7 +9,7 @@ namespace HTTP
     class ChunkedStream : public MutatingFilterStream
     {
     public:
-        ChunkedStream(Stream *parent, bool owns = true);
+        ChunkedStream(Stream::ptr parent, bool own = true);
 
         void close(CloseType type = BOTH);
         size_t read(Buffer *b, size_t len);

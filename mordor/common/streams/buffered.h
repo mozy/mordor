@@ -7,7 +7,7 @@
 class BufferedStream : public FilterStream
 {
 public:
-    BufferedStream(Stream *parent, bool own = true);
+    BufferedStream(Stream::ptr parent, bool own = true);
 
     size_t bufferSize() { return m_bufferSize; }
     void bufferSize(size_t bufferSize) { m_bufferSize = bufferSize; }

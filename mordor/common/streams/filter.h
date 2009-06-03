@@ -7,17 +7,13 @@
 class FilterStream : public Stream
 {
 public:
-    FilterStream(Stream *parent, bool own = true)
+    FilterStream(Stream::ptr parent, bool own = true)
         : m_parent(parent), m_own(own)
-    {}
-    ~FilterStream()
     {
-        if (m_own) {
-            delete m_parent;
-        }
+        assert(parent);
     }
 
-    Stream *parent() { return m_parent; }
+    Stream::ptr parent() { return m_parent; }
     bool ownsParent() { return m_own; }
 
     bool supportsRead() { return m_parent->supportsRead(); }
@@ -42,18 +38,18 @@ public:
     size_t findDelimited(char delim) { return m_parent->findDelimited(delim); }
 
 protected:
-    void parent(Stream *parent) { m_parent = parent; }
+    void parent(Stream::ptr parent) { m_parent = parent; }
     void ownsParent(bool own) { m_own = own; }
 
 private:
-    Stream *m_parent;
+    Stream::ptr m_parent;
     bool m_own;
 };
 
 class MutatingFilterStream : public FilterStream
 {
 protected:
-    MutatingFilterStream(Stream *parent, bool owns = true)
+    MutatingFilterStream(Stream::ptr parent, bool owns = true)
         : FilterStream(parent, owns)
     {}
 

@@ -6,12 +6,15 @@
 #include <string>
 
 #include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include "buffer.h"
 
 class Stream : boost::noncopyable
 {
 public:
+    typedef boost::shared_ptr<Stream> ptr;
+
     enum CloseType {
         READ,
         WRITE,

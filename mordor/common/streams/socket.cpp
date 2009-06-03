@@ -6,18 +6,11 @@
 
 #include "common/socket.h"
 
-SocketStream::SocketStream(Socket *s, bool own)
+SocketStream::SocketStream(boost::shared_ptr<Socket> s, bool own)
 : m_socket(s),
   m_own(own)
 {
     assert(s);
-}
-
-SocketStream::~SocketStream()
-{
-    if (m_socket && m_own) {
-        delete m_socket;
-    }
 }
 
 void
@@ -38,12 +31,10 @@ SocketStream::close(CloseType type)
         }
         m_socket->shutdown(how);
         if (how == SHUT_RDWR) {
-            Socket *s = m_socket;
-            m_socket = NULL;
-            delete s;
+            m_socket.reset();
         }
     } else if (type == BOTH) {
-        m_socket = NULL;
+        m_socket.reset();
     }
 }
 

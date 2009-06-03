@@ -2,7 +2,7 @@
 
 #include "buffered.h"
 
-BufferedStream::BufferedStream(Stream *parent, bool own)
+BufferedStream::BufferedStream(Stream::ptr parent, bool own)
 : FilterStream(parent, own)
 {
     m_bufferSize = 65536;

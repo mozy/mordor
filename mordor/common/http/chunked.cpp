@@ -4,8 +4,8 @@
 
 #include <sstream>
 
-HTTP::ChunkedStream::ChunkedStream(Stream *parent, bool owns)
-: MutatingFilterStream(parent, owns),
+HTTP::ChunkedStream::ChunkedStream(Stream::ptr parent, bool own)
+: MutatingFilterStream(parent, own),
   m_nextChunk(~0)
 {
     if (parent->supportsRead()) {

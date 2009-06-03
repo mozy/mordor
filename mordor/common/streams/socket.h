@@ -9,8 +9,7 @@ class Socket;
 class SocketStream : public Stream
 {
 public:
-    SocketStream(Socket *s, bool own = true);
-    ~SocketStream();
+    SocketStream(boost::shared_ptr<Socket> s, bool own = true);
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
@@ -21,7 +20,7 @@ public:
     size_t write(const Buffer *b, size_t len);
 
 private:
-    Socket *m_socket;
+    boost::shared_ptr<Socket> m_socket;
     bool m_own;
 };
 
