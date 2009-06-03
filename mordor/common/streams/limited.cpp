@@ -2,6 +2,8 @@
 
 #include "limited.h"
 
+#include <stdexcept>
+
 LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
 : FilterStream(parent, own),
   m_pos(0),

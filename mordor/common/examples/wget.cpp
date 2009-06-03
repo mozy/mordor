@@ -11,7 +11,7 @@
 #include "common/streams/std.h"
 #include "common/streams/transfer.h"
 
-void main(int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
     StdoutStream stdoutStream;
     Fiber::ptr mainfiber(new Fiber());
@@ -54,4 +54,5 @@ void main(int argc, const char *argv[])
                   << ex.what( ) << std::endl;
     }
     ioManager.stop();
+    return 0;
 }

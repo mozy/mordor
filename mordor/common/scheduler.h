@@ -22,7 +22,7 @@ class ThreadPool
 public:
     ThreadPool(boost::function<void ()> proc);
 
-    void start(int threads = 1);
+    void start(size_t threads = 1);
 
     size_t size();
     void join_all();

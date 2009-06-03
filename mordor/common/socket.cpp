@@ -54,14 +54,15 @@ struct SocketInitializer {
 static SocketInitializer g_init;
 
 #else
+#include <netdb.h>
 #define closesocket close
 #endif
 
 Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int initialize)
 : m_sock(-1),
-  m_ioManager(ioManager),
   m_family(family),
-  m_protocol(protocol)
+  m_protocol(protocol),
+  m_ioManager(ioManager)
 {
 #ifdef WINDOWS
     if (m_ioManager) {
@@ -75,9 +76,9 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
 
 Socket::Socket(int family, int type, int protocol)
 : m_sock(-1),
-  m_ioManager(NULL),
   m_family(family),
-  m_protocol(protocol)
+  m_protocol(protocol),
+  m_ioManager(NULL)
 {
     m_sock = socket(family, type, protocol);
     if (m_sock == -1) {
@@ -87,9 +88,9 @@ Socket::Socket(int family, int type, int protocol)
 
 Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
 : m_sock(-1),
-  m_ioManager(&ioManager),
   m_family(family),
-  m_protocol(protocol)
+  m_protocol(protocol),
+  m_ioManager(&ioManager)
 {
     m_sock = socket(family, type, protocol);
     if (m_sock == -1) {
@@ -178,9 +179,10 @@ Socket::connect(const Address &to)
             m_ioManager->registerEvent(&m_sendEvent);
             Scheduler::getThis()->yieldTo();
             int err;
-            getOption(SOL_SOCKET, SO_ERROR, &err, sizeof(err));
-            if (error != 0) {
-                throwExceptionFromLastError(error);
+            size_t size = sizeof(int);
+            getOption(SOL_SOCKET, SO_ERROR, &err, &size);
+            if (err != 0) {
+                throwExceptionFromLastError(err);
             }
         } else {
             throwExceptionFromLastError();
@@ -251,7 +253,7 @@ Socket::accept(Socket &target)
             throwExceptionFromLastError();
         }
 
-        target.m_sock(newsock);
+        target.m_sock = newsock;
 #endif
     }
 }
@@ -268,7 +270,7 @@ void
 Socket::close()
 {
     if (m_sock != -1) {
-        if (closesocket(m_sock)) {
+        if (::closesocket(m_sock)) {
             throwExceptionFromLastError();
         }
         m_sock = -1;
@@ -560,11 +562,11 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
     msg.msg_iovlen = 1;
     msg.msg_name = from->name();
     msg.msg_namelen = from->nameLen();
-    int rc = ::recvmsg(m_sock, &msg, flags);
+    int rc = ::recvmsg(m_sock, &msg, *flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(&m_sendEvent);
         Scheduler::getThis()->yieldTo();
-        rc = ::recvmsg(m_sock, &msg, flags);
+        rc = ::recvmsg(m_sock, &msg, *flags);
     }
     if (rc == -1) {
         throwExceptionFromLastError();
@@ -609,11 +611,11 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
     msg.msg_iovlen = len;
     msg.msg_name = from->name();
     msg.msg_namelen = from->nameLen();
-    int rc = ::recvmsg(m_sock, &msg, flags);
+    int rc = ::recvmsg(m_sock, &msg, *flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(&m_sendEvent);
         Scheduler::getThis()->yieldTo();
-        rc = ::recvmsg(m_sock, &msg, flags);
+        rc = ::recvmsg(m_sock, &msg, *flags);
     }
     if (rc == -1) {
         throwExceptionFromLastError();
@@ -626,7 +628,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
 void
 Socket::getOption(int level, int option, void *result, size_t *len)
 {
-    int ret = getsockopt(m_sock, level, option, (char*)result, (int*)len);
+    int ret = getsockopt(m_sock, level, option, (char*)result, (socklen_t*)len);
     if (ret) {
         throwExceptionFromLastError();
     }
@@ -668,7 +670,7 @@ Socket::remoteAddress()
             result.reset(new UnknownAddress(m_family, type(), m_protocol));
             break;
     }
-    int namelen = result->nameLen();
+    socklen_t namelen = result->nameLen();
     if (getpeername(m_sock, result->name(), &namelen)) {
         throwExceptionFromLastError();
     }
@@ -691,7 +693,7 @@ Socket::localAddress()
             result.reset(new UnknownAddress(m_family, type(), m_protocol));
             break;
     }
-    int namelen = result->nameLen();
+    socklen_t namelen = result->nameLen();
     if (getsockname(m_sock, result->name(), &namelen)) {
         throwExceptionFromLastError();
     }

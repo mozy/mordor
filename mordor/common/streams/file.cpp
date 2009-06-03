@@ -33,7 +33,7 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
         case OPEN_EXISTING:
             break;
         case OPEN_ALWAYS:
-            oflags |= O_CREATE;
+            oflags |= O_CREAT;
             break;
         case TRUNCATE_EXISTING:
             oflags |= O_TRUNC;

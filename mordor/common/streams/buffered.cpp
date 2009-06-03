@@ -2,6 +2,8 @@
 
 #include "buffered.h"
 
+#include <stdexcept>
+
 BufferedStream::BufferedStream(Stream::ptr parent, bool own)
 : FilterStream(parent, own)
 {

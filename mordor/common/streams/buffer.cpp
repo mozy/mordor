@@ -2,6 +2,7 @@
 
 #include "buffer.h"
 
+#include <string.h>
 #include <cassert>
 
 Buffer::DataBuf::DataBuf()
@@ -25,7 +26,7 @@ Buffer::DataBuf::DataBuf(size_t length)
 Buffer::DataBuf
 Buffer::DataBuf::slice(size_t start, size_t length)
 {
-    if (length == ~0) {
+    if (length == ~0u) {
         length = m_length - start;
     }
     assert(length <= 0xffffffff);
@@ -41,7 +42,7 @@ Buffer::DataBuf::slice(size_t start, size_t length)
 const Buffer::DataBuf
 Buffer::DataBuf::slice(size_t start, size_t length) const
 {
-    if (length == ~0) {
+    if (length == ~0u) {
         length = m_length - start;
     }
     assert(length <= 0xffffffff);
@@ -231,13 +232,13 @@ Buffer::consume(size_t len)
     invariant();
 }
 
-std::vector<const Buffer::DataBuf>
+const std::vector<Buffer::DataBuf>
 Buffer::readBufs(size_t len) const
 {
-    if (len == ~0)
+    if (len == ~0u)
         len = readAvailable();
     assert(len <= readAvailable());
-    std::vector<const DataBuf> result;
+    std::vector<DataBuf> result;
     result.reserve(m_bufs.size());
     size_t remaining = len;
     std::list<Data>::const_iterator it;
@@ -254,7 +255,7 @@ Buffer::readBufs(size_t len) const
     // TODO: #ifdef _DEBUG
     {
         size_t total = 0;
-        std::vector<const DataBuf>::const_iterator it;
+        std::vector<DataBuf>::const_iterator it;
         for (it = result.begin(); it != result.end(); ++it) {
             total += it->m_length;
         }
@@ -302,7 +303,7 @@ Buffer::readBuf(size_t len) const
 std::vector<Buffer::DataBuf>
 Buffer::writeBufs(size_t len)
 {
-    if (len == ~0)
+    if (len == ~0u)
         len = writeAvailable();
     reserve(len);
     std::vector<DataBuf> result;
@@ -357,7 +358,7 @@ Buffer::writeBuf(size_t len)
 void
 Buffer::copyIn(const Buffer &buf, size_t len)
 {
-    if (len == ~0)
+    if (len == ~0u)
         len = buf.readAvailable();
     assert(buf.readAvailable() >= len);
     invariant();
@@ -435,7 +436,7 @@ Buffer::copyOut(void *buf, size_t len) const
 ptrdiff_t
 Buffer::findDelimited(char delim, size_t len) const
 {
-    if (len == ~0)
+    if (len == ~0u)
         len = readAvailable();
     assert(len <= readAvailable());
 
@@ -473,7 +474,7 @@ Buffer::invariant() const
     for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
         const Data& buf = *it;
         // Strict ordering
-        assert(!seenWrite || seenWrite && buf.readAvailable() == 0);
+        assert(!seenWrite || (seenWrite && buf.readAvailable() == 0));
         read += buf.readAvailable();
         write += buf.writeAvailable();
         if (!seenWrite && buf.writeAvailable() != 0) {
@@ -483,5 +484,5 @@ Buffer::invariant() const
     }
     assert(read == m_readAvailable);
     assert(write == m_writeAvailable);
-    assert(write != 0 || write == 0 && m_writeIt == m_bufs.end());
+    assert(write != 0 || (write == 0 && m_writeIt == m_bufs.end()));
 }

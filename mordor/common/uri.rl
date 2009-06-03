@@ -295,11 +295,6 @@ URI::URI()
     reset();
 }
 
-URI::URI(const std::string& uri)
-{
-    *this = uri;
-}
-
 URI&
 URI::operator=(const std::string& uri)
 {
@@ -384,7 +379,7 @@ URI::Path::operator=(const std::string& path)
 void
 URI::Path::removeDotComponents()
 {
-    for(int i = 0; i < segments.size(); ++i) {
+    for(size_t i = 0; i < segments.size(); ++i) {
         if (segments[i] == ".") {
             if (i + 1 == segments.size()) {
                 segments[i].clear();

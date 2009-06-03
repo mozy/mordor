@@ -38,7 +38,7 @@ RagelParser::run(Stream &stream)
         if (read == 0) {
             run(NULL, 0, true);
         } else {
-            std::vector<const Buffer::DataBuf> bufs = b.readBufs();
+            const std::vector<Buffer::DataBuf> bufs = b.readBufs();
             for (size_t i = 0; i < bufs.size(); ++i) {
                 size_t consumed = run((const char*)bufs[i].m_start, bufs[i].m_length, false);
                 b.consume(consumed);
@@ -75,7 +75,7 @@ RagelParser::run(const char *buf, size_t len, bool isEof)
 
     m_fullString.append(buf, len);
 
-    if (markSpot != ~0) {
+    if (markSpot != ~0u) {
         mark = m_fullString.c_str() + markSpot;
     }
 

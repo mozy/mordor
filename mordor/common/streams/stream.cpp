@@ -2,6 +2,8 @@
 
 #include "stream.h"
 
+#include <string.h>
+
 size_t
 Stream::write(const char *sz)
 {

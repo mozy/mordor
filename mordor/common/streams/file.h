@@ -10,6 +10,7 @@ typedef HandleStream NativeStream;
 typedef HANDLE NativeHandle;
 #else
 #include "fd.h"
+#include <fcntl.h>
 typedef FDStream NativeStream;
 typedef int NativeHandle;
 #endif

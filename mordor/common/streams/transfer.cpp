@@ -8,12 +8,12 @@
 #include "common/scheduler.h"
 #include "stream.h"
 
-static void read(Stream &src, Buffer &buffer, size_t len, size_t &result)
+static void readOne(Stream &src, Buffer &buffer, size_t len, size_t &result)
 {
     result = src.read(buffer, len);
 }
 
-static void write(Stream &dst, Buffer &buffer, long long *totalWritten)
+static void writeOne(Stream &dst, Buffer &buffer, long long *totalWritten)
 {
     size_t result;
     while (buffer.readAvailable() > 0) {
@@ -46,7 +46,7 @@ void transferStream(Stream &src, Stream &dst, long long toTransfer,
     todo = chunkSize;
     if (toTransfer != -1 && toTransfer - *totalRead < (long long)todo)
         todo = (size_t)toTransfer;
-    read(src, *readBuffer, todo, readResult);
+    readOne(src, *readBuffer, todo, readResult);
     *totalRead += readResult;
     if (readResult == 0 && toTransfer != -1) {
         throw UnexpectedEofError();
@@ -65,8 +65,10 @@ void transferStream(Stream &src, Stream &dst, long long toTransfer,
         todo = chunkSize;
         if (toTransfer != -1 && toTransfer - *totalRead < (long long)todo)
             todo = (size_t)toTransfer;
-        dgs[0] = boost::bind(&read, boost::ref(src), boost::ref(*readBuffer), todo, boost::ref(readResult));
-        dgs[1] = boost::bind(&write, boost::ref(dst), boost::ref(*writeBuffer), totalWritten);
+        dgs[0] = boost::bind(&readOne, boost::ref(src), boost::ref(*readBuffer), todo, 
+boost::ref(readResult));
+        dgs[1] = boost::bind(&writeOne, boost::ref(dst), boost::ref(*writeBuffer), 
+totalWritten);
         parallel_do(dgs);
         if (readResult == 0 && toTransfer != -1) {
             throw UnexpectedEofError();
@@ -75,7 +77,7 @@ void transferStream(Stream &src, Stream &dst, long long toTransfer,
             return;
     }
     writeBuffer = readBuffer;
-    write(dst, *writeBuffer, totalWritten);
+    writeOne(dst, *writeBuffer, totalWritten);
 }
 
 void transferStream(Stream::ptr src, Stream &dst, long long toTransfer,

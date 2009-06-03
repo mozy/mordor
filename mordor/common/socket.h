@@ -16,6 +16,9 @@ typedef WSABUF iovec;
 #define SHUT_RD SD_RECEIVE
 #define SHUT_WR SD_SEND
 #define SHUT_RDWR SD_BOTH
+#else
+#include <sys/socket.h>
+#include <netinet/ip.h>
 #endif
 
 struct Address;
@@ -94,7 +97,7 @@ public:
     int protocol() const { return m_protocol; }
     virtual const sockaddr *name() const = 0;
     virtual sockaddr *name() = 0;
-    virtual int nameLen() const = 0;
+    virtual socklen_t nameLen() const = 0;
 
 private:
     int m_type, m_protocol;
@@ -121,7 +124,7 @@ public:
 
     const sockaddr *name() const { return (sockaddr*)&sin; }
     sockaddr *name() { return (sockaddr*)&sin; }
-    int nameLen() const { return sizeof(sockaddr_in); }
+    socklen_t nameLen() const { return sizeof(sockaddr_in); }
 private:
     sockaddr_in sin;
 };
@@ -138,7 +141,7 @@ public:
 
     const sockaddr *name() const { return (sockaddr*)&sin; }
     sockaddr *name() { return (sockaddr*)&sin; }
-    int nameLen() const { return sizeof(sockaddr_in6); }
+    socklen_t nameLen() const { return sizeof(sockaddr_in6); }
 private:
     sockaddr_in6 sin;
 };
@@ -150,7 +153,7 @@ public:
 
     const sockaddr *name() const { return &sa; }
     sockaddr *name() { return &sa; }
-    int nameLen() const { return sizeof(sockaddr); }
+    socklen_t nameLen() const { return sizeof(sockaddr); }
 private:
     sockaddr sa;
 };

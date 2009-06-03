@@ -9,9 +9,11 @@
 struct URI
 {
     URI();
-    URI(const std::string& uri);
+    URI(const std::string& uri) { *this = uri; }
+    URI(const char *uri) { *this = uri; }
 
     URI& operator=(const std::string& uri);
+    URI& operator=(const char *uri) { return *this = std::string(uri); }
 
     void reset();
 

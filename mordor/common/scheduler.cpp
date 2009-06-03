@@ -14,7 +14,7 @@ ThreadPool::ThreadPool(boost::function<void()> proc)
 }
 
 void
-ThreadPool::start(int threads)
+ThreadPool::start(size_t threads)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     for (size_t i = 0; i < threads; ++i) {
@@ -161,7 +161,7 @@ Scheduler::run()
             while (!f) {
                 if (m_fibers.empty())
                     break;
-                std::list<FiberAndThread>::const_iterator it;
+                std::list<FiberAndThread>::iterator it;
                 for (it = m_fibers.begin(); it != m_fibers.end(); ++it) {
                     if (it->thread != boost::thread::id() &&
                         it->thread != boost::this_thread::get_id()) {

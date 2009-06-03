@@ -65,7 +65,7 @@ public:
     void produce(size_t len);
     void consume(size_t len);
 
-    std::vector<const DataBuf> readBufs(size_t len = ~0) const;
+    const std::vector<DataBuf> readBufs(size_t len = ~0) const;
     const DataBuf readBuf(size_t len) const;
     std::vector<DataBuf> writeBufs(size_t len = ~0);
     DataBuf writeBuf(size_t len);

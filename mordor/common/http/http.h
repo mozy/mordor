@@ -7,6 +7,11 @@
 #include <vector>
 
 #include "common/uri.h"
+#include "common/version.h"
+
+#ifndef WINDOWS
+#define stricmp strcasecmp
+#endif
 
 namespace HTTP
 {
@@ -76,6 +81,13 @@ namespace HTTP
         GATEWAY_TIMEOUT                  = 504,
         HTTP_VERSION_NOT_SUPPORTED       = 505
     };
+
+#ifdef major
+#undef major
+#endif
+#ifdef minor
+#undef minor
+#endif
 
     struct Version
     {
