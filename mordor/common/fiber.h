@@ -16,6 +16,7 @@ class Fiber : public boost::enable_shared_from_this<Fiber>
 {
 public:
     typedef boost::shared_ptr<Fiber> ptr;
+    typedef boost::weak_ptr<Fiber> weak_ptr;
 
     enum State
     {
@@ -51,7 +52,8 @@ private:
     void *m_stack, *m_sp;
     size_t m_stacksize;
     State m_state, m_yielderNextState;
-    ptr m_outer, m_terminateOuter, m_yielder;
+    ptr m_outer, m_yielder;
+    weak_ptr m_terminateOuter;
 
     static boost::thread_specific_ptr<Fiber> t_fiber;
 };

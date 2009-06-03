@@ -50,6 +50,7 @@ protected:
     virtual void tickle() = 0;
 
 private:
+    void yieldTo(bool yieldToCallerOnTerminate);
     void run();
 
 private:

@@ -11,7 +11,6 @@
 #include "common/streams/std.h"
 #include "common/streams/transfer.h"
 
-
 void main(int argc, const char *argv[])
 {
     StdoutStream stdoutStream;
@@ -49,9 +48,11 @@ void main(int argc, const char *argv[])
            transferStream(responseStream.get(), &stdoutStream);
         } catch(...) {
             request->cancel();
+            throw;
         }
     } catch (std::exception& ex) {
-        std::cerr << "Caught " << typeid(ex).name( ) << ": "
+        std::cerr << "Caught " << typeid(ex).name() << ": "
                   << ex.what( ) << std::endl;
     }
+    ioManager.stop();
 }

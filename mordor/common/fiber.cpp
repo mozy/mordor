@@ -89,9 +89,9 @@ Fiber::~Fiber()
 {
     if (!m_dg) {
         assert(m_state == EXEC);
-        ptr cur = getThis();
+        Fiber *cur = t_fiber.get();
         assert(cur);
-        assert(cur.get() == this);
+        assert(cur == this);
         setThis(NULL);
 #ifdef NATIVE_WINDOWS_FIBERS
         ConvertFiberToThread();
@@ -220,13 +220,24 @@ Fiber::entryPoint()
     }
     cur->m_dg();
 
-    if (cur->m_terminateOuter && !cur->m_outer) {
-        cur->m_terminateOuter->yieldTo(false, true);
+    if (!cur->m_terminateOuter.expired() && !cur->m_outer) {
+        ptr terminateOuter(cur->m_terminateOuter);
+        // Have to set this reference before calling yieldTo()
+        // so we can reset cur before we call yieldTo()
+        // (since it's not ever going to destruct)
+        terminateOuter->m_yielder = cur;
+        Fiber* terminateOuterp = terminateOuter.get();
+        assert(!cur.unique());
+        assert(!terminateOuter.unique());
+        cur.reset();
+        terminateOuter.reset();
+        terminateOuterp->yieldTo(false, true);
     }
     assert(cur->m_outer);
     cur->m_outer->m_yielder = cur;
     cur->m_outer->m_yielderNextState = Fiber::TERM;
     Fiber* curp = cur.get();
+    assert(!cur.unique());
     cur.reset();
     fiber_switchContext(&curp->m_sp, curp->m_outer->m_sp);
 }

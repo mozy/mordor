@@ -60,9 +60,13 @@ void
 Scheduler::stop()
 {
     m_stopping = true;
-    // XXX: This is incorrect for useCaller = true threads
     for (size_t i = 0; i < m_threads.size(); ++i) {
         tickle();
+    }
+    if (m_rootFiber)
+        tickle();
+    if (Scheduler::getThis() == this) {
+        yieldTo(true);
     }
 }
 
@@ -96,18 +100,26 @@ Scheduler::switchTo()
 void
 Scheduler::yieldTo()
 {
+    yieldTo(false);
+}
+
+void
+Scheduler::yieldTo(bool yieldToCallerOnTerminate)
+{
     assert(t_fiber.get());
     assert(Scheduler::getThis() == this);
-    t_fiber->yieldTo(false);
+    t_fiber->yieldTo(yieldToCallerOnTerminate);
 }
 
 void
 Scheduler::run()
 {
     t_scheduler.reset(this);
-    Fiber::ptr f = Fiber::getThis();
-    if (!f) {
-        f.reset(new Fiber());
+    Fiber::ptr rootfiber = Fiber::getThis();
+    if (!rootfiber) {
+        rootfiber.reset(new Fiber());
+    } else {
+        rootfiber.reset();
     }
     t_fiber.reset(Fiber::getThis().get());
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this), 65536 * 4));
