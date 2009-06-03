@@ -314,7 +314,7 @@ HTTP::ClientRequest::finish()
             m_responseStream = responseStream();
         }
         assert(m_responseStream);
-        transferStream(m_responseStream.get(), NullStream::get());
+        transferStream(m_responseStream, NullStream::get());
     }
 }
 
@@ -491,7 +491,7 @@ HTTP::ClientRequest::ensureResponse()
     try {
         // Read and parse headers
         ResponseParser parser(m_response);
-        parser.run(m_conn->m_stream.get());
+        parser.run(m_conn->m_stream);
         if (parser.error()) {
             throw std::runtime_error("Error parsing response");
         }
@@ -602,7 +602,7 @@ HTTP::ClientRequest::responseDone()
     if (!m_response.general.transferEncoding.empty()) {
         // Read and parse the trailer
         TrailerParser parser(m_responseTrailer);
-        parser.run(m_conn->m_stream.get());
+        parser.run(m_conn->m_stream);
         if (parser.error()) {
             cancel(true);
             throw std::runtime_error("Error parsing trailer");

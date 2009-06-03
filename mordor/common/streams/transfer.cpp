@@ -80,8 +80,25 @@ void transferStream(Stream *src, Stream *dst, long long toTransfer,
     write(dst, writeBuffer, totalWritten);
 }
 
+void transferStream(Stream::ptr src, Stream *dst, long long toTransfer,
+                    long long *totalRead, long long *totalWritten)
+{ transferStream(src.get(), dst, toTransfer, totalRead, totalWritten); }
+void transferStream(Stream *src, Stream::ptr dst, long long toTransfer,
+                    long long *totalRead, long long *totalWritten)
+{ transferStream(src, dst.get(), toTransfer, totalRead, totalWritten); }
+void transferStream(Stream::ptr src, Stream::ptr dst, long long toTransfer,
+                    long long *totalRead, long long *totalWritten)
+{ transferStream(src.get(), dst.get(), toTransfer, totalRead, totalWritten); }
+
 void transferStream(Stream *src, Stream *dst,
                     long long *totalRead, long long *totalWritten)
-{
-    transferStream(src, dst, -1, totalRead, totalWritten);
-}
+{ transferStream(src, dst, -1, totalRead, totalWritten); }
+void transferStream(Stream::ptr src, Stream *dst,
+                    long long *totalRead, long long *totalWritten)
+{ transferStream(src.get(), dst, -1, totalRead, totalWritten); }
+void transferStream(Stream *src, Stream::ptr dst,
+                    long long *totalRead, long long *totalWritten)
+{ transferStream(src, dst.get(), -1, totalRead, totalWritten); }
+void transferStream(Stream::ptr src, Stream::ptr dst,
+                    long long *totalRead, long long *totalWritten)
+{ transferStream(src.get(), dst.get(), -1, totalRead, totalWritten); }
