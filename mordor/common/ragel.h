@@ -12,8 +12,8 @@ class RagelParser
 public:
     // Complete parsing
     void run(const std::string& str);
-    void run(Stream *stream);
-    void run(Stream::ptr stream) { run(stream.get()); }
+    void run(Stream &stream);
+    void run(Stream::ptr stream) { run(*stream.get()); }
 
     // Partial parsing
     virtual void init();

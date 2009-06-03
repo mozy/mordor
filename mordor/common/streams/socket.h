@@ -16,8 +16,8 @@ public:
 
     void close(CloseType type = BOTH);
 
-    size_t read(Buffer *b, size_t len);
-    size_t write(const Buffer *b, size_t len);
+    size_t read(Buffer &b, size_t len);
+    size_t write(const Buffer &b, size_t len);
 
 private:
     boost::shared_ptr<Socket> m_socket;

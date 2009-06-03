@@ -29,8 +29,8 @@ public:
             m_parent->close(type);
         }
     }
-    size_t read(Buffer *b, size_t len) { return m_parent->read(b, len); }
-    size_t write(const Buffer *b, size_t len) { return m_parent->write(b, len); }
+    size_t read(Buffer &b, size_t len) { return m_parent->read(b, len); }
+    size_t write(const Buffer &b, size_t len) { return m_parent->write(b, len); }
     long long seek(long long offset, Anchor anchor) { return m_parent->seek(offset, anchor); }
     long long size() { return m_parent->size(); }
     void truncate(long long size) { m_parent->truncate(size); }

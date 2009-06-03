@@ -4,21 +4,21 @@
 
 #include "stream.h"
 
-void transferStream(Stream *src, Stream *dst, long long toTransfer,
+void transferStream(Stream& src, Stream& dst, long long toTransfer,
                     long long *totalRead = 0, long long *totalWritten = 0);
 
-void transferStream(Stream::ptr src, Stream *dst, long long toTransfer,
+void transferStream(Stream::ptr src, Stream& dst, long long toTransfer,
                     long long *totalRead = 0, long long *totalWritten = 0);
-void transferStream(Stream *src, Stream::ptr dst, long long toTransfer,
+void transferStream(Stream &src, Stream::ptr dst, long long toTransfer,
                     long long *totalRead = 0, long long *totalWritten = 0);
 void transferStream(Stream::ptr src, Stream::ptr dst, long long toTransfer,
                     long long *totalRead = 0, long long *totalWritten = 0);
 
-void transferStream(Stream *src, Stream *dst,
+void transferStream(Stream &src, Stream &dst,
                     long long *totalRead = 0, long long *totalWritten = 0);
-void transferStream(Stream::ptr src, Stream *dst,
+void transferStream(Stream::ptr src, Stream &dst,
                     long long *totalRead = 0, long long *totalWritten = 0);
-void transferStream(Stream *src, Stream::ptr dst,
+void transferStream(Stream &src, Stream::ptr dst,
                     long long *totalRead = 0, long long *totalWritten = 0);
 void transferStream(Stream::ptr src, Stream::ptr dst,
                     long long *totalRead = 0, long long *totalWritten = 0);

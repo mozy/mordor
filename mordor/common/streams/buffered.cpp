@@ -10,12 +10,12 @@ BufferedStream::BufferedStream(Stream::ptr parent, bool own)
 }
 
 size_t
-BufferedStream::read(Buffer *b, size_t len)
+BufferedStream::read(Buffer &b, size_t len)
 {
     size_t remaining = len;
 
     size_t buffered = std::min(m_readBuffer.readAvailable(), remaining);
-    b->copyIn(m_readBuffer, buffered);
+    b.copyIn(m_readBuffer, buffered);
     m_readBuffer.consume(buffered);
     remaining -= buffered;
 
@@ -30,7 +30,7 @@ BufferedStream::read(Buffer *b, size_t len)
             size_t todo = ((remaining - 1) / m_bufferSize + 1) * m_bufferSize;
             size_t result;
             try {
-                result = FilterStream::read(&m_readBuffer, todo);
+                result = FilterStream::read(m_readBuffer, todo);
             } catch (...) {
                 if (remaining == len) {
                     throw;
@@ -41,7 +41,7 @@ BufferedStream::read(Buffer *b, size_t len)
             }
 
             buffered = std::min(m_readBuffer.readAvailable(), remaining);
-            b->copyIn(m_readBuffer, buffered);
+            b.copyIn(m_readBuffer, buffered);
             m_readBuffer.consume(buffered);
             remaining -= buffered;
         } while (remaining > 0 && !m_allowPartialReads);
@@ -51,9 +51,9 @@ BufferedStream::read(Buffer *b, size_t len)
 }
 
 size_t
-BufferedStream::write(const Buffer *b, size_t len)
+BufferedStream::write(const Buffer &b, size_t len)
 {
-    m_writeBuffer.copyIn(*b, len);
+    m_writeBuffer.copyIn(b, len);
     size_t result = flushWrite(len);
     // Partial writes not allowed
     assert(result == len);
@@ -78,7 +78,7 @@ BufferedStream::flushWrite(size_t len)
     {
         size_t result;
         try {
-            result = FilterStream::write(&m_writeBuffer, m_writeBuffer.readAvailable());
+            result = FilterStream::write(m_writeBuffer, m_writeBuffer.readAvailable());
         } catch (...) {
             // If this entire write is still in our buffer,
             // back it out and report the error
@@ -146,7 +146,7 @@ void
 BufferedStream::flush()
 {
     while (m_writeBuffer.readAvailable()) {
-        size_t result = FilterStream::write(&m_writeBuffer, m_writeBuffer.readAvailable());
+        size_t result = FilterStream::write(m_writeBuffer, m_writeBuffer.readAvailable());
         assert(result > 0);
         m_writeBuffer.consume(result);
     }
@@ -169,7 +169,7 @@ BufferedStream::findDelimited(char delim)
             }
         }
 
-        size_t result = FilterStream::read(&m_readBuffer, m_bufferSize);
+        size_t result = FilterStream::read(m_readBuffer, m_bufferSize);
         if (result == 0) {
             // EOF
             throw std::runtime_error("Unexpected EOF");
@@ -178,10 +178,10 @@ BufferedStream::findDelimited(char delim)
 }
 
 void
-BufferedStream::unread(Buffer *b, size_t len)
+BufferedStream::unread(const Buffer &b, size_t len)
 {
     Buffer tempBuffer;
-    tempBuffer.copyIn(*b, len);
+    tempBuffer.copyIn(b, len);
     tempBuffer.copyIn(m_readBuffer);
     m_readBuffer.clear();
     m_readBuffer.copyIn(tempBuffer);

@@ -12,8 +12,8 @@ namespace HTTP
         ChunkedStream(Stream::ptr parent, bool own = true);
 
         void close(CloseType type = BOTH);
-        size_t read(Buffer *b, size_t len);
-        size_t write(const Buffer *b, size_t len);
+        size_t read(Buffer &b, size_t len);
+        size_t write(const Buffer &b, size_t len);
 
     private:
         unsigned long long m_nextChunk;

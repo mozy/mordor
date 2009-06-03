@@ -11,7 +11,7 @@ LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
 }
 
 size_t
-LimitedStream::read(Buffer *b, size_t len)
+LimitedStream::read(Buffer &b, size_t len)
 {
     if (m_pos >= m_size)
         return 0;
@@ -23,7 +23,7 @@ LimitedStream::read(Buffer *b, size_t len)
 }
 
 size_t
-LimitedStream::write(const Buffer *b, size_t len)
+LimitedStream::write(const Buffer &b, size_t len)
 {
     if (m_pos >= m_size)
         throw std::runtime_error("Write beyond EOF");

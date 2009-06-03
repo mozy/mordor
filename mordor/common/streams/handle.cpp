@@ -67,7 +67,7 @@ HandleStream::close(CloseType type)
 }
 
 size_t
-HandleStream::read(Buffer *b, size_t len)
+HandleStream::read(Buffer &b, size_t len)
 {
     DWORD read;
     OVERLAPPED *overlapped = NULL;
@@ -82,7 +82,7 @@ HandleStream::read(Buffer *b, size_t len)
     }
     if (len > 0xfffffffe)
         len = 0xfffffffe;
-    Buffer::DataBuf buf = b->writeBuf(len);
+    Buffer::DataBuf buf = b.writeBuf(len);
     BOOL ret = ReadFile(m_hFile, buf.m_start, (DWORD)len, &read, overlapped);
     if (m_ioManager) {
         if (!ret &&
@@ -104,7 +104,7 @@ HandleStream::read(Buffer *b, size_t len)
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
                 m_readEvent.numberOfBytes;
         }
-        b->produce(m_readEvent.numberOfBytes);
+        b.produce(m_readEvent.numberOfBytes);
         return m_readEvent.numberOfBytes;
     }
     if (!ret && GetLastError() == ERROR_BROKEN_PIPE) {
@@ -113,12 +113,12 @@ HandleStream::read(Buffer *b, size_t len)
     if (!ret) {
         throwExceptionFromLastError();
     }
-    b->produce(read);
+    b.produce(read);
     return read;
 }
 
 size_t
-HandleStream::write(const Buffer *b, size_t len)
+HandleStream::write(const Buffer &b, size_t len)
 {
     DWORD written;
     OVERLAPPED *overlapped = NULL;
@@ -133,7 +133,7 @@ HandleStream::write(const Buffer *b, size_t len)
     }
     if (len > 0xfffffffe)
         len = 0xfffffffe;
-    const Buffer::DataBuf buf = b->readBuf(len);
+    const Buffer::DataBuf buf = b.readBuf(len);
     BOOL ret = WriteFile(m_hFile, buf.m_start, (DWORD)len, &written, overlapped);
     if (m_ioManager) {
         if (!ret && GetLastError() != ERROR_IO_PENDING) {

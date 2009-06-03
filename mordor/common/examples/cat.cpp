@@ -29,7 +29,7 @@ void main(int argc, const char *argv[])
             } else {
                 inStream.reset(new FileStream(arg, FileStream::READ));
             }
-            transferStream(inStream, &stdoutStream);
+            transferStream(inStream, stdoutStream);
         }
     } catch (std::exception& ex) {
         std::cerr << "Caught " << typeid(ex).name( ) << ": "

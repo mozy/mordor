@@ -10,7 +10,7 @@ private:
     NullStream() {}
 
 public:
-    static NullStream *get() { return &s_nullStream; }
+    static NullStream &get() { return s_nullStream; }
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }

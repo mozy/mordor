@@ -44,7 +44,7 @@ void main(int argc, const char *argv[])
         HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
         Stream::ptr responseStream = request->responseStream();
         try {
-           transferStream(request->responseStream(), &stdoutStream);
+           transferStream(request->responseStream(), stdoutStream);
         } catch(...) {
             request->cancel();
             throw;

@@ -28,13 +28,13 @@ RagelParser::run(const std::string& str)
 }
 
 void
-RagelParser::run(Stream *stream)
+RagelParser::run(Stream &stream)
 {
     init();
     Buffer b;
     while (!complete() && !error()) {
         // TODO: limit total amount read
-        size_t read = stream->read(&b, 65536);
+        size_t read = stream.read(b, 65536);
         if (read == 0) {
             run(NULL, 0, true);
         } else {
@@ -47,9 +47,9 @@ RagelParser::run(Stream *stream)
             }
         }
     }
-    BufferedStream *buffered = dynamic_cast<BufferedStream *>(stream);
+    BufferedStream *buffered = dynamic_cast<BufferedStream *>(&stream);
     if (buffered) {
-        buffered->unread(&b, b.readAvailable());
+        buffered->unread(b, b.readAvailable());
     }
 }
 

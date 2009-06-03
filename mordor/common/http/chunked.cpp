@@ -23,7 +23,7 @@ HTTP::ChunkedStream::close(Stream::CloseType type)
 }
 
 size_t
-HTTP::ChunkedStream::read(Buffer *b, size_t len)
+HTTP::ChunkedStream::read(Buffer &b, size_t len)
 {
     if (m_nextChunk == ~0) {
         std::string chunk = parent()->getDelimited();
@@ -49,16 +49,16 @@ HTTP::ChunkedStream::read(Buffer *b, size_t len)
 }
 
 size_t
-HTTP::ChunkedStream::write(const Buffer *b, size_t len)
+HTTP::ChunkedStream::write(const Buffer &b, size_t len)
 {
     std::ostringstream os;
     os << std::hex << len;
     std::string str = os.str();
     parent()->write(str.c_str(), str.size());
     Buffer copy;
-    copy.copyIn(*b, len);
+    copy.copyIn(b, len);
     while (copy.readAvailable()) {
-        size_t result = MutatingFilterStream::write(&copy, copy.readAvailable());
+        size_t result = MutatingFilterStream::write(copy, copy.readAvailable());
         copy.consume(result);
     }
     parent()->write("\r\n", 2);

@@ -35,12 +35,12 @@ public:
         }
     }
 
-    size_t read(Buffer *b, size_t len)
+    size_t read(Buffer &b, size_t len)
     {
         assert(m_type == READ);
         return FilterStream::read(b, len);
     }
-    size_t write(const Buffer *b, size_t len)
+    size_t write(const Buffer &b, size_t len)
     {
         assert(m_type == WRITE);
         return FilterStream::write(b, len);

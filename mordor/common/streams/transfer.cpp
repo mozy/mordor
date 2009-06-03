@@ -8,29 +8,27 @@
 #include "common/scheduler.h"
 #include "stream.h"
 
-static void read(Stream *src, Buffer *buffer, size_t len, size_t *result)
+static void read(Stream &src, Buffer &buffer, size_t len, size_t &result)
 {
-    *result = src->read(buffer, len);
+    result = src.read(buffer, len);
 }
 
-static void write(Stream *dst, Buffer *buffer, long long *totalWritten)
+static void write(Stream &dst, Buffer &buffer, long long *totalWritten)
 {
     size_t result;
-    while (buffer->readAvailable() > 0) {
-        result = dst->write(buffer, buffer->readAvailable());
-        buffer->consume(result);
+    while (buffer.readAvailable() > 0) {
+        result = dst.write(buffer, buffer.readAvailable());
+        buffer.consume(result);
         if (totalWritten)
             *totalWritten = result;
     }
 }
 
-void transferStream(Stream *src, Stream *dst, long long toTransfer,
+void transferStream(Stream &src, Stream &dst, long long toTransfer,
                     long long *totalRead, long long *totalWritten)
 {
-    assert(src);
-    assert(src->supportsRead());
-    assert(dst);
-    assert(dst->supportsWrite());
+    assert(src.supportsRead());
+    assert(dst.supportsWrite());
     assert(toTransfer >= 0 || toTransfer == -1);
     Buffer buf1, buf2;
     Buffer *readBuffer, *writeBuffer;
@@ -48,7 +46,7 @@ void transferStream(Stream *src, Stream *dst, long long toTransfer,
     todo = chunkSize;
     if (toTransfer != -1 && toTransfer - *totalRead < (long long)todo)
         todo = (size_t)toTransfer;
-    read(src, readBuffer, todo, &readResult);
+    read(src, *readBuffer, todo, readResult);
     *totalRead += readResult;
     if (readResult == 0 && toTransfer != -1) {
         throw UnexpectedEofError();
@@ -67,8 +65,8 @@ void transferStream(Stream *src, Stream *dst, long long toTransfer,
         todo = chunkSize;
         if (toTransfer != -1 && toTransfer - *totalRead < (long long)todo)
             todo = (size_t)toTransfer;
-        dgs[0] = boost::bind(&read, src, readBuffer, todo, &readResult);
-        dgs[1] = boost::bind(&write, dst, writeBuffer, totalWritten);
+        dgs[0] = boost::bind(&read, boost::ref(src), boost::ref(*readBuffer), todo, boost::ref(readResult));
+        dgs[1] = boost::bind(&write, boost::ref(dst), boost::ref(*writeBuffer), totalWritten);
         parallel_do(dgs);
         if (readResult == 0 && toTransfer != -1) {
             throw UnexpectedEofError();
@@ -77,28 +75,28 @@ void transferStream(Stream *src, Stream *dst, long long toTransfer,
             return;
     }
     writeBuffer = readBuffer;
-    write(dst, writeBuffer, totalWritten);
+    write(dst, *writeBuffer, totalWritten);
 }
 
-void transferStream(Stream::ptr src, Stream *dst, long long toTransfer,
+void transferStream(Stream::ptr src, Stream &dst, long long toTransfer,
                     long long *totalRead, long long *totalWritten)
-{ transferStream(src.get(), dst, toTransfer, totalRead, totalWritten); }
-void transferStream(Stream *src, Stream::ptr dst, long long toTransfer,
+{ transferStream(*src.get(), dst, toTransfer, totalRead, totalWritten); }
+void transferStream(Stream &src, Stream::ptr dst, long long toTransfer,
                     long long *totalRead, long long *totalWritten)
-{ transferStream(src, dst.get(), toTransfer, totalRead, totalWritten); }
+{ transferStream(src, *dst.get(), toTransfer, totalRead, totalWritten); }
 void transferStream(Stream::ptr src, Stream::ptr dst, long long toTransfer,
                     long long *totalRead, long long *totalWritten)
-{ transferStream(src.get(), dst.get(), toTransfer, totalRead, totalWritten); }
+{ transferStream(*src.get(), *dst.get(), toTransfer, totalRead, totalWritten); }
 
-void transferStream(Stream *src, Stream *dst,
+void transferStream(Stream &src, Stream &dst,
                     long long *totalRead, long long *totalWritten)
 { transferStream(src, dst, -1, totalRead, totalWritten); }
-void transferStream(Stream::ptr src, Stream *dst,
+void transferStream(Stream::ptr src, Stream &dst,
                     long long *totalRead, long long *totalWritten)
-{ transferStream(src.get(), dst, -1, totalRead, totalWritten); }
-void transferStream(Stream *src, Stream::ptr dst,
+{ transferStream(*src.get(), dst, -1, totalRead, totalWritten); }
+void transferStream(Stream &src, Stream::ptr dst,
                     long long *totalRead, long long *totalWritten)
-{ transferStream(src, dst.get(), -1, totalRead, totalWritten); }
+{ transferStream(src, *dst.get(), -1, totalRead, totalWritten); }
 void transferStream(Stream::ptr src, Stream::ptr dst,
                     long long *totalRead, long long *totalWritten)
-{ transferStream(src.get(), dst.get(), -1, totalRead, totalWritten); }
+{ transferStream(*src.get(), *dst.get(), -1, totalRead, totalWritten); }

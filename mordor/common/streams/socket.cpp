@@ -39,24 +39,24 @@ SocketStream::close(CloseType type)
 }
 
 size_t
-SocketStream::read(Buffer *b, size_t len)
+SocketStream::read(Buffer &b, size_t len)
 {
     assert(m_socket);
     if (len == 0)
         return 0;
-    std::vector<Buffer::DataBuf> bufs = b->writeBufs(len);
+    std::vector<Buffer::DataBuf> bufs = b.writeBufs(len);
     size_t result = m_socket->receive((iovec *)&bufs[0], bufs.size());
-    b->produce(result);
+    b.produce(result);
     return result;
 }
 
 size_t
-SocketStream::write(const Buffer *b, size_t len)
+SocketStream::write(const Buffer &b, size_t len)
 {
     assert(m_socket);
     if (len == 0)
         return 0;
-    std::vector<const Buffer::DataBuf> bufs = b->readBufs(len);
+    std::vector<const Buffer::DataBuf> bufs = b.readBufs(len);
     size_t result = m_socket->send((const iovec *)&bufs[0], bufs.size());
     assert(result > 0);
     return result;

@@ -37,8 +37,8 @@ public:
     virtual bool supportsFindDelimited() { return false; }
 
     virtual void close(CloseType type = BOTH) {}
-    virtual size_t read(Buffer *b, size_t len) { assert(supportsRead()); return 0; }
-    virtual size_t write(const Buffer *b, size_t len) { assert(supportsWrite()); return len; }
+    virtual size_t read(Buffer &b, size_t len) { assert(supportsRead()); return 0; }
+    virtual size_t write(const Buffer &b, size_t len) { assert(supportsWrite()); return len; }
     virtual long long seek(long long offset, Anchor anchor) { assert(supportsSeek()); return 0ll; }
     virtual long long size() { assert(supportsSize()); return 0ll; }
     virtual void truncate(long long size) { assert(supportsTruncate()); }
