@@ -10,10 +10,10 @@ void main(int argc, const char *argv[])
 {
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
-    std::vector<boost::shared_ptr<Address> > addresses =
+    std::vector<Address::ptr> addresses =
         Address::lookup(argv[1], AF_UNSPEC, SOCK_STREAM);
-    std::auto_ptr<Socket> s(addresses[0]->createSocket(&ioManager));
-    s->connect(addresses[0].get());
+    Socket::ptr s(addresses[0]->createSocket(ioManager));
+    s->connect(addresses[0]);
     size_t rc = s->send("hello\r\n", 7);
     char buf[8192];
     rc = s->receive(buf, 8192);

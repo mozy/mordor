@@ -85,9 +85,9 @@ Socket::Socket(int family, int type, int protocol)
     }
 }
 
-Socket::Socket(IOManager *ioManager, int family, int type, int protocol)
+Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
 : m_sock(-1),
-  m_ioManager(ioManager),
+  m_ioManager(&ioManager),
   m_family(family),
   m_protocol(protocol)
 {
@@ -111,20 +111,20 @@ Socket::~Socket()
 }
 
 void
-Socket::bind(const Address *addr)
+Socket::bind(const Address &addr)
 {
-    assert(addr->family() == m_family);
-    if (::bind(m_sock, addr->name(), addr->nameLen())) {
+    assert(addr.family() == m_family);
+    if (::bind(m_sock, addr.name(), addr.nameLen())) {
         throwExceptionFromLastError();
     }
 }
 
 void
-Socket::connect(const Address *to)
+Socket::connect(const Address &to)
 {
-    assert(to->family() == m_family);
+    assert(to.family() == m_family);
     if (!m_ioManager) {
-        if (::connect(m_sock, to->name(), to->nameLen())) {
+        if (::connect(m_sock, to.name(), to.nameLen())) {
             throwExceptionFromLastError();
         }
     } else {
@@ -132,20 +132,34 @@ Socket::connect(const Address *to)
         // need to be bound, even to ADDR_ANY, before calling ConnectEx
         switch (m_family) {
             case AF_INET:
-                sockaddr_in addr;
-                addr.sin_family = AF_INET;
-                addr.sin_port = 0;
-                *(int*)&addr.sin_addr = ADDR_ANY;
-                if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
-                    throwExceptionFromLastError();
+                {
+                    sockaddr_in addr;
+                    addr.sin_family = AF_INET;
+                    addr.sin_port = 0;
+                    addr.sin_addr.s_addr = ADDR_ANY;
+                    if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
+                        throwExceptionFromLastError();
+                    }
+                    break;
                 }
-                break;
+            case AF_INET6:
+                {
+                    sockaddr_in6 addr;
+                    addr.sin6_family = AF_INET;
+                    addr.sin6_port = 0;
+                    in6_addr anyaddr = IN6ADDR_ANY_INIT;
+                    addr.sin6_addr = anyaddr;
+                    if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
+                        throwExceptionFromLastError();
+                    }
+                    break;
+                }
             default:
                 assert(false);
         }
         
         m_ioManager->registerEvent(&m_sendEvent);
-        if (!ConnectEx(m_sock, to->name(), to->nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped)) {
+        if (!ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped)) {
             if (GetLastError() != WSA_IO_PENDING) {
                 throwExceptionFromLastError();
             }
@@ -156,8 +170,9 @@ Socket::connect(const Address *to)
         }
         setOption(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
 #else
-        if (!::connect(m_sock, to->name(), to->nameLen())) {
-            // TODO: what, it worked?!
+        if (!::connect(m_sock, to.name(), to.nameLen())) {
+            // Worked first time
+            return;
         }
         if (errno == EINPROGRESS) {
             m_ioManager->registerEvent(&m_sendEvent);
@@ -182,40 +197,40 @@ Socket::listen(int backlog)
     }
 }
 
-Socket *
+Socket::ptr
 Socket::accept()
 {
-    std::auto_ptr<Socket> sock(new Socket(m_ioManager, m_family, type(), m_protocol, 0));
-    accept(sock.get());
-    return sock.release();
+    Socket::ptr sock(new Socket(m_ioManager, m_family, type(), m_protocol, 0));
+    accept(*sock.get());
+    return sock;
 }
 
 void
-Socket::accept(Socket *target)
+Socket::accept(Socket &target)
 {
 #ifdef WINDOWS
     if (m_ioManager) {
-        assert(target->m_sock != -1);
+        assert(target.m_sock != -1);
     } else {
-        assert(target->m_sock == -1);
+        assert(target.m_sock == -1);
     }
 #else
-    assert(target->m_sock == -1);
+    assert(target.m_sock == -1);
 #endif
-    assert(target->m_family == m_family);
-    assert(target->m_protocol == m_protocol);
+    assert(target.m_family == m_family);
+    assert(target.m_protocol == m_protocol);
     if (!m_ioManager) {
         int newsock = ::accept(m_sock, NULL, NULL);
         if (newsock == -1) {
             throwExceptionFromLastError();
         }
-        target->m_sock = newsock;
+        target.m_sock = newsock;
     } else {
 #ifdef WINDOWS
         m_ioManager->registerEvent(&m_receiveEvent);
         unsigned char addrs[64];
         DWORD bytes;
-        BOOL ret = pAcceptEx(m_sock, target->m_sock, addrs, 64, (64 - 16) / 2, (64 - 16) / 2, &bytes,
+        BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 64, (64 - 16) / 2, (64 - 16) / 2, &bytes,
             &m_receiveEvent.overlapped);
         if (!ret && GetLastError() != WSA_IO_PENDING) {
             throwExceptionFromLastError();
@@ -224,7 +239,7 @@ Socket::accept(Socket *target)
         if (!m_receiveEvent.ret && m_receiveEvent.lastError != ERROR_MORE_DATA) {
             throwExceptionFromLastError(m_receiveEvent.lastError);
         }
-        target->setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
+        target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
 #else
         int newsock = ::accept(m_sock, NULL, NULL);
         while (newsock == -1 && errno == EAGAIN) {
@@ -236,7 +251,7 @@ Socket::accept(Socket *target)
             throwExceptionFromLastError();
         }
 
-        target->m_sock(newsock);
+        target.m_sock(newsock);
 #endif
     }
 }
@@ -340,9 +355,9 @@ Socket::send(const iovec *bufs, size_t len, int flags)
 }
 
 size_t
-Socket::sendTo(const void *buf, size_t len, int flags, const Address *to)
+Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
 {
-    assert(to->family() == family());
+    assert(to.family() == family());
 #ifdef WINDOWS
     if (m_ioManager) {
         WSABUF wsabuf;
@@ -350,7 +365,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address *to)
         wsabuf.len = len;
         m_ioManager->registerEvent(&m_sendEvent);
         int ret = WSASendTo(m_sock, &wsabuf, 1, NULL, flags,
-            to->name(), to->nameLen(),
+            to.name(), to.nameLen(),
             &m_sendEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
             throwExceptionFromLastError();
@@ -363,12 +378,12 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address *to)
     } else
 #endif
     {
-        int rc = ::sendto(m_sock, (const char*)buf, len, flags, to->name(), to->nameLen());
+        int rc = ::sendto(m_sock, (const char*)buf, len, flags, to.name(), to.nameLen());
 #ifndef WINDOWS
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(&m_sendEvent);
             Scheduler::getThis()->yieldTo();
-            rc = ::sendto(m_sock, buf, len, flags, to->name(), to->nameLen());
+            rc = ::sendto(m_sock, buf, len, flags, to.name(), to.nameLen());
         }
 #endif
         if (rc == -1) {
@@ -379,14 +394,14 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address *to)
 }
 
 size_t
-Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address *to)
+Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
 {
-    assert(to->family() == family());
+    assert(to.family() == family());
 #ifdef WINDOWS
     if (m_ioManager) {
         m_ioManager->registerEvent(&m_sendEvent);
         int ret = WSASendTo(m_sock, (LPWSABUF)bufs, len, NULL, flags,
-            to->name(), to->nameLen(),
+            to.name(), to.nameLen(),
             &m_sendEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
             throwExceptionFromLastError();
@@ -399,7 +414,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address *to)
     } else {
         DWORD sent;
         if (WSASendTo(m_sock, (LPWSABUF)bufs, len, &sent, flags,
-            to->name(), to->nameLen(),
+            to.name(), to.nameLen(),
             NULL, NULL)) {
             throwExceptionFromLastError();
         }
@@ -410,8 +425,8 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address *to)
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = (iovec*)bufs;
     msg.msg_iovlen = len;
-    msg.msg_name = (sockaddr*)to->name();
-    msg.msg_namelen = to->nameLen();
+    msg.msg_name = (sockaddr*)to.name();
+    msg.msg_namelen = to.nameLen();
     int rc = ::sendmsg(m_sock, &msg, flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(&m_sendEvent);
@@ -625,23 +640,23 @@ Socket::setOption(int level, int option, const void *value, size_t len)
     }
 }
 
-Address *
+Address::ptr
 Socket::emptyAddress()
 {
     switch (m_family) {
         case AF_INET:
-            return new IPv4Address(type(), m_protocol);
+            return Address::ptr(new IPv4Address(type(), m_protocol));
         case AF_INET6:
-            return new IPv6Address(type(), m_protocol);
+            return Address::ptr(new IPv6Address(type(), m_protocol));
         default:
-            return new UnknownAddress(m_family, type(), m_protocol);
+            return Address::ptr(new UnknownAddress(m_family, type(), m_protocol));
     }
 }
 
-Address *
+Address::ptr
 Socket::remoteAddress()
 {
-    std::auto_ptr<Address> result;
+    Address::ptr result;
     switch (m_family) {
         case AF_INET:
             result.reset(new IPv4Address(type(), m_protocol));
@@ -658,13 +673,13 @@ Socket::remoteAddress()
         throwExceptionFromLastError();
     }
     assert(namelen <= result->nameLen());
-    return result.release();
+    return result;
 }
 
-Address *
+Address::ptr
 Socket::localAddress()
 {
-    std::auto_ptr<Address> result;
+    Address::ptr result;
     switch (m_family) {
         case AF_INET:
             result.reset(new IPv4Address(type(), m_protocol));
@@ -681,7 +696,7 @@ Socket::localAddress()
         throwExceptionFromLastError();
     }
     assert(namelen <= result->nameLen());
-    return result.release();
+    return result;
 }
 
 int
@@ -720,10 +735,10 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     if (getaddrinfo(node.c_str(), server, &hints, &results)) {
         throwExceptionFromLastError();
     }
-    std::vector<boost::shared_ptr<Address> > result;
+    std::vector<Address::ptr> result;
     next = results;
     while (next) {
-        boost::shared_ptr<Address> addr;
+        Address::ptr addr;
         switch (next->ai_family) {
             case AF_INET:
                 addr.reset(new IPv4Address(next->ai_socktype, next->ai_protocol));
@@ -748,16 +763,16 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     return result;
 }
 
-Socket *
+Socket::ptr
 Address::createSocket()
 {
-    return new Socket(family(), type(), protocol());
+    return Socket::ptr(new Socket(family(), type(), protocol()));
 }
 
-Socket *
-Address::createSocket(IOManager *ioManager)
+Socket::ptr
+Address::createSocket(IOManager &ioManager)
 {
-    return new Socket(ioManager, family(), type(), protocol());
+    return Socket::ptr(new Socket(ioManager, family(), type(), protocol()));
 }
 
 IPAddress::IPAddress(int type, int protocol)
@@ -769,7 +784,7 @@ IPv4Address::IPv4Address(int type, int protocol)
 {
     sin.sin_family = AF_INET;
     sin.sin_port = 0;
-    *(int*)&sin.sin_addr = 0;
+    sin.sin_addr.s_addr = INADDR_ANY;
 }
 
 IPv6Address::IPv6Address(int type, int protocol)
@@ -777,6 +792,8 @@ IPv6Address::IPv6Address(int type, int protocol)
 {
     sin.sin6_family = AF_INET6;
     sin.sin6_port = 0;
+    in6_addr anyaddr = IN6ADDR_ANY_INIT;
+    sin.sin6_addr = anyaddr;
 }
 
 UnknownAddress::UnknownAddress(int family, int type, int protocol)

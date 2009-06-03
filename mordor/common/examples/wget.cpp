@@ -21,7 +21,7 @@ void main(int argc, const char *argv[])
         assert(uri.authority.hostDefined());
         assert(!uri.schemeDefined() || uri.scheme() == "http" || uri.scheme() == "https");
 
-        std::vector<boost::shared_ptr<Address> > addresses =
+        std::vector<Address::ptr> addresses =
         Address::lookup(uri.authority.host(), AF_UNSPEC, SOCK_STREAM);
         IPAddress *addr = dynamic_cast<IPAddress *>(addresses[0].get());
         assert(addr);
@@ -32,8 +32,8 @@ void main(int argc, const char *argv[])
         } else {
             addr->port(80);
         }
-        boost::shared_ptr<Socket> s(addresses[0]->createSocket(&ioManager));
-        s->connect(addresses[0].get());
+        Socket::ptr s(addresses[0]->createSocket(ioManager));
+        s->connect(addresses[0]);
         Stream::ptr stream(new SocketStream(s));
 
         HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(stream));

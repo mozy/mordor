@@ -15,7 +15,7 @@ protected:
     void init(IOManagerIOCP *ioManager, HANDLE hFile, bool own = true);
 public:
     HandleStream(HANDLE hFile, bool ownHandle = true);
-    HandleStream(IOManagerIOCP *ioManager, HANDLE hFile, bool own = true);
+    HandleStream(IOManagerIOCP &ioManager, HANDLE hFile, bool own = true);
     ~HandleStream();
 
     bool supportsRead() { return true; }

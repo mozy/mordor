@@ -22,19 +22,25 @@ struct Address;
 
 class Socket : boost::noncopyable
 {
+public:
+    typedef boost::shared_ptr<Socket> ptr;
 private:
     Socket(IOManager *ioManager, int family, int type, int protocol, int initialize);
 public:
     Socket(int family, int type, int protocol = 0);
-    Socket(IOManager *ioManager, int family, int type, int protocol = 0);
+    Socket(IOManager &ioManager, int family, int type, int protocol = 0);
     ~Socket();
 
-    void bind(const Address *addr);
-    void connect(const Address *to);
+    void bind(const Address &addr);
+    void bind(const boost::shared_ptr<Address> addr)
+    { bind(*addr.get()); }
+    void connect(const Address &to);
+    void connect(const boost::shared_ptr<Address> addr)
+    { connect(*addr.get()); }
     void listen(int backlog = SOMAXCONN);
 
-    Socket *accept();
-    void accept(Socket *target);
+    Socket::ptr accept();
+    void accept(Socket &target);
     void shutdown(int how = SHUT_RDWR);
     void close();
 
@@ -43,17 +49,21 @@ public:
 
     size_t send(const void *buf, size_t len, int flags = 0);
     size_t send(const iovec *bufs, size_t len, int flags = 0);
-    size_t sendTo(const void *buf, size_t len, int flags, const Address *to);
-    size_t sendTo(const iovec *bufs, size_t len, int flags, const Address *to);
+    size_t sendTo(const void *buf, size_t len, int flags, const Address &to);
+    size_t sendTo(const void *buf, size_t len, int flags, const boost::shared_ptr<Address> to)
+    { return sendTo(buf, len, flags, *to.get()); }
+    size_t sendTo(const iovec *bufs, size_t len, int flags, const Address &to);
+    size_t sendTo(const iovec *bufs, size_t len, int flags, const boost::shared_ptr<Address> to)
+    { return sendTo(bufs, len, flags, *to.get()); }
 
     size_t receive(void *buf, size_t len, int flags = 0);
     size_t receive(iovec *bufs, size_t len, int flags = 0);
     size_t receiveFrom(void *buf, size_t len, int *flags, Address *from);
     size_t receiveFrom(iovec *bufs, size_t len, int *flags, Address *from);
 
-    Address *emptyAddress();
-    Address *remoteAddress();
-    Address *localAddress();
+    boost::shared_ptr<Address> emptyAddress();
+    boost::shared_ptr<Address> remoteAddress();
+    boost::shared_ptr<Address> localAddress();
 
     int family() { return m_family; }
     int type();
@@ -67,15 +77,17 @@ private:
 
 struct Address
 {
+public:
+    typedef boost::shared_ptr<Address> ptr;
 protected:
     Address(int type, int protocol = 0);
 public:
-    static std::vector<boost::shared_ptr<Address> >
+    static std::vector<ptr>
         lookup(const std::string& host, int family = AF_UNSPEC,
             int type = 0, int protocol = 0);
 
-    Socket *createSocket();
-    Socket *createSocket(IOManager *ioManager);
+    Socket::ptr createSocket();
+    Socket::ptr createSocket(IOManager &ioManager);
 
     int family() const { return name()->sa_family; }
     int type() const { return m_type; }

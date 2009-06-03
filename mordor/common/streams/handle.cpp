@@ -34,8 +34,8 @@ HandleStream::HandleStream(HANDLE hFile, bool own)
     assert(m_hFile != INVALID_HANDLE_VALUE);
 }
 
-HandleStream::HandleStream(IOManagerIOCP *ioManager, HANDLE hFile, bool own)
-: m_ioManager(ioManager), m_pos(0), m_hFile(hFile), m_own(own)
+HandleStream::HandleStream(IOManagerIOCP &ioManager, HANDLE hFile, bool own)
+: m_ioManager(&ioManager), m_pos(0), m_hFile(hFile), m_own(own)
 {
     assert(m_hFile != NULL);
     assert(m_hFile != INVALID_HANDLE_VALUE);
