@@ -20,4 +20,5 @@ void main(int argc, const char *argv[])
     buf[rc] = 0;
     std::cout << "Read " << buf << " from conn" << std::endl;
     s->shutdown();
+    ioManager.stop();
 }

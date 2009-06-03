@@ -8,23 +8,39 @@
 
 #include "atomic.h"
 
-ThreadPool::ThreadPool(boost::function<void()> proc, int threads)
-: m_proc(proc), m_size(threads)
+ThreadPool::ThreadPool(boost::function<void()> proc)
+: m_proc(proc)
 {
 }
 
 void
-ThreadPool::start()
+ThreadPool::start(int threads)
 {
-    for (size_t i = 0; i < m_size; ++i) {
-        boost::thread thread(m_proc);
+    boost::mutex::scoped_lock lock(m_mutex);
+    for (size_t i = 0; i < threads; ++i) {
+        m_threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(m_proc)));
     }
 }
 
 size_t
 ThreadPool::size()
 {
-    return m_size;
+    boost::mutex::scoped_lock lock(m_mutex);
+    return m_threads.size();
+}
+
+void
+ThreadPool::join_all()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    for (std::list<boost::shared_ptr<boost::thread> >::const_iterator it(m_threads.begin());
+        it != m_threads.end();
+        ++it)
+    {
+        if ((*it)->get_id() != boost::this_thread::get_id()) {
+            (*it)->join();
+        }
+    }
 }
 
 static void delete_nothing_scheduler(Scheduler* f) {}
@@ -34,8 +50,7 @@ boost::thread_specific_ptr<Scheduler> Scheduler::t_scheduler(&delete_nothing_sch
 boost::thread_specific_ptr<Fiber> Scheduler::t_fiber(&delete_nothing);
 
 Scheduler::Scheduler(int threads, bool useCaller)
-    : m_threads(boost::bind(&Scheduler::run, this),
-                useCaller ? threads - 1 : threads),
+    : m_threads(boost::bind(&Scheduler::run, this)),
       m_stopping(false)
 {
     if (useCaller)
@@ -45,9 +60,10 @@ Scheduler::Scheduler(int threads, bool useCaller)
         assert(getThis() == NULL);
         t_scheduler.reset(this);
         m_rootFiber.reset(new Fiber(boost::bind(&Scheduler::run, this), 65536));
+        m_rootThread = boost::this_thread::get_id();
         t_fiber.reset(m_rootFiber.get());
     }
-    m_threads.start();
+    m_threads.start(threads);
 }
 
 Scheduler *
@@ -59,6 +75,15 @@ Scheduler::getThis()
 void
 Scheduler::stop()
 {
+    if (m_rootThread == boost::thread::id()) {
+        assert(Scheduler::getThis() != this);
+    } else {
+        assert(Scheduler::getThis() == this);
+    }
+    if (m_rootThread != boost::thread::id()) {
+        // First switch to the correct thread
+        switchTo(m_rootThread);
+    }
     m_stopping = true;
     for (size_t i = 0; i < m_threads.size(); ++i) {
         tickle();
@@ -68,6 +93,7 @@ Scheduler::stop()
     if (Scheduler::getThis() == this) {
         yieldTo(true);
     }
+    m_threads.join_all();
 }
 
 bool
@@ -77,23 +103,27 @@ Scheduler::stopping()
 }
 
 void
-Scheduler::schedule(Fiber::ptr f)
+Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
 {
     assert(f);
     boost::mutex::scoped_lock lock(m_mutex);
-    m_fibers.push_back(f);
+    FiberAndThread ft = {f, thread };
+    m_fibers.push_back(ft);
     if (m_fibers.size() == 1)
         tickle();
 }
 
 void
-Scheduler::switchTo()
+Scheduler::switchTo(boost::thread::id thread)
 {
     assert(Scheduler::getThis() != NULL);
     if (Scheduler::getThis() == this) {
-        return;
+        if (thread == boost::thread::id() ||
+            thread == boost::this_thread::get_id()) {
+            return;
+        }
     }
-    schedule(Fiber::getThis());
+    schedule(Fiber::getThis(), thread);
     Scheduler::getThis()->yieldTo();
 }
 
@@ -125,14 +155,22 @@ Scheduler::run()
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this), 65536 * 4));
     while (true) {
         Fiber::ptr f;
+        bool loop = false;
         {
             boost::mutex::scoped_lock lock(m_mutex);
             while (!f) {
                 if (m_fibers.empty())
                     break;
-                std::list<Fiber::ptr>::const_iterator it;
+                std::list<FiberAndThread>::const_iterator it;
                 for (it = m_fibers.begin(); it != m_fibers.end(); ++it) {
-                    f = *it;
+                    if (it->thread != boost::thread::id() &&
+                        it->thread != boost::this_thread::get_id()) {
+                        // Wake up another thread to hopefully service this
+                        tickle();
+                        loop = true;
+                        break;
+                    }
+                    f = it->fiber;
                     if (f->state() == Fiber::EXEC) {
                         f.reset();
                         continue;
@@ -140,7 +178,16 @@ Scheduler::run()
                     m_fibers.erase(it);
                     break;
                 }
+                if (loop) {
+                    break;
+                }
             }
+        }
+        // We're looping because we're not allowed to go back to idle until
+        // the correct thread services a a thread-targetted fiber request;
+        // but we need to break out of the above loop to release the lock
+        if (loop) {
+            continue;
         }
         if (f) {
             if (f->state() != Fiber::TERM) {

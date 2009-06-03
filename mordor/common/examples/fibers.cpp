@@ -32,4 +32,5 @@ void main()
     printf("In pool %c\n", Scheduler::getThis() == &poolA ? 'A' : 'B');
     poolB.stop();
     printf("done\n");
+    poolA.stop();
 }

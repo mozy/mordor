@@ -14,8 +14,7 @@ void main(int argc, const char *argv[])
 {
     StdoutStream stdoutStream;
     Fiber::ptr mainfiber(new Fiber());
-    WorkerPool mainpool, pool(2, false);
-    pool.switchTo();
+    WorkerPool pool(2);
     try {
         if (argc == 1) {
             argc = 2;
@@ -36,6 +35,5 @@ void main(int argc, const char *argv[])
         std::cerr << "Caught " << typeid(ex).name( ) << ": "
                   << ex.what( ) << std::endl;
     }
-    mainpool.switchTo();
     pool.stop();
 }

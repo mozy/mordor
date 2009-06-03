@@ -20,15 +20,17 @@
 class ThreadPool
 {
 public:
-    ThreadPool(boost::function<void ()> proc, int threads = 1);
+    ThreadPool(boost::function<void ()> proc);
 
-    void start();
+    void start(int threads = 1);
 
     size_t size();
+    void join_all();
 
 private:
     boost::function<void ()> m_proc;
-    size_t m_size;
+    boost::mutex m_mutex;
+    std::list<boost::shared_ptr<boost::thread> > m_threads;
 };
 
 class Scheduler
@@ -41,8 +43,8 @@ public:
     void stop();
     bool stopping();
 
-    void schedule(Fiber::ptr f);
-    void switchTo();
+    void schedule(Fiber::ptr f, boost::thread::id thread = boost::thread::id());
+    void switchTo(boost::thread::id thread = boost::thread::id());
     void yieldTo();
 
 protected:
@@ -54,10 +56,15 @@ private:
     void run();
 
 private:
+    struct FiberAndThread {
+        Fiber::ptr fiber;
+        boost::thread::id thread;
+    };
     static boost::thread_specific_ptr<Scheduler> t_scheduler;
     static boost::thread_specific_ptr<Fiber> t_fiber;
     boost::mutex m_mutex;
-    std::list<Fiber::ptr> m_fibers;
+    std::list<FiberAndThread> m_fibers;
+    boost::thread::id m_rootThread;
     Fiber::ptr m_rootFiber;
     ThreadPool m_threads;
     bool m_stopping;
