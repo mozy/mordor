@@ -3,6 +3,7 @@
 #include "fd.h"
 
 #include <sys/fcntl.h>
+#include <sys/stat.h>
 #include <sys/uio.h>
 
 #include "common/exception.h"
@@ -114,7 +115,7 @@ long long
 FDStream::seek(long long offset, Anchor anchor)
 {
     assert(m_fd >= 0);
-    long long pos = lseek64(m_fd, offset, (int)anchor);
+    long long pos = lseek(m_fd, offset, (int)anchor);
     if (pos < 0) {
         throwExceptionFromLastError();
     }
@@ -125,8 +126,8 @@ long long
 FDStream::size()
 {
     assert(m_fd >= 0);
-    struct stat64 statbuf;
-    if (fstat64(m_fd, &statbuf)) {
+    struct stat statbuf;
+    if (fstat(m_fd, &statbuf)) {
         throwExceptionFromLastError();
     }
     return statbuf.st_size;
@@ -136,7 +137,7 @@ void
 FDStream::truncate(long long size)
 {
     assert(m_fd >= 0);
-    if (ftruncate64(m_fd, size)) {
+    if (ftruncate(m_fd, size)) {
         throwExceptionFromLastError();
     }
 }

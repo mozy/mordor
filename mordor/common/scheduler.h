@@ -37,6 +37,7 @@ class Scheduler
 {
 public:
     Scheduler(int threads = 1, bool useCaller = true);
+    virtual ~Scheduler() {}
 
     static Scheduler* getThis();
 

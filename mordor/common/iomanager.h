@@ -11,6 +11,9 @@ typedef AsyncEventIOCP AsyncEvent;
 #elif defined(LINUX)
 #include "iomanager_epoll.h"
 typedef IOManagerEPoll IOManager;
+#elif defined(BSD)
+#include "iomanager_kqueue.h"
+typedef IOManagerKQueue IOManager;
 #endif
 
 #endif

@@ -10,6 +10,8 @@
 class RagelParser
 {
 public:
+    virtual ~RagelParser() {}
+
     // Complete parsing
     void run(const std::string& str);
     void run(Stream &stream);

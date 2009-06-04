@@ -97,6 +97,8 @@ public:
 protected:
     Address(int type, int protocol = 0);
 public:
+    virtual ~Address() {}
+
     static std::vector<ptr>
         lookup(const std::string& host, int family = AF_UNSPEC,
             int type = 0, int protocol = 0);

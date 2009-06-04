@@ -14,6 +14,7 @@
 
 #ifdef __APPLE__
 #   define OSX
+#   define BSD
 #endif
 
 // Architecture

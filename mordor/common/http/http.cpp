@@ -73,7 +73,7 @@ std::ostream& operator<<(std::ostream& os, HTTP::Method m)
 
 std::ostream& operator<<(std::ostream& os, HTTP::Version v)
 {
-    assert(v.major != ~0 && v.minor != ~0);
+    assert(v.major != (unsigned char)~0 && v.minor != (unsigned char)~0);
     return os << "HTTP/" << v.major << "." << v.minor;    
 }
 

@@ -43,7 +43,11 @@ endif
 PLATFORMDIR := $(PLATFORM)/$(ARCH)
 
 ifeq ($(PLATFORM), Darwin)
+    IOMANAGER := kqueue
     UNDERSCORE := _underscore
+endif
+ifeq ($(shell uname), Linux)
+    IOMANAGER := epoll
 endif
 
 # output directory for the build is prefixed with debug v.s. nondebug
@@ -110,11 +114,11 @@ CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG
 
 RAGEL   := ragel
 
-LIBS := -lboost_thread
+LIBS := -lboost_thread-mt
 
 # compile and link a binary.  this *must* be defined using = and not :=
 # because it uses target variables
-COMPLINK = $(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $^ $(CXXLDFLAGS) $(LIBS) -o $@
+COMPLINK = $(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $^ $(CXXLDFLAGS) $(LDFLAGS) $(LIBS) -o $@
 
 # Eliminate default suffix rules
 .SUFFIXES:
@@ -232,7 +236,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/http/connection.o		\
 	$(OBJDIR)/mordor/common/http/http.o			\
 	$(OBJDIR)/mordor/common/http/parser.o			\
-	$(OBJDIR)/mordor/common/iomanager_epoll.o		\
+	$(OBJDIR)/mordor/common/iomanager_$(IOMANAGER).o	\
 	$(OBJDIR)/mordor/common/ragel.o				\
 	$(OBJDIR)/mordor/common/scheduler.o			\
 	$(OBJDIR)/mordor/common/semaphore.o			\
