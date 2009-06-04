@@ -158,6 +158,7 @@ ifeq ($(Q),@)
 	@echo rm $(OBJDIR)
 endif
 	$(Q)rm -rf $(OBJDIR)
+	$(Q)rm -f mordor/common/uri.cpp mordor/common/http/parser.cpp
 
 #
 # Include the dependency information generated during the previous compile
@@ -187,7 +188,6 @@ $(OBJDIR)/lib/libmordor.a:				\
 	$(OBJDIR)/mordor/common/scheduler.o		\
 	$(OBJDIR)/mordor/common/semaphore.o		\
 	$(OBJDIR)/mordor/common/socket.o		\
-	$(OBJDIR)/mordor/common/uri.o			\
 	$(OBJDIR)/mordor/common/streams/buffer.o	\
 	$(OBJDIR)/mordor/common/streams/buffered.o	\
         $(OBJDIR)/mordor/common/streams/fd.o		\
@@ -197,5 +197,5 @@ $(OBJDIR)/lib/libmordor.a:				\
 	$(OBJDIR)/mordor/common/streams/socket.o	\
 	$(OBJDIR)/mordor/common/streams/std.o		\
 	$(OBJDIR)/mordor/common/streams/stream.o	\
-	$(OBJDIR)/mordor/common/streams/transfer.o
-
+	$(OBJDIR)/mordor/common/streams/transfer.o	\
+	$(OBJDIR)/mordor/common/uri.o
