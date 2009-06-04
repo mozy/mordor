@@ -73,7 +73,7 @@ std::ostream& operator<<(std::ostream& os, HTTP::Method m)
 std::ostream& operator<<(std::ostream& os, HTTP::Version v)
 {
     assert(v.major != ~0 && v.minor != ~0);
-    return os << "HTTP/" << (int)v.major << "." << (int)v.minor;    
+    return os << "HTTP/" << v.major << "." << v.minor;    
 }
 
 std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v)

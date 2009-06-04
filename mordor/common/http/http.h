@@ -2,6 +2,7 @@
 #define __HTTP_H__
 // Copyright (c) 2009 - Decho Corp.
 
+#include <string.h>
 #include <map>
 #include <set>
 #include <vector>

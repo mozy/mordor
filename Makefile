@@ -62,6 +62,7 @@ else
     else
         ifdef OPT
             OPT_FLAGS += -O$(OPT)
+            RLFLAGS += -G2
         else
             OPT_FLAGS += -O
         endif
@@ -77,7 +78,6 @@ endif
 ifndef NDEBUG
     DBG_FLAGS += -g
     DBG_FLAGS += -DDEBUG -fno-inline
-    RLFLAGS += -G2
 endif
 
 ifdef GPROF
@@ -176,8 +176,13 @@ $(OBJDIR)/bin/examples/wget: $(OBJDIR)/mordor/common/examples/wget.o $(OBJDIR)/l
 
 $(OBJDIR)/lib/libmordor.a:				\
 	$(OBJDIR)/mordor/common/exception.o		\
-	$(OBJDIR)/mordor/common/iomanager_epoll.o	\
 	$(OBJDIR)/mordor/common/fiber.o			\
+	$(OBJDIR)/mordor/common/http/chunked.o		\
+	$(OBJDIR)/mordor/common/http/client.o		\
+	$(OBJDIR)/mordor/common/http/connection.o	\
+	$(OBJDIR)/mordor/common/http/http.o		\
+	$(OBJDIR)/mordor/common/http/parser.o		\
+	$(OBJDIR)/mordor/common/iomanager_epoll.o	\
 	$(OBJDIR)/mordor/common/ragel.o			\
 	$(OBJDIR)/mordor/common/scheduler.o		\
 	$(OBJDIR)/mordor/common/semaphore.o		\
@@ -185,6 +190,7 @@ $(OBJDIR)/lib/libmordor.a:				\
 	$(OBJDIR)/mordor/common/uri.o			\
 	$(OBJDIR)/mordor/common/streams/buffer.o	\
 	$(OBJDIR)/mordor/common/streams/buffered.o	\
+        $(OBJDIR)/mordor/common/streams/fd.o		\
 	$(OBJDIR)/mordor/common/streams/file.o		\
 	$(OBJDIR)/mordor/common/streams/limited.o	\
 	$(OBJDIR)/mordor/common/streams/null.o		\

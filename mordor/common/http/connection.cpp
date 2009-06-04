@@ -34,8 +34,10 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
             case HEAD:
             case TRACE:
                 return false;
+            default:
+                break;
         }
-        if (entity.contentLength != ~0 && entity.contentLength != 0)
+        if (entity.contentLength != ~0u && entity.contentLength != 0)
             return true;
         for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
             it != general.transferEncoding.end();
@@ -50,8 +52,10 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
             case HEAD:
             case TRACE:
                 return false;
+            default:
+                break;
         }
-        if ((int)status >= 100 && status <= 199 ||
+        if (((int)status >= 100 && status <= 199) ||
             (int)status == 204 ||
             (int)status == 304 ||
             method == HEAD)
@@ -108,7 +112,7 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
         }
     }
     if (stream != baseStream) {
-    } else if (entity.contentLength != ~0) {
+    } else if (entity.contentLength != ~0u) {
         stream.reset(new LimitedStream(stream, entity.contentLength));
     } else if (entity.contentType.type == "multipart") {
         // Getting stream to pass to multipart; self-delimiting

@@ -75,7 +75,9 @@ public:
 private:
     int m_sock, m_family, m_protocol;
     IOManager *m_ioManager;
+#ifdef WINDOWS
     AsyncEvent m_sendEvent, m_receiveEvent;
+#endif
 };
 
 struct Address

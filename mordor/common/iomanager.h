@@ -11,7 +11,6 @@ typedef AsyncEventIOCP AsyncEvent;
 #elif defined(LINUX)
 #include "iomanager_epoll.h"
 typedef IOManagerEPoll IOManager;
-typedef AsyncEventEPoll AsyncEvent;
 #endif
 
 #endif

@@ -3,6 +3,13 @@
 #include "chunked.h"
 
 #include <sstream>
+#include <stdexcept>
+
+#include "common/version.h"
+
+#ifdef WINDOWS
+#define strtoull _strtoui64
+#endif
 
 HTTP::ChunkedStream::ChunkedStream(Stream::ptr parent, bool own)
 : MutatingFilterStream(parent, own),
@@ -25,17 +32,17 @@ HTTP::ChunkedStream::close(Stream::CloseType type)
 size_t
 HTTP::ChunkedStream::read(Buffer &b, size_t len)
 {
-    if (m_nextChunk == ~0) {
+    if (m_nextChunk == ~0u) {
         std::string chunk = parent()->getDelimited();
         char *end;
-        m_nextChunk = _strtoui64(chunk.c_str(), &end, 16);
+        m_nextChunk = strtoull(chunk.c_str(), &end, 16);
         if (end == chunk.c_str()) {
             throw std::runtime_error("Invalid chunk size: " + chunk);
         }
     }
     if (m_nextChunk == 0)
         return 0;
-    size_t toRead = std::min(len, m_nextChunk);
+    size_t toRead = (size_t)std::min<unsigned long long>(len, m_nextChunk);
     size_t result = MutatingFilterStream::read(b, toRead);
     m_nextChunk -= result;
     if (m_nextChunk == 0) {

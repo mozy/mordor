@@ -547,7 +547,7 @@ HTTP::ClientRequest::ensureResponse()
         // closing the connection
         if (Connection::hasMessageBody(m_response.general, m_response.entity,
             m_request.requestLine.method, m_response.status.status) &&
-            transferEncoding.empty() && m_response.entity.contentLength == ~0 &&
+            transferEncoding.empty() && m_response.entity.contentLength == ~0u &&
             m_response.entity.contentType.type != "multipart") {
             close = true;
         }

@@ -5,6 +5,12 @@
 
 #include "parser.h"
 
+#include "common/version.h"
+
+#ifdef WINDOWS
+#define atoll _atoi64
+#endif
+
 // From uri.rl
 std::string unescape(const std::string& str);
 
@@ -184,7 +190,7 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
     action save_ulong {
-        *m_ulong = _atoi64(mark);
+        *m_ulong = atoll(mark);
         mark = NULL;
     }
     

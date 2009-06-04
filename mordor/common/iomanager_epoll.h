@@ -2,19 +2,46 @@
 #define __IOMANAGER_EPOLL_H__
 // Copyright (c) 2009 - Decho Corp.
 
-#include "scheduler.h"
+#include <sys/epoll.h>
 
-struct AsyncEventEPoll
-{
-};
+#include "scheduler.h"
+#include "version.h"
+
+#ifndef LINUX
+#error IOManagerEPoll is Linux only
+#endif
 
 class IOManagerEPoll : public Scheduler
 {
 public:
-    void registerEvent(AsyncEventEPoll *event);
+    enum Event {
+        READ = EPOLLIN,
+        WRITE = EPOLLOUT
+    };
+
+private:
+    struct AsyncEvent
+    {
+        epoll_event event;
+
+        Scheduler *m_schedulerIn, *m_schedulerOut;
+        Fiber::ptr m_fiberIn, m_fiberOut;
+    };
+
+public:
+    IOManagerEPoll(int threads = 1, bool useCaller = true);
+    ~IOManagerEPoll();
+
+    void registerEvent(int fd, Event events);
 protected:
     void idle();
     void tickle();
+
+private:
+    int m_epfd;
+    int m_tickleFds[2];
+    std::map<int, AsyncEvent> m_pendingEvents;
+    boost::mutex m_mutex;
 };
 
 #endif

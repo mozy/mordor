@@ -176,7 +176,7 @@ Socket::connect(const Address &to)
             return;
         }
         if (errno == EINPROGRESS) {
-            m_ioManager->registerEvent(&m_sendEvent);
+            m_ioManager->registerEvent(m_sock, IOManager::WRITE);
             Scheduler::getThis()->yieldTo();
             int err;
             size_t size = sizeof(int);
@@ -245,7 +245,7 @@ Socket::accept(Socket &target)
 #else
         int newsock = ::accept(m_sock, NULL, NULL);
         while (newsock == -1 && errno == EAGAIN) {
-            m_ioManager->registerEvent(&m_receiveEvent);
+            m_ioManager->registerEvent(m_sock, IOManager::READ);
             Scheduler::getThis()->yieldTo();
             newsock = ::accept(m_sock, NULL, NULL);
         }
@@ -302,7 +302,7 @@ Socket::send(const void *buf, size_t len, int flags)
         int rc = ::send(m_sock, (const char*)buf, len, flags);
 #ifndef WINDOWS
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
-            m_ioManager->registerEvent(&m_sendEvent);
+            m_ioManager->registerEvent(m_sock, IOManager::WRITE);
             Scheduler::getThis()->yieldTo();
             rc = ::send(m_sock, buf, len, flags);
         }
@@ -345,7 +345,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
     msg.msg_iovlen = len;
     int rc = ::sendmsg(m_sock, &msg, flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
-        m_ioManager->registerEvent(&m_sendEvent);
+        m_ioManager->registerEvent(m_sock, IOManager::WRITE);
         Scheduler::getThis()->yieldTo();
         rc = ::sendmsg(m_sock, &msg, flags);
     }
@@ -383,7 +383,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
         int rc = ::sendto(m_sock, (const char*)buf, len, flags, to.name(), to.nameLen());
 #ifndef WINDOWS
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
-            m_ioManager->registerEvent(&m_sendEvent);
+            m_ioManager->registerEvent(m_sock, IOManager::WRITE);
             Scheduler::getThis()->yieldTo();
             rc = ::sendto(m_sock, buf, len, flags, to.name(), to.nameLen());
         }
@@ -431,7 +431,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
     msg.msg_namelen = to.nameLen();
     int rc = ::sendmsg(m_sock, &msg, flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
-        m_ioManager->registerEvent(&m_sendEvent);
+        m_ioManager->registerEvent(m_sock, IOManager::WRITE);
         Scheduler::getThis()->yieldTo();
         rc = ::sendmsg(m_sock, &msg, flags);
     }
@@ -467,7 +467,7 @@ Socket::receive(void *buf, size_t len, int flags)
         int rc = ::recv(m_sock, (char*)buf, len, flags);
 #ifndef WINDOWS
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
-            m_ioManager->registerEvent(&m_receiveEvent);
+            m_ioManager->registerEvent(m_sock, IOManager::READ);
             Scheduler::getThis()->yieldTo();
             rc = ::recv(m_sock, buf, len, flags);
         }
@@ -510,7 +510,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
     msg.msg_iovlen = len;
     int rc = ::recvmsg(m_sock, &msg, flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
-        m_ioManager->registerEvent(&m_receiveEvent);
+        m_ioManager->registerEvent(m_sock, IOManager::READ);
         Scheduler::getThis()->yieldTo();
         rc = ::recvmsg(m_sock, &msg, flags);
     }
@@ -564,7 +564,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
     msg.msg_namelen = from->nameLen();
     int rc = ::recvmsg(m_sock, &msg, *flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
-        m_ioManager->registerEvent(&m_sendEvent);
+        m_ioManager->registerEvent(m_sock, IOManager::READ);
         Scheduler::getThis()->yieldTo();
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
@@ -613,7 +613,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
     msg.msg_namelen = from->nameLen();
     int rc = ::recvmsg(m_sock, &msg, *flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
-        m_ioManager->registerEvent(&m_sendEvent);
+        m_ioManager->registerEvent(m_sock, IOManager::READ);
         Scheduler::getThis()->yieldTo();
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
