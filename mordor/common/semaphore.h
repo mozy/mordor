@@ -6,6 +6,8 @@
 
 #ifdef WINDOWS
 #include <windows.h>
+#else
+#include <semaphore.h>
 #endif
 
 class Semaphore
@@ -22,6 +24,7 @@ private:
 #ifdef WINDOWS
     HANDLE m_semaphore;
 #else
+    sem_t m_semaphore;
 #endif
 };
 

@@ -33,9 +33,26 @@ private:
     std::string m_message;
 };
 typedef Win32Error NativeError;
+typedef unsigned int error_t;
+#else
+class ErrnoError : public std::runtime_error
+{
+public:
+    ErrnoError(int error);
+    ~ErrnoError() throw() {}
+    const char *what() const throw() { return m_message.c_str(); }
+
+    int error() { return m_error; }
+
+private:
+    int m_error;
+    std::string m_message;
+};
+typedef ErrnoError NativeError;
+typedef int error_t;
 #endif
 
 void throwExceptionFromLastError();
-void throwExceptionFromLastError(unsigned int lastError);
+void throwExceptionFromLastError(error_t lastError);
 
 #endif

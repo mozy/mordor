@@ -42,6 +42,10 @@ endif
 
 PLATFORMDIR := $(PLATFORM)/$(ARCH)
 
+ifeq ($(PLATFORM), Darwin)
+    UNDERSCORE := _underscore
+endif
+
 # output directory for the build is prefixed with debug v.s. nondebug
 ifdef GITVER
 	OBJTOPDIR := obj-$(RELEASEVER)
@@ -106,9 +110,11 @@ CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG
 
 RAGEL   := ragel
 
+LIBS := -lboost_thread
+
 # compile and link a binary.  this *must* be defined using = and not :=
 # because it uses target variables
-COMPLINK = $(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(filter %.o,$^) $(CXXLDFLAGS) $(LIBS) -o $@
+COMPLINK = $(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $^ $(CXXLDFLAGS) $(LIBS) -o $@
 
 # Eliminate default suffix rules
 .SUFFIXES:
@@ -145,6 +151,13 @@ endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(RAGEL) $(RLFLAGS) -o $@ $<
 
+$(OBJDIR)/%.o: %.s
+ifeq ($(Q),@)
+	@echo as $<
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AS) $(ASFLAGS) $(TARGET_MACH) -o $@ $<
+
 
 #
 # clean up all builds
@@ -168,34 +181,72 @@ endif
 DEPS := $(shell test -d $(OBJDIR) && find $(OBJDIR) -name "*.d")
 -include $(DEPS)
 
-all: wget
+all: cat fibers simpleclient wget
+
+.PHONY: cat
+cat: $(OBJDIR)/bin/examples/cat
+
+$(OBJDIR)/bin/examples/cat: $(OBJDIR)/mordor/common/examples/cat.o $(OBJDIR)/lib/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(COMPLINK)
+
+.PHONY: fibers
+fibers: $(OBJDIR)/bin/examples/fibers
+
+$(OBJDIR)/bin/examples/fibers: $(OBJDIR)/mordor/common/examples/fibers.o $(OBJDIR)/lib/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(COMPLINK)
+
+.PHONY: simpleclient
+fibers: $(OBJDIR)/bin/examples/simpleclient
+
+$(OBJDIR)/bin/examples/simpleclient: $(OBJDIR)/mordor/common/examples/simpleclient.o $(OBJDIR)/lib/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@ 
+endif
+	$(Q)mkdir -p $(@D)
+	$(COMPLINK)
 
 .PHONY: wget
 wget: $(OBJDIR)/bin/examples/wget
 
 $(OBJDIR)/bin/examples/wget: $(OBJDIR)/mordor/common/examples/wget.o $(OBJDIR)/lib/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(COMPLINK)
 
-$(OBJDIR)/lib/libmordor.a:				\
-	$(OBJDIR)/mordor/common/exception.o		\
-	$(OBJDIR)/mordor/common/fiber.o			\
-	$(OBJDIR)/mordor/common/http/chunked.o		\
-	$(OBJDIR)/mordor/common/http/client.o		\
-	$(OBJDIR)/mordor/common/http/connection.o	\
-	$(OBJDIR)/mordor/common/http/http.o		\
-	$(OBJDIR)/mordor/common/http/parser.o		\
-	$(OBJDIR)/mordor/common/iomanager_epoll.o	\
-	$(OBJDIR)/mordor/common/ragel.o			\
-	$(OBJDIR)/mordor/common/scheduler.o		\
-	$(OBJDIR)/mordor/common/semaphore.o		\
-	$(OBJDIR)/mordor/common/socket.o		\
-	$(OBJDIR)/mordor/common/streams/buffer.o	\
-	$(OBJDIR)/mordor/common/streams/buffered.o	\
-        $(OBJDIR)/mordor/common/streams/fd.o		\
-	$(OBJDIR)/mordor/common/streams/file.o		\
-	$(OBJDIR)/mordor/common/streams/limited.o	\
-	$(OBJDIR)/mordor/common/streams/null.o		\
-	$(OBJDIR)/mordor/common/streams/socket.o	\
-	$(OBJDIR)/mordor/common/streams/std.o		\
-	$(OBJDIR)/mordor/common/streams/stream.o	\
-	$(OBJDIR)/mordor/common/streams/transfer.o	\
+$(OBJDIR)/lib/libmordor.a:					\
+	$(OBJDIR)/mordor/common/exception.o			\
+	$(OBJDIR)/mordor/common/fiber.o				\
+	$(OBJDIR)/mordor/common/fiber_$(ARCH)$(UNDERSCORE).o	\
+	$(OBJDIR)/mordor/common/http/chunked.o			\
+	$(OBJDIR)/mordor/common/http/client.o			\
+	$(OBJDIR)/mordor/common/http/connection.o		\
+	$(OBJDIR)/mordor/common/http/http.o			\
+	$(OBJDIR)/mordor/common/http/parser.o			\
+	$(OBJDIR)/mordor/common/iomanager_epoll.o		\
+	$(OBJDIR)/mordor/common/ragel.o				\
+	$(OBJDIR)/mordor/common/scheduler.o			\
+	$(OBJDIR)/mordor/common/semaphore.o			\
+	$(OBJDIR)/mordor/common/socket.o			\
+	$(OBJDIR)/mordor/common/streams/buffer.o		\
+	$(OBJDIR)/mordor/common/streams/buffered.o		\
+        $(OBJDIR)/mordor/common/streams/fd.o			\
+	$(OBJDIR)/mordor/common/streams/file.o			\
+	$(OBJDIR)/mordor/common/streams/limited.o		\
+	$(OBJDIR)/mordor/common/streams/null.o			\
+	$(OBJDIR)/mordor/common/streams/socket.o		\
+	$(OBJDIR)/mordor/common/streams/std.o			\
+	$(OBJDIR)/mordor/common/streams/stream.o		\
+	$(OBJDIR)/mordor/common/streams/transfer.o		\
 	$(OBJDIR)/mordor/common/uri.o
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AR) r $@ $(filter %.o,$?)

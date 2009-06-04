@@ -6,7 +6,7 @@
 
 #include <boost/shared_array.hpp>
 
-#include "common/version.h"
+#include "common/socket.h"
 
 struct Buffer
 {
@@ -16,19 +16,19 @@ public:
     public:
         DataBuf();
         DataBuf(size_t length);
-//        DataBuf(const DataBuf &copy);
 
         DataBuf slice(size_t start, size_t length = ~0);
         const DataBuf slice(size_t start, size_t length = ~0) const;
 
-        // Match the layout of WSABUF
-#ifdef WINDOWS
-        unsigned int m_length;
-        void*  m_start;
-#else
-        void*  m_start;
-        unsigned int m_length;
-#endif
+    public:
+        void *start() { return m_start; }
+        const void *start() const { return m_start; }
+        size_t length() const { return m_length; }
+    private:
+        void start(void *p) { m_start = p; }
+        void length(size_t l) { m_length = l; }        
+        void *m_start;
+        size_t m_length;
     private:
         boost::shared_array<unsigned char> m_array;
     };
@@ -65,9 +65,9 @@ public:
     void produce(size_t len);
     void consume(size_t len);
 
-    const std::vector<DataBuf> readBufs(size_t len = ~0) const;
+    const std::vector<iovec> readBufs(size_t len = ~0) const;
     const DataBuf readBuf(size_t len) const;
-    std::vector<DataBuf> writeBufs(size_t len = ~0);
+    std::vector<iovec> writeBufs(size_t len = ~0);
     DataBuf writeBuf(size_t len);
 
     void copyIn(const Buffer& buf, size_t len = ~0);

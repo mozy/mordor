@@ -169,7 +169,7 @@ namespace HTTP
 
     struct EntityHeaders
     {
-        EntityHeaders() : contentLength(~0) {}
+        EntityHeaders() : contentLength(~0ull) {}
 
         unsigned long long contentLength;
         MediaType contentType;

@@ -37,7 +37,7 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
             default:
                 break;
         }
-        if (entity.contentLength != ~0u && entity.contentLength != 0)
+        if (entity.contentLength != ~0ull && entity.contentLength != 0)
             return true;
         for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
             it != general.transferEncoding.end();
@@ -112,7 +112,7 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
         }
     }
     if (stream != baseStream) {
-    } else if (entity.contentLength != ~0u) {
+    } else if (entity.contentLength != ~0ull) {
         stream.reset(new LimitedStream(stream, entity.contentLength));
     } else if (entity.contentType.type == "multipart") {
         // Getting stream to pass to multipart; self-delimiting

@@ -32,4 +32,27 @@ void throwExceptionFromLastError(unsigned int lastError)
 {
     throw Win32Error(lastError);
 }
+#else
+#include <errno.h>
+#include <string.h>
+
+ErrnoError::ErrnoError(int error)
+: std::runtime_error(""),
+  m_error(error)
+{
+    char *desc = strerror(error);
+    if (desc) {
+        m_message = desc;
+    }
+}
+
+void throwExceptionFromLastError()
+{
+    throwExceptionFromLastError(errno);
+}
+
+void throwExceptionFromLastError(int error)
+{
+    throw ErrnoError(error);
+}
 #endif

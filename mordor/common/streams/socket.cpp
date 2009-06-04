@@ -44,8 +44,8 @@ SocketStream::read(Buffer &b, size_t len)
     assert(m_socket);
     if (len == 0)
         return 0;
-    std::vector<Buffer::DataBuf> bufs = b.writeBufs(len);
-    size_t result = m_socket->receive((iovec *)&bufs[0], bufs.size());
+    std::vector<iovec> bufs = b.writeBufs(len);
+    size_t result = m_socket->receive(&bufs[0], bufs.size());
     b.produce(result);
     return result;
 }
@@ -56,8 +56,8 @@ SocketStream::write(const Buffer &b, size_t len)
     assert(m_socket);
     if (len == 0)
         return 0;
-    const std::vector<Buffer::DataBuf> bufs = b.readBufs(len);
-    size_t result = m_socket->send((const iovec *)&bufs[0], bufs.size());
+    const std::vector<iovec> bufs = b.readBufs(len);
+    size_t result = m_socket->send(&bufs[0], bufs.size());
     assert(result > 0);
     return result;
 }

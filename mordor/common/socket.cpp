@@ -485,7 +485,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
 #ifdef WINDOWS
     if (m_ioManager) {
         m_ioManager->registerEvent(&m_receiveEvent);
-        int ret = WSARecv(m_sock, bufs, len, NULL, (LPDWORD)&flags,
+        int ret = WSARecv(m_sock, (LPWSABUF)bufs, len, NULL, (LPDWORD)&flags,
             &m_receiveEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
             throwExceptionFromLastError();
@@ -584,7 +584,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
     int namelen = from->nameLen();
     if (m_ioManager) {
         m_ioManager->registerEvent(&m_sendEvent);
-        int ret = WSARecvFrom(m_sock, bufs, len, NULL, (LPDWORD)flags,
+        int ret = WSARecvFrom(m_sock, (LPWSABUF)bufs, len, NULL, (LPDWORD)flags,
             from->name(), &namelen,
             &m_sendEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {

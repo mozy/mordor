@@ -3,10 +3,10 @@
 #include <cassert>
 #include <stdio.h>
 
-#include "fiber.h"
-#include "scheduler.h"
+#include "common/fiber.h"
+#include "common/scheduler.h"
 
-void main()
+int main()
 {
     Fiber::ptr mainFiber(new Fiber());
     WorkerPool poolA(1, true), poolB(1, false);
@@ -33,4 +33,5 @@ void main()
     poolB.stop();
     printf("done\n");
     poolA.stop();
+    return 0;
 }

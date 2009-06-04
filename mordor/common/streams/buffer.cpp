@@ -6,52 +6,46 @@
 #include <cassert>
 
 Buffer::DataBuf::DataBuf()
-: m_start(NULL), m_length(0)
-{}
+{
+    start(NULL);
+    length(0);
+}
 
 Buffer::DataBuf::DataBuf(size_t length)
 {
     assert(length <= 0xffffffff);
     m_array.reset(new unsigned char[length]);
-    m_start = m_array.get();
-    m_length = length;
+    start(m_array.get());
+    this->length(length);
 }
-
-/*Buffer::DataBuf::DataBuf(const DataBuf &copy)
-: m_start(copy.m_start),
-  m_length(copy.m_length),
-  m_array(copy.m_array)
-{}*/
 
 Buffer::DataBuf
 Buffer::DataBuf::slice(size_t start, size_t length)
 {
-    if (length == ~0u) {
-        length = m_length - start;
+    if (length == (size_t)~0) {
+        length = this->length() - start;
     }
-    assert(length <= 0xffffffff);
-    assert(start <= m_length);
-    assert(length + start <= m_length);
+    assert(start <= this->length());
+    assert(length + start <= this->length());
     DataBuf result;
     result.m_array = m_array;
-    result.m_start = (unsigned char*)m_start + start;
-    result.m_length = length;
+    result.start((unsigned char*)this->start() + start);
+    result.length(length);
     return result;
 }
 
 const Buffer::DataBuf
 Buffer::DataBuf::slice(size_t start, size_t length) const
 {
-    if (length == ~0u) {
-        length = m_length - start;
+    if (length == (size_t)~0) {
+        length = this->length() - start;
     }
-    assert(length <= 0xffffffff);
-    assert(start <= m_length);
-    assert(length - start <= m_length);
+    assert(start <= this->length());
+    assert(length + start <= this->length());
     DataBuf result;
     result.m_array = m_array;
-    result.m_start = (unsigned char*)m_start + start;
-    result.m_length = length;
+    result.start((unsigned char*)this->start() + start);
+    result.length(length);
     return result;
 }
 
@@ -62,7 +56,7 @@ Buffer::Data::Data(size_t len)
 }
 
 Buffer::Data::Data(Buffer::DataBuf buf)
-: m_writeIndex(buf.m_length), m_buf(buf)
+: m_writeIndex(buf.length()), m_buf(buf)
 {
     invariant();
 }
@@ -78,14 +72,14 @@ size_t
 Buffer::Data::writeAvailable() const
 {
     invariant();
-    return m_buf.m_length - m_writeIndex;
+    return m_buf.length() - m_writeIndex;
 }
 
 size_t
 Buffer::Data::length() const
 {
     invariant();
-    return m_buf.m_length;
+    return m_buf.length();
 }
 
 void
@@ -122,7 +116,7 @@ Buffer::Data::writeBuf()
 void
 Buffer::Data::invariant() const
 {
-    assert(m_writeIndex <= m_buf.m_length);
+    assert(m_writeIndex <= m_buf.length());
 }
 
 
@@ -232,19 +226,33 @@ Buffer::consume(size_t len)
     invariant();
 }
 
-const std::vector<Buffer::DataBuf>
+const std::vector<iovec>
 Buffer::readBufs(size_t len) const
 {
-    if (len == ~0u)
+    if (len == (size_t)~0)
         len = readAvailable();
     assert(len <= readAvailable());
-    std::vector<DataBuf> result;
+    std::vector<iovec> result;
     result.reserve(m_bufs.size());
     size_t remaining = len;
     std::list<Data>::const_iterator it;
     for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
         size_t toConsume = std::min(it->readAvailable(), remaining);
-        result.push_back(it->readBuf().slice(0, toConsume));
+        DataBuf buf = it->readBuf().slice(0, toConsume);
+#ifdef WINDOWS
+        while (buf.length() > 0) {
+            WSABUF wsabuf;
+            wsabuf.buf = (char*)buf.start();
+            wsabuf.len = (unsigned int)std::min<size_t>(0xffffffff, buf.length());
+            result.push_back(wsabuf);
+            buf = buf.slice(wsabuf.len);
+        }
+#else
+        iovec iov;
+        iov.iov_base = (void *)buf.start();
+        iov.iov_len = buf.length();
+        result.push_back(iov);
+#endif
         remaining -= toConsume;
         if (remaining == 0) {
             break;
@@ -252,15 +260,6 @@ Buffer::readBufs(size_t len) const
     }
     assert(remaining == 0);
     invariant();
-    // TODO: #ifdef _DEBUG
-    {
-        size_t total = 0;
-        std::vector<DataBuf>::const_iterator it;
-        for (it = result.begin(); it != result.end(); ++it) {
-            total += it->m_length;
-        }
-        assert(total == len);
-    }
     return result;
 }
 
@@ -280,7 +279,7 @@ Buffer::readBuf(size_t len) const
     Buffer* _this = const_cast<Buffer*>(this);
     // try to avoid allocation
     if (m_writeIt != m_bufs.end() && m_writeIt->writeAvailable() >= readAvailable()) {
-        copyOut(m_writeIt->writeBuf().m_start, readAvailable());
+        copyOut(m_writeIt->writeBuf().start(), readAvailable());
         Data newBuf = Data(m_writeIt->writeBuf().slice(0, readAvailable()));
         _this->m_bufs.clear();
         _this->m_bufs.push_back(newBuf);
@@ -290,7 +289,7 @@ Buffer::readBuf(size_t len) const
         return newBuf.readBuf().slice(0, len);
     }
     Data newBuf = Data(readAvailable());
-    copyOut(newBuf.writeBuf().m_start, readAvailable());
+    copyOut(newBuf.writeBuf().start(), readAvailable());
     newBuf.produce(readAvailable());
     _this->m_bufs.clear();
     _this->m_bufs.push_back(newBuf);
@@ -300,35 +299,39 @@ Buffer::readBuf(size_t len) const
     return newBuf.readBuf().slice(0, len);
 }
 
-std::vector<Buffer::DataBuf>
+std::vector<iovec>
 Buffer::writeBufs(size_t len)
 {
-    if (len == ~0u)
+    if (len == (size_t)~0)
         len = writeAvailable();
     reserve(len);
-    std::vector<DataBuf> result;
+    std::vector<iovec> result;
     result.reserve(m_bufs.size());
     size_t remaining = len;
     std::list<Data>::iterator it = m_writeIt;
     while (remaining > 0) {
-        Data& buf = *it;
-        size_t toProduce = std::min(buf.writeAvailable(), remaining);
-        result.push_back(buf.writeBuf().slice(0, toProduce));
+        Data& data = *it;
+        size_t toProduce = std::min(data.writeAvailable(), remaining);
+        DataBuf buf = data.writeBuf().slice(0, toProduce);
+#ifdef WINDOWS    
+        while (buf.length() > 0) {
+            WSABUF wsabuf;
+            wsabuf.buf = (char*)buf.start();
+            wsabuf.len = (unsigned int)std::min<size_t>(0xffffffff, buf.length());
+            result.push_back(wsabuf);
+            buf = buf.slice(wsabuf.len);
+        }
+#else
+        iovec iov;
+        iov.iov_base = (void *)buf.start();
+        iov.iov_len = buf.length();
+        result.push_back(iov);
+#endif
         remaining -= toProduce;
         ++it;
     }
     assert(remaining == 0);
     invariant();
-    // TODO: #ifdef _DEBUG
-    {
-        assert(writeAvailable() >= len);
-        size_t total = 0;
-        std::vector<DataBuf>::const_iterator it;
-        for (it = result.begin(); it != result.end(); ++it) {
-            total += it->m_length;
-        }
-        assert(total == len);
-    }
     return result;
 }
 
@@ -358,7 +361,7 @@ Buffer::writeBuf(size_t len)
 void
 Buffer::copyIn(const Buffer &buf, size_t len)
 {
-    if (len == ~0u)
+    if (len == (size_t)~0)
         len = buf.readAvailable();
     assert(buf.readAvailable() >= len);
     invariant();
@@ -389,7 +392,7 @@ Buffer::copyIn(const void *data, size_t len)
     
     while (m_writeIt != m_bufs.end() && len > 0) {
         size_t todo = std::min(len, m_writeIt->writeAvailable());
-        memcpy(m_writeIt->writeBuf().m_start, data, todo);
+        memcpy(m_writeIt->writeBuf().start(), data, todo);
         m_writeIt->produce(todo);
         m_writeAvailable -= todo;
         m_readAvailable += todo;
@@ -402,7 +405,7 @@ Buffer::copyIn(const void *data, size_t len)
 
     if (len > 0) {
         Data newBuf(len);
-        memcpy(newBuf.writeBuf().m_start, data, len);
+        memcpy(newBuf.writeBuf().start(), data, len);
         m_bufs.push_back(newBuf);
         m_readAvailable += len;
     }
@@ -424,7 +427,7 @@ Buffer::copyOut(void *buf, size_t len) const
     std::list<Data>::const_iterator it;
     for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
         size_t todo = std::min(len, it->readAvailable());
-        memcpy(next, it->readBuf().m_start, todo);
+        memcpy(next, it->readBuf().start(), todo);
         next += todo;
         len -= todo;
         if (len == 0)
@@ -436,7 +439,7 @@ Buffer::copyOut(void *buf, size_t len) const
 ptrdiff_t
 Buffer::findDelimited(char delim, size_t len) const
 {
-    if (len == ~0u)
+    if (len == (size_t)~0)
         len = readAvailable();
     assert(len <= readAvailable());
 
@@ -445,7 +448,7 @@ Buffer::findDelimited(char delim, size_t len) const
 
     std::list<Data>::const_iterator it;
     for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
-        void *start = it->readBuf().m_start;
+        const void *start = it->readBuf().start();
         size_t toscan = std::min(len, it->readAvailable());
         void *point = memchr(start, delim, toscan);
         if (point != NULL) {

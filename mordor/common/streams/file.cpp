@@ -47,6 +47,6 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
         throwExceptionFromLastError();
     }
     init(handle);
-    m_supportsRead = !!(flags & READ);
-    m_supportsWrite = !!(flags & WRITE);
+    m_supportsRead = flags == READ || flags == READWRITE;
+    m_supportsWrite = flags == WRITE || flags == READWRITE;
 }

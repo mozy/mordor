@@ -38,9 +38,9 @@ RagelParser::run(Stream &stream)
         if (read == 0) {
             run(NULL, 0, true);
         } else {
-            const std::vector<Buffer::DataBuf> bufs = b.readBufs();
+            const std::vector<iovec> bufs = b.readBufs();
             for (size_t i = 0; i < bufs.size(); ++i) {
-                size_t consumed = run((const char*)bufs[i].m_start, bufs[i].m_length, false);
+                size_t consumed = run((const char*)bufs[i].iov_base, bufs[i].iov_len, false);
                 b.consume(consumed);
                 if (error() || complete())
                     break;

@@ -16,7 +16,7 @@ FDStream::FDStream()
 void
 FDStream::init(int fd, bool own)
 {
-    assert(fd > 0);
+    assert(fd >= 0);
     m_fd = fd;
     m_own = own;
 }
@@ -31,13 +31,13 @@ FDStream::init(IOManager *ioManager, int fd, bool own)
 FDStream::FDStream(int fd, bool own)
 : m_ioManager(NULL), m_fd(fd), m_own(own)
 {
-    assert(m_fd > 0);
+    assert(m_fd >= 0);
 }
 
 FDStream::FDStream(IOManager &ioManager, int fd, bool own)
 : m_ioManager(&ioManager), m_fd(fd), m_own(own)
 {
-    assert(m_fd > 0);
+    assert(m_fd >= 0);
     try {
         if (fcntl(m_fd, F_SETFL, O_NONBLOCK)) {
             throwExceptionFromLastError();
@@ -52,7 +52,7 @@ FDStream::FDStream(IOManager &ioManager, int fd, bool own)
 
 FDStream::~FDStream()
 {
-    if (m_own && m_fd > 0) {
+    if (m_own && m_fd >= 0) {
         ::close(m_fd);
     }
 }
@@ -71,15 +71,15 @@ FDStream::close(CloseType type)
 size_t
 FDStream::read(Buffer &b, size_t len)
 {
-    assert(m_fd > 0);
+    assert(m_fd >= 0);
     if (len > 0xfffffffe)
         len = 0xfffffffe;
-    std::vector<Buffer::DataBuf> bufs = b.writeBufs(len);
-    int rc = readv(m_fd, (iovec *)&bufs[0], bufs.size());
+    std::vector<iovec> bufs = b.writeBufs(len);
+    int rc = readv(m_fd, &bufs[0], bufs.size());
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
         m_ioManager->registerEvent(m_fd, IOManager::READ);
         Scheduler::getThis()->yieldTo();
-        rc = readv(m_fd, (iovec *)&bufs[0], bufs.size());
+        rc = readv(m_fd, &bufs[0], bufs.size());
     }
     if (rc < 0) {
         throwExceptionFromLastError();
@@ -91,15 +91,15 @@ FDStream::read(Buffer &b, size_t len)
 size_t
 FDStream::write(const Buffer &b, size_t len)
 {
-    assert(m_fd > 0);
+    assert(m_fd >= 0);
     if (len > 0xfffffffe)
         len = 0xfffffffe;
-    const std::vector<Buffer::DataBuf> bufs = b.readBufs(len);
-    int rc = writev(m_fd, (iovec *)&bufs[0], bufs.size());
+    const std::vector<iovec> bufs = b.readBufs(len);
+    int rc = writev(m_fd, &bufs[0], bufs.size());
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
         m_ioManager->registerEvent(m_fd, IOManager::WRITE);
         Scheduler::getThis()->yieldTo();
-        rc = writev(m_fd, (iovec *)&bufs[0], bufs.size());
+        rc = writev(m_fd, &bufs[0], bufs.size());
     }
     if (rc == 0) {
         throw std::runtime_error("Zero length write");
@@ -113,6 +113,7 @@ FDStream::write(const Buffer &b, size_t len)
 long long
 FDStream::seek(long long offset, Anchor anchor)
 {
+    assert(m_fd >= 0);
     long long pos = lseek64(m_fd, offset, (int)anchor);
     if (pos < 0) {
         throwExceptionFromLastError();
@@ -123,6 +124,7 @@ FDStream::seek(long long offset, Anchor anchor)
 long long
 FDStream::size()
 {
+    assert(m_fd >= 0);
     struct stat64 statbuf;
     if (fstat64(m_fd, &statbuf)) {
         throwExceptionFromLastError();
@@ -133,6 +135,7 @@ FDStream::size()
 void
 FDStream::truncate(long long size)
 {
+    assert(m_fd >= 0);
     if (ftruncate64(m_fd, size)) {
         throwExceptionFromLastError();
     }
@@ -141,6 +144,7 @@ FDStream::truncate(long long size)
 void
 FDStream::flush()
 {
+    assert(m_fd >= 0);
     if (fsync(m_fd)) {
         throwExceptionFromLastError();
     }

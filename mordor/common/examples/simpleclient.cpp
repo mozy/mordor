@@ -6,7 +6,7 @@
 #include "common/iomanager.h"
 #include "common/socket.h"
 
-void main(int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
@@ -21,4 +21,5 @@ void main(int argc, const char *argv[])
     std::cout << "Read " << buf << " from conn" << std::endl;
     s->shutdown();
     ioManager.stop();
+    return 0;
 }

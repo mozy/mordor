@@ -12,7 +12,17 @@
 
 #ifdef WINDOWS
 #include <ws2tcpip.h>
-typedef WSABUF iovec;
+struct iovec
+{
+    union
+    {
+        WSABUF wsabuf;
+        struct {
+            u_long iov_len;
+            void *iov_base;
+        };
+    };
+};
 #define SHUT_RD SD_RECEIVE
 #define SHUT_WR SD_SEND
 #define SHUT_RDWR SD_BOTH

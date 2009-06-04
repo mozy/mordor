@@ -254,7 +254,7 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
     for(it = dgs.begin(); it != dgs.end(); ++it) {
         Fiber::ptr f(new Fiber(boost::bind(&parallel_do_impl, *it,
             boost::ref(completed), dgs.size(), scheduler, caller),
-            8192));
+            16384));
         scheduler->schedule(f);
     }
     scheduler->yieldTo();
