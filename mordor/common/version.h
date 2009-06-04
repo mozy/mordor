@@ -17,6 +17,11 @@
 #   define BSD
 #endif
 
+#ifdef __FreeBSD__
+#   define FREEBSD
+#   define BSD
+#endif
+
 // Architecture
 #ifdef _MSC_VER
 #   ifdef _M_X64

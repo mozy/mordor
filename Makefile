@@ -25,7 +25,10 @@ ifdef INSURE
 endif
 
 PLATFORM := $(shell uname)
-ARCH := $(shell dpkg --print-architecture 2>/dev/null)
+DPKG := $(shell which dpkg)
+ifdef DPKG
+    ARCH := $(shell dpkg --print-architecture 2>/dev/null)
+endif
 ifndef ARCH
     ARCH := $(shell uname -m)
 endif
@@ -45,6 +48,9 @@ PLATFORMDIR := $(PLATFORM)/$(ARCH)
 ifeq ($(PLATFORM), Darwin)
     IOMANAGER := kqueue
     UNDERSCORE := _underscore
+endif
+ifeq ($(PLATFORM), FreeBSD)
+    IOMANAGER := kqueue
 endif
 ifeq ($(shell uname), Linux)
     IOMANAGER := epoll
@@ -115,7 +121,7 @@ CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG
 RLCODEGEN	:= $(shell which rlcodegen)
 RAGEL   	:= ragel
 
-LIBS := -lboost_thread-mt
+LIBS := -lboost_thread
 
 # compile and link a binary.  this *must* be defined using = and not :=
 # because it uses target variables

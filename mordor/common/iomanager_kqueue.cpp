@@ -47,7 +47,10 @@ IOManagerKQueue::registerEvent(int fd, Event events)
     event.event.filter = (short)events;
     std::pair<std::set<AsyncEvent>::iterator, bool> it = m_pendingEvents.insert(event);
     assert(it.second);
-    ((AsyncEvent*)&*it.first)->event.udata = (void *)&it.first->event;
+    AsyncEvent& e = *((AsyncEvent*)&*it.first);
+    e.event.udata = &e;
+    e.m_scheduler = Scheduler::getThis();
+    e.m_fiber = Fiber::getThis();
     if (kevent(m_kqfd, &it.first->event, 1, NULL, 0, NULL)) {
         throwExceptionFromLastError();
     }

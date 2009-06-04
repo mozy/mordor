@@ -2,6 +2,7 @@
 #define __IOMANAGER_EPOLL_H__
 // Copyright (c) 2009 - Decho Corp.
 
+#include <sys/types.h>
 #include <sys/event.h>
 
 #include <set>
