@@ -3,6 +3,7 @@
 #include "http.h"
 
 #include <cassert>
+#include <iostream>
 
 static std::string quote(const std::string& str)
 {
@@ -137,7 +138,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
 
 std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e)
 {
-    if (e.contentLength != ~0)
+    if (e.contentLength != ~0u)
         os << "Content-Length: " << e.contentLength << "\r\n";
     if (!e.contentType.type.empty() && !e.contentType.subtype.empty())
         os << "Content-Type: " << e.contentType << "\r\n";
