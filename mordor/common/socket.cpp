@@ -497,7 +497,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         return m_receiveEvent.numberOfBytes;
     } else {
         DWORD received;
-        if (WSARecv(m_sock, bufs, len, &received, (LPDWORD)&flags,
+        if (WSARecv(m_sock, (LPWSABUF)bufs, len, &received, (LPDWORD)&flags,
             NULL, NULL)) {
             throwExceptionFromLastError();
         }
@@ -597,7 +597,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
         return m_sendEvent.numberOfBytes;
     } else {
         DWORD sent;
-        if (WSARecvFrom(m_sock, bufs, len, &sent, (LPDWORD)flags,
+        if (WSARecvFrom(m_sock, (LPWSABUF)bufs, len, &sent, (LPDWORD)flags,
             from->name(), &namelen,
             NULL, NULL)) {
             throwExceptionFromLastError();

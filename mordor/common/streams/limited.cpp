@@ -4,6 +4,10 @@
 
 #include <stdexcept>
 
+#ifdef min
+#undef min
+#endif
+
 LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
 : FilterStream(parent, own),
   m_pos(0),

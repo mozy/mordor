@@ -2,8 +2,8 @@
 #define __HTTP_PARSER_H__
 // Copyright (c) 2009 - Decho Corp.
 
-#include "http.h"
 #include "common/ragel.h"
+#include "http.h"
 
 namespace HTTP
 {

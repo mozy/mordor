@@ -5,6 +5,8 @@
 
 #include "parser.h"
 
+#include <string>
+
 #include "common/version.h"
 
 #ifdef WINDOWS

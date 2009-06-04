@@ -4,6 +4,13 @@
 
 #include <stdexcept>
 
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+
 BufferedStream::BufferedStream(Stream::ptr parent, bool own)
 : FilterStream(parent, own)
 {

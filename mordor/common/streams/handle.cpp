@@ -80,10 +80,10 @@ HandleStream::read(Buffer &b, size_t len)
             overlapped->OffsetHigh = (DWORD)(m_pos >> 32);
         }
     }
-    if (len > 0xfffffffe)
-        len = 0xfffffffe;
+    if (len > 0xffffffff)
+        len = 0xffffffff;
     Buffer::DataBuf buf = b.writeBuf(len);
-    BOOL ret = ReadFile(m_hFile, buf.m_start, (DWORD)len, &read, overlapped);
+    BOOL ret = ReadFile(m_hFile, buf.start(), (DWORD)len, &read, overlapped);
     if (m_ioManager) {
         if (!ret &&
             (GetLastError() == ERROR_HANDLE_EOF || GetLastError() == ERROR_BROKEN_PIPE)) {
@@ -131,10 +131,10 @@ HandleStream::write(const Buffer &b, size_t len)
             overlapped->OffsetHigh = (DWORD)(m_pos >> 32);
         }
     }
-    if (len > 0xfffffffe)
-        len = 0xfffffffe;
+    if (len > 0xffffffff)
+        len = 0xffffffff;
     const Buffer::DataBuf buf = b.readBuf(len);
-    BOOL ret = WriteFile(m_hFile, buf.m_start, (DWORD)len, &written, overlapped);
+    BOOL ret = WriteFile(m_hFile, buf.start(), (DWORD)len, &written, overlapped);
     if (m_ioManager) {
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
             throwExceptionFromLastError();

@@ -3,7 +3,12 @@
 #include "buffer.h"
 
 #include <string.h>
+#include <algorithm>
 #include <cassert>
+
+#ifdef min
+#undef min
+#endif
 
 Buffer::DataBuf::DataBuf()
 {
@@ -241,11 +246,11 @@ Buffer::readBufs(size_t len) const
         DataBuf buf = it->readBuf().slice(0, toConsume);
 #ifdef WINDOWS
         while (buf.length() > 0) {
-            WSABUF wsabuf;
-            wsabuf.buf = (char*)buf.start();
-            wsabuf.len = (unsigned int)std::min<size_t>(0xffffffff, buf.length());
+            iovec wsabuf;
+            wsabuf.iov_base = (void *)buf.start();
+            wsabuf.iov_len = (unsigned int)std::min<size_t>(0xffffffff, buf.length());
             result.push_back(wsabuf);
-            buf = buf.slice(wsabuf.len);
+            buf = buf.slice(wsabuf.iov_len);
         }
 #else
         iovec iov;
@@ -315,11 +320,11 @@ Buffer::writeBufs(size_t len)
         DataBuf buf = data.writeBuf().slice(0, toProduce);
 #ifdef WINDOWS    
         while (buf.length() > 0) {
-            WSABUF wsabuf;
-            wsabuf.buf = (char*)buf.start();
-            wsabuf.len = (unsigned int)std::min<size_t>(0xffffffff, buf.length());
+            iovec wsabuf;
+            wsabuf.iov_base = (void *)buf.start();
+            wsabuf.iov_len = (unsigned int)std::min<size_t>(0xffffffff, buf.length());
             result.push_back(wsabuf);
-            buf = buf.slice(wsabuf.len);
+            buf = buf.slice(wsabuf.iov_len);
         }
 #else
         iovec iov;
@@ -450,7 +455,7 @@ Buffer::findDelimited(char delim, size_t len) const
     for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
         const void *start = it->readBuf().start();
         size_t toscan = std::min(len, it->readAvailable());
-        void *point = memchr(start, delim, toscan);
+        const void *point = memchr(start, delim, toscan);
         if (point != NULL) {
             success = true;
             totalLength += (unsigned char*)point - (unsigned char*)start;
