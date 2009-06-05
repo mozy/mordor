@@ -17,10 +17,10 @@
 #include "fiber.h"
 #include "semaphore.h"
 
-class ThreadPool
+class ThreadPool2
 {
 public:
-    ThreadPool(boost::function<void ()> proc);
+    ThreadPool2(boost::function<void ()> proc);
 
     void start(size_t threads = 1);
 
@@ -67,7 +67,7 @@ private:
     std::list<FiberAndThread> m_fibers;
     boost::thread::id m_rootThread;
     Fiber::ptr m_rootFiber;
-    ThreadPool m_threads;
+    ThreadPool2 m_threads;
     bool m_stopping;
 };
 

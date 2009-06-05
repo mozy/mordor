@@ -3,3 +3,4 @@
 #include "null.h"
 
 NullStream NullStream::s_nullStream;
+

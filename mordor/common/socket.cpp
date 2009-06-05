@@ -54,6 +54,7 @@ struct SocketInitializer {
 static SocketInitializer g_init;
 
 #else
+#include <fcntl.h>
 #include <netdb.h>
 #define closesocket close
 #endif
@@ -102,6 +103,10 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
     } catch(...) {
         closesocket(m_sock);
         throw;
+    }
+#else
+    if (fcntl(m_sock, F_SETFL, O_NONBLOCK) == -1) {
+        throwExceptionFromLastError();
     }
 #endif
 }
@@ -252,7 +257,10 @@ Socket::accept(Socket &target)
         if (newsock == -1) {
             throwExceptionFromLastError();
         }
-
+        if (fcntl(newsock, F_SETFL, O_NONBLOCK) == -1) {
+            ::close(newsock);
+            throwExceptionFromLastError();
+        }
         target.m_sock = newsock;
 #endif
     }

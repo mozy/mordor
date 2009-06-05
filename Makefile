@@ -112,6 +112,8 @@ BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 
+CC 	:= gcc-3.4
+CXX	:= gcc-3.4
 RAGEL   := ragel
 
 LIBS := -lboost_thread-mt
@@ -252,5 +254,8 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/streams/stream.o		\
 	$(OBJDIR)/mordor/common/streams/transfer.o		\
 	$(OBJDIR)/mordor/common/uri.o
+ifeq ($(Q),@)
+	@echo ar $@
+endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) r $@ $(filter %.o,$?)

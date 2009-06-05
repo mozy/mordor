@@ -8,13 +8,13 @@
 
 #include "atomic.h"
 
-ThreadPool::ThreadPool(boost::function<void()> proc)
+ThreadPool2::ThreadPool2(boost::function<void()> proc)
 : m_proc(proc)
 {
 }
 
 void
-ThreadPool::start(size_t threads)
+ThreadPool2::start(size_t threads)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     for (size_t i = 0; i < threads; ++i) {
@@ -23,14 +23,14 @@ ThreadPool::start(size_t threads)
 }
 
 size_t
-ThreadPool::size()
+ThreadPool2::size()
 {
     boost::mutex::scoped_lock lock(m_mutex);
     return m_threads.size();
 }
 
 void
-ThreadPool::join_all()
+ThreadPool2::join_all()
 {
     boost::mutex::scoped_lock lock(m_mutex);
     for (std::list<boost::shared_ptr<boost::thread> >::const_iterator it(m_threads.begin());
