@@ -112,9 +112,10 @@ BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 
-CC 	:= gcc-3.4
-CXX	:= gcc-3.4
-RAGEL   := ragel
+CC 		:= gcc-3.4
+CXX		:= gcc-3.4
+RLCODEGEN	:= $(shell which rlcodegen)
+RAGEL   	:= ragel
 
 LIBS := -lboost_thread-mt
 
@@ -155,7 +156,11 @@ ifeq ($(Q),@)
 	@echo ragel $<
 endif
 	$(Q)mkdir -p $(@D)
+ifeq ($(RLCODEGEN),)
 	$(Q)$(RAGEL) $(RLFLAGS) -o $@ $<
+else
+	$(Q)$(RAGEL) $< | $(RLCODEGEN) $(RLFLAGS) -o $@
+endif
 
 $(OBJDIR)/%.o: %.s
 ifeq ($(Q),@)
