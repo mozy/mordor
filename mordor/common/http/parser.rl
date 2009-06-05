@@ -339,7 +339,14 @@ HTTP::RequestParser::error() const
 void
 HTTP::RequestParser::exec()
 {
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
     %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
 }
 
 %%{
@@ -406,7 +413,14 @@ HTTP::ResponseParser::error() const
 void
 HTTP::ResponseParser::exec()
 {
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
     %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
 }
 
 %%{
@@ -446,5 +460,12 @@ HTTP::TrailerParser::error() const
 void
 HTTP::TrailerParser::exec()
 {
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
     %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
 }

@@ -49,6 +49,10 @@ static void delete_nothing(Fiber* f) {}
 boost::thread_specific_ptr<Scheduler> Scheduler::t_scheduler(&delete_nothing_scheduler);
 boost::thread_specific_ptr<Fiber> Scheduler::t_fiber(&delete_nothing);
 
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4355)
+#endif
 Scheduler::Scheduler(int threads, bool useCaller)
     : m_threads(boost::bind(&Scheduler::run, this)),
       m_stopping(false)
@@ -65,6 +69,9 @@ Scheduler::Scheduler(int threads, bool useCaller)
     }
     m_threads.start(threads);
 }
+#ifdef MSVC
+#pragma warning(pop)
+#endif
 
 Scheduler *
 Scheduler::getThis()

@@ -26,11 +26,13 @@ struct iovec
 #define SHUT_RD SD_RECEIVE
 #define SHUT_WR SD_SEND
 #define SHUT_RDWR SD_BOTH
+typedef SOCKET socket_t;
 #else
 #include <sys/socket.h>
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+typedef int socket_t;
 #endif
 
 struct Address;
@@ -85,7 +87,8 @@ public:
     int protocol() { return m_protocol; }
 
 private:
-    int m_sock, m_family, m_protocol;
+    socket_t m_sock;
+    int m_family, m_protocol;
     IOManager *m_ioManager;
 #ifdef WINDOWS
     AsyncEvent m_sendEvent, m_receiveEvent;

@@ -10,7 +10,9 @@
 #include "common/uri.h"
 #include "common/version.h"
 
-#ifndef WINDOWS
+#ifdef WINDOWS
+#define stricmp _stricmp
+#else
 #define stricmp strcasecmp
 #endif
 

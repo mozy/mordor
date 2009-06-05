@@ -8,6 +8,7 @@
 #include <sstream>
 
 #include "ragel.h"
+#include "version.h"
 
 #ifdef ABSOLUTE
 #undef ABSOLUTE
@@ -237,7 +238,14 @@ public:
 protected:
     void exec()
     {
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
         %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
     }
 
 public:
@@ -279,7 +287,14 @@ public:
 protected:
     void exec()
     {
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
         %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
     }
 
 public:

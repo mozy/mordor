@@ -24,6 +24,7 @@
 
 // Architecture
 #ifdef _MSC_VER
+#   define MSVC
 #   ifdef _M_X64
 #       define X86_64
 #   elif defined(_M_IX86)
@@ -32,6 +33,7 @@
 #endif
 
 #ifdef __GNUC__
+#   define GCC
 #   ifdef __x86_64
 #       define X86_64
 #   elif defined(i386)

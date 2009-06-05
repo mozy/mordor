@@ -19,7 +19,7 @@ struct SocketInitializer {
         WSADATA wd;
         WSAStartup(0x0101, &wd);
 
-        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
         DWORD bytes = 0;
 
         GUID acceptExGuid = WSAID_ACCEPTEX;
@@ -227,7 +227,7 @@ Socket::accept(Socket &target)
     assert(target.m_family == m_family);
     assert(target.m_protocol == m_protocol);
     if (!m_ioManager) {
-        int newsock = ::accept(m_sock, NULL, NULL);
+        socket_t newsock = ::accept(m_sock, NULL, NULL);
         if (newsock == -1) {
             throwExceptionFromLastError();
         }
@@ -290,9 +290,11 @@ Socket::send(const void *buf, size_t len, int flags)
 {
 #ifdef WINDOWS
     if (m_ioManager) {
+        if (len > 0xffffffff)
+            len = 0xffffffff;
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
-        wsabuf.len = len;
+        wsabuf.len = (unsigned int)len;
         m_ioManager->registerEvent(&m_sendEvent);
         int ret = WSASend(m_sock, &wsabuf, 1, NULL, flags,
             &m_sendEvent.overlapped, NULL);
@@ -307,7 +309,9 @@ Socket::send(const void *buf, size_t len, int flags)
     } else
 #endif
     {
-        int rc = ::send(m_sock, (const char*)buf, len, flags);
+        if (len > 0x7ffffffff)
+            len = 0x7ffffffff;
+        int rc = ::send(m_sock, (const char*)buf, (socklen_t)len, flags);
 #ifndef WINDOWS
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::WRITE);
@@ -328,7 +332,8 @@ Socket::send(const iovec *bufs, size_t len, int flags)
 #ifdef WINDOWS
     if (m_ioManager) {
         m_ioManager->registerEvent(&m_sendEvent);
-        int ret = WSASend(m_sock, (LPWSABUF)bufs, len, NULL, flags,
+        assert(len <= 0xffffffff);
+        int ret = WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
             &m_sendEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
             throwExceptionFromLastError();
@@ -340,7 +345,8 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         return m_sendEvent.numberOfBytes;
     } else {
         DWORD sent;
-        if (WSASend(m_sock, (LPWSABUF)bufs, len, &sent, flags,
+        assert(len <= 0xffffffff);
+        if (WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, flags,
             NULL, NULL)) {
             throwExceptionFromLastError();
         }
@@ -370,9 +376,11 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
     assert(to.family() == family());
 #ifdef WINDOWS
     if (m_ioManager) {
+        if (len > 0xfffffff)
+            len = 0xffffffff;
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
-        wsabuf.len = len;
+        wsabuf.len = (unsigned int)len;
         m_ioManager->registerEvent(&m_sendEvent);
         int ret = WSASendTo(m_sock, &wsabuf, 1, NULL, flags,
             to.name(), to.nameLen(),
@@ -388,7 +396,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
     } else
 #endif
     {
-        int rc = ::sendto(m_sock, (const char*)buf, len, flags, to.name(), to.nameLen());
+        int rc = ::sendto(m_sock, (const char*)buf, (socklen_t)len, flags, to.name(), to.nameLen());
 #ifndef WINDOWS
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::WRITE);
@@ -410,7 +418,8 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
 #ifdef WINDOWS
     if (m_ioManager) {
         m_ioManager->registerEvent(&m_sendEvent);
-        int ret = WSASendTo(m_sock, (LPWSABUF)bufs, len, NULL, flags,
+        assert(len <= 0xffffffff);
+        int ret = WSASendTo(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
             to.name(), to.nameLen(),
             &m_sendEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
@@ -423,7 +432,8 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         return m_sendEvent.numberOfBytes;
     } else {
         DWORD sent;
-        if (WSASendTo(m_sock, (LPWSABUF)bufs, len, &sent, flags,
+        assert(len <= 0xffffffff);
+        if (WSASendTo(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, flags,
             to.name(), to.nameLen(),
             NULL, NULL)) {
             throwExceptionFromLastError();
@@ -455,9 +465,11 @@ Socket::receive(void *buf, size_t len, int flags)
 {
 #ifdef WINDOWS
     if (m_ioManager) {
+        if (len > 0xffffffff)
+            len = 0xffffffff;
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
-        wsabuf.len = len;
+        wsabuf.len = (unsigned int)len;
         m_ioManager->registerEvent(&m_receiveEvent);
         int ret = WSARecv(m_sock, &wsabuf, 1, NULL, (LPDWORD)&flags,
             &m_receiveEvent.overlapped, NULL);
@@ -472,7 +484,7 @@ Socket::receive(void *buf, size_t len, int flags)
     } else
 #endif
     {
-        int rc = ::recv(m_sock, (char*)buf, len, flags);
+        int rc = ::recv(m_sock, (char*)buf, (socklen_t)len, flags);
 #ifndef WINDOWS
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::READ);
@@ -493,7 +505,8 @@ Socket::receive(iovec *bufs, size_t len, int flags)
 #ifdef WINDOWS
     if (m_ioManager) {
         m_ioManager->registerEvent(&m_receiveEvent);
-        int ret = WSARecv(m_sock, (LPWSABUF)bufs, len, NULL, (LPDWORD)&flags,
+        assert(len <= 0xffffffff);
+        int ret = WSARecv(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)&flags,
             &m_receiveEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
             throwExceptionFromLastError();
@@ -505,7 +518,8 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         return m_receiveEvent.numberOfBytes;
     } else {
         DWORD received;
-        if (WSARecv(m_sock, (LPWSABUF)bufs, len, &received, (LPDWORD)&flags,
+        assert(len <= 0xffffffff);
+        if (WSARecv(m_sock, (LPWSABUF)bufs, (DWORD)len, &received, (LPDWORD)&flags,
             NULL, NULL)) {
             throwExceptionFromLastError();
         }
@@ -534,9 +548,11 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
 {
     assert(from->family() == family());
 #ifdef WINDOWS
+    if (len > 0xffffffff)
+        len = 0xffffffff;
     WSABUF wsabuf;
     wsabuf.buf = (char*)buf;
-    wsabuf.len = len;
+    wsabuf.len = (unsigned int)len;
     int namelen = from->nameLen();
     if (m_ioManager) {        
         m_ioManager->registerEvent(&m_sendEvent);        
@@ -592,7 +608,8 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
     int namelen = from->nameLen();
     if (m_ioManager) {
         m_ioManager->registerEvent(&m_sendEvent);
-        int ret = WSARecvFrom(m_sock, (LPWSABUF)bufs, len, NULL, (LPDWORD)flags,
+        assert(len <= 0xffffffff);
+        int ret = WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)flags,
             from->name(), &namelen,
             &m_sendEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
@@ -605,7 +622,8 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
         return m_sendEvent.numberOfBytes;
     } else {
         DWORD sent;
-        if (WSARecvFrom(m_sock, (LPWSABUF)bufs, len, &sent, (LPDWORD)flags,
+        assert(len <= 0xffffffff);
+        if (WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, (LPDWORD)flags,
             from->name(), &namelen,
             NULL, NULL)) {
             throwExceptionFromLastError();
@@ -645,7 +663,7 @@ Socket::getOption(int level, int option, void *result, size_t *len)
 void
 Socket::setOption(int level, int option, const void *value, size_t len)
 {
-    if (setsockopt(m_sock, level, option, (const char*)value, len)) {
+    if (setsockopt(m_sock, level, option, (const char*)value, (socklen_t)len)) {
         throwExceptionFromLastError();
     }
 }
