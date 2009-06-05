@@ -309,8 +309,8 @@ Socket::send(const void *buf, size_t len, int flags)
     } else
 #endif
     {
-        if (len > 0x7ffffffff)
-            len = 0x7ffffffff;
+        if (len > 0x7fffffff)
+            len = 0x7fffffff;
         int rc = ::send(m_sock, (const char*)buf, (socklen_t)len, flags);
 #ifndef WINDOWS
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
@@ -770,17 +770,17 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
         switch (next->ai_family) {
             case AF_INET:
                 addr.reset(new IPv4Address(next->ai_socktype, next->ai_protocol));
-                assert(next->ai_addrlen <= addr->nameLen());
+                assert(next->ai_addrlen <= (size_t)addr->nameLen());
                 memcpy(addr->name(), next->ai_addr, next->ai_addrlen);
                 break;
             case AF_INET6:
                 addr.reset(new IPv6Address(next->ai_socktype, next->ai_protocol));
-                assert(next->ai_addrlen <= addr->nameLen());
+                assert(next->ai_addrlen <= (size_t)addr->nameLen());
                 memcpy(addr->name(), next->ai_addr, next->ai_addrlen);
                 break;
             default:
                 addr.reset(new UnknownAddress(next->ai_family, next->ai_socktype, next->ai_protocol));
-                assert(next->ai_addrlen <= addr->nameLen());
+                assert(next->ai_addrlen <= (size_t)addr->nameLen());
                 memcpy(addr->name(), next->ai_addr, next->ai_addrlen);
                 break;
         }
