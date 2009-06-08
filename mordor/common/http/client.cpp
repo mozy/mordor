@@ -38,19 +38,19 @@ HTTP::ClientConnection::scheduleNextRequest(ClientRequest::ptr request)
         assert(m_currentRequest != m_pendingRequests.end());
         assert(request == *m_currentRequest);
         assert(!request->m_requestDone);
-        assert(request->m_inFlight);
+        assert(request->m_requestInFlight);
         std::list<ClientRequest::ptr>::iterator it(m_currentRequest);
         if (++it == m_pendingRequests.end()) {
             // Do *not* advance m_currentRequest, because we can't let someone else
             // start another request until our flush completes below
             flush = true;
         } else {
-            request->m_inFlight = false;
+            request->m_requestInFlight = false;
             request->m_requestDone = true;
             ++m_currentRequest;
             if (m_currentRequest != m_pendingRequests.end()) {
                 request = *m_currentRequest;
-                request->m_inFlight = true;
+                request->m_requestInFlight = true;
                 request->m_scheduler->schedule(request->m_fiber);
             }
         }
@@ -61,7 +61,7 @@ HTTP::ClientConnection::scheduleNextRequest(ClientRequest::ptr request)
         invariant();
         ClientRequest::ptr request = *m_currentRequest;
         assert(request->m_fiber == Fiber::getThis());
-        request->m_inFlight = false;
+        request->m_requestInFlight = false;
         request->m_requestDone = true;
         ++m_currentRequest;
         // Someone else may have queued up while we were flushing
@@ -80,23 +80,22 @@ HTTP::ClientConnection::scheduleNextResponse(ClientRequest::ptr request)
         assert(!m_pendingRequests.empty());
         assert(request == m_pendingRequests.front());
         assert(!request->m_responseDone);
-        assert(request->m_inFlight);
+        assert(request->m_responseInFlight);
         request->m_responseDone = true;
-        request->m_inFlight = false;
+        request->m_responseInFlight = false;
         m_pendingRequests.pop_front();
         request.reset();
         if (!m_pendingRequests.empty()) {
             request = m_pendingRequests.front();
-            assert(request->m_requestDone);
             assert(!request->m_responseDone);
-            assert(!request->m_inFlight);
+            assert(!request->m_responseInFlight);
             std::set<ClientRequest::ptr>::iterator it = m_waitingResponses.find(request);
             if (request->m_cancelled) {
                 assert(it == m_waitingResponses.end());
-                request->m_inFlight = true;
+                request->m_responseInFlight = true;
             } else if (it != m_waitingResponses.end()) {
                 m_waitingResponses.erase(it);                
-                request->m_inFlight = true;
+                request->m_responseInFlight = true;
                 request->m_scheduler->schedule(request->m_fiber);
                 request.reset();
             } else {
@@ -120,7 +119,7 @@ HTTP::ClientConnection::scheduleAllWaitingRequests()
         it != m_pendingRequests.end();
         ) {
         assert(!(*it)->m_requestDone);
-        if (!(*it)->m_inFlight) {
+        if (!(*it)->m_requestInFlight) {
             (*it)->m_scheduler->schedule((*it)->m_fiber);
             if (m_currentRequest == it) {
                 m_currentRequest = it = m_pendingRequests.erase(it);
@@ -172,13 +171,13 @@ HTTP::ClientConnection::invariant() const
                 assert(m_currentRequest == it);
             } else if (it != m_pendingRequests.begin()) {
                 // Response that's not the first can't be in flight
-                assert(!request->m_inFlight);
+                assert(!request->m_responseInFlight);
             }
         } else {
             assert(!request->m_requestDone);
             // Request that's not the first (caught by previous iteration above)
             // can't be in flight
-            assert(!request->m_inFlight);            
+            assert(!request->m_requestInFlight);            
         }
     }
     if (!seenFirstUnrequested) {
@@ -188,9 +187,8 @@ HTTP::ClientConnection::invariant() const
         it != m_waitingResponses.end();
         ++it) {
         ClientRequest::ptr request = *it;
-        assert(request->m_requestDone);
         assert(!request->m_responseDone);
-        assert(!request->m_inFlight);
+        assert(!request->m_responseInFlight);
         assert(std::find<std::list<ClientRequest::ptr>::const_iterator>
             (m_pendingRequests.begin(), m_currentRequest, request) != m_currentRequest);
     }
@@ -201,14 +199,21 @@ HTTP::ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &re
 : m_conn(conn),
   m_request(request),
   m_requestDone(false),
+  m_requestInFlight(false),
   m_responseHeadersDone(false),
   m_responseDone(false),
-  m_inFlight(false),
+  m_responseInFlight(false),
   m_cancelled(false),
   m_aborted(false)
 {
     m_scheduler = Scheduler::getThis();
     m_fiber = Fiber::getThis();
+}
+
+const HTTP::Request &
+HTTP::ClientRequest::request()
+{
+    return m_request;
 }
 
 Stream::ptr
@@ -279,7 +284,7 @@ HTTP::ClientRequest::cancel(bool abort)
     if (m_cancelled && !abort)
         return;
     m_cancelled = true;
-    if (!abort && !m_inFlight) {
+    if (!abort && !m_requestInFlight && !m_responseInFlight) {
         if (!m_requestDone) {
             // Just abandon it
             std::list<ClientRequest::ptr>::iterator it =
@@ -290,7 +295,7 @@ HTTP::ClientRequest::cancel(bool abort)
         return;
     }
     if (!abort && m_requestDone) {
-        assert(m_inFlight);
+        assert(m_responseInFlight);
         finish();
         return;
     }
@@ -300,15 +305,20 @@ HTTP::ClientRequest::cancel(bool abort)
     (m_requestDone ? m_conn->m_responseException : m_conn->m_requestException) =
         std::runtime_error("No more requests are possible because a prior request failed");
     m_conn->scheduleAllWaitingRequests();
-    if (m_requestDone)
+    m_conn->m_stream->close(Stream::READ);
+    if (m_requestDone) {
         m_conn->scheduleAllWaitingResponses();
+        m_conn->m_stream->close(Stream::BOTH);
+    }
 }
 
 void
 HTTP::ClientRequest::finish()
 {
-    if (!m_requestDone)
+    if (!m_requestDone) {
         cancel(true);
+        return;
+    }
     if (hasResponseBody()) {
         if (!m_responseStream) {
             m_responseStream = responseStream();
@@ -405,7 +415,7 @@ HTTP::ClientRequest::doRequest()
         if (firstRequest) {
             m_conn->m_currentRequest = m_conn->m_pendingRequests.end();
             --m_conn->m_currentRequest;
-            m_inFlight = true;
+            m_requestInFlight = true;
         }
         if (close) {
             m_conn->m_allowNewRequests = false;
@@ -424,7 +434,7 @@ HTTP::ClientRequest::doRequest()
         if (*m_conn->m_requestException.what()) {
             throw m_conn->m_requestException;
         }
-        m_inFlight = true;
+        m_requestInFlight = true;
     }
 
     try {
@@ -450,10 +460,10 @@ HTTP::ClientRequest::doRequest()
 void
 HTTP::ClientRequest::ensureResponse()
 {
-    assert(m_requestDone);
+    // TODO: need to queue up other people waiting for this response if m_responseInFlight
     if (m_responseHeadersDone)
         return;
-    assert(!m_inFlight);
+    assert(!m_responseInFlight);
     bool wait = false;
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
@@ -473,7 +483,7 @@ HTTP::ClientRequest::ensureResponse()
             assert(inserted);
             wait = true;
         } else {
-            m_inFlight = true;
+            m_responseInFlight = true;
         }
     }
     // If we weren't the first response in the queue, wait for someone
@@ -547,7 +557,7 @@ HTTP::ClientRequest::ensureResponse()
         // closing the connection
         if (Connection::hasMessageBody(m_response.general, m_response.entity,
             m_request.requestLine.method, m_response.status.status) &&
-            transferEncoding.empty() && m_response.entity.contentLength == ~0u &&
+            transferEncoding.empty() && m_response.entity.contentLength == ~0ull &&
             m_response.entity.contentType.type != "multipart") {
             close = true;
         }

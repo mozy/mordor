@@ -398,7 +398,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
+				RelativePath=".\http\server.cpp"
 				>
 			</File>
 			<File
@@ -436,6 +436,10 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\streams\std.cpp"
@@ -545,6 +549,10 @@
 			</File>
 			<File
 				RelativePath=".\semaphore.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http\server.h"
 				>
 			</File>
 			<File

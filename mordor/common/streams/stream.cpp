@@ -15,7 +15,7 @@ Stream::write(const void *b, size_t len)
 {
     Buffer buf;
     buf.copyIn(b, len);
-    return write(&buf, len);
+    return write(buf, len);
 }
 
 std::string

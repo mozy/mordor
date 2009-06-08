@@ -411,6 +411,7 @@ Buffer::copyIn(const void *data, size_t len)
     if (len > 0) {
         Data newBuf(len);
         memcpy(newBuf.writeBuf().start(), data, len);
+        newBuf.produce(len);
         m_bufs.push_back(newBuf);
         m_readAvailable += len;
     }

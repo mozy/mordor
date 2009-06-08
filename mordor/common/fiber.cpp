@@ -5,7 +5,7 @@
 
 #include <cassert>
 
-//#define NATIVE_WINDOWS_FIBERS
+#define NATIVE_WINDOWS_FIBERS
 
 #ifdef WINDOWS
 #include <windows.h>

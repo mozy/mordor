@@ -23,6 +23,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wget", "common\examples\wge
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echoserver", "common\examples\echoserver.vcproj", "{35655735-9C38-4255-81E8-F8CDABEB358E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -71,6 +76,14 @@ Global
 		{6CC00BFB-5A32-4033-BF7E-64D524B2A247}.Release|Win32.Build.0 = Release|Win32
 		{6CC00BFB-5A32-4033-BF7E-64D524B2A247}.Release|x64.ActiveCfg = Release|x64
 		{6CC00BFB-5A32-4033-BF7E-64D524B2A247}.Release|x64.Build.0 = Release|x64
+		{35655735-9C38-4255-81E8-F8CDABEB358E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{35655735-9C38-4255-81E8-F8CDABEB358E}.Debug|Win32.Build.0 = Debug|Win32
+		{35655735-9C38-4255-81E8-F8CDABEB358E}.Debug|x64.ActiveCfg = Debug|x64
+		{35655735-9C38-4255-81E8-F8CDABEB358E}.Debug|x64.Build.0 = Debug|x64
+		{35655735-9C38-4255-81E8-F8CDABEB358E}.Release|Win32.ActiveCfg = Release|Win32
+		{35655735-9C38-4255-81E8-F8CDABEB358E}.Release|Win32.Build.0 = Release|Win32
+		{35655735-9C38-4255-81E8-F8CDABEB358E}.Release|x64.ActiveCfg = Release|x64
+		{35655735-9C38-4255-81E8-F8CDABEB358E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

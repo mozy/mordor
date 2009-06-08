@@ -31,6 +31,7 @@ SocketStream::close(CloseType type)
         }
         m_socket->shutdown(how);
         if (how == SHUT_RDWR) {
+            m_socket->close();
             m_socket.reset();
         }
     } else if (type == BOTH) {

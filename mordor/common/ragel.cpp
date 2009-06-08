@@ -75,7 +75,7 @@ RagelParser::run(const char *buf, size_t len, bool isEof)
 
     m_fullString.append(buf, len);
 
-    if (markSpot != ~0u) {
+    if (markSpot != (size_t)~0) {
         mark = m_fullString.c_str() + markSpot;
     }
 

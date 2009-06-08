@@ -32,7 +32,7 @@ HTTP::ChunkedStream::close(Stream::CloseType type)
 size_t
 HTTP::ChunkedStream::read(Buffer &b, size_t len)
 {
-    if (m_nextChunk == ~0u) {
+    if (m_nextChunk == ~0ull) {
         std::string chunk = parent()->getDelimited();
         char *end;
         m_nextChunk = strtoull(chunk.c_str(), &end, 16);

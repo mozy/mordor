@@ -18,6 +18,14 @@ BufferedStream::BufferedStream(Stream::ptr parent, bool own)
     m_allowPartialReads = false;
 }
 
+void
+BufferedStream::close(CloseType type)
+{
+    if ((type & WRITE) && m_writeBuffer.readAvailable())
+        flush();
+    FilterStream::close(type);
+}
+
 size_t
 BufferedStream::read(Buffer &b, size_t len)
 {

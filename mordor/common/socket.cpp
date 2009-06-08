@@ -237,7 +237,7 @@ Socket::accept(Socket &target)
         m_ioManager->registerEvent(&m_receiveEvent);
         unsigned char addrs[64];
         DWORD bytes;
-        BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 64, (64 - 16) / 2, (64 - 16) / 2, &bytes,
+        BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, (64 - 16) / 2, (64 - 16) / 2, &bytes,
             &m_receiveEvent.overlapped);
         if (!ret && GetLastError() != WSA_IO_PENDING) {
             throwExceptionFromLastError();
@@ -247,6 +247,7 @@ Socket::accept(Socket &target)
             throwExceptionFromLastError(m_receiveEvent.lastError);
         }
         target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
+        target.m_ioManager->registerFile((HANDLE)target.m_sock);
 #else
         int newsock = ::accept(m_sock, NULL, NULL);
         while (newsock == -1 && errno == EAGAIN) {

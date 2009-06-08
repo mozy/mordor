@@ -29,14 +29,15 @@ namespace HTTP
         ClientRequest(boost::shared_ptr<ClientConnection> conn, const Request &request);
 
     public:
+        const Request &request();
         Stream::ptr requestStream();
         EntityHeaders &requestTrailer();
-        // Multipart *requestMultipart();
+        // Multipart::ptr requestMultipart();
 
         const Response &response();
         bool hasResponseBody();
         Stream::ptr responseStream();
-        // Multipart *responseMultipart();
+        // Multipart::ptr responseMultipart();
         const EntityHeaders &responseTrailer() const;
 
         void cancel(bool abort = false);
@@ -55,11 +56,11 @@ namespace HTTP
         Request m_request;
         Response m_response;
         EntityHeaders m_requestTrailer, m_responseTrailer;
-        bool m_requestDone, m_responseHeadersDone, m_responseDone, m_inFlight, m_cancelled, m_aborted;
+        bool m_requestDone, m_requestInFlight, m_responseHeadersDone, m_responseDone, m_responseInFlight, m_cancelled, m_aborted;
         Stream::ptr m_requestStream, m_responseStream;
     };
 
-    class ClientConnection : public Connection, public boost::enable_shared_from_this<ClientConnection>
+    class ClientConnection : public Connection, public boost::enable_shared_from_this<ClientConnection>, boost::noncopyable
     {
     public:
         typedef boost::shared_ptr<ClientConnection> ptr;
