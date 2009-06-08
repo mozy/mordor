@@ -77,6 +77,9 @@ namespace HTTP
 
         void invariant() const;
     };
+
+    // Helper functions
+    void respondError(ServerRequest::ptr request, Status status, const std::string &message, bool closeConnection = false);
 };
 
 #endif

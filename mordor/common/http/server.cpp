@@ -254,13 +254,13 @@ HTTP::ServerRequest::doRequest()
 {
     assert(!m_requestDone);
 
-    std::string unrecoverable;
     try {
         // Read and parse headers
         RequestParser parser(m_request);
         parser.run(m_conn->m_stream);
         if (parser.error()) {
-            throw std::runtime_error("Error parsing request");
+            respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
+            return;
         }
         assert(parser.complete());
 
@@ -275,7 +275,8 @@ HTTP::ServerRequest::doRequest()
                 close = true;
             }
         } else {
-            throw std::runtime_error("Unrecognized HTTP client version.");
+            respondError(shared_from_this(), HTTP_VERSION_NOT_SUPPORTED, "", true);
+            return;
         }
         ParameterizedList &transferEncoding = m_request.general.transferEncoding;
         // Remove identity from the Transfer-Encodings
@@ -289,29 +290,34 @@ HTTP::ServerRequest::doRequest()
         }
         if (!transferEncoding.empty()) {
             if (transferEncoding.back().value != "chunked") {
-                throw std::runtime_error("The last transfer-coding is not chunked.");
+                respondError(shared_from_this(), BAD_REQUEST, "The last transfer-coding is not chunked.", true);
             }
             for (ParameterizedList::const_iterator it(transferEncoding.begin());
                 it + 1 != transferEncoding.end();
                 ++it) {
                 if (it->value == "chunked") {
-                    throw std::runtime_error("chunked transfer-coding applied multiple times");
+                    respondError(shared_from_this(), BAD_REQUEST, "chunked transfer-coding applied multiple times.", true);
+                    return;
                 } else if (it->value == "deflate" ||
                     it->value == "gzip" ||
                     it->value == "x-gzip") {
                     // Supported transfer-codings
-                    throw std::runtime_error("deflate and gzip transfer-codings are not yet supported");
+                    respondError(shared_from_this(), NOT_IMPLEMENTED, "deflate and gzip transfer-codings are not yet supported", false);
+                    return;
                 } else if (it->value == "compress" ||
                     it->value == "x-compress") {
-                    throw std::runtime_error("compress transfer-coding is unsupported");
+                    respondError(shared_from_this(), NOT_IMPLEMENTED, "compress transfer-coding is not supported", false);
+                    return;
                 } else {
-                    throw std::runtime_error("Unrecognized transfer-coding: " + it->value);
+                    respondError(shared_from_this(), NOT_IMPLEMENTED, "Unrecognized transfer-coding: " + it->value, false);
+                    return;
                 }
             }
         }
         // Host header required with HTTP/1.1
         if (m_request.requestLine.ver == Version(1, 1) && m_request.request.host.empty()) {
-            throw std::runtime_error("Host header is required with HTTP/1.1");
+            respondError(shared_from_this(), BAD_REQUEST, "Host header is required with HTTP/1.1", false);
+            return;
         }
 
         // If the there is a message body, but it's undelimited, make sure we're
@@ -329,16 +335,14 @@ HTTP::ServerRequest::doRequest()
         }
         m_conn->m_dg(shared_from_this());
     } catch (std::exception &ex) {
-        unrecoverable = ex.what();
-    }
-    if (!unrecoverable.empty()) {
         if (!m_responseDone) {
             if (!committed()) {
+                size_t whatLen = strlen(ex.what());
                 m_response.status.status = INTERNAL_SERVER_ERROR;
                 m_response.general.connection.clear();
                 m_response.general.connection.insert("close");
                 m_response.general.transferEncoding.clear();
-                m_response.entity.contentLength = unrecoverable.size();
+                m_response.entity.contentLength = whatLen;
                 m_response.entity.contentType.type = "text";
                 m_response.entity.contentType.subtype = "plain";
                 m_response.entity.contentType.parameters.clear();
@@ -346,7 +350,7 @@ HTTP::ServerRequest::doRequest()
                     m_responseStream = responseStream();
                 }
                 assert(m_responseStream);
-                m_responseStream->write(unrecoverable.c_str(), unrecoverable.size());
+                m_responseStream->write(ex.what(), whatLen);
                 m_responseStream->close();
             } else {
                 finish();
@@ -506,4 +510,22 @@ HTTP::ServerRequest::responseDone()
         m_conn->m_stream->write(str.c_str(), str.size());         
     }
     m_conn->scheduleNextResponse(shared_from_this());
+}
+
+
+void
+HTTP::respondError(ServerRequest::ptr request, Status status, const std::string &message, bool closeConnection)
+{
+    assert(!request->committed());
+    request->response().status.status = status;
+    if (closeConnection)
+        request->response().general.connection.insert("close");
+    request->response().entity.contentLength = message.size();
+    if (!message.empty()) {
+        request->response().entity.contentType.type = "text";
+        request->response().entity.contentType.subtype = "plain";
+    }
+    Stream::ptr responseStream = request->responseStream();
+    responseStream->write(message.c_str(), message.size());
+    responseStream->close();
 }
