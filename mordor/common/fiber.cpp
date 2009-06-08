@@ -5,9 +5,10 @@
 
 #include <cassert>
 
+#ifdef WINDOWS
+
 #define NATIVE_WINDOWS_FIBERS
 
-#ifdef WINDOWS
 #include <windows.h>
 #else
 #include <sys/mman.h>

@@ -196,12 +196,23 @@ endif
 DEPS := $(shell test -d $(OBJDIR) && find $(OBJDIR) -name "*.d")
 -include $(DEPS)
 
-all: cat fibers simpleclient wget
+all: cat echoserver fibers simpleclient wget
 
 .PHONY: cat
 cat: $(OBJDIR)/bin/examples/cat
 
 $(OBJDIR)/bin/examples/cat: $(OBJDIR)/mordor/common/examples/cat.o $(OBJDIR)/lib/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(COMPLINK)
+
+
+.PHONY: echoserver
+echoserver: $(OBJDIR)/bin/examples/echoserver
+
+$(OBJDIR)/bin/examples/echoserver: $(OBJDIR)/mordor/common/examples/echoserver.o $(OBJDIR)/lib/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
@@ -247,6 +258,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/http/connection.o		\
 	$(OBJDIR)/mordor/common/http/http.o			\
 	$(OBJDIR)/mordor/common/http/parser.o			\
+	$(OBJDIR)/mordor/common/http/server.o			\
 	$(OBJDIR)/mordor/common/iomanager_$(IOMANAGER).o	\
 	$(OBJDIR)/mordor/common/ragel.o				\
 	$(OBJDIR)/mordor/common/scheduler.o			\
