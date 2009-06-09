@@ -37,7 +37,7 @@ typedef int socket_t;
 
 struct Address;
 
-class Socket : boost::noncopyable
+class Socket : public boost::enable_shared_from_this<Socket>, boost::noncopyable
 {
 public:
     typedef boost::shared_ptr<Socket> ptr;

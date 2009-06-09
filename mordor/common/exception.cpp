@@ -30,7 +30,12 @@ void throwExceptionFromLastError()
 
 void throwExceptionFromLastError(unsigned int lastError)
 {
-    throw Win32Error(lastError);
+    switch (lastError) {
+        case ERROR_OPERATION_ABORTED:
+            throw OperationAbortedException();
+        default:
+            throw Win32Error(lastError);
+    }
 }
 #else
 #include <errno.h>
@@ -53,6 +58,11 @@ void throwExceptionFromLastError()
 
 void throwExceptionFromLastError(int error)
 {
-    throw ErrnoError(error);
+    switch (error) {
+        case E_CANCELLED:
+            throw OperationAbortedException();
+        default:
+            throw ErrnoError(error);
+    }
 }
 #endif

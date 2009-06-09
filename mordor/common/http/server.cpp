@@ -6,6 +6,7 @@
 
 #include "parser.h"
 
+#include "common/exception.h"
 #include "common/streams/null.h"
 #include "common/streams/transfer.h"
 #include "parser.h"
@@ -27,6 +28,7 @@ HTTP::ServerConnection::processRequests()
 void
 HTTP::ServerConnection::scheduleNextRequest(ServerRequest::ptr request)
 {
+    bool close = false;
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
@@ -35,13 +37,23 @@ HTTP::ServerConnection::scheduleNextRequest(ServerRequest::ptr request)
             assert(request == m_pendingRequests.back());
             assert(!request->m_requestDone);
             request->m_requestDone = true;
+            if (request->m_responseDone) {
+                m_pendingRequests.pop_back();
+            }
+            close = request->m_willClose;
             request.reset();
         }
-        request.reset(new ServerRequest(shared_from_this()));
-        m_pendingRequests.push_back(request);
+        if (!close) {
+            request.reset(new ServerRequest(shared_from_this()));
+            m_pendingRequests.push_back(request);
+        }
     }
-    // TODO: pipeline request processing by starting a new Fiber
-    request->doRequest();
+    if (!close) {
+        Fiber::ptr requestFiber(new Fiber(boost::bind(&ServerRequest::doRequest, request)));
+        Scheduler::getThis()->schedule(requestFiber);
+    } else {
+        m_stream->close(Stream::READ);
+    }
 }
 
 void
@@ -50,19 +62,22 @@ HTTP::ServerConnection::scheduleNextResponse(ServerRequest::ptr request)
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
-        assert(request == m_pendingRequests.front());
         assert(!request->m_responseDone);
         assert(request->m_responseInFlight);
-        std::list<ServerRequest::ptr>::iterator it(m_pendingRequests.begin());
-        ++it;
-        if (it != m_pendingRequests.end()) {
-            std::set<ServerRequest::ptr>::iterator waitIt(m_waitingResponses.find(*it));
+        std::list<ServerRequest::ptr>::iterator it =
+            std::find(m_pendingRequests.begin(), m_pendingRequests.end(), request);
+        assert(it != m_pendingRequests.end());
+        std::list<ServerRequest::ptr>::iterator next(it);
+        ++next;
+        if (next != m_pendingRequests.end()) {
+            std::set<ServerRequest::ptr>::iterator waitIt(m_waitingResponses.find(*next));
             if (waitIt != m_waitingResponses.end()) {
                 request->m_responseInFlight = false;
                 request->m_responseDone = true;
-                m_pendingRequests.pop_front();
+                if (request->m_requestDone)
+                    m_pendingRequests.erase(it);
                 m_waitingResponses.erase(waitIt);
-                request = *it;
+                request = *next;
                 request->m_responseInFlight = true;
                 request->m_scheduler->schedule(request->m_fiber);
                 return;
@@ -75,13 +90,20 @@ HTTP::ServerConnection::scheduleNextResponse(ServerRequest::ptr request)
     assert(request == m_pendingRequests.front());
     request->m_responseInFlight = false;
     request->m_responseDone = true;
-    if(request->m_response.general.connection.find("close") != request->m_response.general.connection.end()) {
+    if (request->m_willClose) {
         m_stream->close();
     }
-    m_pendingRequests.pop_front();
+    std::list<ServerRequest::ptr>::iterator it =
+            std::find(m_pendingRequests.begin(), m_pendingRequests.end(), request);
+    assert(it != m_pendingRequests.end());
+    if (request->m_requestDone) {
+        it = m_pendingRequests.erase(it);
+    } else {
+        ++it;
+    }
     // Someone else may have queued up while we were flushing
-    if (!m_pendingRequests.empty()) {
-        std::set<ServerRequest::ptr>::iterator waitIt(m_waitingResponses.find(m_pendingRequests.front()));
+    if (it != m_pendingRequests.end()) {
+        std::set<ServerRequest::ptr>::iterator waitIt(m_waitingResponses.find(*it));
         if (waitIt != m_waitingResponses.end()) {
             request = *waitIt;
             m_waitingResponses.erase(waitIt);
@@ -114,14 +136,16 @@ void
 HTTP::ServerConnection::invariant() const
 {
     // assert(m_mutex.locked());
-    bool seenFirstUnrequested = false;
+    bool seenResponseNotDone = false;
     for (std::list<ServerRequest::ptr>::const_iterator it(m_pendingRequests.begin());
         it != m_pendingRequests.end();
         ++it) {
         ServerRequest::ptr request = *it;
-        if (!request->m_requestDone)
+        assert (!(request->m_requestDone && request->m_responseDone));
+        if (seenResponseNotDone)
             assert(!request->m_responseDone);
-        assert (!request->m_responseDone);
+        else
+            seenResponseNotDone = !request->m_responseDone;
         if (!request->m_requestDone) {
             ++it;
             assert(it == m_pendingRequests.end());
@@ -140,15 +164,14 @@ HTTP::ServerConnection::invariant() const
 
 HTTP::ServerRequest::ServerRequest(ServerConnection::ptr conn)
 : m_conn(conn),
+  m_scheduler(NULL),
   m_requestDone(false),
   m_committed(false),
   m_responseDone(false),
   m_responseInFlight(false),
-  m_aborted(false)
-{
-    m_scheduler = Scheduler::getThis();
-    m_fiber = Fiber::getThis();
-}
+  m_aborted(false),
+  m_willClose(false)
+{}
 
 const HTTP::Request &
 HTTP::ServerRequest::request()
@@ -235,17 +258,18 @@ HTTP::ServerRequest::finish()
     if (m_responseDone) {
         return;
     }
-    if (Connection::hasMessageBody(m_response.general, m_response.entity,
+    if (committed() && Connection::hasMessageBody(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status)) {
         cancel();
         return;
     }
-    if (!m_requestDone) {
-        if (!m_responseStream) {
-            m_responseStream = responseStream();
+    commit();
+    if (!m_requestDone && hasRequestBody() && !m_willClose) {
+        if (!m_requestStream) {
+            m_requestStream = requestStream();
         }
-        assert(m_responseStream);
-        transferStream(m_responseStream, NullStream::get());
+        assert(m_requestStream);
+        transferStream(m_requestStream, NullStream::get());
     }
 }
 
@@ -258,21 +282,19 @@ HTTP::ServerRequest::doRequest()
         // Read and parse headers
         RequestParser parser(m_request);
         parser.run(m_conn->m_stream);
-        if (parser.error()) {
+        if (parser.error() || !parser.complete()) {
             respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
             return;
         }
-        assert(parser.complete());
 
-        bool close = false;
         StringSet &connection = m_request.general.connection;
         if (m_request.requestLine.ver == Version(1, 0)) {
             if (connection.find("Keep-Alive") == connection.end()) {
-                close = true;
+                m_willClose = true;
             }
         } else if (m_request.requestLine.ver == Version(1, 1)) {
             if (connection.find("close") != connection.end()) {
-                close = true;
+                m_willClose = true;
             }
         } else {
             respondError(shared_from_this(), HTTP_VERSION_NOT_SUPPORTED, "", true);
@@ -320,40 +342,37 @@ HTTP::ServerRequest::doRequest()
             return;
         }
 
-        // If the there is a message body, but it's undelimited, make sure we're
-        // closing the connection
-        if (Connection::hasMessageBody(m_request.general, m_request.entity,
-            m_request.requestLine.method, INVALID) &&
-            transferEncoding.empty() && m_request.entity.contentLength == ~0ull &&
-            m_request.entity.contentType.type != "multipart") {
-            close = true;
-        }
-
         if (!Connection::hasMessageBody(m_request.general, m_request.entity,
             m_request.requestLine.method, INVALID)) {
             m_conn->scheduleNextRequest(shared_from_this());
         }
         m_conn->m_dg(shared_from_this());
+    } catch (OperationAbortedException) {
+        // Do nothing (this occurs when a pipelined request fails because a prior request closed the connection
     } catch (std::exception &ex) {
         if (!m_responseDone) {
-            if (!committed()) {
-                size_t whatLen = strlen(ex.what());
-                m_response.status.status = INTERNAL_SERVER_ERROR;
-                m_response.general.connection.clear();
-                m_response.general.connection.insert("close");
-                m_response.general.transferEncoding.clear();
-                m_response.entity.contentLength = whatLen;
-                m_response.entity.contentType.type = "text";
-                m_response.entity.contentType.subtype = "plain";
-                m_response.entity.contentType.parameters.clear();
-                if (!m_responseStream) {
-                    m_responseStream = responseStream();
+            try {
+                if (!committed()) {
+                    size_t whatLen = strlen(ex.what());
+                    m_response.status.status = INTERNAL_SERVER_ERROR;
+                    m_response.general.connection.clear();
+                    m_response.general.connection.insert("close");
+                    m_response.general.transferEncoding.clear();
+                    m_response.entity.contentLength = whatLen;
+                    m_response.entity.contentType.type = "text";
+                    m_response.entity.contentType.subtype = "plain";
+                    m_response.entity.contentType.parameters.clear();
+                    if (!m_responseStream) {
+                        m_responseStream = responseStream();
+                    }
+                    assert(m_responseStream);
+                    m_responseStream->write(ex.what(), whatLen);
+                    m_responseStream->close();
+                } else {
+                    finish();
                 }
-                assert(m_responseStream);
-                m_responseStream->write(ex.what(), whatLen);
-                m_responseStream->close();
-            } else {
-                finish();
+            } catch(...) {
+                // Swallow any exceptions that happen while trying to report the error
             }
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
@@ -371,6 +390,9 @@ HTTP::ServerRequest::commit()
         return;
     // TODO: need to queue up other people waiting for this response if m_responseInFlight
     m_committed = true;
+
+    if (m_response.general.connection.find("close") != m_response.general.connection.end())
+        m_willClose = true;
 
     // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
     const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
@@ -424,7 +446,11 @@ HTTP::ServerRequest::commit()
     // If we weren't the first response in the queue, wait for someone
     // else to schedule us
     if (wait) {
+        m_scheduler = Scheduler::getThis();
+        m_fiber = Fiber::getThis();
         Scheduler::getThis()->yieldTo();
+        m_scheduler = NULL;
+        m_fiber.reset();
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
@@ -442,15 +468,7 @@ HTTP::ServerRequest::commit()
     assert(m_response.status.ver == Version(1, 0) ||
            m_response.status.ver == Version(1, 1));
 
-    bool close = false;
-    if (m_request.general.connection.find("close") != m_request.general.connection.end())
-        close = true;
-    if (m_request.requestLine.ver == Version(1, 0) &&
-        m_request.general.connection.find("Keep-Alive") == m_request.general.connection.end())
-        close = true;
-    if (m_response.general.connection.find("close") != m_response.general.connection.end())
-        close = true;
-    if (close) {
+    if (m_willClose) {
         m_response.general.connection.insert("close");
     } else if (m_response.status.ver == Version(1, 0)) {
         m_response.general.connection.insert("Keep-Alive");
@@ -510,6 +528,13 @@ HTTP::ServerRequest::responseDone()
         m_conn->m_stream->write(str.c_str(), str.size());         
     }
     m_conn->scheduleNextResponse(shared_from_this());
+    if (!m_requestDone && hasRequestBody() && !m_willClose) {
+        if (!m_requestStream) {
+            m_requestStream = requestStream();
+        }
+        assert(m_requestStream);
+        transferStream(m_requestStream, NullStream::get());
+    }
 }
 
 
@@ -524,8 +549,10 @@ HTTP::respondError(ServerRequest::ptr request, Status status, const std::string 
     if (!message.empty()) {
         request->response().entity.contentType.type = "text";
         request->response().entity.contentType.subtype = "plain";
+        Stream::ptr responseStream = request->responseStream();
+        responseStream->write(message.c_str(), message.size());
+        responseStream->close();
+    } else {
+        request->finish();
     }
-    Stream::ptr responseStream = request->responseStream();
-    responseStream->write(message.c_str(), message.size());
-    responseStream->close();
 }

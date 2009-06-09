@@ -295,7 +295,7 @@ unquote(char *p, char *pe)
         m_string = &m_request->request.host;
     }
 
-    Host = 'Host:'i @set_host LWS* host (':' port)? >mark %save_string LWS*;
+    Host = 'Host:'i @set_host LWS* (host (':' port)?) >mark %save_string LWS*;
     
     request_header = Host;
 

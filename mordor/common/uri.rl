@@ -136,8 +136,10 @@ std::string unescape(const std::string& str)
     }
     action save_host
     {
-        m_uri->authority.host(unescape(std::string(mark, fpc - mark)));
-        mark = NULL;
+        if (mark != NULL) {
+            m_uri->authority.host(unescape(std::string(mark, fpc - mark)));
+            mark = NULL;
+        }
     }
     
     userinfo = (unreserved | pct_encoded | sub_delims | ":")*;
@@ -183,7 +185,7 @@ std::string unescape(const std::string& str)
     }
 
     path_abempty = ("/" segment >set_absolute)*;
-    path_absolute = "/" (segment_nz ("/" segment)*)? > set_absolute;
+    path_absolute = "/" (segment_nz ("/" segment)*)?  >set_absolute;
     path_noscheme = segment_nz_nc >set_relative ("/" segment)*;
     path_rootless = segment_nz >set_relative ("/" segment)*;
     path_empty = "" %set_relative;

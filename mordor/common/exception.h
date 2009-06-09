@@ -20,6 +20,7 @@ public:
 };
 
 #ifdef WINDOWS
+#include <winerror.h>
 class Win32Error : public std::runtime_error
 {
 public:
@@ -35,6 +36,7 @@ private:
 typedef Win32Error NativeError;
 typedef unsigned int error_t;
 #else
+#include <errno.h>
 class ErrnoError : public std::runtime_error
 {
 public:
@@ -51,6 +53,16 @@ private:
 typedef ErrnoError NativeError;
 typedef int error_t;
 #endif
+
+class OperationAbortedException : public NativeError
+{
+public:
+#ifdef WINDOWS
+    OperationAbortedException() : Win32Error(ERROR_OPERATION_ABORTED) {}
+#else
+    OperationAbortedException() : ErrnoError(ECANCELED) {}
+#endif
+};
 
 void throwExceptionFromLastError();
 void throwExceptionFromLastError(error_t lastError);

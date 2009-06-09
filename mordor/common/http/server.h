@@ -48,7 +48,7 @@ namespace HTTP
         Request m_request;
         Response m_response;
         EntityHeaders m_requestTrailer, m_responseTrailer;
-        bool m_requestDone, m_committed, m_responseDone, m_responseInFlight, m_aborted;
+        bool m_requestDone, m_committed, m_responseDone, m_responseInFlight, m_aborted, m_willClose;
         Stream::ptr m_requestStream, m_responseStream;
     };
 
@@ -79,7 +79,7 @@ namespace HTTP
     };
 
     // Helper functions
-    void respondError(ServerRequest::ptr request, Status status, const std::string &message, bool closeConnection = false);
+    void respondError(ServerRequest::ptr request, Status status, const std::string &message = "", bool closeConnection = false);
 };
 
 #endif

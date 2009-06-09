@@ -163,7 +163,8 @@ Socket::connect(const Address &to)
             default:
                 assert(false);
         }
-        
+
+        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         if (!ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped)) {
             if (GetLastError() != WSA_IO_PENDING) {
@@ -181,6 +182,7 @@ Socket::connect(const Address &to)
             return;
         }
         if (errno == EINPROGRESS) {
+            ptr self = shared_from_this();
             m_ioManager->registerEvent(m_sock, IOManager::WRITE);
             Scheduler::getThis()->yieldTo();
             int err;
@@ -233,6 +235,7 @@ Socket::accept(Socket &target)
         }
         target.m_sock = newsock;
     } else {
+        ptr self = shared_from_this();
 #ifdef WINDOWS
         m_ioManager->registerEvent(&m_receiveEvent);
         unsigned char addrs[64];
@@ -296,6 +299,7 @@ Socket::send(const void *buf, size_t len, int flags)
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
         wsabuf.len = (unsigned int)len;
+        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         int ret = WSASend(m_sock, &wsabuf, 1, NULL, flags,
             &m_sendEvent.overlapped, NULL);
@@ -310,6 +314,7 @@ Socket::send(const void *buf, size_t len, int flags)
     } else
 #endif
     {
+        ptr self = shared_from_this();
         if (len > 0x7fffffff)
             len = 0x7fffffff;
         int rc = ::send(m_sock, (const char*)buf, (socklen_t)len, flags);
@@ -332,6 +337,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
 {
 #ifdef WINDOWS
     if (m_ioManager) {
+        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         assert(len <= 0xffffffff);
         int ret = WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
@@ -354,6 +360,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         return sent;
     }
 #else
+    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = (iovec*)bufs;
@@ -382,6 +389,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
         wsabuf.len = (unsigned int)len;
+        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         int ret = WSASendTo(m_sock, &wsabuf, 1, NULL, flags,
             to.name(), to.nameLen(),
@@ -399,6 +407,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
     {
         int rc = ::sendto(m_sock, (const char*)buf, (socklen_t)len, flags, to.name(), to.nameLen());
 #ifndef WINDOWS
+        ptr self = shared_from_this();
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::WRITE);
             Scheduler::getThis()->yieldTo();
@@ -418,6 +427,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
     assert(to.family() == family());
 #ifdef WINDOWS
     if (m_ioManager) {
+        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         assert(len <= 0xffffffff);
         int ret = WSASendTo(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
@@ -442,6 +452,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         return sent;
     }
 #else
+    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = (iovec*)bufs;
@@ -471,6 +482,7 @@ Socket::receive(void *buf, size_t len, int flags)
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
         wsabuf.len = (unsigned int)len;
+        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
         int ret = WSARecv(m_sock, &wsabuf, 1, NULL, (LPDWORD)&flags,
             &m_receiveEvent.overlapped, NULL);
@@ -487,6 +499,7 @@ Socket::receive(void *buf, size_t len, int flags)
     {
         int rc = ::recv(m_sock, (char*)buf, (socklen_t)len, flags);
 #ifndef WINDOWS
+        ptr self = shared_from_this();
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::READ);
             Scheduler::getThis()->yieldTo();
@@ -505,6 +518,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
 {
 #ifdef WINDOWS
     if (m_ioManager) {
+        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
         assert(len <= 0xffffffff);
         int ret = WSARecv(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)&flags,
@@ -527,6 +541,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         return received;
     }
 #else
+    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = bufs;
@@ -555,7 +570,8 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
     wsabuf.buf = (char*)buf;
     wsabuf.len = (unsigned int)len;
     int namelen = from->nameLen();
-    if (m_ioManager) {        
+    if (m_ioManager) {
+        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);        
         int ret = WSARecvFrom(m_sock, &wsabuf, 1, NULL, (LPDWORD)flags,
             from->name(), &namelen,
@@ -578,6 +594,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
         return sent;
     }
 #else
+    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     iovec iov;
@@ -608,6 +625,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
 #ifdef WINDOWS
     int namelen = from->nameLen();
     if (m_ioManager) {
+        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         assert(len <= 0xffffffff);
         int ret = WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)flags,
@@ -632,6 +650,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
         return sent;
     }
 #else
+    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = bufs;

@@ -560,11 +560,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
@@ -597,6 +597,7 @@
 				<Tool
 					Name="Ragel"
 					OutputFileName="http\$(InputName).cpp"
+					CodeStyle="2"
 				/>
 			</FileConfiguration>
 			<FileConfiguration

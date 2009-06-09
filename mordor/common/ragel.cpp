@@ -37,6 +37,7 @@ RagelParser::run(Stream &stream)
         size_t read = stream.read(b, 65536);
         if (read == 0) {
             run(NULL, 0, true);
+            break;
         } else {
             const std::vector<iovec> bufs = b.readBufs();
             for (size_t i = 0; i < bufs.size(); ++i) {

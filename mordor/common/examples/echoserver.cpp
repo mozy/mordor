@@ -50,21 +50,27 @@ void httpRequest(HTTP::ServerRequest::ptr request)
     switch (request->request().requestLine.method) {
         case HTTP::GET:
         case HTTP::HEAD:
+        case HTTP::PUT:
+        case HTTP::POST:
             request->response().entity.contentLength = request->request().entity.contentLength;
             request->response().entity.contentType = request->request().entity.contentType;
             request->response().general.transferEncoding = request->request().general.transferEncoding;
             request->response().status.status = HTTP::OK;
-            if (request->hasRequestBody() && request->request().requestLine.method != HTTP::HEAD) {
-                transferStream(request->requestStream(), request->responseStream());
-                request->responseStream()->close();
+            request->response().entity.extension = request->request().entity.extension;
+            if (request->hasRequestBody()) {
+                if (request->request().requestLine.method != HTTP::HEAD) {
+                    transferStream(request->requestStream(), request->responseStream());
+                    request->responseStream()->close();
+                } else {
+                    request->finish();
+                }
             } else {
+                request->response().entity.contentLength = 0;
                 request->finish();
             }
             break;
         default:
-            request->response().entity.contentLength = 0;
-            request->response().status.status = HTTP::METHOD_NOT_ALLOWED;
-            request->finish();
+            respondError(request, HTTP::METHOD_NOT_ALLOWED);
             break;
     }
 }
