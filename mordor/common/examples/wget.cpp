@@ -8,6 +8,7 @@
 #include "common/iomanager.h"
 #include "common/socket.h"
 #include "common/streams/socket.h"
+#include "common/streams/ssl.h"
 #include "common/streams/std.h"
 #include "common/streams/transfer.h"
 
@@ -35,6 +36,8 @@ int main(int argc, const char *argv[])
         Socket::ptr s(addresses[0]->createSocket(ioManager));
         s->connect(addresses[0]);
         Stream::ptr stream(new SocketStream(s));
+        if (uri.schemeDefined() && uri.scheme() == "https")
+            stream.reset(new SSLStream(stream));
 
         HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(stream));
         HTTP::Request requestHeaders;

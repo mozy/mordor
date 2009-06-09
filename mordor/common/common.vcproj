@@ -382,6 +382,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\openssl.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\parser.cpp"
 				>
 			</File>
@@ -399,6 +403,10 @@
 			</File>
 			<File
 				RelativePath=".\http\server.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
 				>
 			</File>
 			<File
@@ -438,7 +446,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
+				RelativePath=".\streams\ssl.cpp"
 				>
 			</File>
 			<File
@@ -536,6 +544,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\openssl.h"
+				>
+			</File>
+			<File
 				RelativePath=".\http\parser.h"
 				>
 			</File>
@@ -565,6 +577,10 @@
 			</File>
 			<File
 				RelativePath=".\socket.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\ssl.h"
 				>
 			</File>
 			<File
