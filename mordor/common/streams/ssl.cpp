@@ -9,6 +9,15 @@
 #pragma comment(lib, "ssleay32")
 #endif
 
+struct SSLInitializer {
+    SSLInitializer()
+    {
+        SSL_library_init();
+    }
+};
+
+static SSLInitializer g_init;
+
 SSLStream::SSLStream(Stream::ptr parent, bool client, bool own)
 : OpenSSLStream(BIO_new_stream(parent, own))
 {
@@ -21,6 +30,12 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own)
     // TODO: exception
     assert(m_ssl);
     SSL_set_bio(m_ssl, OpenSSLStream::parent(), OpenSSLStream::parent());
+    ownsParent(false);
+    if (client) {
+        SSL_set_connect_state(m_ssl);
+    } else {
+        SSL_set_accept_state(m_ssl);
+    }
 }
 
 SSLStream::~SSLStream()

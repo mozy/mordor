@@ -37,7 +37,7 @@ static std::string escape(const std::string& str, const std::string& allowedChar
     bool differed = false;
     while(c < end)
     {
-        if (allowedChars.find(*c) != std::string::npos) {
+        if (allowedChars.find(*c) == std::string::npos) {
             if (!differed) {
                 result.resize(c - str.c_str());
             }

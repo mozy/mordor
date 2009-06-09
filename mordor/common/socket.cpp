@@ -238,9 +238,9 @@ Socket::accept(Socket &target)
         ptr self = shared_from_this();
 #ifdef WINDOWS
         m_ioManager->registerEvent(&m_receiveEvent);
-        unsigned char addrs[64];
+        unsigned char addrs[sizeof(SOCKADDR_STORAGE) * 2 + 16];
         DWORD bytes;
-        BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, (64 - 16) / 2, (64 - 16) / 2, &bytes,
+        BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE), &bytes,
             &m_receiveEvent.overlapped);
         if (!ret && GetLastError() != WSA_IO_PENDING) {
             throwExceptionFromLastError();

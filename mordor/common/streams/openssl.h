@@ -12,6 +12,10 @@ public:
     OpenSSLStream(BIO *bio, bool own = true);
     ~OpenSSLStream();
 
+    bool supportsRead() { return true; }
+    bool supportsWrite() { return true; }
+    bool supportsSeek() { return true; }
+
     BIO *parent() { return m_bio; }
 
     void close(CloseType type = BOTH);
@@ -22,6 +26,7 @@ public:
 
 protected:
     void parent(BIO *bio) { m_bio = bio; }
+    void ownsParent(bool own) { m_own = own; }
 
 private:
     BIO *m_bio;

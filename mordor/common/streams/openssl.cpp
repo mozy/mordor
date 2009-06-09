@@ -38,6 +38,7 @@ OpenSSLStream::read(Buffer &b, size_t len)
         return 0;
     } else {
         assert(false);
+        return -1;
     }
 }
 
@@ -53,6 +54,7 @@ OpenSSLStream::write(const Buffer &b, size_t len)
         return result;
     } else {
         assert(false);
+        return -1;
     }
 }
 
@@ -126,7 +128,7 @@ static int stream_new(BIO *bio)
     bio->init = 0;
     bio->num = -1;
     bio->ptr = NULL;
-    bio->flags = BIO_FLAGS_UPLINK;
+    bio->flags = 0;
     return 1;
 }
 
@@ -139,7 +141,7 @@ static int stream_free(BIO *bio)
             delete (Stream::ptr *)bio->ptr;
         }
         bio->ptr = NULL;
-        bio->flags = BIO_FLAGS_UPLINK;
+        bio->flags = 0;
     }
     return 1;
 }
@@ -160,12 +162,13 @@ static int stream_read(BIO *bio, char *out, int size)
             return -1;
         }
     }
+    return 0;
 }
 
 static int stream_write(BIO *bio, const char *in, int size)
 {
     try {
-        int result = (int)(*(Stream::ptr *)bio->ptr)->write(in, size);
+        return (int)(*(Stream::ptr *)bio->ptr)->write(in, size);
     } catch (std::exception) {
         return -1;
     }
