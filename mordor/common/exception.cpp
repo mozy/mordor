@@ -59,7 +59,7 @@ void throwExceptionFromLastError()
 void throwExceptionFromLastError(int error)
 {
     switch (error) {
-        case E_CANCELLED:
+        case ECANCELED:
             throw OperationAbortedException();
         default:
             throw ErrnoError(error);
