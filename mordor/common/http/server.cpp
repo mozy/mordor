@@ -287,47 +287,57 @@ HTTP::ServerRequest::doRequest()
             return;
         }
 
-        StringSet &connection = m_request.general.connection;
-        if (m_request.requestLine.ver == Version(1, 0)) {
-            if (connection.find("Keep-Alive") == connection.end()) {
-                m_willClose = true;
-            }
-        } else if (m_request.requestLine.ver == Version(1, 1)) {
-            if (connection.find("close") != connection.end()) {
-                m_willClose = true;
-            }
-        } else {
+        if (m_request.requestLine.ver.major != 1) {
             respondError(shared_from_this(), HTTP_VERSION_NOT_SUPPORTED, "", true);
             return;
         }
+        StringSet &connection = m_request.general.connection;
+        if (m_request.requestLine.ver == Version(1, 0) &&
+            connection.find("Keep-Alive") == connection.end()) {
+            m_willClose = true;
+        }
+        if (connection.find("close") != connection.end()) {
+            m_willClose = true;
+        }
+
+        // Host header required with HTTP/1.1
+        if (m_request.requestLine.ver >= Version(1, 1) && m_request.request.host.empty()) {
+            respondError(shared_from_this(), BAD_REQUEST, "Host header is required with HTTP/1.1", false);
+            return;
+        }
+
+
         ParameterizedList &transferEncoding = m_request.general.transferEncoding;
         // Remove identity from the Transfer-Encodings
         for (ParameterizedList::iterator it(transferEncoding.begin());
             it != transferEncoding.end();
             ++it) {
-            if (it->value == "identity") {
+            if (stricmp(it->value.c_str(), "identity") == 0) {
                 it = transferEncoding.erase(it);
                 --it;
             }
         }
         if (!transferEncoding.empty()) {
-            if (transferEncoding.back().value != "chunked") {
+            if (stricmp(transferEncoding.back().value.c_str(), "chunked") != 0) {
                 respondError(shared_from_this(), BAD_REQUEST, "The last transfer-coding is not chunked.", true);
+            }
+            if (!transferEncoding.back().parameters.empty()) {
+                respondError(shared_from_this(), NOT_IMPLEMENTED, "Unknown parameter to chunked transfer-coding.", true);
             }
             for (ParameterizedList::const_iterator it(transferEncoding.begin());
                 it + 1 != transferEncoding.end();
                 ++it) {
-                if (it->value == "chunked") {
+                if (stricmp(it->value.c_str(), "chunked") == 0) {
                     respondError(shared_from_this(), BAD_REQUEST, "chunked transfer-coding applied multiple times.", true);
                     return;
-                } else if (it->value == "deflate" ||
-                    it->value == "gzip" ||
-                    it->value == "x-gzip") {
+                } else if (stricmp(it->value.c_str(), "deflate") == 0 ||
+                    stricmp(it->value.c_str(), "gzip") == 0 ||
+                    stricmp(it->value.c_str(), "x-gzip") == 0) {
                     // Supported transfer-codings
                     respondError(shared_from_this(), NOT_IMPLEMENTED, "deflate and gzip transfer-codings are not yet supported", false);
                     return;
-                } else if (it->value == "compress" ||
-                    it->value == "x-compress") {
+                } else if (stricmp(it->value.c_str(), "compress") == 0 ||
+                    stricmp(it->value.c_str(), "x-compress") == 0) {
                     respondError(shared_from_this(), NOT_IMPLEMENTED, "compress transfer-coding is not supported", false);
                     return;
                 } else {
@@ -336,10 +346,19 @@ HTTP::ServerRequest::doRequest()
                 }
             }
         }
-        // Host header required with HTTP/1.1
-        if (m_request.requestLine.ver == Version(1, 1) && m_request.request.host.empty()) {
-            respondError(shared_from_this(), BAD_REQUEST, "Host header is required with HTTP/1.1", false);
-            return;
+
+        // Check expectations
+        const ParameterizedKeyValueList &expect = m_request.request.expect;
+        for (ParameterizedKeyValueList::const_iterator it(expect.begin());
+            it != expect.end();
+            ++it) {
+            if (stricmp(it->key.c_str(), "100-continue") == 0) {
+                if (!it->value.empty() || !it->parameters.empty()) {
+                    respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized parameters to 100-continue expectation", false);
+                }
+            } else {
+                respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized expectation: " + it->key, false);
+            }
         }
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity,

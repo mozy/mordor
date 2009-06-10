@@ -613,7 +613,6 @@
 				<Tool
 					Name="Ragel"
 					OutputFileName="http\$(InputName).cpp"
-					CodeStyle="2"
 				/>
 			</FileConfiguration>
 			<FileConfiguration

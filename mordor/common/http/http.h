@@ -108,6 +108,24 @@ namespace HTTP
         {
             return !(*this == rhs);
         }
+        bool operator<(const Version& rhs) const
+        {
+            if (major < rhs.major) return true; return minor < rhs.minor;
+        }
+        bool operator<=(const Version& rhs) const
+        {
+            if (major > rhs.major) return false;
+            if (major < rhs.major) return true; return minor <= rhs.minor;
+        }
+        bool operator>(const Version& rhs) const
+        {
+            if (major > rhs.major) return true; return minor > rhs.minor;
+        }
+        bool operator>=(const Version& rhs) const
+        {
+            if (major < rhs.major) return false;
+            if (major > rhs.major) return true; return minor >= rhs.minor;
+        }
     };
 
     struct caseinsensitiveless
@@ -127,6 +145,15 @@ namespace HTTP
     };
 
     typedef std::vector<ValueWithParameters> ParameterizedList;
+
+    struct KeyValueWithParameters
+    {
+        std::string key;
+        std::string value;
+        StringMap parameters;
+    };
+
+    typedef std::vector<KeyValueWithParameters> ParameterizedKeyValueList;
 
     struct MediaType
     {
@@ -157,16 +184,23 @@ namespace HTTP
     {
         StringSet connection;
         ParameterizedList transferEncoding;
+        StringSet trailer;
     };
 
     struct RequestHeaders
     {
+        ValueWithParameters authorization;
+        ParameterizedKeyValueList expect;
         std::string host;
+        ValueWithParameters proxyAuthorization;
     };
 
     struct ResponseHeaders
     {
+        StringSet acceptRanges;
         URI location;
+        ParameterizedList proxyAuthenticate;
+        ParameterizedList wwwAuthenticate;
     };
 
     struct EntityHeaders
@@ -204,6 +238,8 @@ std::ostream& operator<<(std::ostream& os, HTTP::Status s);
 std::ostream& operator<<(std::ostream& os, HTTP::Version v);
 std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l);
+std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v);
+std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedKeyValueList &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::MediaType &m);
 std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r);
 std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine &s);

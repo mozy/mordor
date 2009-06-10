@@ -224,16 +224,42 @@ unquote(char *p, char *pe)
         (*m_parameters)[m_temp1] = unquote((char*)mark, (char*)fpc);
         mark = NULL;
     }
-    
+
     attribute = token >mark %save_parameter_attribute;
     value = token | quoted_string >mark %save_parameter_value;
     parameter = attribute '=' value;
     parameterizedListElement = token >mark %save_parameterized_list_element (';' parameter)*;
     parameterizedList = LWS* parameterizedListElement ( LWS* ',' LWS* parameterizedListElement)* LWS*;
     
+    action save_auth_scheme {
+        m_auth->value = std::string(mark, fpc - mark);
+        m_parameters = &m_auth->parameters;
+        mark = NULL;        
+    }
+    
+    action set_challenge {
+        m_tempAuth.parameters.clear();
+        m_auth = &m_tempAuth;
+    }
+    
+    action save_challenge {
+        m_parameterizedList->push_back(m_tempAuth);
+    }
+
+    auth_param = attribute '=' value;
+    auth_scheme = token;
+    challenge = auth_scheme >mark %save_auth_scheme ' ' LWS* auth_param ( LWS* ',' LWS* auth_param );
+    credentials = challenge;
+    challengeList = LWS* challenge >set_challenge %save_challenge ( LWS* ',' LWS* challenge >set_challenge %save_challenge);
+    
     action set_connection {
         m_headerHandled = true;
         m_list = &m_general->connection;
+    }
+    
+    action set_trailer {
+        m_headerHandled = true;
+        m_list = &m_general->trailer;
     }
     
     action set_transfer_encoding {
@@ -242,9 +268,10 @@ unquote(char *p, char *pe)
     }
 
     Connection = 'Connection:'i @set_connection list;
+    Trailer = 'Trailer:'i @set_trailer list;
     Transfer_Encoding = 'Transfer-Encoding:'i @set_transfer_encoding parameterizedList;
     
-    general_header = Connection | Transfer_Encoding;
+    general_header = Connection | Trailer | Transfer_Encoding;
     
     action set_content_length {
         m_headerHandled = true;
@@ -290,14 +317,56 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
     
+    action set_authorization {
+        m_headerHandled = true;
+        m_auth = &m_request->request.authorization;
+    }
+
     action set_host {
         m_headerHandled = true;
         m_string = &m_request->request.host;
     }
+    
+    action set_expect {
+        m_headerHandled = true;
+    }
+    
+    action set_proxy_authorization {
+        m_headerHandled = true;
+        m_auth = &m_request->request.proxyAuthorization;
+    }
+
+    action save_expectation {
+        KeyValueWithParameters kvp;
+        kvp.key = std::string(mark, fpc - mark);
+        m_request->request.expect.push_back(kvp);
+        mark = NULL;
+    }
+    action save_expectation_value {
+        m_request->request.expect.back().value = unquote((char*)mark, (char*)fpc);
+        mark = NULL;
+    }
+    action save_expectation_param {
+		m_temp1 = std::string(mark, fpc - mark);
+		m_request->request.expect.back().parameters[m_temp1] = "";
+        mark = NULL;
+    }
+    action save_expectation_param_value {
+        m_request->request.expect.back().parameters[m_temp1] = unquote((char*)mark, (char*)fpc);
+        mark = NULL;
+    }
+
+    Authorization = 'Authorization:'i @set_authorization credentials;
 
     Host = 'Host:'i @set_host LWS* (host (':' port)?) >mark %save_string LWS*;
     
-    request_header = Host;
+    expect_params = ';' token >mark %save_expectation_param ( '=' (token | quoted_string) >mark %save_expectation_param_value )?;
+    expectation = token >mark %save_expectation ( '=' (token | quoted_string) >mark %save_expectation_value expect_params* )?;
+    Expect = 'Expect:'i @set_expect LWS* expectation ( LWS* ',' LWS* expectation )* LWS*;
+    
+    Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization credentials;
+    
+    request_header = Authorization | Host | Expect | Proxy_Authorization;
 
     Method = token >mark %parse_Method;
     Request_URI = ( "*" | absolute_URI | hier_part | authority);
@@ -364,13 +433,29 @@ HTTP::RequestParser::exec()
         mark = NULL;
     }
     
+    action set_accept_ranges
+    {
+        m_headerHandled = true;
+        m_list = &m_response->response.acceptRanges;
+    }
     action set_location {
         m_headerHandled = true;
     }
+    action set_proxy_authenticate {
+        m_headerHandled = true;
+        m_parameterizedList = &m_response->response.proxyAuthenticate;
+    }
+    action set_www_authenticate {
+        m_headerHandled = true;
+        m_parameterizedList = &m_response->response.wwwAuthenticate;
+    }
     
+    Accept_Ranges = 'Accept-Ranges:'i @set_accept_ranges list;
     Location = 'Location:'i @set_location LWS* absolute_URI LWS*;
+    Proxy_Authenticate = 'Proxy-Authenticate:'i @set_proxy_authenticate challengeList;
+    WWW_Authenticate = 'WWW-Authenticate:'i @set_www_authenticate challengeList;
     
-    response_header = Location;
+    response_header = Accept_Ranges | Location;
 
     Status_Code = DIGIT{3} > mark %parse_Status_Code;
     Reason_Phrase = (TEXT -- (CR | LF))* >mark %parse_Reason_Phrase;

@@ -15,6 +15,7 @@ namespace HTTP
         StringSet *m_list;
         ParameterizedList *m_parameterizedList;
         StringMap *m_parameters;
+        ValueWithParameters *m_auth;
         unsigned long long *m_ulong;
 
         // Temp storage
@@ -58,6 +59,8 @@ namespace HTTP
         URI::Path *m_path;
         GeneralHeaders *m_general;
         EntityHeaders *m_entity;
+
+        ValueWithParameters m_tempAuth;
     };
 
     class TrailerParser : public HttpParser
