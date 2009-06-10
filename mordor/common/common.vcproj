@@ -306,6 +306,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\http\basic.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\buffer.cpp"
 				>
 			</File>
@@ -406,10 +410,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -446,6 +446,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\ssl.cpp"
 				>
 			</File>
@@ -455,6 +459,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\stream.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\string.cpp"
 				>
 			</File>
 			<File
@@ -473,6 +481,14 @@
 			>
 			<File
 				RelativePath=".\atomic.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http\auth.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http\basic.h"
 				>
 			</File>
 			<File
@@ -572,11 +588,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
@@ -589,6 +605,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\stream.h"
+				>
+			</File>
+			<File
+				RelativePath=".\string.h"
 				>
 			</File>
 			<File

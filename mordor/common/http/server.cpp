@@ -439,6 +439,11 @@ HTTP::ServerRequest::commit()
             }
         }
     }
+    if (m_response.status.status == UNAUTHORIZED) {
+        assert(!m_response.response.wwwAuthenticate.empty());
+    } else if (m_response.status.status == PROXY_AUTHENTICATION_REQUIRED) {
+        assert(!m_response.response.proxyAuthenticate.empty());
+    }
 
     bool wait = false;
     {
