@@ -42,10 +42,10 @@ namespace HTTP
 
         void cancel(bool abort = false);
         void finish();
+        void ensureResponse();
 
     private:
         void doRequest();
-        void ensureResponse();
         void requestDone();
         void responseDone();
 

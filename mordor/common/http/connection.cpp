@@ -42,7 +42,7 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
         for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
             it != general.transferEncoding.end();
             ++it) {
-            if (it->value != "identity")
+            if (stricmp(it->value.c_str(), "identity") != 0)
                 return true;
         }
         return false;
@@ -63,7 +63,7 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
         for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
             it != general.transferEncoding.end();
             ++it) {
-            if (it->value != "identity")
+            if (stricmp(it->value.c_str(), "identity") != 0)
                 return true;
         }
         // TODO: if (entity.contentType.major == "multipart") return true;
@@ -94,18 +94,20 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
     for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
         it != general.transferEncoding.end();
         ++it) {
-        if (it->value == "chunked") {
+        if (stricmp(it->value.c_str(), "chunked") == 0) {
             ChunkedStream *chunked = new ChunkedStream(stream);
             stream.reset(chunked);
-        } else if (it->value == "deflate") {
+        } else if (stricmp(it->value.c_str(), "deflate") == 0) {
             // TODO: ZlibStream
             assert(false);
-        } else if (it->value == "gzip" || it->value == "x-gzip") {
+        } else if (stricmp(it->value.c_str(), "gzip") == 0 ||
+            stricmp(it->value.c_str(), "x-gzip") == 0) {
             // TODO: GzipStream
             assert(false);
-        } else if (it->value == "compress" || it->value == "x-compress") {
+        } else if (stricmp(it->value.c_str(), "compress") == 0 ||
+            stricmp(it->value.c_str(), "x-compress") == 0) {
             assert(false);
-        } else if (it->value == "identity") {
+        } else if (stricmp(it->value.c_str(), "identity") == 0) {
             assert(false);
         } else {
             assert(false);

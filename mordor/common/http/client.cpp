@@ -525,27 +525,27 @@ HTTP::ClientRequest::ensureResponse()
         for (ParameterizedList::iterator it(transferEncoding.begin());
             it != transferEncoding.end();
             ++it) {
-            if (it->value == "identity") {
+            if (stricmp(it->value.c_str(), "identity") == 0) {
                 it = transferEncoding.erase(it);
                 --it;
             }
         }
         if (!transferEncoding.empty()) {
-            if (transferEncoding.back().value != "chunked") {
+            if (stricmp(transferEncoding.back().value.c_str(), "chunked") != 0) {
                 throw std::runtime_error("The last transfer-coding is not chunked.");
             }
             for (ParameterizedList::const_iterator it(transferEncoding.begin());
                 it + 1 != transferEncoding.end();
                 ++it) {
-                if (it->value == "chunked") {
+                if (stricmp(it->value.c_str(), "chunked") == 0) {
                     throw std::runtime_error("chunked transfer-coding applied multiple times");
-                } else if (it->value == "deflate" ||
-                    it->value == "gzip" ||
-                    it->value == "x-gzip") {
+                } else if (stricmp(it->value.c_str(), "deflate") == 0 ||
+                    stricmp(it->value.c_str(), "gzip") == 0 ||
+                    stricmp(it->value.c_str(), "x-gzip") == 0) {
                     // Supported transfer-codings
                     throw std::runtime_error("deflate and gzip transfer-codings are not yet supported");
-                } else if (it->value == "compress" ||
-                    it->value == "x-compress") {
+                } else if (stricmp(it->value.c_str(), "compress") == 0 ||
+                    stricmp(it->value.c_str(), "x-compress") == 0) {
                     throw std::runtime_error("compress transfer-coding is unsupported");
                 } else {
                     throw std::runtime_error("Unrecognized transfer-coding: " + it->value);

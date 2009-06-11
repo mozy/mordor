@@ -5,6 +5,7 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "common/exception.h"
 #include "common/http/basic.h"
 #include "common/http/client.h"
 #include "common/iomanager.h"
@@ -18,13 +19,35 @@ struct CredentialStore
 {
     bool authorize(const URI &uri, const std::string &realm, bool proxy, std::string &u, std::string &p)
     {
-        u = username;
-        p = password;
+        if (proxy && !hasProxy)
+            return false;
+        if (proxy) {
+            u = proxyUsername;
+            p = proxyPassword;
+        } else {
+            u = username;
+            p = password;
+        }
         return true;
     }
     std::string username;
     std::string password;
+    std::string proxyUsername;
+    std::string proxyPassword;
+    bool hasProxy;
 };
+
+HTTP::ClientConnection::ptr establishConn(IOManager &ioManager, Address::ptr address, bool ssl)
+{
+    Socket::ptr s(address->createSocket(ioManager));
+    s->connect(address);
+    Stream::ptr stream(new SocketStream(s));
+    if (ssl)
+        stream.reset(new SSLStream(stream));
+
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(stream));
+    return conn;
+}
 
 int main(int argc, const char *argv[])
 {
@@ -38,35 +61,65 @@ int main(int argc, const char *argv[])
 
         CredentialStore store;
 
-        if (argc > 3) {
+        std::string proxy;
+
+        if (argc == 3 || argc == 5 || argc == 7) {
+            proxy = argv[2];
+            --argc;
+            ++argv;
+        }
+
+        store.hasProxy = false;
+        if (argc == 4 || argc == 6) {
             store.username = argv[2];
             store.password = argv[3];
         }
+        if (argc == 6) {
+            store.proxyUsername = argv[4];
+            store.proxyPassword = argv[5];
+            store.hasProxy = true;
+        }
 
         std::vector<Address::ptr> addresses =
-        Address::lookup(uri.authority.host(), AF_UNSPEC, SOCK_STREAM);
-        IPAddress *addr = dynamic_cast<IPAddress *>(addresses[0].get());
-        assert(addr);
-        if (uri.authority.portDefined()) {
-            addr->port(uri.authority.port());
-        } else if (uri.schemeDefined() && uri.scheme() == "https") {
-            addr->port(443);
-        } else {
-            addr->port(80);
+        Address::lookup(proxy.empty() ? uri.authority.host() : proxy, AF_UNSPEC, SOCK_STREAM);
+        if (proxy.empty()) {
+            IPAddress *addr = dynamic_cast<IPAddress *>(addresses[0].get());
+            assert(addr);
+            if (uri.authority.portDefined()) {
+                addr->port(uri.authority.port());
+            } else if (uri.schemeDefined() && uri.scheme() == "https") {
+                addr->port(443);
+            } else {
+                addr->port(80);
+            }
         }
-        Socket::ptr s(addresses[0]->createSocket(ioManager));
-        s->connect(addresses[0]);
-        Stream::ptr stream(new SocketStream(s));
-        if (uri.schemeDefined() && uri.scheme() == "https")
-            stream.reset(new SSLStream(stream));
-
-        HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(stream));
+        
+        HTTP::ClientConnection::ptr conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
         HTTP::Request requestHeaders;
-        requestHeaders.requestLine.uri.path = uri.path;
+        if (proxy.empty())
+            requestHeaders.requestLine.uri.path = uri.path;
+        else
+            requestHeaders.requestLine.uri = uri;
         requestHeaders.request.host = uri.authority.host();
         HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
-        if (request->response().status.status == HTTP::UNAUTHORIZED) {
-            HTTP::BasicClientAuthenticationScheme basic(boost::bind(&CredentialStore::authorize, &store, _1, _2, _3, _4, _5));
+        HTTP::BasicClientAuthenticationScheme basic(boost::bind(&CredentialStore::authorize, &store, _1, _2, _3, _4, _5));
+        if (request->response().status.status == HTTP::PROXY_AUTHENTICATION_REQUIRED) {
+            if (basic.authorize(request, requestHeaders, true)) {
+                request->finish();
+                try {
+                    request = conn->request(requestHeaders);
+                    request->ensureResponse();
+                } catch (/* Win32Error &ex */) {
+                    if (false /* ex.lastError() == WSAECONNABORTED */) {
+                        conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
+                        request = conn->request(requestHeaders);
+                    } else {
+                        throw;
+                    }
+                }
+            }
+        }
+        if (request->response().status.status == HTTP::UNAUTHORIZED) {            
             if (basic.authorize(request, requestHeaders, false)) {
                 request->finish();
                 request = conn->request(requestHeaders);

@@ -188,7 +188,10 @@ std::ostream& operator<<(std::ostream& os, const HTTP::MediaType &m)
 
 std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r)
 {
-    return os << r.method << " " << r.uri << " " << r.ver;
+    if (!r.uri.isDefined())
+        return os << r.method << " * " << r.ver;
+    else
+        return os << r.method << " " << r.uri << " " << r.ver;
 }
 
 std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine &s)
