@@ -5,6 +5,7 @@
 #include <string.h>
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <vector>
 
 #include "common/uri.h"
@@ -16,8 +17,17 @@
 #define stricmp strcasecmp
 #endif
 
+class HTTPException : public std::runtime_error
+{
+public:
+    HTTPException() : std::runtime_error("") {}
+};
+
 namespace HTTP
 {
+    class IncompleteMessageHeaderException : public HTTPException
+    { };
+
 #ifdef DELETE
 #undef DELETE
 #endif

@@ -75,7 +75,7 @@ void throwExceptionFromLastError(int error)
         case ECANCELED:
             throw OperationAbortedException();
         default:
-            throwSocketException(lastError);
+            throwSocketException(error);
             throw ErrnoError(error);
     }
 }

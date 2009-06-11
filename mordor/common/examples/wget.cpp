@@ -109,7 +109,10 @@ int main(int argc, const char *argv[])
                 try {
                     request = conn->request(requestHeaders);
                     request->ensureResponse();
-                } catch (SocketException &ex) {
+                } catch (SocketException) {
+                    conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
+                    request = conn->request(requestHeaders);
+                } catch (HTTP::IncompleteMessageHeaderException) {
                     conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
                     request = conn->request(requestHeaders);
                 }
