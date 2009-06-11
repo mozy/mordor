@@ -13,6 +13,8 @@ namespace HTTP
     public:
         typedef boost::shared_ptr<ClientAuthenticationScheme> ptr;
 
+        virtual ~ClientAuthenticationScheme() {}
+
         virtual bool authorize(ClientRequest::ptr challenge, Request &nextRequest, bool proxy = false) = 0;
     };
 };

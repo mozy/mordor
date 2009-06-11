@@ -121,7 +121,7 @@ CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG
 RLCODEGEN	:= $(shell which rlcodegen)
 RAGEL   	:= ragel
 
-LIBS := -lboost_thread -lssl
+LIBS := -lboost_thread -lssl -lcrypto
 
 # compile and link a binary.  this *must* be defined using = and not :=
 # because it uses target variables
@@ -253,6 +253,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/exception.o			\
 	$(OBJDIR)/mordor/common/fiber.o				\
 	$(OBJDIR)/mordor/common/fiber_$(ARCH)$(UNDERSCORE).o	\
+	$(OBJDIR)/mordor/common/http/basic.o			\
 	$(OBJDIR)/mordor/common/http/chunked.o			\
 	$(OBJDIR)/mordor/common/http/client.o			\
 	$(OBJDIR)/mordor/common/http/connection.o		\
@@ -276,6 +277,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/streams/std.o			\
 	$(OBJDIR)/mordor/common/streams/stream.o		\
 	$(OBJDIR)/mordor/common/streams/transfer.o		\
+	$(OBJDIR)/mordor/common/string.o			\
 	$(OBJDIR)/mordor/common/uri.o
 ifeq ($(Q),@)
 	@echo ar $@
