@@ -73,6 +73,7 @@ std::string unescape(const std::string& str)
             assert(c + 2 < end);
             if (!differed) {
                 result.resize(c - str.c_str());
+                differed = true;
             }
             char decoded;
             ++c;
@@ -317,6 +318,18 @@ private:
 URI::URI()
 {
     reset();
+}
+
+URI::URI(const std::string& uri)
+{
+    reset();
+    *this = uri;
+}
+
+URI::URI(const char *uri)
+{
+    reset();
+    *this = uri;
 }
 
 URI&
