@@ -68,7 +68,6 @@ static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithRe
         it != map.map.end();
         ++it) {
         os << ';' << it->first << "=" << quote(it->second);
-
     }
     return os;
 }
@@ -92,7 +91,9 @@ static std::ostream& operator<<(std::ostream& os, const serializeStringMapAsAuth
         ++it) {
         if (it != map.map.begin())
             os << ", ";
-        os << it->first << "=" << quote(it->second);
+        os << it->first;
+        if (!it->second.empty())
+            os << "=" << quote(it->second);
     }
     return os;
 }

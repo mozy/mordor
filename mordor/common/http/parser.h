@@ -59,8 +59,6 @@ namespace HTTP
         URI::Path *m_path;
         GeneralHeaders *m_general;
         EntityHeaders *m_entity;
-
-        ValueWithParameters m_tempAuth;
     };
 
     class TrailerParser : public HttpParser

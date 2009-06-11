@@ -232,25 +232,22 @@ unquote(char *p, char *pe)
     parameterizedList = LWS* parameterizedListElement ( LWS* ',' LWS* parameterizedListElement)* LWS*;
     
     action save_auth_scheme {
-        m_auth->value = std::string(mark, fpc - mark);
-        m_parameters = &m_auth->parameters;
-        mark = NULL;        
-    }
-    
-    action set_challenge {
-        m_tempAuth.parameters.clear();
-        m_auth = &m_tempAuth;
-    }
-    
-    action save_challenge {
-        m_parameterizedList->push_back(m_tempAuth);
+        if (m_parameterizedList && ((!m_parameterizedList->empty() && m_auth == &m_parameterizedList->back())
+            || m_parameterizedList->empty())) {
+            ValueWithParameters vp;
+            m_parameterizedList->push_back(vp);
+            m_auth = &m_parameterizedList->back();
+        }
+		m_auth->value = std::string(mark, fpc - mark);
+		m_parameters = &m_auth->parameters;
+		mark = NULL;
     }
 
-    auth_param = attribute '=' value;
+    auth_param = attribute ('=' value)?;
     auth_scheme = token;
-    challenge = auth_scheme >mark %save_auth_scheme ' ' LWS* auth_param ( LWS* ',' LWS* auth_param );
-    credentials = challenge;
-    challengeList = LWS* challenge >set_challenge %save_challenge ( LWS* ',' LWS* challenge >set_challenge %save_challenge);
+    challenge = auth_scheme >mark %save_auth_scheme SP LWS* auth_param ( LWS* ',' LWS* auth_param )* LWS*;
+    credentials = auth_scheme >mark %save_auth_scheme (LWS+ auth_param)? (LWS* ',' LWS* auth_param )* LWS*;
+    challengeList = LWS* challenge ( LWS* ',' LWS* challenge)* LWS*;
     
     action set_connection {
         m_headerHandled = true;
@@ -319,6 +316,7 @@ unquote(char *p, char *pe)
     
     action set_authorization {
         m_headerHandled = true;
+        m_parameterizedList = NULL;
         m_auth = &m_request->request.authorization;
     }
 
@@ -333,6 +331,7 @@ unquote(char *p, char *pe)
     
     action set_proxy_authorization {
         m_headerHandled = true;
+        m_parameterizedList = NULL;
         m_auth = &m_request->request.proxyAuthorization;
     }
 
@@ -455,7 +454,7 @@ HTTP::RequestParser::exec()
     Proxy_Authenticate = 'Proxy-Authenticate:'i @set_proxy_authenticate challengeList;
     WWW_Authenticate = 'WWW-Authenticate:'i @set_www_authenticate challengeList;
     
-    response_header = Accept_Ranges | Location;
+    response_header = Accept_Ranges | Location | Proxy_Authenticate | WWW_Authenticate;
 
     Status_Code = DIGIT{3} > mark %parse_Status_Code;
     Reason_Phrase = (TEXT -- (CR | LF))* >mark %parse_Reason_Phrase;
