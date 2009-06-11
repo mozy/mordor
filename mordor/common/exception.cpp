@@ -2,6 +2,18 @@
 
 #include "exception.h"
 
+static void throwSocketException(error_t lastError)
+{
+    switch (lastError) {
+        case WSA(ECONNABORTED):
+            throw ConnectionAbortedException();
+        case WSA(ECONNRESET):
+            throw ConnectionResetException();
+        default:
+            break;
+    }
+}
+
 #ifdef WINDOWS
 #include <windows.h>
 
@@ -34,6 +46,7 @@ void throwExceptionFromLastError(unsigned int lastError)
         case ERROR_OPERATION_ABORTED:
             throw OperationAbortedException();
         default:
+            throwSocketException(lastError);
             throw Win32Error(lastError);
     }
 }
@@ -62,6 +75,7 @@ void throwExceptionFromLastError(int error)
         case ECANCELED:
             throw OperationAbortedException();
         default:
+            throwSocketException(lastError);
             throw ErrnoError(error);
     }
 }

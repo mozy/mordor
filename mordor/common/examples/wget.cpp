@@ -109,13 +109,9 @@ int main(int argc, const char *argv[])
                 try {
                     request = conn->request(requestHeaders);
                     request->ensureResponse();
-                } catch (.../* Win32Error &ex */) {
-                    if (false /* ex.lastError() == WSAECONNABORTED */) {
-                        conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
-                        request = conn->request(requestHeaders);
-                    } else {
-                        throw;
-                    }
+                } catch (SocketException &ex) {
+                    conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
+                    request = conn->request(requestHeaders);
                 }
             }
         }

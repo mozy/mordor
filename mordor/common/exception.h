@@ -64,6 +64,30 @@ public:
 #endif
 };
 
+class SocketException : public NativeError
+{
+public:
+    SocketException(error_t lastError) : NativeError(lastError) {}
+};
+
+#ifdef WINDOWS
+#define WSA(error) WSA ## error
+#else
+#define WSA(error) error
+#endif
+
+class ConnectionAbortedException : public SocketException
+{
+public:
+    ConnectionAbortedException() : SocketException(WSA(ECONNABORTED)) {}
+};
+
+class ConnectionResetException : public SocketException
+{
+public:
+    ConnectionResetException() : SocketException(WSA(ECONNRESET)) {}
+};
+
 void throwExceptionFromLastError();
 void throwExceptionFromLastError(error_t lastError);
 

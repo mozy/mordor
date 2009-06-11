@@ -502,10 +502,9 @@ HTTP::ClientRequest::ensureResponse()
         // Read and parse headers
         ResponseParser parser(m_response);
         parser.run(m_conn->m_stream);
-        if (parser.error()) {
+        if (parser.error() || !parser.complete()) {
             throw std::runtime_error("Error parsing response");
         }
-        assert(parser.complete());
 
         bool close = false;
         StringSet &connection = m_response.general.connection;
