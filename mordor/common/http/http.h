@@ -84,7 +84,7 @@ namespace HTTP
         REQUEST_ENTITY_TOO_LARGE         = 413,
         REQUEST_URI_TOO_LONG             = 414,
         UNSUPPORTED_MEDIA_TYPE           = 415,
-        REQUESTED_RANGE_NOT_SATISFIEABLE = 416,
+        REQUESTED_RANGE_NOT_SATISFIABLE  = 416,
         EXPECTATION_FAILED               = 417,
 
         INTERNAL_SERVER_ERROR            = 500,
@@ -94,6 +94,7 @@ namespace HTTP
         GATEWAY_TIMEOUT                  = 504,
         HTTP_VERSION_NOT_SUPPORTED       = 505
     };
+    const char *reason(Status s);
 
 #ifdef major
 #undef major

@@ -499,8 +499,7 @@ HTTP::ServerRequest::commit()
     }
 
     if (m_response.status.reason.empty()) {
-        // TODO: default reason phrases
-        m_response.status.reason = "Status";
+        m_response.status.reason = reason(m_response.status.status);
     }
 
     try {
