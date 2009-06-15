@@ -774,6 +774,12 @@ HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
     } 
     if (fullEntity) {
         request->response().entity.contentLength = size;
+        if (size == ~0ull && request->request().requestLine.ver >= Version(1, 1) &&
+            request->response().general.transferEncoding.empty()) {
+            ValueWithParameters vp;
+            vp.value = "chunked";
+            request->response().general.transferEncoding.push_back(vp);
+        }
         if (request->request().requestLine.method != HEAD) {
             transferStream(response, request->responseStream());
             request->responseStream()->close();
