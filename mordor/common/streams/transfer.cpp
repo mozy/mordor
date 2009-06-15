@@ -41,6 +41,8 @@ void transferStream(Stream &src, Stream &dst, long long toTransfer,
     *totalRead = 0;
     if (totalWritten)
         *totalWritten = 0;
+    if (toTransfer == 0)
+        return;
 
     readBuffer = &buf1;
     todo = chunkSize;

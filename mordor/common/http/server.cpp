@@ -624,7 +624,9 @@ HTTP::respondError(ServerRequest::ptr request, Status status, const std::string 
     request->response().status.status = status;
     if (closeConnection)
         request->response().general.connection.insert("close");
+    request->response().general.transferEncoding.clear();
     request->response().entity.contentLength = message.size();
+    request->response().entity.contentType.type.clear();
     if (!message.empty()) {
         request->response().entity.contentType.type = "text";
         request->response().entity.contentType.subtype = "plain";
@@ -634,4 +636,149 @@ HTTP::respondError(ServerRequest::ptr request, Status status, const std::string 
     } else {
         request->finish();
     }
+}
+
+#ifdef min
+#undef min
+#endif
+
+void
+HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
+{
+    assert(!request->committed());
+    unsigned long long size = ~0ull;
+    request->response().response.acceptRanges.insert("bytes");
+    if (response->supportsSize()) {
+        size = response->size();
+    }
+    const RangeSet &range = request->request().request.range;
+    bool fullEntity = range.empty();
+    // Validate range request
+    // TODO: sort and merge overlapping ranges
+    unsigned long long previousLast;
+    for (RangeSet::const_iterator it(range.begin());
+        it != range.end();
+        ++it) {
+        // Invalid; first is after last
+        if (it->first > it->second && it->first != ~0ull) {
+            fullEntity = true;
+            break;
+        }
+        // Unsupported - suffix range when we can't determine the size
+        if (it->first == ~0ull && size == ~0ull) {
+            fullEntity = true;
+            break;
+        }
+        // First byte is beyond end of stream
+        if (it->first >= size && size != ~0ull && it->first != ~0ull) {
+            respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
+            return;
+        }
+        // Suffix range is greater than entire stream
+        if (it->first == ~0ull && it->second >= size) {
+            fullEntity = true;
+            break;
+        }
+        // Regular range contains entire stream
+        if (it->first == 0 && it->second >= size - 1) {
+            fullEntity = true;
+            break;
+        }
+        // Unsupported: un-ordered range and stream doesn't support seeking
+        if (it != range.begin()) {
+            if (it->first <= previousLast && !response->supportsSeek()) {
+                fullEntity = true;
+                break;
+            }
+        }
+        if (it->first == ~0ull)
+            previousLast = size - 1;
+        else
+            previousLast = it->second;
+    }
+    if (!fullEntity) {        
+        if (range.size() > 1) {
+            MediaType contentType = request->response().entity.contentType;
+            request->response().entity.contentLength = ~0;
+            request->response().entity.contentType.type = "multipart";
+            request->response().entity.contentType.subtype = "byteranges";
+            request->response().entity.contentType.parameters["boundary"] = "abcdefg";
+            // TODO: random boundary
+            unsigned long long currentPos = 0;
+
+            if (request->request().requestLine.method != HEAD) {
+                Multipart::ptr multipart = request->responseMultipart();
+                for (RangeSet::const_iterator it(range.begin());
+                    it != range.end();
+                    ++it) {
+                    BodyPart::ptr part = multipart->nextPart();
+                    part->headers().contentType = contentType;
+                    ContentRange &cr = part->headers().contentRange;
+                    cr.instance = size;
+                    if (it->first == ~0ull) {
+                        if (it->second > size)
+                            cr.first = 0;
+                        else
+                            cr.first = size - it->second;
+                    } else {
+                        cr.first = it->first;
+                        cr.last = std::min(it->second, size - 1);
+                    }
+                    if (response->supportsSeek()) {
+                        response->seek(cr.first, Stream::BEGIN);
+                    } else {
+                        transferStream(response, NullStream::get(), cr.first - currentPos);
+                    }
+                    transferStream(response, part->stream(), cr.last - cr.first + 1);
+                    part->stream()->close();
+                    currentPos = cr.last + 1;
+                }
+                multipart->finish();
+            }
+        } else {
+            ContentRange &cr = request->response().entity.contentRange;
+            cr.instance = size;
+
+            if (range.front().first == ~0ull) {
+                if (range.front().second > size)
+                    cr.first = 0;
+                else
+                    cr.first = size - range.front().second;
+                cr.last = size - 1;
+            } else {
+                cr.first = range.front().first;
+                cr.last = std::min(range.front().second, size - 1);                
+            }
+            request->response().entity.contentLength = cr.last - cr.first + 1;
+            
+            if (response->supportsSeek()) {
+                try {
+                   response->seek(cr.first, Stream::BEGIN);
+                } catch (UnexpectedEofError) {
+                    respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
+                    return;
+                }
+            } else {
+                try {
+                    transferStream(response, NullStream::get(), cr.first);
+                } catch (UnexpectedEofError) {
+                    respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
+                    return;
+                }
+                if (request->request().requestLine.method != HEAD) {
+                    transferStream(response, request->responseStream(), cr.last - cr.first + 1);
+                    request->responseStream()->close();
+                }
+            }
+        }
+    } 
+    if (fullEntity) {
+        request->response().entity.contentLength = size;
+        if (request->request().requestLine.method != HEAD) {
+            transferStream(response, request->responseStream());
+            request->responseStream()->close();
+        }
+    }
+    if (request->request().requestLine.method == HEAD)
+        request->finish();
 }

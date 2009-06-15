@@ -401,7 +401,7 @@ unquote(char *p, char *pe)
 
     action save_suffix_byte_pos {
         m_request->request.range.push_back(RangeSet::value_type(
-            strtoull(mark, NULL, 10), ~0ull));
+            ~0ull, strtoull(mark, NULL, 10)));
         mark = NULL;
     }
 

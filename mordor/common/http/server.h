@@ -83,6 +83,7 @@ namespace HTTP
 
     // Helper functions
     void respondError(ServerRequest::ptr request, Status status, const std::string &message = "", bool closeConnection = false);
+    void respondStream(ServerRequest::ptr request, Stream::ptr response);
 };
 
 #endif

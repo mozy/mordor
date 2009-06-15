@@ -71,9 +71,9 @@ void httpRequest(HTTP::ServerRequest::ptr request)
                             responsePart->stream()->close();
                         }
                         responseMultipart->finish();                        
-                    } else {                    
-                        transferStream(request->requestStream(), request->responseStream());
-                        request->responseStream()->close();
+                    } else {
+                        respondStream(request, request->requestStream());
+                        return;
                     }
                 } else {
                     request->finish();
