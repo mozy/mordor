@@ -41,3 +41,4 @@ HTTP::BasicClientAuthenticationScheme::authorize(ClientRequest::ptr challenge, R
     }
     return result;
 }
+

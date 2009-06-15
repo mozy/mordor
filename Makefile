@@ -258,6 +258,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/http/client.o			\
 	$(OBJDIR)/mordor/common/http/connection.o		\
 	$(OBJDIR)/mordor/common/http/http.o			\
+	$(OBJDIR)/mordor/common/http/multipart.o		\
 	$(OBJDIR)/mordor/common/http/parser.o			\
 	$(OBJDIR)/mordor/common/http/server.o			\
 	$(OBJDIR)/mordor/common/iomanager_$(IOMANAGER).o	\

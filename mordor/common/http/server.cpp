@@ -655,7 +655,7 @@ HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
     bool fullEntity = range.empty();
     // Validate range request
     // TODO: sort and merge overlapping ranges
-    unsigned long long previousLast;
+    unsigned long long previousLast = 0;
     for (RangeSet::const_iterator it(range.begin());
         it != range.end();
         ++it) {
