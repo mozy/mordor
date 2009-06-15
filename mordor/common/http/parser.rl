@@ -10,7 +10,7 @@
 #include "common/version.h"
 
 #ifdef WINDOWS
-#define atoll _atoi64
+#define strtoull _strtoui64
 #endif
 
 // From uri.rl
@@ -192,7 +192,7 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
     action save_ulong {
-        *m_ulong = atoll(mark);
+        *m_ulong = strtoull(mark, NULL, 10);
         mark = NULL;
     }
     
@@ -226,7 +226,7 @@ unquote(char *p, char *pe)
     }
 
     attribute = token >mark %save_parameter_attribute;
-    value = token | quoted_string >mark %save_parameter_value;
+    value = (token | quoted_string) >mark %save_parameter_value;
     parameter = attribute '=' value;
     parameterizedListElement = token >mark %save_parameterized_list_element (';' parameter)*;
     parameterizedList = LWS* parameterizedListElement ( LWS* ',' LWS* parameterizedListElement)* LWS*;
@@ -275,6 +275,29 @@ unquote(char *p, char *pe)
         m_ulong = &m_entity->contentLength;
     }
     
+    action set_content_range {
+        m_headerHandled = true;
+    }
+    
+    action save_cr_first_byte_pos {
+        m_entity->contentRange.first = strtoull(mark, NULL, 10);
+        mark = NULL;
+    }
+
+    action save_cr_last_byte_pos {
+        m_entity->contentRange.last = strtoull(mark, NULL, 10);
+        mark = NULL;
+    }
+    
+    action save_blank_cr {
+        m_entity->contentRange.last = 0;
+    }
+
+    action save_instance_length {
+        m_entity->contentRange.instance = strtoull(mark, NULL, 10);
+        mark = NULL;
+    }
+    
     action set_content_type
     {
 		m_headerHandled = true;
@@ -290,17 +313,21 @@ unquote(char *p, char *pe)
 		m_entity->contentType.subtype = std::string(mark, fpc - mark);
 		mark = NULL;
     }
-
-    type = token >mark %save_type;
-    subtype = token >mark %save_subtype;
-    media_type = type'/' subtype (';' parameter)*;
     
     Content_Length = 'Content-Length:'i @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
+    
+    byte_range_resp_spec = (DIGIT+ >mark %save_cr_first_byte_pos '-' DIGIT+ >mark %save_cr_last_byte_pos) | '*' %save_blank_cr;
+    content_range_spec = bytes_unit SP byte_range_resp_spec '/' ( DIGIT+ >mark %save_instance_length | '*');
+    Content_Range = 'Content-Range:'i @set_content_range LWS* content_range_spec LWS*;
+    
+    type = token >mark %save_type;
+    subtype = token >mark %save_subtype;
+    media_type = type'/' subtype (';' LWS* parameter)*;
     Content_Type = 'Content-Type:'i @set_content_type LWS* media_type LWS*;
     
     extension_header = message_header;
 
-    entity_header = Content_Length | Content_Type | extension_header;
+    entity_header = Content_Length | Content_Range | Content_Type | extension_header;
 
 }%%
 
@@ -335,6 +362,10 @@ unquote(char *p, char *pe)
         m_auth = &m_request->request.proxyAuthorization;
     }
 
+    action set_range {
+        m_headerHandled = true;
+    }
+
     action save_expectation {
         KeyValueWithParameters kvp;
         kvp.key = std::string(mark, fpc - mark);
@@ -354,6 +385,26 @@ unquote(char *p, char *pe)
         m_request->request.expect.back().parameters[m_temp1] = unquote((char*)mark, (char*)fpc);
         mark = NULL;
     }
+    
+    action save_first_byte_pos {
+        m_request->request.range.push_back(RangeSet::value_type(
+            strtoull(mark, NULL, 10), ~0ull));
+        mark = NULL;
+    }
+
+    action save_last_byte_pos {
+        if (mark != NULL) {
+            m_request->request.range.back().second = strtoull(mark, NULL, 10);
+        }
+        mark = NULL;
+    }
+
+    action save_suffix_byte_pos {
+        m_request->request.range.push_back(RangeSet::value_type(
+            strtoull(mark, NULL, 10), ~0ull));
+        mark = NULL;
+    }
+
 
     Authorization = 'Authorization:'i @set_authorization credentials;
 
@@ -365,7 +416,13 @@ unquote(char *p, char *pe)
     
     Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization credentials;
     
-    request_header = Authorization | Host | Expect | Proxy_Authorization;
+    byte_range_spec = DIGIT+ >mark %save_first_byte_pos '-' (DIGIT+ >mark %save_last_byte_pos)?;
+    suffix_byte_range_spec = '-' DIGIT+ > mark %save_suffix_byte_pos;
+    byte_range_set = LWS* (byte_range_spec | suffix_byte_range_spec) ( LWS* ',' LWS* (byte_range_spec | suffix_byte_range_spec))* LWS*;
+    ranges_specifier = bytes_unit '=' byte_range_set;
+    Range = 'Range:'i @set_range LWS* ranges_specifier;
+    
+    request_header = Authorization | Host | Expect | Proxy_Authorization | Range;
 
     Method = token >mark %parse_Method;
     Request_URI = ( "*" | absolute_URI | hier_part | authority);

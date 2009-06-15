@@ -12,6 +12,7 @@
 #include "connection.h"
 #include "common/fiber.h"
 #include "common/streams/stream.h"
+#include "multipart.h"
 
 class Scheduler;
 
@@ -32,12 +33,12 @@ namespace HTTP
         const Request &request();
         Stream::ptr requestStream();
         EntityHeaders &requestTrailer();
-        // Multipart::ptr requestMultipart();
+        Multipart::ptr requestMultipart();
 
         const Response &response();
         bool hasResponseBody();
         Stream::ptr responseStream();
-        // Multipart::ptr responseMultipart();
+        Multipart::ptr responseMultipart();
         const EntityHeaders &responseTrailer() const;
 
         void cancel(bool abort = false);
@@ -58,6 +59,7 @@ namespace HTTP
         EntityHeaders m_requestTrailer, m_responseTrailer;
         bool m_requestDone, m_requestInFlight, m_responseHeadersDone, m_responseDone, m_responseInFlight, m_cancelled, m_aborted;
         Stream::ptr m_requestStream, m_responseStream;
+        Multipart::ptr m_requestMultipart, m_responseMultipart;
     };
 
     class ClientConnection : public Connection, public boost::enable_shared_from_this<ClientConnection>, boost::noncopyable

@@ -118,18 +118,27 @@ int main(int argc, const char *argv[])
                 }
             }
         }
-        if (request->response().status.status == HTTP::UNAUTHORIZED) {            
+        if (request->response().status.status == HTTP::UNAUTHORIZED) {
             if (basic.authorize(request, requestHeaders, false)) {
                 request->finish();
                 request = conn->request(requestHeaders);
             }
         }
-        Stream::ptr responseStream = request->responseStream();
-        try {
-            transferStream(request->responseStream(), stdoutStream);
-        } catch(...) {
-            request->cancel();
-            throw;
+        if (request->hasResponseBody()) {
+            try {
+                if (request->response().entity.contentType.type != "multipart") {
+                    transferStream(request->responseStream(), stdoutStream);
+                } else {
+                    Multipart::ptr responseMultipart = request->responseMultipart();
+                    for (BodyPart::ptr bodyPart = responseMultipart->nextPart(); bodyPart;
+                        bodyPart = responseMultipart->nextPart()) {
+                        transferStream(bodyPart->stream(), stdoutStream);
+                    }                        
+                }
+            } catch(...) {
+                request->cancel();
+                throw;
+            }
         }
     } catch (std::exception& ex) {
         std::cerr << "Caught " << typeid(ex).name() << ": "

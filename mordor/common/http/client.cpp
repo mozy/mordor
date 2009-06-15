@@ -219,9 +219,9 @@ HTTP::ClientRequest::request()
 Stream::ptr
 HTTP::ClientRequest::requestStream()
 {
-    assert(m_request.entity.contentType.type != "multipart");
     if (m_requestStream)
         return m_requestStream;
+    assert(m_request.entity.contentType.type != "multipart");
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ClientRequest::requestDone, this),
@@ -237,6 +237,26 @@ HTTP::ClientRequest::requestTrailer()
     return m_requestTrailer;
 }
 
+Multipart::ptr
+HTTP::ClientRequest::requestMultipart()
+{
+    if (m_requestMultipart)
+        return m_requestMultipart;
+    assert(m_request.entity.contentType.type == "multipart");
+    assert(!m_requestStream);
+    m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
+        m_request.requestLine.method, INVALID,
+        NULL,
+        boost::bind(&ClientRequest::cancel, this, true), false);
+    HTTP::StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
+    if (it == m_request.entity.contentType.parameters.end()) {
+        throw std::runtime_error("No boundary with multipart");
+    }
+    m_requestMultipart.reset(new Multipart(m_requestStream, it->second));
+    m_requestMultipart->multipartFinished = boost::bind(&ClientRequest::requestDone, this);
+    return m_requestMultipart;
+}
+
 const HTTP::Response &
 HTTP::ClientRequest::response()
 {
@@ -248,8 +268,9 @@ bool
 HTTP::ClientRequest::hasResponseBody()
 {
     ensureResponse();
-    assert(m_response.entity.contentType.type != "multipart");
     if (m_responseStream)
+        return true;
+    if (m_responseMultipart)
         return true;
     return Connection::hasMessageBody(m_response.general,
         m_response.entity,
@@ -263,7 +284,9 @@ HTTP::ClientRequest::responseStream()
 {
     if (m_responseStream)
         return m_responseStream;
+    assert(!m_responseMultipart);
     ensureResponse();
+    assert(m_response.entity.contentType.type != "multipart");
     return m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
         boost::bind(&ClientRequest::responseDone, this),
@@ -274,6 +297,26 @@ const HTTP::EntityHeaders &
 HTTP::ClientRequest::responseTrailer() const
 {
     return m_responseTrailer;
+}
+
+Multipart::ptr
+HTTP::ClientRequest::responseMultipart()
+{
+    if (m_responseMultipart)
+        return m_responseMultipart;
+    ensureResponse();
+    assert(m_response.entity.contentType.type == "multipart");
+    m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
+        m_request.requestLine.method, m_response.status.status,
+        NULL,
+        boost::bind(&ClientRequest::cancel, this, true), true);
+    HTTP::StringMap::const_iterator it = m_response.entity.contentType.parameters.find("boundary");
+    if (it == m_response.entity.contentType.parameters.end()) {
+        throw std::runtime_error("No boundary with multipart");
+    }
+    m_responseMultipart.reset(new Multipart(m_responseStream, it->second));
+    m_responseMultipart->multipartFinished = boost::bind(&ClientRequest::responseDone, this);
+    return m_responseMultipart;
 }
 
 void
@@ -320,11 +363,18 @@ HTTP::ClientRequest::finish()
         return;
     }
     if (hasResponseBody()) {
-        if (!m_responseStream) {
-            m_responseStream = responseStream();
+        if (m_response.entity.contentType.type == "multipart") {
+            if (!m_responseMultipart) {
+                m_responseMultipart = responseMultipart();
+            }
+            while(m_responseMultipart->nextPart());
+        } else {
+            if (!m_responseStream) {
+                m_responseStream = responseStream();
+            }
+            assert(m_responseStream);
+            transferStream(m_responseStream, NullStream::get());
         }
-        assert(m_responseStream);
-        transferStream(m_responseStream, NullStream::get());
     }
 }
 

@@ -173,6 +173,17 @@ namespace HTTP
         StringMap parameters;
     };
 
+    typedef std::vector<std::pair<unsigned long long, unsigned long long> > RangeSet;
+    struct ContentRange
+    {
+        ContentRange() : first(~0ULL), last(~0ULL), instance(~0ULL) {}
+
+        unsigned long long first;
+        unsigned long long last;
+        unsigned long long instance;
+    };
+
+
     struct RequestLine
     {
         RequestLine() : method(GET) {}
@@ -204,6 +215,7 @@ namespace HTTP
         ParameterizedKeyValueList expect;
         std::string host;
         ValueWithParameters proxyAuthorization;
+        RangeSet range;
     };
 
     struct ResponseHeaders
@@ -219,6 +231,7 @@ namespace HTTP
         EntityHeaders() : contentLength(~0ull) {}
 
         unsigned long long contentLength;
+        ContentRange contentRange;
         MediaType contentType;
         StringMap extension;
     };
@@ -252,6 +265,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l);
 std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedKeyValueList &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::MediaType &m);
+std::ostream& operator<<(std::ostream& os, const HTTP::ContentRange &m);
 std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r);
 std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine &s);
 std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g);

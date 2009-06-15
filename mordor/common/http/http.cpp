@@ -117,6 +117,24 @@ std::ostream& operator<<(std::ostream& os, const serializeParameterizedListAsCha
     return os;
 }
 
+static std::ostream& operator<<(std::ostream& os, const HTTP::RangeSet& set)
+{
+    assert(!set.empty());
+    os << "bytes=";
+    for (HTTP::RangeSet::const_iterator it(set.begin());
+        it != set.end();
+        ++it) {
+        if (it != set.begin())
+            os << ", ";
+        if (it->first != ~0ull)
+            os << it->first;
+        os << "-";
+        if (it->second != ~0ull)
+            os << it->second;
+    }
+    return os;
+}
+
 const char *HTTP::methods[] = {
     "GET",
     "HEAD",
@@ -279,6 +297,20 @@ std::ostream& operator<<(std::ostream& os, const HTTP::MediaType &m)
     return os << m.type << "/" << m.subtype << serializeStringMapWithRequiredValue(m.parameters);
 }
 
+std::ostream& operator<<(std::ostream& os, const HTTP::ContentRange &cr)
+{
+    os << "bytes ";
+    if (cr.first == ~0ull || cr.last == ~0ull)
+        os << "*/";
+    else
+        os << cr.first << "-" << cr.last << "/";        
+    if (cr.instance == ~0ull)
+        os << "*";
+    else
+        os << cr.instance;
+    return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r)
 {
     if (!r.uri.isDefined())
@@ -318,6 +350,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
         assert(!r.proxyAuthorization.parameters.empty());
         os << "Proxy-Authorization: " << r.proxyAuthorization.value << " " << serializeStringMapAsAuthParam(r.proxyAuthorization.parameters) << "\r\n";
     }
+    if (!r.range.empty())
+        os << "Range: " << r.range << "\r\n";
     return os;
 }
 
@@ -338,6 +372,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e)
 {
     if (e.contentLength != ~0ull)
         os << "Content-Length: " << e.contentLength << "\r\n";
+    if (e.contentRange.first != ~0ull || e.contentRange.last != ~0ull || e.contentRange.instance != ~0ull)
+        os << "Content-Range: " << e.contentRange << "\r\n";
     if (!e.contentType.type.empty() && !e.contentType.subtype.empty())
         os << "Content-Type: " << e.contentType << "\r\n";
     for (HTTP::StringMap::const_iterator it(e.extension.begin());

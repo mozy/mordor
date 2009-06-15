@@ -382,6 +382,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\multipart.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\null.cpp"
 				>
 			</File>
@@ -549,6 +553,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\limited.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http\multipart.h"
 				>
 			</File>
 			<File
