@@ -34,6 +34,8 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
             case HEAD:
             case TRACE:
                 return false;
+            case CONNECT:
+                return true;
             default:
                 break;
         }
@@ -45,7 +47,9 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
             if (stricmp(it->value.c_str(), "identity") != 0)
                 return true;
         }
-        return false;
+        if (entity.contentType.type == "multipart")
+            return true;
+        throw std::runtime_error("Requests must have some way to determine when they end!");
     } else {
         // Response
         switch (method) {
@@ -66,9 +70,10 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
             if (stricmp(it->value.c_str(), "identity") != 0)
                 return true;
         }
-        // TODO: if (entity.contentType.major == "multipart") return true;
         if (entity.contentLength == 0)
             return false;
+        if (entity.contentType.type == "multipart")
+            return true;
         return true;
     }
 }

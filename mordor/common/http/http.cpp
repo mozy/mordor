@@ -10,7 +10,7 @@ static std::string quote(const std::string& str)
     if (str.empty())
         return "\"\"";
 
-    if (str.find_first_of("!#$%&'*+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~") == std::string::npos) {
+    if (str.find_first_not_of("!#$%&'*+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~") == std::string::npos) {
         return str;
     }
 

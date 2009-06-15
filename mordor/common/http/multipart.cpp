@@ -160,7 +160,7 @@ BodyPart::stream()
     if (!m_stream) {
         assert(m_multipart->m_stream->supportsWrite());
         std::ostringstream os;
-        os << m_headers;
+        os << m_headers << "\r\n";
         std::string headers = os.str();
         m_multipart->m_stream->write(headers.c_str(), headers.size());
         NotifyStream *notify = new NotifyStream(m_multipart->m_stream, false);

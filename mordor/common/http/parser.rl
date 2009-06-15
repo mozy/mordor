@@ -433,6 +433,19 @@ unquote(char *p, char *pe)
     write data;
 }%%
 
+void
+HTTP::HTTPParser::init()
+{
+    m_string = NULL;
+    m_list = NULL;
+    m_parameterizedList = NULL;
+    m_parameters = NULL;
+    m_auth = NULL;
+    m_ulong = NULL;
+    m_headerHandled = false;
+    RagelParser::init();
+}
+
 HTTP::RequestParser::RequestParser(Request& request)
 : m_request(&request),
   m_ver(&request.requestLine.ver),
@@ -445,7 +458,7 @@ HTTP::RequestParser::RequestParser(Request& request)
 void
 HTTP::RequestParser::init()
 {
-    RagelParser::init();
+    HTTPParser::init();
     %% write init;
 }
 
@@ -535,7 +548,7 @@ HTTP::ResponseParser::ResponseParser(Response& response)
 void
 HTTP::ResponseParser::init()
 {
-    RagelParser::init();
+    HTTPParser::init();
     %% write init;
 }
 
@@ -582,7 +595,7 @@ HTTP::TrailerParser::TrailerParser(EntityHeaders& entity)
 void
 HTTP::TrailerParser::init()
 {
-    RagelParser::init();
+    HTTPParser::init();
     %% write init;
 }
 

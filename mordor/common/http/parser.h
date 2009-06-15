@@ -7,9 +7,12 @@
 
 namespace HTTP
 {
-    class HttpParser : public RagelParser
+    class HTTPParser : public RagelParser
     {
+    public:
+        void init();
     protected:
+        HTTPParser() { init(); }
         // Pointers to current headers
         std::string *m_string;
         StringSet *m_list;
@@ -23,7 +26,7 @@ namespace HTTP
         bool m_headerHandled;
     };
 
-    class RequestParser : public HttpParser
+    class RequestParser : public HTTPParser
     {
     public:
         RequestParser(Request& request);
@@ -42,7 +45,7 @@ namespace HTTP
         EntityHeaders *m_entity;
     };
 
-    class ResponseParser : public HttpParser
+    class ResponseParser : public HTTPParser
     {
     public:
         ResponseParser(Response& response);
@@ -61,7 +64,7 @@ namespace HTTP
         EntityHeaders *m_entity;
     };
 
-    class TrailerParser : public HttpParser
+    class TrailerParser : public HTTPParser
     {
     public:
         TrailerParser(EntityHeaders& entity);

@@ -65,7 +65,7 @@ void httpRequest(HTTP::ServerRequest::ptr request)
                         for (BodyPart::ptr requestPart = requestMultipart->nextPart();
                             requestPart;
                             requestPart = requestMultipart->nextPart()) {
-                            BodyPart::ptr responsePart = requestMultipart->nextPart();
+                            BodyPart::ptr responsePart = responseMultipart->nextPart();
                             responsePart->headers() = requestPart->headers();
                             transferStream(requestPart->stream(), responsePart->stream());
                             responsePart->stream()->close();

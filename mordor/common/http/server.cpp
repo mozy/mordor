@@ -211,7 +211,7 @@ HTTP::ServerRequest::requestMultipart()
     assert(m_request.entity.contentType.type == "multipart");
     assert(!m_requestStream);
     HTTP::StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
-    if (it == m_response.entity.contentType.parameters.end() || it->second.empty()) {
+    if (it == m_request.entity.contentType.parameters.end() || it->second.empty()) {
         throw std::runtime_error("No boundary with multipart");
     }
     m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
