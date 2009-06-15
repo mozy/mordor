@@ -3,6 +3,7 @@
 // Copyright (c) 2009 - Decho Corp.
 
 #include "connection.h"
+#include "multipart.h"
 
 namespace HTTP
 {
@@ -22,11 +23,11 @@ namespace HTTP
         bool hasRequestBody();
         Stream::ptr requestStream();
         const EntityHeaders &requestTrailer() const;
-        // Multipart::ptr requestMultipart();
+        Multipart::ptr requestMultipart();
 
         Response &response();
         Stream::ptr responseStream();
-        // Multipart::ptr responseMultipart();
+        Multipart::ptr responseMultipart();
         EntityHeaders &responseTrailer();
 
         bool committed() const { return m_committed; }
@@ -39,6 +40,7 @@ namespace HTTP
         void commit();
         void finishRequest();
         void requestDone();
+        void responseMultipartDone();
         void responseDone();
 
     private:
@@ -50,6 +52,7 @@ namespace HTTP
         EntityHeaders m_requestTrailer, m_responseTrailer;
         bool m_requestDone, m_committed, m_responseDone, m_responseInFlight, m_aborted, m_willClose;
         Stream::ptr m_requestStream, m_responseStream;
+        Multipart::ptr m_requestMultipart, m_responseMultipart;
     };
 
     class ServerConnection : public Connection, public boost::enable_shared_from_this<ServerConnection>, boost::noncopyable

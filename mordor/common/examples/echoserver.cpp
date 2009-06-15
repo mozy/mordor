@@ -59,8 +59,22 @@ void httpRequest(HTTP::ServerRequest::ptr request)
             request->response().entity.extension = request->request().entity.extension;
             if (request->hasRequestBody()) {
                 if (request->request().requestLine.method != HTTP::HEAD) {
-                    transferStream(request->requestStream(), request->responseStream());
-                    request->responseStream()->close();
+                    if (request->request().entity.contentType.type == "multipart") {
+                        Multipart::ptr requestMultipart = request->requestMultipart();
+                        Multipart::ptr responseMultipart = request->responseMultipart();
+                        for (BodyPart::ptr requestPart = requestMultipart->nextPart();
+                            requestPart;
+                            requestPart = requestMultipart->nextPart()) {
+                            BodyPart::ptr responsePart = requestMultipart->nextPart();
+                            responsePart->headers() = requestPart->headers();
+                            transferStream(requestPart->stream(), responsePart->stream());
+                            responsePart->stream()->close();
+                        }
+                        responseMultipart->finish();                        
+                    } else {                    
+                        transferStream(request->requestStream(), request->responseStream());
+                        request->responseStream()->close();
+                    }
                 } else {
                     request->finish();
                 }

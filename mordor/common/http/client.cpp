@@ -221,20 +221,12 @@ HTTP::ClientRequest::requestStream()
 {
     if (m_requestStream)
         return m_requestStream;
+    assert(!m_requestMultipart);
     assert(m_request.entity.contentType.type != "multipart");
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ClientRequest::requestDone, this),
         boost::bind(&ClientRequest::cancel, this, true), false);
-}
-
-HTTP::EntityHeaders &
-HTTP::ClientRequest::requestTrailer()
-{
-    // If transferEncoding is not empty, it must include chunked,
-    // and it must include chunked in order to have a trailer
-    assert(!m_request.general.transferEncoding.empty());
-    return m_requestTrailer;
 }
 
 Multipart::ptr
@@ -244,17 +236,26 @@ HTTP::ClientRequest::requestMultipart()
         return m_requestMultipart;
     assert(m_request.entity.contentType.type == "multipart");
     assert(!m_requestStream);
-    m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
-        m_request.requestLine.method, INVALID,
-        NULL,
-        boost::bind(&ClientRequest::cancel, this, true), false);
     HTTP::StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
     if (it == m_request.entity.contentType.parameters.end()) {
         throw std::runtime_error("No boundary with multipart");
     }
+    m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
+        m_request.requestLine.method, INVALID,
+        boost::bind(&ClientRequest::requestDone, this),
+        boost::bind(&ClientRequest::cancel, this, true), false);
     m_requestMultipart.reset(new Multipart(m_requestStream, it->second));
-    m_requestMultipart->multipartFinished = boost::bind(&ClientRequest::requestDone, this);
+    m_requestMultipart->multipartFinished = boost::bind(&ClientRequest::requestMultipartDone, this);
     return m_requestMultipart;
+}
+
+HTTP::EntityHeaders &
+HTTP::ClientRequest::requestTrailer()
+{
+    // If transferEncoding is not empty, it must include chunked,
+    // and it must include chunked in order to have a trailer
+    assert(!m_request.general.transferEncoding.empty());
+    return m_requestTrailer;
 }
 
 const HTTP::Response &
@@ -306,14 +307,14 @@ HTTP::ClientRequest::responseMultipart()
         return m_responseMultipart;
     ensureResponse();
     assert(m_response.entity.contentType.type == "multipart");
-    m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
-        m_request.requestLine.method, m_response.status.status,
-        NULL,
-        boost::bind(&ClientRequest::cancel, this, true), true);
     HTTP::StringMap::const_iterator it = m_response.entity.contentType.parameters.find("boundary");
     if (it == m_response.entity.contentType.parameters.end()) {
         throw std::runtime_error("No boundary with multipart");
     }
+    m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
+        m_request.requestLine.method, m_response.status.status,
+        NULL,
+        boost::bind(&ClientRequest::cancel, this, true), true);
     m_responseMultipart.reset(new Multipart(m_responseStream, it->second));
     m_responseMultipart->multipartFinished = boost::bind(&ClientRequest::responseDone, this);
     return m_responseMultipart;
@@ -642,6 +643,12 @@ HTTP::ClientRequest::ensureResponse()
         m_conn->scheduleAllWaitingResponses();
         throw;
     }
+}
+
+void
+HTTP::ClientRequest::requestMultipartDone()
+{
+    m_requestStream->close();
 }
 
 void

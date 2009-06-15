@@ -182,8 +182,7 @@ HTTP::ServerRequest::request()
 bool
 HTTP::ServerRequest::hasRequestBody()
 {
-    assert(m_request.entity.contentType.type != "multipart");
-    if (m_requestStream.get())
+    if (m_requestStream)
         return true;
     return Connection::hasMessageBody(m_request.general,
         m_request.entity,
@@ -194,13 +193,34 @@ HTTP::ServerRequest::hasRequestBody()
 Stream::ptr
 HTTP::ServerRequest::requestStream()
 {
-    assert(m_request.entity.contentType.type != "multipart");
     if (m_requestStream)
         return m_requestStream;
+    assert(!m_requestMultipart);
+    assert(m_request.entity.contentType.type != "multipart");
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ServerRequest::requestDone, this),
         boost::bind(&ServerRequest::cancel, this), true);
+}
+
+Multipart::ptr
+HTTP::ServerRequest::requestMultipart()
+{
+    if (m_requestMultipart)
+        return m_requestMultipart;
+    assert(m_request.entity.contentType.type == "multipart");
+    assert(!m_requestStream);
+    HTTP::StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
+    if (it == m_response.entity.contentType.parameters.end() || it->second.empty()) {
+        throw std::runtime_error("No boundary with multipart");
+    }
+    m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
+        m_request.requestLine.method, INVALID,
+        NULL,
+        boost::bind(&ServerRequest::cancel, this), true);
+    m_requestMultipart.reset(new Multipart(m_requestStream, it->second));
+    m_requestMultipart->multipartFinished = boost::bind(&ServerRequest::requestDone, this);
+    return m_requestMultipart;
 }
 
 const HTTP::EntityHeaders &
@@ -224,11 +244,34 @@ HTTP::ServerRequest::responseStream()
 {
     if (m_responseStream)
         return m_responseStream;
+    assert(!m_responseMultipart);
+    assert(m_response.entity.contentType.type != "multipart");
     commit();    
     return m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
         boost::bind(&ServerRequest::responseDone, this),
         boost::bind(&ServerRequest::cancel, this), false);
+}
+
+Multipart::ptr
+HTTP::ServerRequest::responseMultipart()
+{
+    if (m_responseMultipart)
+        return m_responseMultipart;
+    assert(m_response.entity.contentType.type == "multipart");
+    assert(!m_responseStream);
+    HTTP::StringMap::const_iterator it = m_response.entity.contentType.parameters.find("boundary");
+    if (it == m_response.entity.contentType.parameters.end()) {
+        throw std::runtime_error("No boundary with multipart");
+    }
+    commit();
+    m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
+        m_request.requestLine.method, m_response.status.status,
+        boost::bind(&ServerRequest::responseDone, this),
+        boost::bind(&ServerRequest::cancel, this), false);
+    m_responseMultipart.reset(new Multipart(m_responseStream, it->second));
+    m_responseMultipart->multipartFinished = boost::bind(&ServerRequest::responseMultipartDone, this);
+    return m_responseMultipart;
 }
 
 HTTP::EntityHeaders &
@@ -265,11 +308,18 @@ HTTP::ServerRequest::finish()
     }
     commit();
     if (!m_requestDone && hasRequestBody() && !m_willClose) {
-        if (!m_requestStream) {
-            m_requestStream = requestStream();
+        if (m_request.entity.contentType.type == "multipart") {
+            if (!m_requestMultipart) {
+                m_requestMultipart = requestMultipart();
+            }
+            while(m_requestMultipart->nextPart());
+        } else {
+            if (!m_requestStream) {
+                m_requestStream = requestStream();
+            }
+            assert(m_requestStream);
+            transferStream(m_requestStream, NullStream::get());
         }
-        assert(m_requestStream);
-        transferStream(m_requestStream, NullStream::get());
     }
 }
 
@@ -537,6 +587,12 @@ HTTP::ServerRequest::requestDone()
         assert(parser.complete());
     }
     m_conn->scheduleNextRequest(shared_from_this());
+}
+
+void
+HTTP::ServerRequest::responseMultipartDone()
+{
+    m_responseStream->close();
 }
 
 void

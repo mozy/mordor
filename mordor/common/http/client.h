@@ -32,8 +32,8 @@ namespace HTTP
     public:
         const Request &request();
         Stream::ptr requestStream();
-        EntityHeaders &requestTrailer();
         Multipart::ptr requestMultipart();
+        EntityHeaders &requestTrailer();
 
         const Response &response();
         bool hasResponseBody();
@@ -47,6 +47,7 @@ namespace HTTP
 
     private:
         void doRequest();
+        void requestMultipartDone();
         void requestDone();
         void responseDone();
 
