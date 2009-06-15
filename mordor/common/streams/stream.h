@@ -16,9 +16,9 @@ public:
     typedef boost::shared_ptr<Stream> ptr;
 
     enum CloseType {
-        READ,
-        WRITE,
-        BOTH
+        READ  = 0x01,
+        WRITE = 0x02,
+        BOTH  = 0x03
     };
 
     enum Anchor {

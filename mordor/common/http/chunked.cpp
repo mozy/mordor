@@ -59,7 +59,7 @@ size_t
 HTTP::ChunkedStream::write(const Buffer &b, size_t len)
 {
     std::ostringstream os;
-    os << std::hex << len;
+    os << std::hex << len << "\r\n";
     std::string str = os.str();
     parent()->write(str.c_str(), str.size());
     Buffer copy;

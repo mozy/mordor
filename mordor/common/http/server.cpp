@@ -651,6 +651,7 @@ HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
     if (response->supportsSize()) {
         size = response->size();
     }
+    request->response().general.transferEncoding.clear();
     const RangeSet &range = request->request().request.range;
     bool fullEntity = range.empty();
     // Validate range request
