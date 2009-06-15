@@ -171,7 +171,7 @@ BufferedStream::flush()
 }
 
 size_t
-BufferedStream::findDelimited(char delim)
+BufferedStream::find(char delim)
 {
     const size_t sanitySize = 65536;
     while (true) {
@@ -180,7 +180,7 @@ BufferedStream::findDelimited(char delim)
             throw std::runtime_error("Buffer overflow!");
         }
         if (readAvailable > 0) {
-            ptrdiff_t result = m_readBuffer.findDelimited(delim);
+            ptrdiff_t result = m_readBuffer.find(delim);
             if (result != -1) {
                 return result;
             }
@@ -190,6 +190,36 @@ BufferedStream::findDelimited(char delim)
         if (result == 0) {
             // EOF
             throw std::runtime_error("Unexpected EOF");
+        }
+    }
+}
+
+size_t
+BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFound)
+{
+    if (sanitySize == (size_t)~0)
+        sanitySize = m_bufferSize;
+    sanitySize += str.size();
+    while (true) {
+        size_t readAvailable = m_readBuffer.readAvailable();
+        if (readAvailable >= sanitySize) {
+            if (throwIfNotFound)
+                throw std::runtime_error("Buffer overflow!");
+            return ~0;
+        }
+        if (readAvailable > 0) {
+            ptrdiff_t result = m_readBuffer.find(str);
+            if (result != -1) {
+                return result;
+            }
+        }
+
+        size_t result = FilterStream::read(m_readBuffer, m_bufferSize);
+        if (result == 0) {
+            // EOF
+            if (throwIfNotFound)
+                throw std::runtime_error("Unexpected EOF");
+            return ~0;
         }
     }
 }

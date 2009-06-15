@@ -76,13 +76,21 @@ public:
 
     void copyOut(void* buf, size_t len) const;
 
-    ptrdiff_t findDelimited(char delim, size_t len = ~0) const;
+    ptrdiff_t find(char delim, size_t len = ~0) const;
+    ptrdiff_t find(const std::string &str, size_t len = ~0) const;
+
+    bool operator== (const std::string &str) const;
+    bool operator!= (const std::string &str) const;
+    bool operator== (const char *str) const;
+    bool operator!= (const char *str) const;
 
 private:
     std::list<Data> m_bufs;
     size_t m_readAvailable;
     size_t m_writeAvailable;
     std::list<Data>::iterator m_writeIt;
+
+    int opCmp(const char *str, size_t len) const;
 
     void invariant() const;
 };

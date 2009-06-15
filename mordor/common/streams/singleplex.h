@@ -24,7 +24,8 @@ public:
     bool supportsRead() { return m_type == READ; }
     bool supportsWrite() { return m_type == WRITE; }
     bool supportsTruncate() { return m_type == WRITE && FilterStream::supportsTruncate(); }
-    bool supportsFindDelimited() { return m_type == READ && FilterStream::supportsFindDelimited(); }
+    bool supportsFind() { return m_type == READ && FilterStream::supportsFind(); }
+    bool supportsUnread() { return m_type == READ && FilterStream::supportsUnread(); }
 
     void close(CloseType type = BOTH)
     {
@@ -56,10 +57,20 @@ public:
             return;
         return FilterStream::flush();
     }
-    size_t findDelimited(char delim)
+    size_t find(char delim)
     {
         assert(m_type == READ);
-        return FilterStream::findDelimited(delim);
+        return FilterStream::find(delim);
+    }
+    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)
+    {
+        assert(m_type == READ);
+        return FilterStream::find(str, sanitySize, throwIfNotFound);
+    }
+    void unread(const Buffer &b, size_t len)
+    {
+        assert(m_type == READ);
+        return FilterStream::unread(b, len);
     }
 
 private:

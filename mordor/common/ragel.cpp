@@ -4,7 +4,6 @@
 
 #include <cassert>
 
-#include "common/streams/buffered.h"
 #include "common/streams/stream.h"
 
 void
@@ -48,9 +47,8 @@ RagelParser::run(Stream &stream)
             }
         }
     }
-    BufferedStream *buffered = dynamic_cast<BufferedStream *>(&stream);
-    if (buffered) {
-        buffered->unread(b, b.readAvailable());
+    if (stream.supportsUnread()) {
+        stream.unread(b, b.readAvailable());
     }
 }
 

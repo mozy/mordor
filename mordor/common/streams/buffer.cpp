@@ -443,7 +443,7 @@ Buffer::copyOut(void *buf, size_t len) const
 }
 
 ptrdiff_t
-Buffer::findDelimited(char delim, size_t len) const
+Buffer::find(char delim, size_t len) const
 {
     if (len == (size_t)~0)
         len = readAvailable();
@@ -471,6 +471,114 @@ Buffer::findDelimited(char delim, size_t len) const
         return totalLength + 1;
     }
     return -1;
+}
+
+ptrdiff_t
+Buffer::find(const std::string &str, size_t len) const
+{
+    if (len == (size_t)~0)
+        len = readAvailable();
+    assert(len <= readAvailable());
+
+    size_t totalLength = 0;
+    size_t foundSoFar = 0;
+
+    std::list<Data>::const_iterator it;
+    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
+        const void *start = it->readBuf().start();
+        size_t toscan = std::min(len, it->readAvailable());
+        while (toscan > 0) {
+            if (foundSoFar == 0) {
+                const void *point = memchr(start, str[0], toscan);
+                if (point != NULL) {
+                    foundSoFar = 1;
+                    size_t found = (unsigned char*)point - (unsigned char*)start;
+                    toscan -= found + 1;
+                    len -= found + 1;
+                    totalLength += found;
+                    start = (unsigned char*)point + 1;
+                } else {
+                    totalLength += toscan;
+                    len -= toscan;
+                    toscan = 0;
+                    continue;
+                }
+            }
+            assert(foundSoFar != 0);
+            size_t tocompare = std::min(toscan, str.size() - foundSoFar);
+            if (memcmp(start, str.c_str() + foundSoFar, tocompare) == 0) {
+                foundSoFar += tocompare;
+                toscan -= tocompare;
+                len -= tocompare;
+                if (foundSoFar == str.size())
+                    break;
+            } else {
+                foundSoFar = 0;
+            }
+        }
+        if (foundSoFar == str.size())
+            break;
+        if (len == 0)
+            break;
+    }
+    if (foundSoFar == str.size())
+        return totalLength;
+    return -1;
+}
+
+bool
+Buffer::operator== (const std::string &str) const
+{
+    if (str.size() != readAvailable())
+        return false;
+    return opCmp(str.c_str(), str.size()) == 0;
+}
+
+bool
+Buffer::operator!= (const std::string &str) const
+{
+    if (str.size() != readAvailable())
+        return true;
+    return opCmp(str.c_str(), str.size()) != 0;
+}
+
+bool
+Buffer::operator== (const char *str) const
+{
+    size_t len = strlen(str);
+    if (len != readAvailable())
+        return false;
+    return opCmp(str, len) == 0;
+}
+
+bool
+Buffer::operator!= (const char *str) const
+{
+    size_t len = strlen(str);
+    if (len != readAvailable())
+        return true;
+    return opCmp(str, len) != 0;
+}
+
+int
+Buffer::opCmp(const char *str, size_t len) const
+{
+    size_t offset = 0;
+    std::list<Data>::const_iterator it;
+    int lengthResult = (int)((ptrdiff_t)readAvailable() - (ptrdiff_t)len);
+    if (lengthResult > 0)
+        len = readAvailable();
+    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
+        const void *start = it->readBuf().start();
+        size_t tocompare = std::min(it->readAvailable(), len);
+        int result = memcmp(it->readBuf().start(), str + offset, tocompare);
+        if (result != 0)
+            return result;
+        len -= tocompare;
+        if (len == 0)
+            return lengthResult;
+    }
+    return lengthResult;
 }
 
 void

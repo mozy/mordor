@@ -14,7 +14,7 @@ HTTP::Connection::Connection(Stream::ptr stream)
     assert(stream);
     assert(stream->supportsRead());
     assert(stream->supportsWrite());
-    if (!stream->supportsFindDelimited()) {
+    if (!stream->supportsFind()) {
         BufferedStream *buffered = new BufferedStream(stream);
         buffered->allowPartialReads(true);
         m_stream.reset(buffered);

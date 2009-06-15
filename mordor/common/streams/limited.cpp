@@ -57,3 +57,11 @@ LimitedStream::size()
     }
     return std::min(m_size, FilterStream::size());
 }
+
+
+void
+LimitedStream::unread(const Buffer &b, size_t len)
+{
+    FilterStream::unread(b, len);
+    m_pos -= len;
+}

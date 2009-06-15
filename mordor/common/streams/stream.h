@@ -34,7 +34,8 @@ public:
     virtual bool supportsSeek() { return false; }
     virtual bool supportsSize() { return false; }
     virtual bool supportsTruncate() { return false; }
-    virtual bool supportsFindDelimited() { return false; }
+    virtual bool supportsFind() { return false; }
+    virtual bool supportsUnread() { return false; }
 
     virtual void close(CloseType type = BOTH) {}
     virtual size_t read(Buffer &b, size_t len) { assert(supportsRead()); return 0; }
@@ -43,7 +44,9 @@ public:
     virtual long long size() { assert(supportsSize()); return 0ll; }
     virtual void truncate(long long size) { assert(supportsTruncate()); }
     virtual void flush() {}
-    virtual size_t findDelimited(char delim) { assert(false); return 0; }
+    virtual size_t find(char delim) { assert(false); return 0; }
+    virtual size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { assert(false); return ~0; }
+    virtual void unread(const Buffer &b, size_t len) { assert(false); }
 
     // Convenience functions - do *not* implement in FilterStream, so that
     // filters do not need to implement these

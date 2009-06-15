@@ -21,7 +21,8 @@ public:
     bool supportsSeek() { return m_parent->supportsSeek(); }
     bool supportsSize() { return m_parent->supportsSize(); }
     bool supportsTruncate() { return m_parent->supportsTruncate(); }
-    bool supportsFindDelimited() { return m_parent->supportsFindDelimited(); }
+    bool supportsFind() { return m_parent->supportsFind(); }
+    bool supportsUnread() { return m_parent->supportsUnread(); }
 
     void close(CloseType type = BOTH)
     {
@@ -35,7 +36,10 @@ public:
     long long size() { return m_parent->size(); }
     void truncate(long long size) { m_parent->truncate(size); }
     void flush() { m_parent->flush(); }
-    size_t findDelimited(char delim) { return m_parent->findDelimited(delim); }
+    size_t find(char delim) { return m_parent->find(delim); }
+    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwOnNotFound = true)
+    { return m_parent->find(str, sanitySize, throwOnNotFound); }
+    void unread(const Buffer &b, size_t len) { return m_parent->unread(b, len); }
 
 protected:
     void parent(Stream::ptr parent) { m_parent = parent; }
@@ -53,10 +57,13 @@ protected:
         : FilterStream(parent, owns)
     {}
 
-    bool supportsFindDelimited() { return false; }
+    bool supportsFind() { return false; }
+    bool supportsUnread() { return false; }
 
 public:
-    size_t findDelimited(char delim) { assert(false); return 0; }
+    size_t find(char delim) { assert(false); return 0; }
+    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { assert(false); return ~0; }
+    void unread(const Buffer &b, size_t len) { assert(false); }
 };
 
 #endif

@@ -21,7 +21,7 @@ Stream::write(const void *b, size_t len)
 std::string
 Stream::getDelimited(char delim)
 {
-    size_t offset = findDelimited(delim);
+    size_t offset = find(delim);
     if (offset == 0)
         return std::string();
     Buffer buf;

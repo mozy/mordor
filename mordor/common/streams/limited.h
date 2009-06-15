@@ -17,6 +17,7 @@ public:
     long long seek(long long offset, Anchor anchor);
     long long size();
     void truncate(long long size) { assert(false); }
+    void unread(const Buffer &b, size_t len);
 
 private:
     long long m_pos, m_size;
