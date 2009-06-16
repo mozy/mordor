@@ -5,7 +5,7 @@
 #include <boost/function.hpp>
 
 #include "auth.h"
-#include "common/uri.h"
+#include "mordor/common/uri.h"
 
 namespace HTTP
 {

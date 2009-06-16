@@ -2,7 +2,7 @@
 
 #include "handle.h"
 
-#include "common/exception.h"
+#include "mordor/common/exception.h"
 
 HandleStream::HandleStream()
 : m_ioManager(NULL),

@@ -2,7 +2,7 @@
 
 #include "basic.h"
 
-#include "common/string.h"
+#include "mordor/common/string.h"
 
 bool
 HTTP::BasicClientAuthenticationScheme::authorize(ClientRequest::ptr challenge, Request &nextRequest, bool proxy)

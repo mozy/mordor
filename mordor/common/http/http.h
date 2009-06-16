@@ -8,8 +8,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "common/uri.h"
-#include "common/version.h"
+#include "mordor/common/uri.h"
+#include "mordor/common/version.h"
 
 #ifdef WINDOWS
 #define stricmp _stricmp

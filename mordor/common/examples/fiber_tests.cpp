@@ -1,7 +1,7 @@
 #include <cassert>
 #include <stdio.h>
 
-#include "common/fiber.h"
+#include "mordor/common/fiber.h"
 
 static Fiber *g_mainFiber, *g_a;
 

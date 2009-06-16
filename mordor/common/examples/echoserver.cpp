@@ -2,11 +2,11 @@
 
 #include <boost/bind.hpp>
 
-#include "common/http/server.h"
-#include "common/iomanager.h"
-#include "common/socket.h"
-#include "common/streams/socket.h"
-#include "common/streams/transfer.h"
+#include "mordor/common/http/server.h"
+#include "mordor/common/iomanager.h"
+#include "mordor/common/socket.h"
+#include "mordor/common/streams/socket.h"
+#include "mordor/common/streams/transfer.h"
 
 void socketConnection(Socket::ptr s)
 {

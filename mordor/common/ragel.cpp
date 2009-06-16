@@ -4,8 +4,6 @@
 
 #include <cassert>
 
-#include "common/streams/stream.h"
-
 void
 RagelParser::run(const std::string& str)
 {

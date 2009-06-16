@@ -4,11 +4,9 @@
 
 #include <boost/bind.hpp>
 
-#include "parser.h"
-
-#include "common/exception.h"
-#include "common/streams/null.h"
-#include "common/streams/transfer.h"
+#include "mordor/common/exception.h"
+#include "mordor/common/streams/null.h"
+#include "mordor/common/streams/transfer.h"
 #include "parser.h"
 
 HTTP::ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg)

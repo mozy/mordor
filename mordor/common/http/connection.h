@@ -4,8 +4,8 @@
 
 #include <boost/function.hpp>
 
-#include "common/streams/stream.h"
 #include "http.h"
+#include "mordor/common/streams/stream.h"
 
 namespace HTTP
 {

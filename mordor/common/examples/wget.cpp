@@ -5,15 +5,15 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "common/exception.h"
-#include "common/http/basic.h"
-#include "common/http/client.h"
-#include "common/iomanager.h"
-#include "common/socket.h"
-#include "common/streams/socket.h"
-#include "common/streams/ssl.h"
-#include "common/streams/std.h"
-#include "common/streams/transfer.h"
+#include "mordor/common/exception.h"
+#include "mordor/common/http/basic.h"
+#include "mordor/common/http/client.h"
+#include "mordor/common/iomanager.h"
+#include "mordor/common/socket.h"
+#include "mordor/common/streams/socket.h"
+#include "mordor/common/streams/ssl.h"
+#include "mordor/common/streams/std.h"
+#include "mordor/common/streams/transfer.h"
 
 struct CredentialStore
 {

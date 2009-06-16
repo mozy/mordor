@@ -1,6 +1,6 @@
 // Copyright (c) 2009 - Decho Corp.
 
-#include "common/string.h"
+#include "mordor/common/string.h"
 
 #include <cassert>
 

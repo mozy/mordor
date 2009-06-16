@@ -2,7 +2,7 @@
 
 #include "file.h"
 
-#include "common/exception.h"
+#include "mordor/common/exception.h"
 
 FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlags)
 {

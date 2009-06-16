@@ -2,7 +2,7 @@
 #define __HTTP_CHUNKED_H__
 // Copyright (c) 2009 - Decho Corp.
 
-#include "common/streams/filter.h"
+#include "mordor/common/streams/filter.h"
 
 namespace HTTP
 {

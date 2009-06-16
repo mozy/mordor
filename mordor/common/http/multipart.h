@@ -9,8 +9,8 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "common/streams/stream.h"
 #include "http.h"
+#include "mordor/common/streams/stream.h"
 
 class BodyPart;
 

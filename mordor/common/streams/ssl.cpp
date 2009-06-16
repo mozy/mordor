@@ -2,7 +2,7 @@
 
 #include "ssl.h"
 
-#include "common/version.h"
+#include "mordor/common/version.h"
 
 #ifdef MSVC
 #pragma comment(lib, "libeay32")

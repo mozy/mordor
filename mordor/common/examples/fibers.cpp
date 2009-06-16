@@ -3,8 +3,8 @@
 #include <cassert>
 #include <stdio.h>
 
-#include "common/fiber.h"
-#include "common/scheduler.h"
+#include "mordor/common/fiber.h"
+#include "mordor/common/scheduler.h"
 
 int main()
 {

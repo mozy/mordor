@@ -2,7 +2,7 @@
 
 #include "std.h"
 
-#include "common/exception.h"
+#include "mordor/common/exception.h"
 
 StdinStream::StdinStream()
 {

@@ -7,9 +7,9 @@
 
 #include <boost/bind.hpp>
 
-#include "common/scheduler.h"
-#include "common/streams/null.h"
-#include "common/streams/transfer.h"
+#include "mordor/common/scheduler.h"
+#include "mordor/common/streams/null.h"
+#include "mordor/common/streams/transfer.h"
 #include "parser.h"
 
 HTTP::ClientConnection::ClientConnection(Stream::ptr stream)

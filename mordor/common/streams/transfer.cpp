@@ -4,8 +4,8 @@
 
 #include <boost/bind.hpp>
 
-#include "common/exception.h"
-#include "common/scheduler.h"
+#include "mordor/common/exception.h"
+#include "mordor/common/scheduler.h"
 #include "stream.h"
 
 static void readOne(Stream &src, Buffer &buffer, size_t len, size_t &result)

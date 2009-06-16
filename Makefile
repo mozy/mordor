@@ -98,8 +98,8 @@ ifdef GPROF
 	DBG_FLAGS += -pg
 endif
 
-# add all the subdirs to the include path
-INC_FLAGS := -Imordor
+# add current dir to include dir
+INC_FLAGS := -I.
 
 # run with 'make V=1' for verbose make output
 ifeq ($(V),1)

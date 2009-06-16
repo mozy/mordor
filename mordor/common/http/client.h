@@ -10,8 +10,8 @@
 #include <boost/thread/mutex.hpp>
 
 #include "connection.h"
-#include "common/fiber.h"
-#include "common/streams/stream.h"
+#include "mordor/common/fiber.h"
+#include "mordor/common/streams/stream.h"
 #include "multipart.h"
 
 class Scheduler;

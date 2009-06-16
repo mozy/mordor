@@ -4,7 +4,7 @@
 
 #include <cassert>
 
-#include "common/socket.h"
+#include "mordor/common/socket.h"
 
 SocketStream::SocketStream(boost::shared_ptr<Socket> s, bool own)
 : m_socket(s),

@@ -3,10 +3,10 @@
 #include "connection.h"
 
 #include "chunked.h"
-#include "common/streams/buffered.h"
-#include "common/streams/limited.h"
-#include "common/streams/notify.h"
-#include "common/streams/singleplex.h"
+#include "mordor/common/streams/buffered.h"
+#include "mordor/common/streams/limited.h"
+#include "mordor/common/streams/notify.h"
+#include "mordor/common/streams/singleplex.h"
 
 HTTP::Connection::Connection(Stream::ptr stream)
 : m_stream(stream)

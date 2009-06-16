@@ -7,7 +7,14 @@
 
 #include <string>
 
-#include "common/version.h"
+#include "mordor/common/version.h"
+
+#ifdef ABSOLUTE
+#undef ABSOLUTE
+#endif
+#ifdef RELATIVE
+#undef RELATIVE
+#endif
 
 #ifdef WINDOWS
 #define strtoull _strtoui64

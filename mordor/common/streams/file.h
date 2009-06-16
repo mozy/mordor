@@ -2,7 +2,7 @@
 #define __FILE_H__
 // Copyright (c) 2009 - Decho Corp.
 
-#include "common/version.h"
+#include "mordor/common/version.h"
 
 #ifdef WINDOWS
 #include "handle.h"

@@ -5,7 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "common/version.h"
+#include "mordor/common/version.h"
 
 #ifdef WINDOWS
 #define strtoull _strtoui64

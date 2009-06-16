@@ -6,9 +6,9 @@
 
 #include <boost/bind.hpp>
 
-#include "common/streams/notify.h"
-#include "common/streams/null.h"
-#include "common/streams/transfer.h"
+#include "mordor/common/streams/notify.h"
+#include "mordor/common/streams/null.h"
+#include "mordor/common/streams/transfer.h"
 #include "parser.h"
 
 Multipart::Multipart(Stream::ptr stream, std::string boundary)

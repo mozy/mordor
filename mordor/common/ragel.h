@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "common/streams/stream.h"
+#include "mordor/common/streams/stream.h"
 
 class RagelParser
 {

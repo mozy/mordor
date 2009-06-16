@@ -6,7 +6,7 @@
 
 #include <boost/shared_array.hpp>
 
-#include "common/socket.h"
+#include "mordor/common/socket.h"
 
 struct Buffer
 {

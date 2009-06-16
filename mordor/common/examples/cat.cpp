@@ -4,11 +4,11 @@
 
 #include <boost/shared_ptr.hpp>
 
-#include "common/fiber.h"
-#include "common/scheduler.h"
-#include "common/streams/file.h"
-#include "common/streams/std.h"
-#include "common/streams/transfer.h"
+#include "mordor/common/fiber.h"
+#include "mordor/common/scheduler.h"
+#include "mordor/common/streams/file.h"
+#include "mordor/common/streams/std.h"
+#include "mordor/common/streams/transfer.h"
 
 int main(int argc, const char *argv[])
 {
