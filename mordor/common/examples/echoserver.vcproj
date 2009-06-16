@@ -24,7 +24,7 @@
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
-			BuildLogFile="$(IntDir)\echoserver-BuildLog.htm"
+			BuildLogFile="$(IntDir)\$(TargetName)-BuildLog.htm"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -49,7 +49,7 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
-				ProgramDataBaseFileName="$(IntDir)\echoserver-vc90.pdb"
+				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
 				DebugInformationFormat="4"
 			/>
@@ -95,7 +95,7 @@
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
-			BuildLogFile="$(IntDir)\echoserver-BuildLog.htm"
+			BuildLogFile="$(IntDir)\$(TargetName)-BuildLog.htm"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -121,7 +121,7 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
-				ProgramDataBaseFileName="$(IntDir)\echoserver-vc90.pdb"
+				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
@@ -168,7 +168,7 @@
 			ConfigurationType="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
-			BuildLogFile="$(IntDir)\echoserver-BuildLog.htm"
+			BuildLogFile="$(IntDir)\$(TargetName)-BuildLog.htm"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -193,7 +193,7 @@
 				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				ProgramDataBaseFileName="$(IntDir)\echoserver-vc90.pdb"
+				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
@@ -242,7 +242,7 @@
 			ConfigurationType="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
-			BuildLogFile="$(IntDir)\echoserver-BuildLog.htm"
+			BuildLogFile="$(IntDir)\$(TargetName)-BuildLog.htm"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -268,7 +268,7 @@
 				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				ProgramDataBaseFileName="$(IntDir)\echoserver-vc90.pdb"
+				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>

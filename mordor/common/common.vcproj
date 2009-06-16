@@ -641,7 +641,6 @@
 				<Tool
 					Name="Ragel"
 					OutputFileName="http\$(InputName).cpp"
-					InhibitLineDirectives="true"
 				/>
 			</FileConfiguration>
 			<FileConfiguration
