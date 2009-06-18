@@ -34,4 +34,16 @@ protected:
     std::string m_fullString;
 };
 
+class RagelParserWithStack : public RagelParser
+{
+protected:
+    void prepush();
+    void postpop();
+
+protected:
+    // Ragel state
+    std::vector<int> stack;
+    size_t top;
+};
+
 #endif

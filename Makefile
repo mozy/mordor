@@ -268,7 +268,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/socket.o			\
 	$(OBJDIR)/mordor/common/streams/buffer.o		\
 	$(OBJDIR)/mordor/common/streams/buffered.o		\
-        $(OBJDIR)/mordor/common/streams/fd.o			\
+	$(OBJDIR)/mordor/common/streams/fd.o			\
 	$(OBJDIR)/mordor/common/streams/file.o			\
 	$(OBJDIR)/mordor/common/streams/limited.o		\
 	$(OBJDIR)/mordor/common/streams/null.o			\
@@ -279,9 +279,19 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/streams/stream.o		\
 	$(OBJDIR)/mordor/common/streams/transfer.o		\
 	$(OBJDIR)/mordor/common/string.o			\
-	$(OBJDIR)/mordor/common/uri.o
+	$(OBJDIR)/mordor/common/uri.o				\
+	$(OBJDIR)/mordor/common/xml/parser.o
 ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) r $@ $(filter %.o,$?)
+
+$(OBJDIR)/lib/libtritonclient.a:				\
+	$(OBJDIR)/mordor/triton/client/list.o
+ifeq ($(Q),@)
+	@echo ar $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AR) r $@ $(filter %.o$?)
+

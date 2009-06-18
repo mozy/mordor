@@ -398,6 +398,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\xml\parser.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ragel.cpp"
 				>
 			</File>
@@ -576,6 +580,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\xml\parser.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ragel.h"
 				>
 			</File>
@@ -632,6 +640,42 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\xml\parser.rl"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|x64"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+		</File>
 		<File
 			RelativePath=".\http\parser.rl"
 			>

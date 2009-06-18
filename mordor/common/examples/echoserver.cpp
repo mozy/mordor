@@ -70,7 +70,7 @@ void httpRequest(HTTP::ServerRequest::ptr request)
                             transferStream(requestPart->stream(), responsePart->stream());
                             responsePart->stream()->close();
                         }
-                        responseMultipart->finish();                        
+                        responseMultipart->finish();
                     } else {
                         respondStream(request, request->requestStream());
                         return;

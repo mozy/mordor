@@ -97,3 +97,19 @@ RagelParser::run(const char *buf, size_t len, bool isEof)
 
     return p - (pe - len);
 }
+
+void
+RagelParserWithStack::prepush()
+{
+    if (stack.empty())
+        stack.resize(1);
+    if (top >= stack.size())
+        stack.resize(stack.size() * 2);
+}
+
+void
+RagelParserWithStack::postpop()
+{
+    if (top <= stack.size() / 4)
+        stack.resize(stack.size() / 2);
+}

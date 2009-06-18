@@ -1,7 +1,4 @@
 // Copyright (c) 2009 - Decho Corp.
-/* To compile to .cpp:
-   ragel parser.rl -G2 -o parser.cpp
-*/
 
 #include "parser.h"
 
