@@ -196,7 +196,7 @@ endif
 DEPS := $(shell test -d $(OBJDIR) && find $(OBJDIR) -name "*.d")
 -include $(DEPS)
 
-all: cat echoserver fibers simpleclient wget
+all: cat echoserver fibers simpleclient wget list
 
 .PHONY: cat
 cat: $(OBJDIR)/bin/examples/cat
@@ -249,6 +249,16 @@ endif
 	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
 
+.PHONY: list
+list: $(OBJDIR)/bin/triton/list
+
+$(OBJDIR)/bin/triton/list: $(OBJDIR)/mordor/triton/client/list_main.o $(OBJDIR)/lib/libmordor.a $(OBJDIR)/lib/libtritonclient.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(COMPLINK)
+
 $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/exception.o			\
 	$(OBJDIR)/mordor/common/fiber.o				\
@@ -294,5 +304,5 @@ ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(AR) r $@ $(filter %.o$?)
+	$(Q)$(AR) r $@ $(filter %.o,$?)
 
