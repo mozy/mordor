@@ -382,8 +382,6 @@ HTTP::ServerRequest::doRequest()
                     stricmp(it->value.c_str(), "gzip") == 0 ||
                     stricmp(it->value.c_str(), "x-gzip") == 0) {
                     // Supported transfer-codings
-                    respondError(shared_from_this(), NOT_IMPLEMENTED, "deflate and gzip transfer-codings are not yet supported", false);
-                    return;
                 } else if (stricmp(it->value.c_str(), "compress") == 0 ||
                     stricmp(it->value.c_str(), "x-compress") == 0) {
                     respondError(shared_from_this(), NOT_IMPLEMENTED, "compress transfer-coding is not supported", false);
@@ -475,8 +473,7 @@ HTTP::ServerRequest::commit()
             if (it->value == "gzip" ||
                 it->value == "x-gzip" ||
                 it->value == "deflate") {
-                // Known Transfer-Codings; TODO: just break
-                assert(false);
+                // Known Transfer-Codings
             } else if (it->value == "compress" ||
                 it->value == "x-compress") {
                 // Unsupported Transfer-Codings

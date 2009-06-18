@@ -4,9 +4,11 @@
 
 #include "chunked.h"
 #include "mordor/common/streams/buffered.h"
+#include "mordor/common/streams/gzip.h"
 #include "mordor/common/streams/limited.h"
 #include "mordor/common/streams/notify.h"
 #include "mordor/common/streams/singleplex.h"
+#include "mordor/common/streams/zlib.h"
 
 HTTP::Connection::Connection(Stream::ptr stream)
 : m_stream(stream)
@@ -100,15 +102,12 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
         it != general.transferEncoding.end();
         ++it) {
         if (stricmp(it->value.c_str(), "chunked") == 0) {
-            ChunkedStream *chunked = new ChunkedStream(stream);
-            stream.reset(chunked);
+            stream.reset(new ChunkedStream(stream));
         } else if (stricmp(it->value.c_str(), "deflate") == 0) {
-            // TODO: ZlibStream
-            assert(false);
+            stream.reset(new ZlibStream(stream));
         } else if (stricmp(it->value.c_str(), "gzip") == 0 ||
             stricmp(it->value.c_str(), "x-gzip") == 0) {
-            // TODO: GzipStream
-            assert(false);
+            stream.reset(new GzipStream(stream));
         } else if (stricmp(it->value.c_str(), "compress") == 0 ||
             stricmp(it->value.c_str(), "x-compress") == 0) {
             assert(false);

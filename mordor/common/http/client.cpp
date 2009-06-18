@@ -405,8 +405,8 @@ HTTP::ClientRequest::doRequest()
             if (it->value == "gzip" ||
                 it->value == "x-gzip" ||
                 it->value == "deflate") {
-                // Known Transfer-Codings; TODO: just break
-                assert(false);
+                // Known Transfer-Codings
+                continue;
             } else if (it->value == "compress" ||
                 it->value == "x-compress") {
                 // Unsupported Transfer-Codings
@@ -596,7 +596,6 @@ HTTP::ClientRequest::ensureResponse()
                     stricmp(it->value.c_str(), "gzip") == 0 ||
                     stricmp(it->value.c_str(), "x-gzip") == 0) {
                     // Supported transfer-codings
-                    throw std::runtime_error("deflate and gzip transfer-codings are not yet supported");
                 } else if (stricmp(it->value.c_str(), "compress") == 0 ||
                     stricmp(it->value.c_str(), "x-compress") == 0) {
                     throw std::runtime_error("compress transfer-coding is unsupported");
@@ -626,7 +625,6 @@ HTTP::ClientRequest::ensureResponse()
 
         if (!Connection::hasMessageBody(m_response.general, m_response.entity,
             m_request.requestLine.method, m_response.status.status)) {
-            m_responseDone = true;
             if (close) {
                 m_conn->m_stream->close();
             } else {

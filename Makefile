@@ -121,7 +121,7 @@ CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG
 RLCODEGEN	:= $(shell which rlcodegen)
 RAGEL   	:= ragel
 
-LIBS := -lboost_thread -lssl -lcrypto
+LIBS := -lboost_thread -lssl -lcrypto -lz
 
 # compile and link a binary.  this *must* be defined using = and not :=
 # because it uses target variables
@@ -278,6 +278,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/streams/std.o			\
 	$(OBJDIR)/mordor/common/streams/stream.o		\
 	$(OBJDIR)/mordor/common/streams/transfer.o		\
+	$(OBJDIR)/mordor/common/streams/zlib.o			\
 	$(OBJDIR)/mordor/common/string.o			\
 	$(OBJDIR)/mordor/common/uri.o				\
 	$(OBJDIR)/mordor/common/xml/parser.o
