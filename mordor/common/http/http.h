@@ -216,6 +216,7 @@ namespace HTTP
         std::string host;
         ValueWithParameters proxyAuthorization;
         RangeSet range;
+        ParameterizedList te;
     };
 
     struct ResponseHeaders

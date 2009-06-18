@@ -407,6 +407,10 @@ HTTP::ServerRequest::doRequest()
             }
         }
 
+        // TE is a connection-specific header
+        if (!m_request.request.te.empty())
+            m_request.general.connection.insert("TE");
+
         if (!Connection::hasMessageBody(m_request.general, m_request.entity,
             m_request.requestLine.method, INVALID)) {
             m_conn->scheduleNextRequest(shared_from_this());

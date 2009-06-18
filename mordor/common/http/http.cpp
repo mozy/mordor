@@ -352,6 +352,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
     }
     if (!r.range.empty())
         os << "Range: " << r.range << "\r\n";
+    if (!r.te.empty())
+        os << "TE: " << r.te << "\r\n";
     return os;
 }
 

@@ -446,6 +446,9 @@ HTTP::ClientRequest::doRequest()
             close = false;
         }
     }
+    // TE is a connection-specific header
+    if (!m_request.request.te.empty())
+        m_request.general.connection.insert("TE");
 
     bool firstRequest;
     // Put the request in the queue

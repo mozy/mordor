@@ -409,6 +409,11 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
 
+    action set_te {
+        m_headerHandled = true;
+        m_parameterizedList = &m_request->request.te;
+    }
+
 
     Authorization = 'Authorization:'i @set_authorization credentials;
 
@@ -425,6 +430,7 @@ unquote(char *p, char *pe)
     byte_range_set = LWS* (byte_range_spec | suffix_byte_range_spec) ( LWS* ',' LWS* (byte_range_spec | suffix_byte_range_spec))* LWS*;
     ranges_specifier = bytes_unit '=' byte_range_set;
     Range = 'Range:'i @set_range LWS* ranges_specifier;
+    TE = 'TE:'i @set_te parameterizedList;
     
     request_header = Authorization | Host | Expect | Proxy_Authorization | Range;
 
