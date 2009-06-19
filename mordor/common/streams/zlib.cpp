@@ -7,7 +7,7 @@
 #include "mordor/common/exception.h"
 
 #ifdef MSVC
-#pragma comment(lib, "zlib")
+#pragma comment(lib, "zdll")
 #endif
 
 ZlibStream::ZlibStream(Stream::ptr parent, bool own, Type type, int level,
@@ -125,7 +125,8 @@ ZlibStream::read(Buffer &b, size_t len)
         size_t avail_in;
         if (!inbufs.empty()) {
             m_strm.next_in = (Bytef*)inbufs[0].iov_base;
-            m_strm.avail_in = avail_in = inbufs[0].iov_len;
+            avail_in = inbufs[0].iov_len;
+            m_strm.avail_in = inbufs[0].iov_len;
         } else {
             m_strm.next_in = NULL;
             m_strm.avail_in = 0;

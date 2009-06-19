@@ -418,6 +418,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -454,10 +458,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\ssl.cpp"
 				>
 			</File>
@@ -479,6 +479,10 @@
 			</File>
 			<File
 				RelativePath=".\uri.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\zlib.cpp"
 				>
 			</File>
 		</Filter>
@@ -524,6 +528,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\deflate.h"
+				>
+			</File>
+			<File
 				RelativePath=".\exception.h"
 				>
 			</File>
@@ -537,6 +545,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\filter.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\gzip.h"
 				>
 			</File>
 			<File
@@ -604,11 +616,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
@@ -637,6 +649,10 @@
 			</File>
 			<File
 				RelativePath=".\version.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\zlib.h"
 				>
 			</File>
 		</Filter>
