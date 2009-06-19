@@ -300,7 +300,8 @@ endif
 
 $(OBJDIR)/lib/libtritonclient.a:				\
 	$(OBJDIR)/mordor/triton/client/get.o			\
-	$(OBJDIR)/mordor/triton/client/list.o
+	$(OBJDIR)/mordor/triton/client/list.o			\
+	$(OBJDIR)/mordor/triton/client/put.o
 ifeq ($(Q),@)
 	@echo ar $@
 endif

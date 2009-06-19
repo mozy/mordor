@@ -101,3 +101,29 @@ base64encode(const void* src, size_t len)
 
     return ret;
 }
+
+void
+hexstringFromData(const void *data, size_t len, char *hex)
+{
+    const unsigned char *buf = (const unsigned char *)data;
+    size_t i, j;
+    for (i = j = 0; i < len; ++i) {
+        char c;
+        c = (buf[i] >> 4) & 0xf;
+        c = (c > 9) ? c + 'a' - 10 : c + '0';
+        hex[j++] = c;
+        c = (buf[i] & 0xf);
+        c = (c > 9) ? c + 'a' - 10 : c + '0';
+        hex[j++] = c;
+    }
+    hex[j] = '\0';
+}
+
+std::string
+hexstringFromData(const void *data, size_t len)
+{
+    std::string result;
+    result.resize(len * 2);
+    hexstringFromData(data, len, (char *)result.data());
+    return result;
+}
