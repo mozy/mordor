@@ -299,6 +299,7 @@ endif
 	$(Q)$(AR) r $@ $(filter %.o,$?)
 
 $(OBJDIR)/lib/libtritonclient.a:				\
+	$(OBJDIR)/mordor/triton/client/get.o			\
 	$(OBJDIR)/mordor/triton/client/list.o
 ifeq ($(Q),@)
 	@echo ar $@
