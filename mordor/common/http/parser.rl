@@ -201,15 +201,19 @@ unquote(char *p, char *pe)
     }
     
     action save_element {
-        m_list->insert(std::string(mark, fpc - mark));
+        assert(m_list || m_set);
+        if (m_list)
+            m_list->push_back(std::string(mark, fpc - mark));
+        else
+            m_set->insert(std::string(mark, fpc - mark));
         mark = NULL;
     }
-    action save_element_eof {
-		m_list->insert(std::string(mark, pe - mark));
-        mark = NULL;
+    action end_list {
+        m_list = NULL;
+        m_set = NULL;
     }
-    element = token >mark %save_element %/save_element_eof;
-    list = LWS* element ( LWS* ',' LWS* element)* LWS*;
+    element = token >mark %save_element;
+    list = LWS* element ( LWS* ',' LWS* element)* LWS* %end_list;
     
     action save_parameterized_list_element {
         ValueWithParameters vp;
@@ -255,12 +259,12 @@ unquote(char *p, char *pe)
     
     action set_connection {
         m_headerHandled = true;
-        m_list = &m_general->connection;
+        m_set = &m_general->connection;
     }
     
     action set_trailer {
         m_headerHandled = true;
-        m_list = &m_general->trailer;
+        m_set = &m_general->trailer;
     }
     
     action set_transfer_encoding {
@@ -274,6 +278,11 @@ unquote(char *p, char *pe)
     
     general_header = Connection | Trailer | Transfer_Encoding;
     
+    action set_content_encoding {
+        m_headerHandled = true;
+        m_list = &m_entity->contentEncoding;
+    }
+
     action set_content_length {
         m_headerHandled = true;
         m_ulong = &m_entity->contentLength;
@@ -318,6 +327,7 @@ unquote(char *p, char *pe)
 		mark = NULL;
     }
     
+    Content_Encoding = 'Content-Encoding:'i @set_content_encoding list;
     Content_Length = 'Content-Length:'i @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
     
     byte_range_resp_spec = (DIGIT+ >mark %save_cr_first_byte_pos '-' DIGIT+ >mark %save_cr_last_byte_pos) | '*' %save_blank_cr;
@@ -389,7 +399,7 @@ unquote(char *p, char *pe)
         m_request->request.expect.back().parameters[m_temp1] = unquote((char*)mark, (char*)fpc);
         mark = NULL;
     }
-    
+
     action save_first_byte_pos {
         m_request->request.range.push_back(RangeSet::value_type(
             strtoull(mark, NULL, 10), ~0ull));
@@ -447,6 +457,7 @@ void
 HTTP::HTTPParser::init()
 {
     m_string = NULL;
+    m_set = NULL;
     m_list = NULL;
     m_parameterizedList = NULL;
     m_parameters = NULL;
@@ -515,7 +526,7 @@ HTTP::RequestParser::exec()
     action set_accept_ranges
     {
         m_headerHandled = true;
-        m_list = &m_response->response.acceptRanges;
+        m_set = &m_response->response.acceptRanges;
     }
     action set_location {
         m_headerHandled = true;

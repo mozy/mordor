@@ -15,7 +15,8 @@ namespace HTTP
         HTTPParser() { init(); }
         // Pointers to current headers
         std::string *m_string;
-        StringSet *m_list;
+        StringSet *m_set;
+        std::vector<std::string> *m_list;
         ParameterizedList *m_parameterizedList;
         StringMap *m_parameters;
         ValueWithParameters *m_auth;

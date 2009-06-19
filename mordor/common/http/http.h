@@ -231,6 +231,7 @@ namespace HTTP
     {
         EntityHeaders() : contentLength(~0ull) {}
 
+        std::vector<std::string> contentEncoding;
         unsigned long long contentLength;
         ContentRange contentRange;
         MediaType contentType;

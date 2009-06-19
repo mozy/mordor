@@ -44,6 +44,18 @@ static std::ostream& operator<<(std::ostream& os, const HTTP::StringSet& set)
     return os;
 }
 
+static std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& list)
+{
+    for (std::vector<std::string>::const_iterator it(list.begin());
+        it != list.end();
+        ++it) {
+        if (it != list.begin())
+            os << ", ";
+        os << *it;
+    }
+    return os;
+}
+
 struct serializeStringMapWithRequiredValue
 {
     serializeStringMapWithRequiredValue(const HTTP::StringMap &m, char d = ';') : map(m) {}
@@ -372,6 +384,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
 
 std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e)
 {
+    if (!e.contentEncoding.empty())
+        os << "Content-Encoding: " << e.contentEncoding << "\r\n";
     if (e.contentLength != ~0ull)
         os << "Content-Length: " << e.contentLength << "\r\n";
     if (e.contentRange.first != ~0ull || e.contentRange.last != ~0ull || e.contentRange.instance != ~0ull)
