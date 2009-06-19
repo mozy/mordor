@@ -130,7 +130,14 @@ XMLParser::init()
 void
 XMLParser::exec()
 {
-    %% write exec;
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+        %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
 }
 
 bool

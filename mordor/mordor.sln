@@ -30,6 +30,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echoserver", "common\exampl
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "client", "triton\client\client.vcproj", "{2A105D09-5FE6-4052-867D-80D85A96BD7B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "list", "triton\client\list.vcproj", "{C5E93091-F617-4FD6-8510-FF7EA9299753}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2A105D09-5FE6-4052-867D-80D85A96BD7B} = {2A105D09-5FE6-4052-867D-80D85A96BD7B}
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -94,6 +100,14 @@ Global
 		{2A105D09-5FE6-4052-867D-80D85A96BD7B}.Release|Win32.Build.0 = Release|Win32
 		{2A105D09-5FE6-4052-867D-80D85A96BD7B}.Release|x64.ActiveCfg = Release|x64
 		{2A105D09-5FE6-4052-867D-80D85A96BD7B}.Release|x64.Build.0 = Release|x64
+		{C5E93091-F617-4FD6-8510-FF7EA9299753}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C5E93091-F617-4FD6-8510-FF7EA9299753}.Debug|Win32.Build.0 = Debug|Win32
+		{C5E93091-F617-4FD6-8510-FF7EA9299753}.Debug|x64.ActiveCfg = Debug|x64
+		{C5E93091-F617-4FD6-8510-FF7EA9299753}.Debug|x64.Build.0 = Debug|x64
+		{C5E93091-F617-4FD6-8510-FF7EA9299753}.Release|Win32.ActiveCfg = Release|Win32
+		{C5E93091-F617-4FD6-8510-FF7EA9299753}.Release|Win32.Build.0 = Release|Win32
+		{C5E93091-F617-4FD6-8510-FF7EA9299753}.Release|x64.ActiveCfg = Release|x64
+		{C5E93091-F617-4FD6-8510-FF7EA9299753}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
