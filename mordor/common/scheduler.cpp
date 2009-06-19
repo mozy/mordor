@@ -64,6 +64,7 @@ Scheduler::Scheduler(int threads, bool useCaller)
         assert(getThis() == NULL);
         t_scheduler.reset(this);
         m_rootFiber.reset(new Fiber(boost::bind(&Scheduler::run, this), 65536));
+        m_rootFiber->call();
         m_rootThread = boost::this_thread::get_id();
         t_fiber.reset(m_rootFiber.get());
     }
@@ -157,6 +158,7 @@ Scheduler::run()
         rootfiber.reset(new Fiber());
     } else {
         rootfiber.reset();
+        Fiber::yield();
     }
     t_fiber.reset(Fiber::getThis().get());
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this), 65536 * 4));

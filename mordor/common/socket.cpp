@@ -151,11 +151,12 @@ Socket::connect(const Address &to)
             case AF_INET6:
                 {
                     sockaddr_in6 addr;
-                    addr.sin6_family = AF_INET;
+                    memset(&addr, 0, sizeof(sockaddr_in6));
+                    addr.sin6_family = AF_INET6;
                     addr.sin6_port = 0;
                     in6_addr anyaddr = IN6ADDR_ANY_INIT;
                     addr.sin6_addr = anyaddr;
-                    if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
+                    if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in6))) {
                         throwExceptionFromLastError();
                     }
                     break;
