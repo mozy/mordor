@@ -170,20 +170,16 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
     action save_field_value {
-        if (m_headerHandled) {
-            m_headerHandled = false;
+        std::string fieldValue = unfold((char*)mark, (char*)fpc);
+        
+        StringMap::iterator it = m_entity->extension.find(m_temp1);
+        if (it == m_entity->extension.end()) {
+            m_entity->extension[m_temp1] = fieldValue;
         } else {
-            std::string fieldValue = unfold((char*)mark, (char*)fpc);
-            
-            StringMap::iterator it = m_entity->extension.find(m_temp1);
-            if (it == m_entity->extension.end()) {
-                m_entity->extension[m_temp1] = fieldValue;
-            } else {
-                it->second.append(", ");
-                it->second.append(fieldValue);
-            }
-            mark = NULL;
+            it->second.append(", ");
+            it->second.append(fieldValue);
         }
+        mark = NULL;
     }
 
     field_chars = OCTET -- (CTL | CR LF SP HT);
@@ -258,17 +254,14 @@ unquote(char *p, char *pe)
     challengeList = LWS* challenge ( LWS* ',' LWS* challenge)* LWS*;
     
     action set_connection {
-        m_headerHandled = true;
         m_set = &m_general->connection;
     }
     
     action set_trailer {
-        m_headerHandled = true;
         m_set = &m_general->trailer;
     }
     
     action set_transfer_encoding {
-        m_headerHandled = true;
         m_parameterizedList = &m_general->transferEncoding;
     }
 
@@ -277,19 +270,14 @@ unquote(char *p, char *pe)
     Transfer_Encoding = 'Transfer-Encoding:'i @set_transfer_encoding parameterizedList;
     
     general_header = Connection | Trailer | Transfer_Encoding;
+    general_header_names = 'Connection'i | 'Trailer'i | 'Transfer_Encoding'i;
     
     action set_content_encoding {
-        m_headerHandled = true;
         m_list = &m_entity->contentEncoding;
     }
 
     action set_content_length {
-        m_headerHandled = true;
         m_ulong = &m_entity->contentLength;
-    }
-    
-    action set_content_range {
-        m_headerHandled = true;
     }
     
     action save_cr_first_byte_pos {
@@ -313,7 +301,6 @@ unquote(char *p, char *pe)
     
     action set_content_type
     {
-		m_headerHandled = true;
 		m_parameters = &m_entity->contentType.parameters;
     }
     action save_type
@@ -332,16 +319,15 @@ unquote(char *p, char *pe)
     
     byte_range_resp_spec = (DIGIT+ >mark %save_cr_first_byte_pos '-' DIGIT+ >mark %save_cr_last_byte_pos) | '*' %save_blank_cr;
     content_range_spec = bytes_unit SP byte_range_resp_spec '/' ( DIGIT+ >mark %save_instance_length | '*');
-    Content_Range = 'Content-Range:'i @set_content_range LWS* content_range_spec LWS*;
+    Content_Range = 'Content-Range:'i LWS* content_range_spec LWS*;
     
     type = token >mark %save_type;
     subtype = token >mark %save_subtype;
     media_type = type'/' subtype (';' LWS* parameter)*;
     Content_Type = 'Content-Type:'i @set_content_type LWS* media_type LWS*;
     
-    extension_header = message_header;
-
-    entity_header = Content_Length | Content_Range | Content_Type | extension_header;
+    entity_header = Content_Encoding | Content_Length | Content_Range | Content_Type; # | extension_header;
+    entity_header_names = 'Content-Encoding'i | 'Content-Length'i | 'Content-Range'i | 'Content-Type'i;
 
 }%%
 
@@ -356,28 +342,17 @@ unquote(char *p, char *pe)
     }
     
     action set_authorization {
-        m_headerHandled = true;
         m_parameterizedList = NULL;
         m_auth = &m_request->request.authorization;
     }
 
     action set_host {
-        m_headerHandled = true;
         m_string = &m_request->request.host;
     }
     
-    action set_expect {
-        m_headerHandled = true;
-    }
-    
     action set_proxy_authorization {
-        m_headerHandled = true;
         m_parameterizedList = NULL;
         m_auth = &m_request->request.proxyAuthorization;
-    }
-
-    action set_range {
-        m_headerHandled = true;
     }
 
     action save_expectation {
@@ -420,7 +395,6 @@ unquote(char *p, char *pe)
     }
 
     action set_te {
-        m_headerHandled = true;
         m_parameterizedList = &m_request->request.te;
     }
 
@@ -431,7 +405,7 @@ unquote(char *p, char *pe)
     
     expect_params = ';' token >mark %save_expectation_param ( '=' (token | quoted_string) >mark %save_expectation_param_value )?;
     expectation = token >mark %save_expectation ( '=' (token | quoted_string) >mark %save_expectation_value expect_params* )?;
-    Expect = 'Expect:'i @set_expect LWS* expectation ( LWS* ',' LWS* expectation )* LWS*;
+    Expect = 'Expect:'i LWS* expectation ( LWS* ',' LWS* expectation )* LWS*;
     
     Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization credentials;
     
@@ -439,15 +413,19 @@ unquote(char *p, char *pe)
     suffix_byte_range_spec = '-' DIGIT+ > mark %save_suffix_byte_pos;
     byte_range_set = LWS* (byte_range_spec | suffix_byte_range_spec) ( LWS* ',' LWS* (byte_range_spec | suffix_byte_range_spec))* LWS*;
     ranges_specifier = bytes_unit '=' byte_range_set;
-    Range = 'Range:'i @set_range LWS* ranges_specifier;
+    Range = 'Range:'i LWS* ranges_specifier;
     TE = 'TE:'i @set_te parameterizedList;
     
     request_header = Authorization | Host | Expect | Proxy_Authorization | Range;
+    request_header_names = 'Authorization'i | 'Host'i | 'Expect'i | 'Proxy-Authorization'i | 'Range'i;
+    
+    extension_header = (token - (general_header_names | request_header_names | entity_header_names)) >mark %save_field_name
+        ':' field_value;
 
     Method = token >mark %parse_Method;
     Request_URI = ( "*" | absolute_URI | hier_part | authority);
     Request_Line = Method SP Request_URI SP HTTP_Version CRLF;
-    Request = Request_Line ((general_header | request_header | entity_header) CRLF)* CRLF @done;
+    Request = Request_Line ((general_header | request_header | entity_header | extension_header) CRLF)* CRLF @done;
 
     main := Request;
     write data;
@@ -463,7 +441,6 @@ HTTP::HTTPParser::init()
     m_parameters = NULL;
     m_auth = NULL;
     m_ulong = NULL;
-    m_headerHandled = false;
     RagelParser::init();
 }
 
@@ -525,32 +502,30 @@ HTTP::RequestParser::exec()
     
     action set_accept_ranges
     {
-        m_headerHandled = true;
         m_set = &m_response->response.acceptRanges;
     }
-    action set_location {
-        m_headerHandled = true;
-    }
     action set_proxy_authenticate {
-        m_headerHandled = true;
         m_parameterizedList = &m_response->response.proxyAuthenticate;
     }
     action set_www_authenticate {
-        m_headerHandled = true;
         m_parameterizedList = &m_response->response.wwwAuthenticate;
     }
     
     Accept_Ranges = 'Accept-Ranges:'i @set_accept_ranges list;
-    Location = 'Location:'i @set_location LWS* absolute_URI LWS*;
+    Location = 'Location:'i LWS* absolute_URI LWS*;
     Proxy_Authenticate = 'Proxy-Authenticate:'i @set_proxy_authenticate challengeList;
     WWW_Authenticate = 'WWW-Authenticate:'i @set_www_authenticate challengeList;
     
     response_header = Accept_Ranges | Location | Proxy_Authenticate | WWW_Authenticate;
+    response_header_names = 'Accept-Ranges'i | 'Location'i | 'Proxy-Authenticate'i | 'WWW-Authenticate'i;
+    
+    extension_header = (token - (general_header_names | response_header_names | entity_header_names)) >mark %save_field_name
+        ':' field_value;
 
     Status_Code = DIGIT{3} > mark %parse_Status_Code;
     Reason_Phrase = (TEXT -- (CR | LF))* >mark %parse_Reason_Phrase;
     Status_Line = HTTP_Version SP Status_Code SP Reason_Phrase CRLF;
-    Response = Status_Line ((general_header | response_header | entity_header) CRLF)* CRLF @done;
+    Response = Status_Line ((general_header | response_header | entity_header | extension_header) CRLF)* CRLF @done;
 
     main := Response;
 
@@ -602,7 +577,9 @@ HTTP::ResponseParser::exec()
     machine http_trailer_parser;
     include http_parser;
 
-    trailer = (entity_header CRLF)*;
+    extension_header = (token - (entity_header_names)) >mark %save_field_name ':' field_value;
+
+    trailer = (entity_header | extension_header CRLF)*;
 
     main := trailer CRLF @done;
 

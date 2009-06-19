@@ -24,7 +24,6 @@ namespace HTTP
 
         // Temp storage
         std::string m_temp1, m_temp2;
-        bool m_headerHandled;
     };
 
     class RequestParser : public HTTPParser
