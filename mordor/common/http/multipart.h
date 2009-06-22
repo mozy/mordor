@@ -20,6 +20,8 @@ class Multipart : public boost::enable_shared_from_this<Multipart>, boost::nonco
 public:
     typedef boost::shared_ptr<Multipart> ptr;
 
+    static std::string randomBoundary();
+
     Multipart(Stream::ptr stream, std::string boundary);
 
     boost::shared_ptr<BodyPart> nextPart();

@@ -11,6 +11,20 @@
 #include "mordor/common/streams/transfer.h"
 #include "parser.h"
 
+static const char *allowedBoundaryChars =
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'()+_,-./:=?";
+
+std::string
+Multipart::randomBoundary()
+{
+    std::string result;
+    result.resize(70);
+    for (size_t i = 0; i < 70; ++i) {
+        result[i] = allowedBoundaryChars[rand() % 36];
+    }
+    return result;
+}
+
 Multipart::Multipart(Stream::ptr stream, std::string boundary)
 : m_stream(stream),
   m_boundary(boundary),
@@ -23,7 +37,7 @@ Multipart::Multipart(Stream::ptr stream, std::string boundary)
         m_boundary.resize(m_boundary.size() - 1);
     assert(!m_boundary.empty());
     assert(m_boundary.size() <= 70);
-    if (m_boundary.find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'()+_,-./:=?") != std::string::npos) {
+    if (m_boundary.find_first_not_of(allowedBoundaryChars) != std::string::npos) {
         if (stream->supportsWrite()) {
             assert(false);
         } else {

@@ -702,8 +702,7 @@ HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
             request->response().entity.contentLength = ~0;
             request->response().entity.contentType.type = "multipart";
             request->response().entity.contentType.subtype = "byteranges";
-            request->response().entity.contentType.parameters["boundary"] = "abcdefg";
-            // TODO: random boundary
+            request->response().entity.contentType.parameters["boundary"] = Multipart::randomBoundary();
             unsigned long long currentPos = 0;
 
             if (request->request().requestLine.method != HEAD) {
