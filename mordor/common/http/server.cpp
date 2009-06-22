@@ -5,9 +5,12 @@
 #include <boost/bind.hpp>
 
 #include "mordor/common/exception.h"
+#include "mordor/common/log.h"
 #include "mordor/common/streams/null.h"
 #include "mordor/common/streams/transfer.h"
 #include "parser.h"
+
+static Logger::ptr g_log = Log::lookup("mordor.common.http.server");
 
 HTTP::ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg)
 : Connection(stream),
@@ -334,6 +337,7 @@ HTTP::ServerRequest::doRequest()
             respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
             return;
         }
+        LOG_TRACE(g_log) << m_request;
 
         if (m_request.requestLine.ver.major != 1) {
             respondError(shared_from_this(), HTTP_VERSION_NOT_SUPPORTED, "", true);
@@ -556,10 +560,11 @@ HTTP::ServerRequest::commit()
         std::ostringstream os;
         os << m_response;
         std::string str = os.str();
+        LOG_TRACE(g_log) << str;
         m_conn->m_stream->write(str.c_str(), str.size());
 
         if (!Connection::hasMessageBody(m_response.general, m_response.entity, m_request.requestLine.method, m_response.status.status)) {
-            m_conn->scheduleNextResponse(shared_from_this());
+            responseDone();
         }
     } catch(...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
@@ -584,6 +589,7 @@ HTTP::ServerRequest::requestDone()
             throw std::runtime_error("Error parsing trailer");
         }
         assert(parser.complete());
+        LOG_TRACE(g_log) << m_requestTrailer;
     }
     m_conn->scheduleNextRequest(shared_from_this());
 }
@@ -602,9 +608,11 @@ HTTP::ServerRequest::responseDone()
     if (!m_response.general.transferEncoding.empty()) {
         std::ostringstream os;
         os << m_responseTrailer;
-        std::string str = os.str();;
+        std::string str = os.str();
+        LOG_TRACE(g_log) << str;
         m_conn->m_stream->write(str.c_str(), str.size());         
     }
+    LOG_INFO(g_log) << m_request.requestLine << " " << m_response.status.status;
     m_conn->scheduleNextResponse(shared_from_this());
     if (!m_requestDone && hasRequestBody() && !m_willClose) {
         if (!m_requestStream) {

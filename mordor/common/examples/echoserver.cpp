@@ -4,6 +4,7 @@
 
 #include "mordor/common/http/server.h"
 #include "mordor/common/iomanager.h"
+#include "mordor/common/log.h"
 #include "mordor/common/socket.h"
 #include "mordor/common/streams/socket.h"
 #include "mordor/common/streams/transfer.h"
@@ -116,6 +117,7 @@ void startHttpServer(IOManager &ioManager)
 
 int main(int argc, const char *argv[])
 {
+    Log::addSink(LogSink::ptr(new StdoutLogSink()));
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     startSocketServer(ioManager);

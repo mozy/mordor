@@ -253,13 +253,20 @@ const char *HTTP::reason(Status s)
 
 std::ostream& operator<<(std::ostream& os, HTTP::Method m)
 {
-    assert(m >= HTTP::GET && m <= HTTP::TRACE);
+    if (m < HTTP::GET || m > HTTP::TRACE);
+        return os << "INVALID";
     return os << HTTP::methods[(size_t)m];
+}
+
+std::ostream& operator<<(std::ostream& os, HTTP::Status s)
+{
+    return os << (int)s;
 }
 
 std::ostream& operator<<(std::ostream& os, HTTP::Version v)
 {
-    assert(v.major != (unsigned char)~0 && v.minor != (unsigned char)~0);
+    if (v.major == (unsigned char)~0 || v.minor == (unsigned char)~0)
+        return os << "HTTP/0.0";
     return os << "HTTP/" << (int)v.major << "." << (int)v.minor;
 }
 
@@ -334,7 +341,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r)
 std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine &s)
 {
     assert(!s.reason.empty());
-    return os << s.ver << " " << (int)s.status << " " << s.reason;
+    return os << s.ver << " " << s.status << " " << s.reason;
 }
 
 std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)

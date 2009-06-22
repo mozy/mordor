@@ -272,6 +272,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/http/parser.o			\
 	$(OBJDIR)/mordor/common/http/server.o			\
 	$(OBJDIR)/mordor/common/iomanager_$(IOMANAGER).o	\
+	$(OBJDIR)/mordor/common/log.o				\
 	$(OBJDIR)/mordor/common/ragel.o				\
 	$(OBJDIR)/mordor/common/scheduler.o			\
 	$(OBJDIR)/mordor/common/semaphore.o			\
@@ -299,6 +300,7 @@ endif
 	$(Q)$(AR) r $@ $(filter %.o,$?)
 
 $(OBJDIR)/lib/libtritonclient.a:				\
+	$(OBJDIR)/mrodor/triton/client/client.o			\
 	$(OBJDIR)/mordor/triton/client/get.o			\
 	$(OBJDIR)/mordor/triton/client/list.o			\
 	$(OBJDIR)/mordor/triton/client/put.o

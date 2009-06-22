@@ -382,6 +382,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\log.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\multipart.cpp"
 				>
 			</File>
@@ -482,10 +486,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -520,6 +520,10 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\streams\ssl.cpp"
@@ -636,6 +640,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\log.h"
+				>
+			</File>
+			<File
 				RelativePath=".\http\multipart.h"
 				>
 			</File>
@@ -680,11 +688,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File

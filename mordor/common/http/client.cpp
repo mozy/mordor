@@ -7,10 +7,13 @@
 
 #include <boost/bind.hpp>
 
+#include "mordor/common/log.h"
 #include "mordor/common/scheduler.h"
 #include "mordor/common/streams/null.h"
 #include "mordor/common/streams/transfer.h"
 #include "parser.h"
+
+static Logger::ptr g_log = Log::lookup("mordor.common.http.client");
 
 HTTP::ClientConnection::ClientConnection(Stream::ptr stream)
 : Connection(stream),
@@ -496,6 +499,7 @@ HTTP::ClientRequest::doRequest()
         std::ostringstream os;
         os << m_request;
         std::string str = os.str();
+        LOG_TRACE(g_log) << str;
         m_conn->m_stream->write(str.c_str(), str.size());
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID)) {
@@ -562,6 +566,7 @@ HTTP::ClientRequest::ensureResponse()
         if (!parser.complete()) {
             throw IncompleteMessageHeaderException();
         }
+        LOG_TRACE(g_log) << m_response;
 
         bool close = false;
         StringSet &connection = m_response.general.connection;
@@ -659,7 +664,8 @@ HTTP::ClientRequest::requestDone()
     if (!m_request.general.transferEncoding.empty()) {
         std::ostringstream os;
         os << m_requestTrailer;
-        std::string str = os.str();;
+        std::string str = os.str();
+        LOG_TRACE(g_log) << str;
         m_conn->m_stream->write(str.c_str(), str.size());        
     }
     m_conn->scheduleNextRequest(shared_from_this());
@@ -678,6 +684,7 @@ HTTP::ClientRequest::responseDone()
             throw std::runtime_error("Error parsing trailer");
         }
         assert(parser.complete());
+        LOG_TRACE(g_log) << m_responseTrailer;
     }
     m_conn->scheduleNextResponse(shared_from_this());
 }
