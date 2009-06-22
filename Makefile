@@ -252,12 +252,34 @@ endif
 .PHONY: list
 list: $(OBJDIR)/bin/triton/list
 
-$(OBJDIR)/bin/triton/list: $(OBJDIR)/mordor/triton/client/list_main.o $(OBJDIR)/lib/libmordor.a $(OBJDIR)/lib/libtritonclient.a
+$(OBJDIR)/bin/triton/list: $(OBJDIR)/mordor/triton/client/list_main.o $(OBJDIR)/lib/libtritonclient.a $(OBJDIR)/lib/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
 	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
+
+$(OBJDIR)/mordor/common/http/http_parser.o: mordor/common/http/parser.cpp
+ifeq ($(Q),@)
+	@echo c++ $<
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) -I $(OBJDIR)/$(dir $*) $(CXXFLAGS) -c -o $@ $<
+   
+$(OBJDIR)/mordor/common/streams/socket_stream.o: mordor/common/streams/socket.cpp
+ifeq ($(Q),@)
+	@echo c++ $<
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) -I $(OBJDIR)/$(dir $*) $(CXXFLAGS) -c -o $@ $<
+   
+$(OBJDIR)/mordor/common/xml/xml_parser.o: mordor/common/xml/parser.cpp
+ifeq ($(Q),@)
+	@echo c++ $<
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) -I $(OBJDIR)/$(dir $*) $(CXXFLAGS) -c -o $@ $<
+
 
 $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/exception.o			\
@@ -269,7 +291,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/http/connection.o		\
 	$(OBJDIR)/mordor/common/http/http.o			\
 	$(OBJDIR)/mordor/common/http/multipart.o		\
-	$(OBJDIR)/mordor/common/http/parser.o			\
+	$(OBJDIR)/mordor/common/http/http_parser.o		\
 	$(OBJDIR)/mordor/common/http/server.o			\
 	$(OBJDIR)/mordor/common/iomanager_$(IOMANAGER).o	\
 	$(OBJDIR)/mordor/common/log.o				\
@@ -284,7 +306,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/streams/limited.o		\
 	$(OBJDIR)/mordor/common/streams/null.o			\
 	$(OBJDIR)/mordor/common/streams/openssl.o		\
-	$(OBJDIR)/mordor/common/streams/socket.o		\
+	$(OBJDIR)/mordor/common/streams/socket_stream.o		\
 	$(OBJDIR)/mordor/common/streams/ssl.o			\
 	$(OBJDIR)/mordor/common/streams/std.o			\
 	$(OBJDIR)/mordor/common/streams/stream.o		\
@@ -292,15 +314,15 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/streams/zlib.o			\
 	$(OBJDIR)/mordor/common/string.o			\
 	$(OBJDIR)/mordor/common/uri.o				\
-	$(OBJDIR)/mordor/common/xml/parser.o
+	$(OBJDIR)/mordor/common/xml/xml_parser.o
 ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(AR) r $@ $(filter %.o,$?)
+	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
 $(OBJDIR)/lib/libtritonclient.a:				\
-	$(OBJDIR)/mrodor/triton/client/client.o			\
+	$(OBJDIR)/mordor/triton/client/client.o			\
 	$(OBJDIR)/mordor/triton/client/get.o			\
 	$(OBJDIR)/mordor/triton/client/list.o			\
 	$(OBJDIR)/mordor/triton/client/put.o
@@ -308,5 +330,5 @@ ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(AR) r $@ $(filter %.o,$?)
+	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 

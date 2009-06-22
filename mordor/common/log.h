@@ -32,8 +32,7 @@ public:
         WARNING,
         INFO,
         TRACE,
-        VERBOSE,
-        DEBUG
+        VERBOSE
     };
 
     static boost::shared_ptr<Logger> lookup(const std::string &name);
@@ -73,11 +72,11 @@ public:
         const char *file, int line);
 };
 
-struct LogStream : public std::ostringstream
+struct LogEvent
 {
     friend class Logger;
 private:
-    LogStream(boost::shared_ptr<Logger> logger, Log::Level level,
+    LogEvent(boost::shared_ptr<Logger> logger, Log::Level level,
         const char *file, int line)
         : m_logger(logger),
           m_level(level),
@@ -85,20 +84,22 @@ private:
           m_line(line)
     {}
 
-    LogStream(const LogStream &copy)
+    LogEvent(const LogEvent &copy)
         : m_logger(copy.m_logger),
           m_level(copy.m_level),
           m_file(copy.m_file),
           m_line(copy.m_line)
     {}
 public:
-    ~LogStream();
+    ~LogEvent();
+    std::ostream &os() { return m_os; }
 
 private:
     boost::shared_ptr<Logger> m_logger;
     Log::Level m_level;
     const char *m_file;
     int m_line;
+    std::ostringstream m_os;
 };
 
 struct LoggerLess
@@ -127,23 +128,21 @@ public:
     void addSink(LogSink::ptr sink) { m_sinks.push_back(sink); }
     void clearSinks() { m_sinks.clear(); }
 
-    LogStream log(Log::Level level, const char *file = NULL, int line = -1)
-    { return LogStream(shared_from_this(), level, file, line); }
+    LogEvent log(Log::Level level, const char *file = NULL, int line = -1)
+    { return LogEvent(shared_from_this(), level, file, line); }
     void log(Log::Level level, const std::string &str, const char *file = NULL, int line = 0);
 
-    LogStream debug(const char *file = NULL, int line = -1)
-    { return log(Log::DEBUG, file, line); }
-    LogStream verbose(const char *file = NULL, int line = -1)
+    LogEvent verbose(const char *file = NULL, int line = -1)
     { return log(Log::VERBOSE, file, line); }
-    LogStream trace(const char *file = NULL, int line = -1)
+    LogEvent trace(const char *file = NULL, int line = -1)
     { return log(Log::TRACE, file, line); }
-    LogStream info(const char *file = NULL, int line = -1)
+    LogEvent info(const char *file = NULL, int line = -1)
     { return log(Log::INFO, file, line); }
-    LogStream warning(const char *file = NULL, int line = -1)
+    LogEvent warning(const char *file = NULL, int line = -1)
     { return log(Log::WARNING, file, line); }
-    LogStream error(const char *file = NULL, int line = -1)
+    LogEvent error(const char *file = NULL, int line = -1)
     { return log(Log::ERROR, file, line); }
-    LogStream fatal(const char *file = NULL, int line = -1)
+    LogEvent fatal(const char *file = NULL, int line = -1)
     { return log(Log::FATAL, file, line); }
 
     std::string name() const { return m_name; }
@@ -157,13 +156,12 @@ private:
     bool m_inheritSinks;
 };
 
-#define LOG_DEBUG(log) (log)->debug(__FILE__, __LINE__)
-#define LOG_VERBOSE(log) (log)->verbose(__FILE__, __LINE__)
-#define LOG_TRACE(log) (log)->trace(__FILE__, __LINE__)
-#define LOG_INFO(log) (log)->info(__FILE__, __LINE__)
-#define LOG_WARNING(log) (log)->warning(__FILE__, __LINE__)
-#define LOG_ERROR(log) (log)->error(__FILE__, __LINE__)
-#define LOG_FATAL(log) (log)->fatal(__FILE__, __LINE__)
+#define LOG_VERBOSE(log) (log)->verbose(__FILE__, __LINE__).os()
+#define LOG_TRACE(log) (log)->trace(__FILE__, __LINE__).os()
+#define LOG_INFO(log) (log)->info(__FILE__, __LINE__).os()
+#define LOG_WARNING(log) (log)->warning(__FILE__, __LINE__).os()
+#define LOG_ERROR(log) (log)->error(__FILE__, __LINE__).os()
+#define LOG_FATAL(log) (log)->fatal(__FILE__, __LINE__).os()
 
 std::ostream &operator <<(std::ostream &os, Log::Level level);
 

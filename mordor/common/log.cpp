@@ -130,7 +130,7 @@ Logger::log(Log::Level level, const std::string &str,
     DWORD thread = GetCurrentThreadId();
 #else
     pid_t thread = getpid();
-#endif;
+#endif
     void *fiber = Fiber::getThis().get();
     while (_this) {
         for (std::list<LogSink::ptr>::iterator it(_this->m_sinks.begin());
@@ -147,9 +147,9 @@ Logger::log(Log::Level level, const std::string &str,
     }
 }
 
-LogStream::~LogStream()
+LogEvent::~LogEvent()
 {
-    m_logger->log(m_level, str(), m_file, m_line);
+    m_logger->log(m_level, m_os.str(), m_file, m_line);
 }
 
 static const char *levelStrs[] = {
@@ -158,11 +158,11 @@ static const char *levelStrs[] = {
     "WARN",
     "INFO",
     "TRACE",
-    "VERBOSE",
-    "DEBUG"
+    "VERBOSE"
 };
 
 std::ostream &operator <<(std::ostream &os, Log::Level level)
 {
+    assert(level >= Log::FATAL && level <= Log::VERBOSE);
     return os << levelStrs[level];
 }
