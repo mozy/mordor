@@ -253,7 +253,7 @@ const char *HTTP::reason(Status s)
 
 std::ostream& operator<<(std::ostream& os, HTTP::Method m)
 {
-    if (m < HTTP::GET || m > HTTP::TRACE);
+    if (m < HTTP::GET || m > HTTP::TRACE)
         return os << "INVALID";
     return os << HTTP::methods[(size_t)m];
 }
