@@ -13,6 +13,10 @@
 
 #include "version.h"
 
+#ifdef WINDOWS
+#include <windows.h>
+#endif
+
 class Logger;
 class LogSink;
 
