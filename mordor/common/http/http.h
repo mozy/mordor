@@ -183,6 +183,24 @@ namespace HTTP
         unsigned long long instance;
     };
 
+    struct AcceptValueWithParameters
+    {
+        AcceptValueWithParameters() : qvalue(~0u) {}
+        AcceptValueWithParameters(const std::string &v, unsigned int q = ~0u)
+            : value(v), qvalue(q)
+        {}
+
+        std::string value;
+        StringMap parameters;
+        unsigned int qvalue;
+        StringMap acceptParams;
+
+        bool operator== (const AcceptValueWithParameters &rhs) const;
+        bool operator!= (const AcceptValueWithParameters &rhs) const
+        { return !(*this == rhs); }
+    };
+
+    typedef std::vector<AcceptValueWithParameters> AcceptList;
 
     struct RequestLine
     {
@@ -216,7 +234,7 @@ namespace HTTP
         std::string host;
         ValueWithParameters proxyAuthorization;
         RangeSet range;
-        ParameterizedList te;
+        AcceptList te;
     };
 
     struct ResponseHeaders
@@ -257,6 +275,10 @@ namespace HTTP
 
         std::string toString() const;
     };
+
+    bool isAcceptable(const AcceptList &list, const AcceptValueWithParameters &value, bool defaultMissing = false);
+    bool isPreferred(const AcceptList &list, const AcceptValueWithParameters &lhs, const AcceptValueWithParameters &rhs);
+    const AcceptValueWithParameters *preferred(const AcceptList &accept, const AcceptList &available);
 };
 
 std::ostream& operator<<(std::ostream& os, HTTP::Method m);
@@ -268,6 +290,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v
 std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedKeyValueList &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::MediaType &m);
 std::ostream& operator<<(std::ostream& os, const HTTP::ContentRange &m);
+std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters &v);
+std::ostream& operator<<(std::ostream& os, const HTTP::AcceptList &l);
 std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r);
 std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine &s);
 std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g);

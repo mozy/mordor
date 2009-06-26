@@ -39,6 +39,7 @@ ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy st
             assert(false);
     }
     int rc;
+    memset(&m_strm, 0, sizeof(z_stream));
     if (supportsRead()) {
         rc = inflateInit2(&m_strm, windowBits);
     } else {

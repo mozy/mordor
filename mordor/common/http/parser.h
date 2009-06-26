@@ -18,6 +18,7 @@ namespace HTTP
         StringSet *m_set;
         std::vector<std::string> *m_list;
         ParameterizedList *m_parameterizedList;
+        AcceptList *m_acceptList;
         StringMap *m_parameters;
         ValueWithParameters *m_auth;
         unsigned long long *m_ulong;

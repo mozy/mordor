@@ -51,7 +51,7 @@ private:
     void flushBuffer();
 
 private:
-    size_t m_bufferSize;
+    static const size_t m_bufferSize = 64 * 1024;
     Buffer m_inBuffer, m_outBuffer;
     z_stream m_strm;
     bool m_closed;

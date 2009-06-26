@@ -98,8 +98,8 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
     }
     Stream::ptr baseStream(stream);
     bool notifyOnClose = false;
-    for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
-        it != general.transferEncoding.end();
+    for (ParameterizedList::const_reverse_iterator it(general.transferEncoding.rbegin());
+        it != general.transferEncoding.rend();
         ++it) {
         if (stricmp(it->value.c_str(), "chunked") == 0) {
             stream.reset(new ChunkedStream(stream));

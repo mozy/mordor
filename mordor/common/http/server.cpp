@@ -781,11 +781,30 @@ HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
     } 
     if (fullEntity) {
         request->response().entity.contentLength = size;
-        if (size == ~0ull && request->request().requestLine.ver >= Version(1, 1) &&
-            request->response().general.transferEncoding.empty()) {
-            ValueWithParameters vp;
-            vp.value = "chunked";
-            request->response().general.transferEncoding.push_back(vp);
+        if (request->request().requestLine.ver >= Version(1, 1)) {
+            AcceptList available;
+            available.push_back(AcceptValueWithParameters("deflate", 1000));
+            available.push_back(AcceptValueWithParameters("gzip", 500));
+            available.push_back(AcceptValueWithParameters("x-gzip", 500));
+            const AcceptValueWithParameters *preferredEncoding =
+                preferred(request->request().request.te, available);
+            if (preferredEncoding) {
+                ValueWithParameters vp;
+                vp.value = preferredEncoding->value;
+                request->response().general.transferEncoding.push_back(vp);
+            }
+
+            if ((size == ~0ull && isAcceptable(request->request().request.te,
+                AcceptValueWithParameters("chunked"), true)) ||
+                !request->response().general.transferEncoding.empty()) {
+                ValueWithParameters vp;
+                vp.value = "chunked";
+                request->response().general.transferEncoding.push_back(vp);
+            } else if (size == ~0ull) {
+                request->response().general.connection.insert("close");
+            }
+        } else if (size == ~0ull) {
+            request->response().general.connection.insert("close");
         }
         if (request->request().requestLine.method != HEAD) {
             transferStream(response, request->responseStream());

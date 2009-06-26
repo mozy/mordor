@@ -2,6 +2,9 @@
 
 #include "http.h"
 
+#include <boost/bind.hpp>
+
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 
@@ -251,6 +254,94 @@ const char *HTTP::reason(Status s)
     }
 }
 
+bool
+HTTP::AcceptValueWithParameters::operator ==(const AcceptValueWithParameters &rhs) const
+{
+    return stricmp(value.c_str(), rhs.value.c_str()) == 0 &&
+        parameters == rhs.parameters;
+}
+
+bool
+HTTP::isAcceptable(const HTTP::AcceptList &list, const AcceptValueWithParameters &value,
+                   bool defaultMissing)
+{
+    for (HTTP::AcceptList::const_iterator it(list.begin());
+        it != list.end();
+        ++it) {
+        if (*it == value) {
+            return it->qvalue > 0;
+        }
+    }
+    return defaultMissing;
+}
+
+bool
+HTTP::isPreferred(const HTTP::AcceptList &list, const AcceptValueWithParameters &lhs,
+                  const AcceptValueWithParameters &rhs)
+{
+    assert(lhs != rhs);
+    unsigned int lQvalue = ~0u, rQvalue = ~0u;
+    for (HTTP::AcceptList::const_iterator it(list.begin());
+        it != list.end();
+        ++it) {
+        if (*it == lhs) {
+            lQvalue = it->qvalue;
+            if (lQvalue == ~0u)
+                lQvalue = 1000;
+        } else if (*it == rhs) {
+            rQvalue = it->qvalue;
+            if (rQvalue == ~0u)
+                rQvalue = 1000;
+        }
+        if (lQvalue != ~0u && rQvalue != ~0u)
+            break;
+    }
+    if (lQvalue == ~0u)
+        lQvalue = 0;
+    if (rQvalue == ~0u)
+        rQvalue = 0;
+    return lQvalue > rQvalue;
+}
+
+const
+HTTP::AcceptValueWithParameters *
+HTTP::preferred(const HTTP::AcceptList &accept, const HTTP::AcceptList &available)
+{
+    assert(!available.empty());
+#ifdef _DEBUG
+    // Assert that the available list is ordered
+    for (HTTP::AcceptList::const_iterator it(available.begin());
+        it != available.end();
+        ++it) {
+        assert(it->qvalue <= 1000);
+        HTTP::AcceptList::const_iterator next(it);
+        ++next;
+        if (next != available.end())
+            assert(it->qvalue >= next->qvalue);
+    }
+#endif
+    HTTP::AcceptList::const_iterator availableIt(available.begin());
+    while (availableIt != available.end()) {
+        HTTP::AcceptList::const_iterator nextIt(availableIt);
+        ++nextIt;
+        while (nextIt != available.end() && nextIt->qvalue == availableIt->qvalue)
+            ++nextIt;
+        AcceptList preferred;
+        for (;
+            availableIt != nextIt;
+            ++availableIt) {
+            if (isAcceptable(accept, *availableIt))
+                preferred.push_back(*availableIt);
+        }
+        if (!preferred.empty()) {
+            std::stable_sort(preferred.begin(), preferred.end(), boost::bind(
+                &isPreferred, boost::ref(accept), _1, _2));
+            return &*std::find(available.begin(), nextIt, preferred.front());
+        }
+    }
+    return NULL;
+}
+
 std::ostream& operator<<(std::ostream& os, HTTP::Method m)
 {
     if (m < HTTP::GET || m > HTTP::TRACE)
@@ -327,6 +418,46 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ContentRange &cr)
         os << "*";
     else
         os << cr.instance;
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters &v)
+{
+    assert(!v.value.empty());
+    os << v.value << serializeStringMapWithRequiredValue(v.parameters);
+    if (v.qvalue != ~0u) {
+        assert(v.qvalue <= 1000);
+        unsigned int qvalue = v.qvalue;
+        unsigned int curPlace = 1000;
+        while (curPlace > 0 && qvalue > 0) {
+            if (curPlace == 100)
+                os << ".";
+            if (qvalue >= curPlace)
+                os << "1";
+            else
+                os << "0";
+            qvalue -= curPlace;
+            curPlace /= 10;
+        }
+        os << serializeStringMapWithOptionalValue(v.acceptParams);
+    } else {
+        assert(v.acceptParams.empty());
+    }
+
+    if (!v.value.empty())
+        os << "=" << quote(v.value) << serializeStringMapWithOptionalValue(v.parameters);
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const HTTP::AcceptList &l)
+{
+    for (HTTP::AcceptList::const_iterator it(l.begin());
+        it != l.end();
+        ++it) {
+        if (it != l.begin())
+            os << ", ";
+        os << *it;
+    }
     return os;
 }
 

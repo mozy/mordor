@@ -34,11 +34,11 @@ static
 HTTP::Method
 parseMethod(const char *str, const char *end)
 {
-	*(char*)end = '\0';
+    *(char*)end = '\0';
     for(size_t i = 0; i < 8; ++i) {
-		if (stricmp(str, HTTP::methods[i]) == 0) {
-			return (HTTP::Method)i;
-		}
+        if (stricmp(str, HTTP::methods[i]) == 0) {
+            return (HTTP::Method)i;
+        }
     }
     throw std::invalid_argument("Unrecognized method");
 }
@@ -151,7 +151,7 @@ unquote(char *p, char *pe)
     product_version = token;
     product = token ("/" product_version)?;
 
-    qvalue = ("0" ("." DIGIT{0,3})) | ("1" ("." "0"{0,3}));
+    qvalue = ('0' ('.' DIGIT{0,3})?) | ('1' ('.' '0'{0,3})?);
 
     subtag = ALPHA{1,8};
     primary_tag = ALPHA{1,8};
@@ -229,7 +229,7 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
 
-    attribute = token >mark %save_parameter_attribute;
+    attribute = (token - 'q'i) >mark %save_parameter_attribute; # q separates params from accept-params
     value = (token | quoted_string) >mark %save_parameter_value;
     parameter = attribute '=' value;
     parameterizedListElement = token >mark %save_parameterized_list_element (';' parameter)*;
@@ -242,9 +242,9 @@ unquote(char *p, char *pe)
             m_parameterizedList->push_back(vp);
             m_auth = &m_parameterizedList->back();
         }
-		m_auth->value = std::string(mark, fpc - mark);
-		m_parameters = &m_auth->parameters;
-		mark = NULL;
+        m_auth->value = std::string(mark, fpc - mark);
+        m_parameters = &m_auth->parameters;
+        mark = NULL;
     }
 
     auth_param = attribute ('=' value)?;
@@ -270,7 +270,7 @@ unquote(char *p, char *pe)
     Transfer_Encoding = 'Transfer-Encoding:'i @set_transfer_encoding parameterizedList;
     
     general_header = Connection | Trailer | Transfer_Encoding;
-    general_header_names = 'Connection'i | 'Trailer'i | 'Transfer_Encoding'i;
+    general_header_names = 'Connection'i | 'Trailer'i | 'Transfer-Encoding'i;
     
     action set_content_encoding {
         m_list = &m_entity->contentEncoding;
@@ -301,17 +301,17 @@ unquote(char *p, char *pe)
     
     action set_content_type
     {
-		m_parameters = &m_entity->contentType.parameters;
+        m_parameters = &m_entity->contentType.parameters;
     }
     action save_type
     {
-		m_entity->contentType.type = std::string(mark, fpc - mark);
-		mark = NULL;
+        m_entity->contentType.type = std::string(mark, fpc - mark);
+        mark = NULL;
     }
     action save_subtype
     {
-		m_entity->contentType.subtype = std::string(mark, fpc - mark);
-		mark = NULL;
+        m_entity->contentType.subtype = std::string(mark, fpc - mark);
+        mark = NULL;
     }
     
     Content_Encoding = 'Content-Encoding:'i @set_content_encoding list;
@@ -366,8 +366,8 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
     action save_expectation_param {
-		m_temp1 = std::string(mark, fpc - mark);
-		m_request->request.expect.back().parameters[m_temp1] = "";
+        m_temp1 = std::string(mark, fpc - mark);
+        m_request->request.expect.back().parameters[m_temp1] = "";
         mark = NULL;
     }
     action save_expectation_param_value {
@@ -394,8 +394,41 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
 
+    action save_accept_list_element {
+        AcceptValueWithParameters avp;
+        avp.value = std::string(mark, fpc - mark);
+        m_acceptList->push_back(avp);
+        m_parameters = &m_acceptList->back().parameters;
+        mark = NULL;
+    }
+    
+    action save_qvalue {
+        m_acceptList->back().qvalue = 0;
+        size_t i = 0;
+        unsigned int curPlace = 1000;
+        for (; i < 5 && mark < fpc; ++i, ++mark) {
+            if (i == 1)
+                continue;
+            unsigned int cur = *mark - '0';
+            m_acceptList->back().qvalue += cur * curPlace;
+            curPlace /= 10;
+        }
+        mark = NULL;
+    }
+    
+    action save_accept_attribute {
+        m_temp1 = std::string(mark, fpc - mark);
+        m_acceptList->back().acceptParams[m_temp1] = "";
+        mark = NULL;
+    }
+    
+    action save_accept_value {
+        m_acceptList->back().acceptParams[m_temp1] = unquote((char*)mark, (char*)fpc);
+        mark = NULL;
+    }
+    
     action set_te {
-        m_parameterizedList = &m_request->request.te;
+        m_acceptList = &m_request->request.te;
     }
 
 
@@ -414,10 +447,15 @@ unquote(char *p, char *pe)
     byte_range_set = LWS* (byte_range_spec | suffix_byte_range_spec) ( LWS* ',' LWS* (byte_range_spec | suffix_byte_range_spec))* LWS*;
     ranges_specifier = bytes_unit '=' byte_range_set;
     Range = 'Range:'i LWS* ranges_specifier;
-    TE = 'TE:'i @set_te parameterizedList;
+
+    accept_extension = ';' token >mark %save_accept_attribute ('=' (token | quoted_string) >mark %save_accept_value)?;
+    accept_params = ';q='i qvalue >mark %save_qvalue (accept_extension)*;
+    acceptListElement = token >mark %save_accept_list_element (';' parameter)* (accept_params)?;
+    acceptList = LWS* acceptListElement ( LWS* ',' LWS* acceptListElement)* LWS*;
+    TE = 'TE:'i @set_te acceptList;
     
-    request_header = Authorization | Host | Expect | Proxy_Authorization | Range;
-    request_header_names = 'Authorization'i | 'Host'i | 'Expect'i | 'Proxy-Authorization'i | 'Range'i;
+    request_header = Authorization | Host | Expect | Proxy_Authorization | Range | TE;
+    request_header_names = 'Authorization'i | 'Host'i | 'Expect'i | 'Proxy-Authorization'i | 'Range'i | 'TE'i;
     
     extension_header = (token - (general_header_names | request_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;
