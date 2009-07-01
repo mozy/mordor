@@ -4,6 +4,7 @@
 
 #include <map>
 #include <sstream>
+#include <typeinfo>
 #include <vector>
 
 class TestInstance;

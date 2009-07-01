@@ -198,6 +198,20 @@ DEPS := $(shell test -d $(OBJDIR) && find $(OBJDIR) -name "*.d")
 
 all: cat echoserver fibers simpleclient wget list
 
+.PHONY: check
+check: $(OBJDIR)/mordor/common/run_tests
+	$(Q)$(OBJDIR)/mordor/common/run_tests
+
+
+$(OBJDIR)/mordor/common/run_tests: $(OBJDIR)/mordor/test/test.o			\
+	$(patsubst %.cpp,$(OBJDIR)/%.o,$(wildcard mordor/common/tests/*.cpp))	\
+	$(OBJDIR)/lib/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(COMPLINK)
+
 .PHONY: cat
 cat: $(OBJDIR)/bin/examples/cat
 

@@ -54,10 +54,11 @@ public:
     TestAssertion(const char *file, int line, const std::string &msg)
         : m_file(file), m_line(line), m_msg(msg)
     {}
+   ~TestAssertion() throw() {}
 
     const char *file() const { return m_file; }
     int line() const { return m_line; }
-    const char *what() const { return m_msg.c_str(); }
+    const char *what() const throw() { return m_msg.c_str(); }
 
 private:
     const char *m_file;

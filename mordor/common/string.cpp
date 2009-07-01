@@ -127,3 +127,4 @@ hexstringFromData(const void *data, size_t len)
     hexstringFromData(data, len, (char *)result.data());
     return result;
 }
+
