@@ -40,6 +40,7 @@ static std::string escape(const std::string& str, const std::string& allowedChar
         if (allowedChars.find(*c) == std::string::npos) {
             if (!differed) {
                 result.resize(c - str.c_str());
+                differed = true;
             }
             result.append(1, '%');
             result.append(1, hexdigits[*c >> 4]);
@@ -376,6 +377,25 @@ URI::Authority::normalize(const std::string& defaultHost, bool emptyHostValid,
         m_hostDefined = false;
 }
 
+std::string
+URI::Path::toString() const
+{
+    std::ostringstream os;
+    os << *this;
+    return os.str();
+}
+
+bool
+URI::Authority::operator==(const Authority &rhs) const
+{
+    return m_userinfoDefined == rhs.m_userinfoDefined &&
+           m_portDefined == rhs.m_portDefined &&
+           m_hostDefined == rhs.m_hostDefined &&
+           m_port == rhs.m_port &&
+           m_host == rhs.m_host &&
+           m_userinfo == rhs.m_userinfo;
+}
+
 std::ostream&
 operator<<(std::ostream& os, const URI::Authority& authority)
 {
@@ -439,7 +459,7 @@ URI::Path::removeDotComponents()
                 --i;
                 continue;
             }
-            segments.erase(segments.begin() + i, segments.begin() + i + 2);
+            segments.erase(segments.begin() + i - 1, segments.begin() + i + 1);
             i -= 2;
             continue;
         }
@@ -500,6 +520,12 @@ operator<<(std::ostream& os, const URI::Path& path)
     return os << path.serialize();
 }
 
+bool
+URI::Path::operator==(const Path &rhs) const
+{
+    return type == rhs.type && segments == rhs.segments;
+}
+
 void
 URI::normalize()
 {
@@ -537,9 +563,6 @@ operator<<(std::ostream& os, const URI& uri)
         os << "//" << uri.authority;
     }
 
-    if (uri.path.type == URI::Path::RELATIVE && uri.authority.hostDefined()) {
-        os << "/";
-    } else        
     // Has scheme, but no authority, must ensure that an absolute path
     // doesn't begin with an empty segment (or could be mistaken for authority)
     if (uri.schemeDefined() && !uri.authority.hostDefined() &&
@@ -608,4 +631,17 @@ URI::transform(const URI& base, const URI& relative)
     target.m_fragment = relative.m_fragment;
     target.m_fragmentDefined = relative.m_fragmentDefined;
     return target;
+}
+
+bool
+URI::operator==(const URI &rhs) const
+{
+    return m_schemeDefined == rhs.m_schemeDefined &&
+           m_queryDefined == rhs.m_queryDefined &&
+           m_fragmentDefined == rhs.m_fragmentDefined &&
+           m_scheme == rhs.m_scheme &&
+           authority == rhs.authority &&
+           path == rhs.path &&
+           m_query == rhs.m_query &&
+           m_fragment == rhs.m_fragment;
 }

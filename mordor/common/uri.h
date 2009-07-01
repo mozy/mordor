@@ -44,6 +44,10 @@ struct URI
         void normalize(const std::string& defaultHost = "", bool emptyHostValid = false,
             int defaultPort = -1, bool emptyPortValid = false);
 
+        bool operator==(const Authority &rhs) const;
+        bool operator!=(const Authority &rhs) const
+        { return !(*this == rhs); }
+
     private:
         std::string m_userinfo, m_host;
         int m_port;
@@ -89,6 +93,12 @@ struct URI
             bool schemeless;
         };
         path_serializer serialize(bool schemeless = false) const;
+
+        std::string toString() const;
+
+        bool operator==(const Path &rhs) const;
+        bool operator!=(const Path &rhs) const
+        { return !(*this == rhs); }
     };
     Path path;
 
@@ -110,6 +120,10 @@ struct URI
     void normalize();
 
     static URI transform(const URI& base, const URI& relative);
+
+    bool operator==(const URI &rhs) const;
+    bool operator!=(const URI &rhs) const
+    { return !(*this == rhs); }
 
 private:
     std::string m_scheme, m_query, m_fragment;
