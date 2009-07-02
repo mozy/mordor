@@ -66,6 +66,7 @@ Fiber::Fiber()
 {
     assert(!getThis());
     m_state = EXEC;
+    m_stack = NULL;
     m_stacksize = 0;
     m_sp = NULL;
     setThis(this);
@@ -76,7 +77,6 @@ Fiber::Fiber()
 
 Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
 {
-    assert(dg);
     stacksize += g_pagesize - 1;
     stacksize -= stacksize % g_pagesize;
     m_dg = dg;
@@ -88,7 +88,8 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
 
 Fiber::~Fiber()
 {
-    if (!m_dg) {
+    if (!m_stack) {
+        assert(!m_dg);
         assert(m_state == EXEC);
         Fiber *cur = t_fiber.get();
         assert(cur);
@@ -115,8 +116,8 @@ Fiber::reset()
 void
 Fiber::reset(boost::function<void ()> dg)
 {
-    assert(m_dg);
-    assert(m_state == TERM);
+    assert(m_stack);
+    assert(m_state == TERM || (!m_dg && m_state == HOLD));
     m_dg = dg;
     initStack(m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = HOLD;
@@ -219,6 +220,7 @@ Fiber::entryPoint()
         cur->m_yielder->m_state = cur->m_yielderNextState;
         cur->m_yielder.reset();
     }
+    assert(cur->m_dg);
     cur->m_dg();
 
     if (!cur->m_terminateOuter.expired() && !cur->m_outer) {
