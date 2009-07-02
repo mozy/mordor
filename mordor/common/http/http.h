@@ -96,6 +96,8 @@ namespace HTTP
     };
     const char *reason(Status s);
 
+    std::string quote(const std::string &str);
+
 #ifdef major
 #undef major
 #endif

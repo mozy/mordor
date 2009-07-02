@@ -320,6 +320,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\run_tests.cpp"
 				>
 			</File>

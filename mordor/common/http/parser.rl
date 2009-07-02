@@ -209,7 +209,7 @@ unquote(char *p, char *pe)
         m_set = NULL;
     }
     element = token >mark %save_element;
-    list = LWS* element ( LWS* ',' LWS* element)* LWS* %end_list;
+    list = (LWS* element ( LWS* ',' LWS* element)* LWS*) %end_list;
     
     action save_parameterized_list_element {
         ValueWithParameters vp;

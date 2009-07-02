@@ -8,7 +8,8 @@
 #include <cassert>
 #include <iostream>
 
-static std::string quote(const std::string& str)
+std::string
+HTTP::quote(const std::string &str)
 {
     if (str.empty())
         return "\"\"";
@@ -82,7 +83,7 @@ static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithRe
     for (HTTP::StringMap::const_iterator it(map.map.begin());
         it != map.map.end();
         ++it) {
-        os << ';' << it->first << "=" << quote(it->second);
+        os << ';' << it->first << "=" << HTTP::quote(it->second);
     }
     return os;
 }
@@ -94,7 +95,7 @@ static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithOp
         ++it) {
         os << ";" << it->first;
         if (!it->second.empty())
-            os << "=" << quote(it->second);
+            os << "=" << HTTP::quote(it->second);
     }
     return os;
 }
@@ -108,7 +109,7 @@ static std::ostream& operator<<(std::ostream& os, const serializeStringMapAsAuth
             os << ", ";
         os << it->first;
         if (!it->second.empty())
-            os << "=" << quote(it->second);
+            os << "=" << HTTP::quote(it->second);
     }
     return os;
 }
@@ -384,7 +385,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v
     assert(!v.key.empty());
     os << v.key;
     if (!v.value.empty())
-        os << "=" << quote(v.value) << serializeStringMapWithOptionalValue(v.parameters);
+        os << "=" << HTTP::quote(v.value)
+            << serializeStringMapWithOptionalValue(v.parameters);
     return os;
 }
 
@@ -445,7 +447,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters
     }
 
     if (!v.value.empty())
-        os << "=" << quote(v.value) << serializeStringMapWithOptionalValue(v.parameters);
+        os << "=" << HTTP::quote(v.value)
+            << serializeStringMapWithOptionalValue(v.parameters);
     return os;
 }
 
