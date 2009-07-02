@@ -192,8 +192,15 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, bool terminateMe)
     ptr cur = getThis();
     assert(cur);
     setThis(this);
-    if (yieldToCallerOnTerminate)
-        m_terminateOuter = cur->shared_from_this();
+    if (yieldToCallerOnTerminate) {
+        Fiber::ptr outer = shared_from_this();
+        Fiber::ptr previous;
+        while (outer) {
+            previous = outer;
+            outer = outer->m_outer;
+        }
+        previous->m_terminateOuter = cur->shared_from_this();
+    }
     m_state = EXEC;
     m_yielder = cur;
     m_yielderNextState = terminateMe ? TERM : HOLD;
