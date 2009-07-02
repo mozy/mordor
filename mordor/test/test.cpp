@@ -2,6 +2,7 @@
 
 #include "test.h"
 
+#include <cassert>
 #include <iostream>
 
 #include "mordor/common/version.h"
@@ -26,7 +27,16 @@ registerTest(const std::string &suite, const std::string &testName,
 {
     if (!g_allTests)
         g_allTests = new AllTests;
-    (*g_allTests)[suite][testName] = test;
+    (*g_allTests)[suite].second[testName] = test;
+}
+
+void
+registerSuiteInvariant(const std::string &suite, TestDg invariant)
+{
+    if (!g_allTests)
+        g_allTests = new AllTests;
+    assert((*g_allTests)[suite].first == NULL);
+    (*g_allTests)[suite].first = invariant;
 }
 
 void
@@ -38,11 +48,20 @@ runTests()
             it != g_allTests->end();
             ++it) {
             instance.m_suite = it->first;
-            for (TestSuite::const_iterator it2(it->second.begin());
-                it2 != it->second.end();
+            for (TestSuite::second_type::const_iterator
+                    it2(it->second.second.begin());
+                it2 != it->second.second.end();
                 ++it2) {
+                if (it->second.first) {
+                    instance.m_test = "<invariant>";
+                    instance.run(it->second.first);
+                }
                 instance.m_test = it2->first;
                 instance.run(it2->second);
+            }
+            if (it->second.first) {
+                instance.m_test = "<invariant>";
+                instance.run(it->second.first);
             }
         }
     }

@@ -10,7 +10,7 @@
 class TestInstance;
 
 typedef void (*TestDg)();
-typedef std::map<std::string, TestDg> TestSuite;
+typedef std::pair<TestDg, std::map<std::string, TestDg> > TestSuite;
 typedef std::map<std::string, TestSuite> AllTests;
 
 #define TEST(TestName)                                                          \
@@ -21,6 +21,17 @@ typedef std::map<std::string, TestSuite> AllTests;
         }                                                                       \
 } g_ ## TestName ## _registration;                                              \
     static void TestName()
+
+
+#define SUITE_INVARIANT(TestSuite)                                              \
+    static void _ ## TestSuite ## _invariant();                                 \
+    static struct register__ ## TestSuite ## _invariant_struct {                \
+        register__ ## TestSuite ## _invariant_struct() {                        \
+            registerSuiteInvariant(#TestSuite,                                  \
+                &_ ## TestSuite ## _invariant);                                 \
+        }                                                                       \
+} g__ ## TestSuite ## _invariant_registration;                                  \
+    static void _ ## TestSuite ## _invariant()
 
 
 #define TEST_WITH_SUITE(TestSuite, TestName)                                    \
@@ -40,6 +51,8 @@ typedef std::map<std::string, TestSuite> AllTests;
 
 void registerTest(const std::string &suite, const std::string &testName,
                   TestDg test);
+void registerSuiteInvariant(const std::string &suite, TestDg invariant);
+
 void runTests();
 
 template <class T>
