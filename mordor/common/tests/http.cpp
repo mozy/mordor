@@ -64,7 +64,7 @@ TEST_WITH_SUITE(HTTP, requestWithSimpleHeader)
     TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
     TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
     TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
-    TEST_ASSERT_EQUAL(request.general.connection.size(), 1);
+    TEST_ASSERT_EQUAL(request.general.connection.size(), 1u);
     TEST_ASSERT(request.general.connection.find("close")
         != request.general.connection.end());
 }
@@ -84,7 +84,7 @@ TEST_WITH_SUITE(HTTP, requestWithComplexHeader)
     TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
     TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
     TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
-    TEST_ASSERT_EQUAL(request.general.connection.size(), 2);
+    TEST_ASSERT_EQUAL(request.general.connection.size(), 2u);
     TEST_ASSERT(request.general.connection.find("close")
         != request.general.connection.end());
     TEST_ASSERT(request.general.connection.find("keep-alive")
@@ -105,28 +105,28 @@ TEST_WITH_SUITE(HTTP, rangeHeader)
     TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
     TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
     TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 1));
-    TEST_ASSERT_EQUAL(request.request.range.size(), 7);
+    TEST_ASSERT_EQUAL(request.request.range.size(), 7u);
     HTTP::RangeSet::const_iterator it = request.request.range.begin();
-    TEST_ASSERT_EQUAL(it->first, 0);
-    TEST_ASSERT_EQUAL(it->second, 499);
+    TEST_ASSERT_EQUAL(it->first, 0u);
+    TEST_ASSERT_EQUAL(it->second, 499u);
     ++it;
-    TEST_ASSERT_EQUAL(it->first, 500);
-    TEST_ASSERT_EQUAL(it->second, 999);
+    TEST_ASSERT_EQUAL(it->first, 500u);
+    TEST_ASSERT_EQUAL(it->second, 999u);
     ++it;
     TEST_ASSERT_EQUAL(it->first, ~0ull);
-    TEST_ASSERT_EQUAL(it->second, 500);
+    TEST_ASSERT_EQUAL(it->second, 500u);
     ++it;
-    TEST_ASSERT_EQUAL(it->first, 9500);
+    TEST_ASSERT_EQUAL(it->first, 9500u);
     TEST_ASSERT_EQUAL(it->second, ~0ull);
     ++it;
-    TEST_ASSERT_EQUAL(it->first, 0);
-    TEST_ASSERT_EQUAL(it->second, 0);
+    TEST_ASSERT_EQUAL(it->first, 0u);
+    TEST_ASSERT_EQUAL(it->second, 0u);
     ++it;
     TEST_ASSERT_EQUAL(it->first, ~0ull);
-    TEST_ASSERT_EQUAL(it->second, 1);
+    TEST_ASSERT_EQUAL(it->second, 1u);
     ++it;
-    TEST_ASSERT_EQUAL(it->first, 500);
-    TEST_ASSERT_EQUAL(it->second, 600);
+    TEST_ASSERT_EQUAL(it->first, 500u);
+    TEST_ASSERT_EQUAL(it->second, 600u);
 }
 
 TEST_WITH_SUITE(HTTP, versionComparison)
