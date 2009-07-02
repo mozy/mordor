@@ -11,7 +11,7 @@
 #include <windows.h>
 #endif
 
-static AllTests *g_allTests;
+static TestSuites *g_allTests;
 
 static struct CleanupAllTests {
     ~CleanupAllTests()
@@ -26,7 +26,7 @@ registerTest(const std::string &suite, const std::string &testName,
              TestDg test)
 {
     if (!g_allTests)
-        g_allTests = new AllTests;
+        g_allTests = new TestSuites();
     (*g_allTests)[suite].second[testName] = test;
 }
 
@@ -34,38 +34,11 @@ void
 registerSuiteInvariant(const std::string &suite, TestDg invariant)
 {
     if (!g_allTests)
-        g_allTests = new AllTests;
+        g_allTests = new TestSuites();
     assert((*g_allTests)[suite].first == NULL);
     (*g_allTests)[suite].first = invariant;
 }
 
-void
-runTests()
-{
-    TestInstance instance;
-    if (g_allTests) {
-        for (AllTests::const_iterator it(g_allTests->begin());
-            it != g_allTests->end();
-            ++it) {
-            instance.m_suite = it->first;
-            for (TestSuite::second_type::const_iterator
-                    it2(it->second.second.begin());
-                it2 != it->second.second.end();
-                ++it2) {
-                if (it->second.first) {
-                    instance.m_test = "<invariant>";
-                    instance.run(it->second.first);
-                }
-                instance.m_test = it2->first;
-                instance.run(it2->second);
-            }
-            if (it->second.first) {
-                instance.m_test = "<invariant>";
-                instance.run(it->second.first);
-            }
-        }
-    }
-}
 
 class TestAssertion : public std::exception
 {
@@ -86,15 +59,17 @@ private:
 };
 
 void
-TestInstance::assertion(const char *file, int line, const std::string &expr)
+assertion(const char *file, int line, const std::string &expr)
 {
     throw TestAssertion(file, line, expr);
 }
 
-void
-TestInstance::run(TestDg test)
+bool runTest(TestListener *listener, const std::string &suite,
+             const std::string &testName, TestDg test)
 {
-    std::cout << "Running " << m_suite << "::" << m_test << ": ";
+    if (listener)
+        listener->testStarted(suite, testName);
+    
     bool protect = true;
 #ifdef WINDOWS
     protect = !IsDebuggerPresent();
@@ -102,19 +77,122 @@ TestInstance::run(TestDg test)
     if (protect) {
         try {
             test();
-            std::cout << "OK" << std::endl;
+            if (listener)
+                listener->testComplete(suite, testName);
         } catch (const TestAssertion &assertion) {
-            std::cerr << "Assertion failed (" << assertion.file() << ":"
-                << assertion.line() << "):" << std::endl << assertion.what()
-                << std::endl;
+            std::ostringstream os;
+            os << "Assertion failed (" << assertion.file() << ":"
+               << assertion.line() << "):" << std::endl << assertion.what()
+               << std::endl;
+            if (listener)
+                listener->testAsserted(suite, testName, os.str());
+            return false;
         } catch (std::exception &ex) {
-            std::cerr << "Unexpected exception " << typeid(ex).name() << ":" << std::endl
-                << "" << ex.what() << std::endl;
+            if (listener)
+                listener->testException(suite, testName, ex);
+            return false;
         } catch (...) {
-            std::cerr << "Unexpected unknown exception" << std::endl;
+            if (listener)
+                listener->testUnknownException(suite, testName);
+            return false;
         }
     } else {
         test();
-        std::cout << "OK" << std::endl;
+        if (listener)
+            listener->testComplete(suite, testName);
     }
+    return true;
+}
+
+bool
+runTests(const TestSuites *suites, TestListener *listener)
+{
+    bool result = true;
+    if (!suites) suites = g_allTests;
+    if (suites) {
+        for (TestSuites::const_iterator it(suites->begin());
+            it != suites->end();
+            ++it) {
+            for (TestSuite::second_type::const_iterator
+                    it2(it->second.second.begin());
+                it2 != it->second.second.end();
+                ++it2) {
+                if (it->second.first) {
+                    result = result && runTest(listener, it->first,
+                        "<invariant>", it->second.first);
+                }
+                result = result && runTest(listener, it->first, it2->first,
+                    it2->second);
+            }
+            if (it->second.first) {
+                result = result && runTest(listener, it->first,
+                    "<invariant>", it->second.first);
+            }
+        }
+    }
+    if (listener)
+        listener->testsComplete();
+    return result;
+}
+
+const TestSuites &
+allTests()
+{
+    if (!g_allTests)
+        g_allTests = new TestSuites();
+    return *g_allTests;
+}
+
+TestSuites
+testsForArguments(int argc, char **argv)
+{
+    TestSuites tests;
+    const TestSuites &all = allTests();
+    for (int i = 0; i < argc; ++i) {
+        std::string suite = argv[i];
+        std::string test;
+        size_t offset = suite.find("::");
+        if (offset != std::string::npos) {
+            test = suite.substr(offset + 2);
+            suite = suite.substr(0, offset);
+        }
+        TestSuites::const_iterator suiteIt = all.find(suite);
+        if (suiteIt != all.end()) {
+            if (test.empty()) {
+                tests[suite] = suiteIt->second;
+            } else {
+                TestSuite::second_type::const_iterator testIt =
+                    suiteIt->second.second.find(test);
+                if (testIt != suiteIt->second.second.end()) {
+                    tests[suite].first = suiteIt->second.first;
+                    tests[suite].second[test] = testIt->second;
+                }
+            }                
+        }
+    }
+    return tests;
+}
+
+bool
+runTests()
+{
+    return runTests(g_allTests, NULL);
+}
+
+bool
+runTests(const TestSuites &suites)
+{
+    return runTests(&suites, NULL);
+}
+
+bool
+runTests(TestListener &listener)
+{
+    return runTests(g_allTests, &listener);
+}
+
+bool
+runTests(const TestSuites &suites, TestListener &listener)
+{
+    return runTests(&suites, &listener);
 }

@@ -11,8 +11,10 @@ class TestInstance;
 
 typedef void (*TestDg)();
 typedef std::pair<TestDg, std::map<std::string, TestDg> > TestSuite;
-typedef std::map<std::string, TestSuite> AllTests;
+typedef std::map<std::string, TestSuite> TestSuites;
 
+
+// Test definitions
 #define TEST(TestName)                                                          \
     static void TestName();                                                     \
     static struct register_ ## TestName ## _struct {                            \
@@ -43,18 +45,62 @@ typedef std::map<std::string, TestSuite> AllTests;
 } g_ ## TestSuite ## _ ## TestName ## _registration;                            \
     static void TestSuite ## _ ## TestName()
 
+
+// Assertion macros
 #define TEST_ASSERT(expr)                                                       \
-    if (!(expr)) TestInstance::assertion(__FILE__, __LINE__, #expr)
+    if (!(expr)) assertion(__FILE__, __LINE__, #expr)
 
 #define TEST_ASSERT_EQUAL(lhs, rhs)                                             \
-    TestInstance::assertEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+    assertEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
+// Assertion internal functions
+void assertion(const char *file, int line, const std::string &expr);
+
+template <class T, class U>
+void assertEqual(const char *file, int line,
+    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(lhs == rhs)) {
+        std::ostringstream os;
+        serializer<T> t(lhs);
+        serializer<U> u(rhs);
+        os << lhsExpr << " == " << rhsExpr << "\n" << t << " == " << u;
+        assertion(file, line, os.str());
+    }
+}
+
+// Public interface
+class TestListener
+{
+public:
+    virtual void testStarted(const std::string &suite,
+        const std::string &test) = 0;
+    virtual void testComplete(const std::string &suite,
+        const std::string &test) = 0;
+    virtual void testAsserted(const std::string &suite,
+        const std::string &test, const std::string &message) = 0;
+    virtual void testException(const std::string &suite,
+        const std::string &test, const std::exception &ex) = 0;
+    virtual void testUnknownException(const std::string &suite,
+        const std::string &test) = 0;
+    virtual void testsComplete() = 0;
+};
+
+// Internal functions
 void registerTest(const std::string &suite, const std::string &testName,
                   TestDg test);
 void registerSuiteInvariant(const std::string &suite, TestDg invariant);
 
-void runTests();
+// Public functions
+const TestSuites &allTests();
+TestSuites testsForArguments(int argc, char **argv);
+bool runTests();
+bool runTests(const TestSuites &suites);
+bool runTests(TestListener &listener);
+bool runTests(const TestSuites &suites,
+              TestListener &listener);
 
+// Serialization for assertion reporting
 template <class T>
 struct serializer 
 {  
@@ -95,28 +141,5 @@ NO_SERIALIZE_BARE(type)
 
 template <class T>
 NO_SERIALIZE_BARE(std::vector<T>)
-
-class TestInstance
-{
-public:
-    static void assertion(const char *file, int line, const std::string &expr);
-    template <class T, class U>
-    static void assertEqual(const char *file, int line,
-        T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
-    {
-        if (!(lhs == rhs)) {
-            std::ostringstream os;
-            serializer<T> t(lhs);
-            serializer<U> u(rhs);
-            os << lhsExpr << " == " << rhsExpr << "\n" << t << " == " << u;
-            assertion(file, line, os.str());
-        }
-    }
-
-    void run(TestDg test);
-
-    std::string m_suite;
-    std::string m_test;
-};
 
 #endif
