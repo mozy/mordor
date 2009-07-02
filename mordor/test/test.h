@@ -46,33 +46,12 @@ typedef std::map<std::string, TestSuite> TestSuites;
     static void TestSuite ## _ ## TestName()
 
 
-// Assertion macros
-#define TEST_ASSERT(expr)                                                       \
-    if (!(expr)) assertion(__FILE__, __LINE__, #expr)
-
-#define TEST_ASSERT_EQUAL(lhs, rhs)                                             \
-    assertEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
-
-// Assertion internal functions
-void assertion(const char *file, int line, const std::string &expr);
-
-template <class T, class U>
-void assertEqual(const char *file, int line,
-    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
-{
-    if (!(lhs == rhs)) {
-        std::ostringstream os;
-        serializer<T> t(lhs);
-        serializer<U> u(rhs);
-        os << lhsExpr << " == " << rhsExpr << "\n" << t << " == " << u;
-        assertion(file, line, os.str());
-    }
-}
-
 // Public interface
 class TestListener
 {
 public:
+    virtual ~TestListener() {}
+
     virtual void testStarted(const std::string &suite,
         const std::string &test) = 0;
     virtual void testComplete(const std::string &suite,
@@ -141,5 +120,29 @@ NO_SERIALIZE_BARE(type)
 
 template <class T>
 NO_SERIALIZE_BARE(std::vector<T>)
+
+// Assertion macros
+#define TEST_ASSERT(expr)                                                       \
+    if (!(expr)) assertion(__FILE__, __LINE__, #expr)
+
+#define TEST_ASSERT_EQUAL(lhs, rhs)                                             \
+    assertEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+
+// Assertion internal functions
+void assertion(const char *file, int line, const std::string &expr);
+
+template <class T, class U>
+void assertEqual(const char *file, int line,
+    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(lhs == rhs)) {
+        std::ostringstream os;
+        serializer<T> t(lhs);
+        serializer<U> u(rhs);
+        os << lhsExpr << " == " << rhsExpr << "\n" << t << " == " << u;
+        assertion(file, line, os.str());
+    }
+}
+
 
 #endif

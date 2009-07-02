@@ -203,8 +203,9 @@ check: $(OBJDIR)/mordor/common/run_tests
 	$(Q)$(OBJDIR)/mordor/common/run_tests
 
 
-$(OBJDIR)/mordor/common/run_tests: $(OBJDIR)/mordor/test/test.o			\
+$(OBJDIR)/mordor/common/run_tests:						\
 	$(patsubst %.cpp,$(OBJDIR)/%.o,$(wildcard mordor/common/tests/*.cpp))	\
+	$(OBJDIR)/lib/libmordortest.a						\
 	$(OBJDIR)/lib/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
@@ -346,3 +347,11 @@ endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
+$(OBJDIR)/lib/libmordortest.a:					\
+	$(OBJDIR)/mordor/test/test.o				\
+	$(OBJDIR)/mordor/test/stdoutlistener.o
+ifeq ($(Q),@)
+	@echo ar $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AR) ruc $@ $(filter %.o,$?)
