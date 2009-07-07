@@ -56,6 +56,8 @@ private:
 
 public:
     Buffer();
+    Buffer(const Buffer &copy);
+
     size_t readAvailable() const;
     size_t writeAvailable() const;
 

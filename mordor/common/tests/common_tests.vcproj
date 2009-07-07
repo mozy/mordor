@@ -324,6 +324,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\memory_stream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\run_tests.cpp"
 				>
 			</File>

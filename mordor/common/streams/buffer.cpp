@@ -132,6 +132,23 @@ Buffer::Buffer()
     invariant();
 }
 
+Buffer::Buffer(const Buffer &copy)
+{
+    m_bufs = copy.m_bufs;
+    m_readAvailable = copy.m_readAvailable;
+    m_writeAvailable = copy.m_writeAvailable;
+    m_writeIt = m_bufs.end();
+    for (std::list<Data>::iterator it = m_bufs.begin();
+        it != m_bufs.end();
+        ++it) {
+        if (it->writeAvailable() > 0) {
+            m_writeIt = it;
+            break;
+        }
+    }
+    invariant();
+}
+
 size_t
 Buffer::readAvailable() const
 {
@@ -357,7 +374,6 @@ Buffer::writeBuf(size_t len)
     // Existing bufs are insufficient... remove them and reserve anew
     compact();
     reserve(len);
-    reserve(len);
     assert(m_writeIt != m_bufs.end());
     assert(m_writeIt->writeAvailable() >= len);
     return m_writeIt->writeBuf().slice(0, len);
@@ -575,6 +591,7 @@ Buffer::opCmp(const char *str, size_t len) const
         if (result != 0)
             return result;
         len -= tocompare;
+        offset += tocompare;
         if (len == 0)
             return lengthResult;
     }

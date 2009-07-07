@@ -128,6 +128,13 @@ NO_SERIALIZE_BARE(std::vector<T>)
 #define TEST_ASSERT_EQUAL(lhs, rhs)                                             \
     assertEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
+#define TEST_ASSERT_EXCEPTION(code, exception)                                  \
+    try {                                                                       \
+        code;                                                                   \
+        assertion(__FILE__, __LINE__, "Expected " #exception " from " #code);   \
+    } catch (exception) {                                                       \
+    }
+
 // Assertion internal functions
 void assertion(const char *file, int line, const std::string &expr);
 
