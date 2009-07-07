@@ -124,7 +124,7 @@ unquote(char *p, char *pe)
 
     # almost-basic character types
     # note that we allow a single LF for a CR LF
-    CRLF = CR LF | LF;
+    CRLF = CR LF;
     LWS = CRLF? ( SP | HT )+;
     TEXT = LWS | (OCTET -- CTL);
     HEX = xdigit;
@@ -204,12 +204,8 @@ unquote(char *p, char *pe)
             m_set->insert(std::string(mark, fpc - mark));
         mark = NULL;
     }
-    action end_list {
-        m_list = NULL;
-        m_set = NULL;
-    }
     element = token >mark %save_element;
-    list = (LWS* element ( LWS* ',' LWS* element)* LWS*) %end_list;
+    list = (LWS* element ( LWS* ',' LWS* element)* LWS*);
     
     action save_parameterized_list_element {
         ValueWithParameters vp;
@@ -255,10 +251,12 @@ unquote(char *p, char *pe)
     
     action set_connection {
         m_set = &m_general->connection;
+        m_list = NULL;
     }
     
     action set_trailer {
         m_set = &m_general->trailer;
+        m_list = NULL;
     }
     
     action set_transfer_encoding {
@@ -274,6 +272,7 @@ unquote(char *p, char *pe)
     
     action set_content_encoding {
         m_list = &m_entity->contentEncoding;
+        m_set = NULL;
     }
 
     action set_content_length {
@@ -541,6 +540,7 @@ HTTP::RequestParser::exec()
     action set_accept_ranges
     {
         m_set = &m_response->response.acceptRanges;
+        m_list = NULL;
     }
     action set_proxy_authenticate {
         m_parameterizedList = &m_response->response.proxyAuthenticate;

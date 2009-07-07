@@ -76,8 +76,8 @@ TEST_WITH_SUITE(HTTP, requestWithComplexHeader)
 
     parser.run("GET / HTTP/1.0\r\n"
                "Connection:\r\n"
-               " keep-alive,  keep-alive,\r\n"
-               "\t close\r\n"
+               " keep-alive,  keep-alive\r\n"
+               "\t, close\r\n"
                "\r\n");
     TEST_ASSERT(!parser.error());
     TEST_ASSERT(parser.complete());
