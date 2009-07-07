@@ -33,14 +33,22 @@ ifndef ARCH
     ARCH := $(shell uname -m)
 endif
 DEBIANVER := $(shell cat /etc/debian_version 2>/dev/null)
-ifeq ($(DEBIANVER), 3.1)
-    PLATFORM := $(PLATFORM)-sarge
-endif
-ifeq ($(DEBIANVER), 4.0)
-    PLATFORM := $(PLATFORM)-etch
-endif
-ifeq ($(DEBIANVER), 5.0)
-    PLATFORM := $(PLATFORM)-lenny
+UBUNTUCODENAME := $(shell sed -n 's/DISTRIB_CODENAME\=\(.*\)/\1/p' /etc/lsb_release 2>/dev/null)
+ifdef UBUNTUCODENAME
+    PLATFORM := $(PLATFORM)-$(UBUNTUCODENAME)
+else
+    ifeq ($(DEBIANVER), 3.1)
+        PLATFORM := $(PLATFORM)-sarge
+    endif
+    ifeq ($(DEBIANVER), 4.0)
+        PLATFORM := $(PLATFORM)-etch
+    endif
+    ifeq ($(DEBIANVER), 5.0)
+        PLATFORM := $(PLATFORM)-lenny
+    endif
+    ifeq ($(DEBIANVER), testing)
+        PLATFORM := $(PLATFORM)-squeeze
+    endif
 endif
 
 PLATFORMDIR := $(PLATFORM)/$(ARCH)
@@ -76,7 +84,7 @@ else
     else
         ifdef OPT
             OPT_FLAGS += -O$(OPT)
-            RLFLAGS += -G2
+            RLCODEGEN_FLAGS += -G2
         else
             OPT_FLAGS += -O
         endif
@@ -118,8 +126,16 @@ BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 
-RLCODEGEN	:= $(shell which rlcodegen)
+RLCODEGEN	:= $(shell which rlcodegen rlgen-cd)
 RAGEL   	:= ragel
+
+RAGEL_MAJOR	:= $(shell ragel -v | sed -n 's/.*\([0-9]\)\.[0-9]\+.*/\1/p')
+
+ifeq ($(RAGEL_MAJOR), 6)
+    ifdef RLCODEGEN
+        RAGEL_FLAGS += -x
+    endif
+endif
 
 LIBS := -lboost_thread -lssl -lcrypto -lz
 
@@ -160,10 +176,10 @@ ifeq ($(Q),@)
 	@echo ragel $<
 endif
 	$(Q)mkdir -p $(@D)
-ifeq ($(RLCODEGEN),)
-	$(Q)$(RAGEL) $(RLFLAGS) -o $@ $<
+ifndef RLCODEGEN
+	$(Q)$(RAGEL) $(RAGEL_FLAGS) $(RLCODEGEN_FLAGS) -o $@ $<
 else
-	$(Q)$(RAGEL) $< | $(RLCODEGEN) $(RLFLAGS) -o $@
+	$(Q)$(RAGEL) $(RAGEL_FLAGS) $< | $(RLCODEGEN) $(RLCODEGEN_FLAGS) -o $@
 endif
 
 $(OBJDIR)/%.o: %.s
