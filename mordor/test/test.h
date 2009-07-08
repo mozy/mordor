@@ -128,6 +128,9 @@ NO_SERIALIZE_BARE(std::vector<T>)
 #define TEST_ASSERT_EQUAL(lhs, rhs)                                             \
     assertEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
+#define TEST_ASSERT_NOT_EQUAL(lhs, rhs)                                         \
+    assertNotEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+
 #define TEST_ASSERT_EXCEPTION(code, exception)                                  \
     try {                                                                       \
         code;                                                                   \
@@ -147,6 +150,19 @@ void assertEqual(const char *file, int line,
         serializer<T> t(lhs);
         serializer<U> u(rhs);
         os << lhsExpr << " == " << rhsExpr << "\n" << t << " == " << u;
+        assertion(file, line, os.str());
+    }
+}
+
+template <class T, class U>
+void assertNotEqual(const char *file, int line,
+    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(lhs != rhs)) {
+        std::ostringstream os;
+        serializer<T> t(lhs);
+        serializer<U> u(rhs);
+        os << lhsExpr << " != " << rhsExpr << "\n" << t << " != " << u;
         assertion(file, line, os.str());
     }
 }

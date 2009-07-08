@@ -332,6 +332,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\scheduler.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\uri.cpp"
 				>
 			</File>

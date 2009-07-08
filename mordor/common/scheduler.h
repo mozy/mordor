@@ -87,6 +87,17 @@ private:
 void
 parallel_do(const std::vector<boost::function<void ()> > &dgs);
 
+// Automatically returns to calling scheduler when goes out of scope
+struct SchedulerSwitcher : public boost::noncopyable
+{
+public:
+    SchedulerSwitcher(Scheduler *target = NULL);
+    ~SchedulerSwitcher();
+
+private:
+    Scheduler *m_caller;
+};
+
 /*
 template<class T>
 static

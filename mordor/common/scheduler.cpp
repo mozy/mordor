@@ -234,6 +234,19 @@ WorkerPool::tickle()
 }
 
 
+SchedulerSwitcher::SchedulerSwitcher(Scheduler *target)
+{
+    assert(Scheduler::getThis());
+    m_caller = Scheduler::getThis();
+    if (target)
+        target->switchTo();
+}
+
+SchedulerSwitcher::~SchedulerSwitcher()
+{
+    m_caller->switchTo();
+}
+
 static
 void
 parallel_do_impl(boost::function<void ()> dg, size_t &completed,
