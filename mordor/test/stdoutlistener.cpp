@@ -15,6 +15,7 @@ StdoutListener::testStarted(const std::string &suite, const std::string &test)
     if (test != "<invariant>")
         ++m_tests;
     std::cout << "Running " << suite << "::" << test << ": ";
+    std::cout.flush();
 }
 
 void

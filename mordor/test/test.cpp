@@ -9,14 +9,41 @@
 
 #ifdef WINDOWS
 #include <windows.h>
-#endif
-#ifdef OSX
+#elif defined (LINUX)
+#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#elif defined (OSX)
 #include <sys/sysctl.h>
 #endif
 
 static TestSuites *g_allTests;
+#ifdef LINUX
+static bool g_traced;
+#endif
 
 static struct CleanupAllTests {
+#ifdef LINUX
+    CleanupAllTests()
+    {
+        char buffer[1024];
+        snprintf(buffer, 1024, "/proc/%d/status", getpid());
+        int fd = open(buffer, O_RDONLY);
+        if (fd >= 0) {
+            int rc = read(fd, buffer, 1024);
+            if (rc > 0) {
+                const char *tracerPidStr = strstr(buffer, "TracerPid:");
+                if (tracerPidStr) {
+                    int tracingPid = atoi(tracerPidStr + 13);
+                    if (tracingPid != 0) {
+                        g_traced = true;
+                    }
+                }
+            }
+            close(fd);
+        }
+    }
+#endif
     ~CleanupAllTests()
     {
         if (g_allTests)
@@ -76,7 +103,9 @@ bool runTest(TestListener *listener, const std::string &suite,
     bool protect = true;
 #ifdef WINDOWS
     protect = !IsDebuggerPresent();
-#elif defined(OSX)
+#elif defined (LINUX)
+    protect = !g_traced;
+#elif defined (OSX)
     int mib[4];
     kinfo_proc info;
     size_t size;
