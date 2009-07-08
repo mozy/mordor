@@ -10,11 +10,21 @@
 #include <errno.h>
 #endif
 
+#ifdef OSX
+#include <mach/mach_init.h>
+#include <mach/task.h>
+#endif
+
 Semaphore::Semaphore(unsigned int count)
 {
 #ifdef WINDOWS
     m_semaphore = CreateSemaphore(NULL, count, 2147483647, NULL);
     if (m_semaphore == NULL) {
+        throwExceptionFromLastError();
+    }
+#elif defined(OSX)
+    m_task = mach_task_self();
+    if (semaphore_create(m_task, &m_semaphore, SYNC_POLICY_FIFO, count)) {
         throwExceptionFromLastError();
     }
 #else
@@ -29,6 +39,9 @@ Semaphore::~Semaphore()
 #ifdef WINDOWS
     BOOL bRet = CloseHandle(m_semaphore);
     assert(bRet);
+#elif defined(OSX)
+    int rc = semaphore_destroy(m_task, m_semaphore);
+    assert(!rc);
 #else
     int rc = sem_destroy(&m_semaphore);
     assert(!rc);
@@ -42,6 +55,14 @@ Semaphore::wait()
     DWORD dwRet = WaitForSingleObject(m_semaphore, INFINITE);
     if (dwRet != WAIT_OBJECT_0) {
         throwExceptionFromLastError();
+    }
+#elif defined(OSX)
+    while (true) {
+        if (!semaphore_wait(m_semaphore))
+            return;
+        if (errno != EINTR) {
+            throwExceptionFromLastError();
+        }
     }
 #else
     while (true) {
@@ -61,6 +82,8 @@ Semaphore::notify()
     if (!ReleaseSemaphore(m_semaphore, 1, NULL)) {
         throwExceptionFromLastError();
     }
+#elif defined(OSX)
+    semaphore_signal(m_semaphore);
 #else
     if (sem_post(&m_semaphore)) {
         throwExceptionFromLastError();
