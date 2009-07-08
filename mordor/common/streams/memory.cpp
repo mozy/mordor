@@ -78,7 +78,7 @@ MemoryStream::seek(long long offset, Anchor anchor)
         case BEGIN:
             if (offset < 0)
                 throw std::invalid_argument("resulting offset is negative");
-            if (offset > (long long)(size_t)~0) {
+            if ((unsigned long long)offset > (size_t)~0) {
                 throw std::invalid_argument(
                     "Memory stream position cannot exceed virtual address space.");
             }
@@ -122,7 +122,7 @@ void
 MemoryStream::truncate(long long size)
 {
     assert(size >= 0);
-    if (size > (long long)(size_t)~0) {
+    if ((unsigned long long)size > (size_t)~0) {
         throw std::invalid_argument(
             "Memory stream size cannot exceed virtual address space.");
     }

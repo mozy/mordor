@@ -76,7 +76,7 @@ bool runTest(TestListener *listener, const std::string &suite,
     bool protect = true;
 #ifdef WINDOWS
     protect = !IsDebuggerPresent();
-#else defined(OSX)
+#elif defined(OSX)
     int mib[4];
     kinfo_proc info;
     size_t size;
@@ -136,12 +136,12 @@ runTests(const TestSuites *suites, TestListener *listener)
                     result = result && runTest(listener, it->first,
                         "<invariant>", it->second.first);
                 }
-                result = result && runTest(listener, it->first, it2->first,
-                    it2->second);
+                result = runTest(listener, it->first, it2->first,
+                    it2->second) && result;
             }
             if (it->second.first) {
-                result = result && runTest(listener, it->first,
-                    "<invariant>", it->second.first);
+                result = runTest(listener, it->first,
+                    "<invariant>", it->second.first) && result;
             }
         }
     }
