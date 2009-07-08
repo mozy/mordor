@@ -10,6 +10,9 @@
 #ifdef WINDOWS
 #include <windows.h>
 #endif
+#ifdef OSX
+#include <sys/sysctl.h>
+#endif
 
 static TestSuites *g_allTests;
 
@@ -73,6 +76,18 @@ bool runTest(TestListener *listener, const std::string &suite,
     bool protect = true;
 #ifdef WINDOWS
     protect = !IsDebuggerPresent();
+#else defined(OSX)
+    int mib[4];
+    kinfo_proc info;
+    size_t size;
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_PROC;
+    mib[2] = KERN_PROC_PID;
+    mib[3] = getpid();
+    size = sizeof(kinfo_proc);
+    info.kp_proc.p_flag = 0;
+    sysctl(mib, 4, &info, &size, NULL, 0);
+    protect = !(info.kp_proc.p_flag & P_TRACED);
 #endif
     if (protect) {
         try {
