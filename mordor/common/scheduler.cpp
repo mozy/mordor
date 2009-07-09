@@ -8,14 +8,16 @@
 
 #include "atomic.h"
 
-ThreadPool2::ThreadPool2(boost::function<void()> proc)
-: m_proc(proc)
+void
+ThreadPool2::init(boost::function<void()> proc)
 {
+    m_proc = proc;
 }
 
 void
 ThreadPool2::start(size_t threads)
 {
+    assert(m_proc);
     boost::mutex::scoped_lock lock(m_mutex);
     for (size_t i = 0; i < threads; ++i) {
         m_threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(m_proc)));
@@ -49,14 +51,10 @@ static void delete_nothing(Fiber* f) {}
 boost::thread_specific_ptr<Scheduler> Scheduler::t_scheduler(&delete_nothing_scheduler);
 boost::thread_specific_ptr<Fiber> Scheduler::t_fiber(&delete_nothing);
 
-#ifdef MSVC
-#pragma warning(push)
-#pragma warning(disable : 4355)
-#endif
 Scheduler::Scheduler(int threads, bool useCaller, bool autoStop)
-    : m_threads(boost::bind(&Scheduler::run, this)),
-      m_stopping(false)
+    : m_stopping(true)
 {
+    m_threads.init(boost::bind(&Scheduler::run, this));
     m_autoStop = autoStop && useCaller && threads == 1;
     if (useCaller)
         assert(threads >= 1);
@@ -69,11 +67,8 @@ Scheduler::Scheduler(int threads, bool useCaller, bool autoStop)
         t_fiber.reset(m_rootFiber.get());
         m_rootThread = boost::this_thread::get_id();
     }
-    m_threads.start(threads);
+    m_threadCount = threads;
 }
-#ifdef MSVC
-#pragma warning(pop)
-#endif
 
 Scheduler::~Scheduler()
 {
@@ -87,6 +82,14 @@ Scheduler *
 Scheduler::getThis()
 {
     return t_scheduler.get();
+}
+
+void
+Scheduler::start()
+{
+    assert(m_stopping);
+    m_stopping = false;
+    m_threads.start(m_threadCount);
 }
 
 void
@@ -158,7 +161,7 @@ Scheduler::yieldTo()
 {
     assert(t_fiber.get());
     if (m_rootThread == boost::this_thread::get_id() &&
-        t_fiber->state() == Fiber::INIT || t_fiber->state() == Fiber::TERM) {
+        (t_fiber->state() == Fiber::INIT || t_fiber->state() == Fiber::TERM)) {
         yieldTo(true);
     } else {
         yieldTo(false);
@@ -172,7 +175,7 @@ Scheduler::yieldTo(bool yieldToCallerOnTerminate)
     assert(Scheduler::getThis() == this);
     if (yieldToCallerOnTerminate)
         assert(m_rootThread == boost::this_thread::get_id());
-    if (t_fiber->state() == Fiber::TERM) {
+    if (t_fiber->state() != Fiber::HOLD) {
         m_stopping = false;
         t_fiber->reset();
     }
@@ -247,7 +250,9 @@ Scheduler::run()
 
 WorkerPool::WorkerPool(int threads, bool useCaller, bool autoStop)
     : Scheduler(threads, useCaller, autoStop)
-{}
+{
+    start();
+}
 
 void
 WorkerPool::idle()

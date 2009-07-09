@@ -8,6 +8,7 @@
 #include <windows.h>
 #elif defined(OSX)
 #include <mach/semaphore.h>
+#elif defined(FREEBSD)
 #else
 #include <semaphore.h>
 #endif
@@ -28,6 +29,8 @@ private:
 #elif defined(OSX)
     task_t m_task;
     semaphore_t m_semaphore;
+#elif defined(FREEBSD)
+    int m_semaphore;
 #else
     sem_t m_semaphore;
 #endif

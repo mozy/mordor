@@ -82,9 +82,9 @@ TEST_WITH_SUITE(Scheduler, otherThread)
     Fiber::ptr f(new Fiber(
         boost::bind(&otherThreadProc, &pool, boost::ref(done))));
     TEST_ASSERT(!Scheduler::getThis());
-    pool.schedule(f);
     TEST_ASSERT_EQUAL(f->state(), Fiber::INIT);
     TEST_ASSERT(!done);
+    pool.schedule(f);
     while (!done);
     pool.stop();
     TEST_ASSERT_EQUAL(f->state(), Fiber::TERM);

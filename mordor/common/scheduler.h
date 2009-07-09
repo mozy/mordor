@@ -20,8 +20,7 @@
 class ThreadPool2
 {
 public:
-    ThreadPool2(boost::function<void ()> proc);
-
+    void init(boost::function<void ()> proc);
     void start(size_t threads = 1);
 
     size_t size();
@@ -49,6 +48,8 @@ public:
     void yieldTo();
 
 protected:
+    void start();
+
     virtual void idle() = 0;
     virtual void tickle() = 0;
 
@@ -68,6 +69,7 @@ private:
     boost::thread::id m_rootThread;
     Fiber::ptr m_rootFiber;
     ThreadPool2 m_threads;
+    size_t m_threadCount;
     bool m_autoStop;
     bool m_stopping;
 };

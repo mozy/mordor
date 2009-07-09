@@ -50,7 +50,7 @@ HTTP::ServerConnection::scheduleNextRequest(ServerRequest::ptr request)
         }
     }
     if (!close) {
-        Fiber::ptr requestFiber(new Fiber(boost::bind(&ServerRequest::doRequest, request)));
+        Fiber::ptr requestFiber(new Fiber(boost::bind(&ServerRequest::doRequest, request), 4096 * 2));
         Scheduler::getThis()->schedule(requestFiber);
     } else {
         m_stream->close(Stream::READ);
