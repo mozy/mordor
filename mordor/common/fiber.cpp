@@ -32,9 +32,9 @@
 #endif
 
 static void push(void **sp, size_t v);
-static void allocStack(void **stack, void **sp, size_t *stacksize, void (*entryPoint)());
+static void allocStack(void **stack, void **sp, size_t *stacksize);
 static void freeStack(void *stack, size_t stacksize);
-static void initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)());
+static void initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)());
 extern "C"
 #ifdef NATIVE_WINDOWS_FIBERS
 static
@@ -80,10 +80,11 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
     stacksize += g_pagesize - 1;
     stacksize -= stacksize % g_pagesize;
     m_dg = dg;
-    m_state = HOLD;
+    m_state = INIT;
+    m_stack = NULL;
     m_stacksize = stacksize;
-    allocStack(&m_stack, &m_sp, &m_stacksize, &Fiber::entryPoint);
-    initStack(m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
+    allocStack(&m_stack, &m_sp, &m_stacksize);
+    initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
 }
 
 Fiber::~Fiber()
@@ -99,7 +100,7 @@ Fiber::~Fiber()
         ConvertFiberToThread();
 #endif
     } else {
-        assert(m_state == TERM);
+        assert(m_state == TERM || m_state == INIT);
         freeStack(m_stack, m_stacksize);
     }
 }
@@ -107,20 +108,21 @@ Fiber::~Fiber()
 void
 Fiber::reset()
 {
+    assert(m_stack);
+    assert(m_state == TERM || m_state == INIT);
     assert(m_dg);
-    assert(m_state == TERM);
-    initStack(m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
-    m_state = HOLD;
+    initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
+    m_state = INIT;
 }
 
 void
 Fiber::reset(boost::function<void ()> dg)
 {
     assert(m_stack);
-    assert(m_state == TERM || (!m_dg && m_state == HOLD));
+    assert(m_state == TERM || m_state == INIT);
     m_dg = dg;
-    initStack(m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
-    m_state = HOLD;
+    initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
+    m_state = INIT;
 }
 
 Fiber::ptr
@@ -140,7 +142,7 @@ Fiber::setThis(Fiber* f)
 void
 Fiber::call()
 {
-    assert(m_state == HOLD);
+    assert(m_state == HOLD || m_state == INIT);
     assert(!m_outer);
     ptr cur = getThis();
     assert(cur);
@@ -188,7 +190,7 @@ Fiber::state()
 void
 Fiber::yieldTo(bool yieldToCallerOnTerminate, bool terminateMe)
 {
-    assert(m_state == HOLD);
+    assert(m_state == HOLD || m_state == INIT);
     ptr cur = getThis();
     assert(cur);
     setThis(this);
@@ -228,6 +230,7 @@ Fiber::entryPoint()
         cur->m_yielder.reset();
     }
     assert(cur->m_dg);
+    assert(cur->m_state == EXEC);
     cur->m_dg();
 
     if (!cur->m_terminateOuter.expired() && !cur->m_outer) {
@@ -245,7 +248,7 @@ Fiber::entryPoint()
     }
     assert(cur->m_outer);
     cur->m_outer->m_yielder = cur;
-    cur->m_outer->m_yielderNextState = Fiber::TERM;
+    cur->m_outer->m_yielderNextState = TERM;
     Fiber* curp = cur.get();
     assert(!cur.unique());
     cur.reset();
@@ -271,17 +274,14 @@ static VOID CALLBACK native_fiber_entryPoint(PVOID lpParameter)
 
 static
 void
-allocStack(void **stack, void **sp, size_t *stacksize, void (*entryPoint)())
+allocStack(void **stack, void **sp, size_t *stacksize)
 {
     assert(stack);
     assert(sp);
     if (*stacksize == 0)
         *stacksize = g_pagesize;
 #ifdef NATIVE_WINDOWS_FIBERS
-    *sp = *stack = CreateFiber(*stacksize, &native_fiber_entryPoint, entryPoint);
-    if (!*stack) {
-        assert(false);
-    }
+    // Fibers are allocated in initStack
 #elif defined(WINDOWS)
     *stack = VirtualAlloc(NULL, *stacksize + g_pagesize, MEM_RESERVE, PAGE_NOACCESS);
     if (!*stack) {
@@ -370,17 +370,23 @@ fiber_switchContext(void **oldsp, void *newsp)
 
 static
 void
-initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)())
+initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
 {
 #ifdef NATIVE_WINDOWS_FIBERS
+    if (*stack)
+        freeStack(*stack, stacksize);
+    *sp = *stack = CreateFiber(stacksize, &native_fiber_entryPoint, entryPoint);
+    if (!*stack) {
+        assert(false);
+    }
 #elif defined(ASM_X86_64_WINDOWS)
     // Shadow space (4 registers + return address)
     for (int i = 0; i < 5; ++i)
         push(sp, 0x0000000000000000ull);
     push(sp, (size_t)entryPoint);     // RIP
     push(sp, 0xffffffffffffffffull);  // RBP
-    push(sp, (size_t)stack + stacksize);// Stack base
-    push(sp, (size_t)stack);          // Stack top
+    push(sp, (size_t)*stack + stacksize);// Stack base
+    push(sp, (size_t)*stack);          // Stack top
     push(sp, 0x0000000000000000ull);  // RBX
     push(sp, 0x0000000000000000ull);  // RSI
     push(sp, 0x0000000000000000ull);  // RDI
@@ -398,8 +404,8 @@ initStack(void *stack, void **sp, size_t stacksize, void (*entryPoint)())
     push(sp, (size_t)entryPoint);     // EIP
     push(sp, 0xffffffff);             // EBP
     push(sp, 0xffffffff);             // Exception handler
-    push(sp, (size_t)stack + stacksize);// Stack base
-    push(sp, (size_t)stack);          // Stack top
+    push(sp, (size_t)*stack + stacksize);// Stack base
+    push(sp, (size_t)*stack);          // Stack top
     push(sp, 0x00000000);             // EBX
     push(sp, 0x00000000);             // ESI
     push(sp, 0x00000000);             // EDI

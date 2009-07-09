@@ -20,6 +20,7 @@ public:
 
     enum State
     {
+        INIT,
         HOLD,
         EXEC,
         TERM

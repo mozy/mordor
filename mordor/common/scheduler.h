@@ -36,8 +36,8 @@ private:
 class Scheduler
 {
 public:
-    Scheduler(int threads = 1, bool useCaller = true);
-    virtual ~Scheduler() {}
+    Scheduler(int threads = 1, bool useCaller = true, bool autoStop = true);
+    virtual ~Scheduler();
 
     static Scheduler* getThis();
 
@@ -68,13 +68,14 @@ private:
     boost::thread::id m_rootThread;
     Fiber::ptr m_rootFiber;
     ThreadPool2 m_threads;
+    bool m_autoStop;
     bool m_stopping;
 };
 
 class WorkerPool : public Scheduler
 {
 public:
-    WorkerPool(int threads = 1, bool useCaller = true);
+    WorkerPool(int threads = 1, bool useCaller = true, bool autoStop = true);
 
 protected:
     void idle();

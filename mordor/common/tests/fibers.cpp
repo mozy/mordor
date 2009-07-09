@@ -38,7 +38,7 @@ TEST_WITH_SUITE(Fibers, call)
     TEST_ASSERT(Fiber::getThis() == mainFiber);
     TEST_ASSERT(a != mainFiber);
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::HOLD);
+    TEST_ASSERT(a->state() == Fiber::INIT);
     a->call();
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 2);
@@ -63,7 +63,7 @@ fiberProc2a(Fiber::ptr mainFiber, Fiber::weak_ptr weakself,
     TEST_ASSERT(Fiber::getThis() == self);
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     TEST_ASSERT(self->state() == Fiber::EXEC);
-    TEST_ASSERT(other->state() == Fiber::HOLD);
+    TEST_ASSERT(other->state() == Fiber::INIT);
     other->call();
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 3);
@@ -100,8 +100,8 @@ TEST_WITH_SUITE(Fibers, nestedCall)
     TEST_ASSERT(a != mainFiber);
     TEST_ASSERT(b != mainFiber);
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::HOLD);
-    TEST_ASSERT(b->state() == Fiber::HOLD);
+    TEST_ASSERT(a->state() == Fiber::INIT);
+    TEST_ASSERT(b->state() == Fiber::INIT);
     a->call();
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 4);
@@ -128,9 +128,9 @@ fiberProc3a(Fiber::ptr mainFiber, Fiber::weak_ptr weaka, Fiber::weak_ptr weakb,
     TEST_ASSERT(Fiber::getThis() == a);
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     TEST_ASSERT(a->state() == Fiber::EXEC);
-    TEST_ASSERT(b->state() == Fiber::HOLD);
-    TEST_ASSERT(c->state() == Fiber::HOLD);
-    TEST_ASSERT(d->state() == Fiber::HOLD);
+    TEST_ASSERT(b->state() == Fiber::INIT);
+    TEST_ASSERT(c->state() == Fiber::INIT);
+    TEST_ASSERT(d->state() == Fiber::INIT);
     b->call();
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 6);
@@ -153,8 +153,8 @@ fiberProc3b(Fiber::ptr mainFiber, Fiber::weak_ptr weaka, Fiber::weak_ptr weakb,
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     TEST_ASSERT(a->state() == Fiber::EXEC);
     TEST_ASSERT(b->state() == Fiber::EXEC);
-    TEST_ASSERT(c->state() == Fiber::HOLD);
-    TEST_ASSERT(d->state() == Fiber::HOLD);
+    TEST_ASSERT(c->state() == Fiber::INIT);
+    TEST_ASSERT(d->state() == Fiber::INIT);
     c->yieldTo();
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 5);
@@ -178,7 +178,7 @@ fiberProc3c(Fiber::ptr mainFiber, Fiber::weak_ptr weaka, Fiber::weak_ptr weakb,
     TEST_ASSERT(a->state() == Fiber::EXEC);
     TEST_ASSERT(b->state() == Fiber::HOLD);
     TEST_ASSERT(c->state() == Fiber::EXEC);
-    TEST_ASSERT(d->state() == Fiber::HOLD);
+    TEST_ASSERT(d->state() == Fiber::INIT);
     d->call();
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 9);
@@ -241,10 +241,10 @@ TEST_WITH_SUITE(Fibers, yieldTo)
     TEST_ASSERT(c != mainFiber);
     TEST_ASSERT(d != mainFiber);
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::HOLD);
-    TEST_ASSERT(b->state() == Fiber::HOLD);
-    TEST_ASSERT(c->state() == Fiber::HOLD);
-    TEST_ASSERT(d->state() == Fiber::HOLD);
+    TEST_ASSERT(a->state() == Fiber::INIT);
+    TEST_ASSERT(b->state() == Fiber::INIT);
+    TEST_ASSERT(c->state() == Fiber::INIT);
+    TEST_ASSERT(d->state() == Fiber::INIT);
     a->call();
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 7);
@@ -263,4 +263,50 @@ TEST_WITH_SUITE(Fibers, yieldTo)
     TEST_ASSERT(b->state() == Fiber::TERM);
     TEST_ASSERT(c->state() == Fiber::TERM);
     TEST_ASSERT(d->state() == Fiber::TERM);
+}
+
+static void
+fiberProc4(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence)
+{
+    Fiber::ptr self(weakself);
+    TEST_ASSERT(Fiber::getThis() == self);
+    TEST_ASSERT(mainFiber != self);
+    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    TEST_ASSERT(self->state() == Fiber::EXEC);
+    ++sequence;
+}
+
+TEST_WITH_SUITE(Fibers, reset)
+{
+    int sequence = 0;
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr a(new Fiber(NULL, 65536 * 6));
+    a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
+        boost::ref(sequence)));
+    TEST_ASSERT(Fiber::getThis() == mainFiber);
+    TEST_ASSERT(a != mainFiber);
+    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    TEST_ASSERT(a->state() == Fiber::INIT);
+    a->call();
+    ++sequence;
+    TEST_ASSERT_EQUAL(sequence, 2);
+    TEST_ASSERT(Fiber::getThis() == mainFiber);
+    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    TEST_ASSERT(a->state() == Fiber::TERM);
+    a->reset();
+    TEST_ASSERT(a->state() == Fiber::INIT);
+    a->call();
+    ++sequence;
+    TEST_ASSERT_EQUAL(sequence, 4);
+    TEST_ASSERT(Fiber::getThis() == mainFiber);
+    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    TEST_ASSERT(a->state() == Fiber::TERM);
+    a->reset();
+    TEST_ASSERT(a->state() == Fiber::INIT);
+    a->call();
+    ++sequence;
+    TEST_ASSERT_EQUAL(sequence, 6);
+    TEST_ASSERT(Fiber::getThis() == mainFiber);
+    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    TEST_ASSERT(a->state() == Fiber::TERM);
 }

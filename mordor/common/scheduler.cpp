@@ -53,10 +53,11 @@ boost::thread_specific_ptr<Fiber> Scheduler::t_fiber(&delete_nothing);
 #pragma warning(push)
 #pragma warning(disable : 4355)
 #endif
-Scheduler::Scheduler(int threads, bool useCaller)
+Scheduler::Scheduler(int threads, bool useCaller, bool autoStop)
     : m_threads(boost::bind(&Scheduler::run, this)),
       m_stopping(false)
 {
+    m_autoStop = autoStop && useCaller && threads == 1;
     if (useCaller)
         assert(threads >= 1);
     if (useCaller) {
@@ -64,15 +65,23 @@ Scheduler::Scheduler(int threads, bool useCaller)
         assert(getThis() == NULL);
         t_scheduler.reset(this);
         m_rootFiber.reset(new Fiber(boost::bind(&Scheduler::run, this), 65536));
-        m_rootFiber->call();
-        m_rootThread = boost::this_thread::get_id();
+        t_scheduler.reset(this);
         t_fiber.reset(m_rootFiber.get());
+        m_rootThread = boost::this_thread::get_id();
     }
     m_threads.start(threads);
 }
 #ifdef MSVC
 #pragma warning(pop)
 #endif
+
+Scheduler::~Scheduler()
+{
+    assert(m_stopping);
+    if (getThis() == this) {
+        t_scheduler.reset(NULL);
+    }
+}
 
 Scheduler *
 Scheduler::getThis()
@@ -83,14 +92,17 @@ Scheduler::getThis()
 void
 Scheduler::stop()
 {
-    if (m_rootThread == boost::thread::id()) {
-        assert(Scheduler::getThis() != this);
-    } else {
-        assert(Scheduler::getThis() == this);
-    }
     if (m_rootThread != boost::thread::id()) {
+        // A thread-hijacking scheduler must be stopped
+        // from within itself to return control to the
+        // original thread
+        assert(Scheduler::getThis() == this);
         // First switch to the correct thread
         switchTo(m_rootThread);
+    } else {
+        // A spawned-threads only scheduler cannot be stopped from within
+        // itself... who would get control?
+        assert(Scheduler::getThis() != this);
     }
     m_stopping = true;
     for (size_t i = 0; i < m_threads.size(); ++i) {
@@ -99,9 +111,15 @@ Scheduler::stop()
     if (m_rootFiber)
         tickle();
     if (Scheduler::getThis() == this) {
+        // Give this thread's run fiber a chance to kill itself off
         yieldTo(true);
     }
-    m_threads.join_all();
+    if (m_rootThread == boost::this_thread::get_id() ||
+        Scheduler::getThis() != this) {
+        m_threads.join_all();
+    } else {
+        assert(false);
+    }
 }
 
 bool
@@ -138,7 +156,13 @@ Scheduler::switchTo(boost::thread::id thread)
 void
 Scheduler::yieldTo()
 {
-    yieldTo(false);
+    assert(t_fiber.get());
+    if (m_rootThread == boost::this_thread::get_id() &&
+        t_fiber->state() == Fiber::INIT || t_fiber->state() == Fiber::TERM) {
+        yieldTo(true);
+    } else {
+        yieldTo(false);
+    }
 }
 
 void
@@ -146,6 +170,12 @@ Scheduler::yieldTo(bool yieldToCallerOnTerminate)
 {
     assert(t_fiber.get());
     assert(Scheduler::getThis() == this);
+    if (yieldToCallerOnTerminate)
+        assert(m_rootThread == boost::this_thread::get_id());
+    if (t_fiber->state() == Fiber::TERM) {
+        m_stopping = false;
+        t_fiber->reset();
+    }
     t_fiber->yieldTo(yieldToCallerOnTerminate);
 }
 
@@ -153,14 +183,16 @@ void
 Scheduler::run()
 {
     t_scheduler.reset(this);
-    Fiber::ptr rootfiber = Fiber::getThis();
-    if (!rootfiber) {
-        rootfiber.reset(new Fiber());
+    Fiber::ptr threadfiber = Fiber::getThis();
+    if (!threadfiber) {
+        // Running in own thread
+        threadfiber.reset(new Fiber());
+        t_fiber.reset(Fiber::getThis().get());
     } else {
-        rootfiber.reset();
-        Fiber::yield();
+        // Hijacked a thread
+        assert(t_fiber.get() == Fiber::getThis().get());
+        threadfiber.reset();
     }
-    t_fiber.reset(Fiber::getThis().get());
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this), 65536 * 4));
     while (true) {
         Fiber::ptr f;
@@ -203,6 +235,8 @@ Scheduler::run()
                 f->yieldTo();
             }
             continue;
+        } else if (m_autoStop) {
+            m_stopping = true;
         }
         if (idleFiber->state() == Fiber::TERM) {
             return;
@@ -211,8 +245,8 @@ Scheduler::run()
     }
 }
 
-WorkerPool::WorkerPool(int threads, bool useCaller)
-    : Scheduler(threads, useCaller)
+WorkerPool::WorkerPool(int threads, bool useCaller, bool autoStop)
+    : Scheduler(threads, useCaller, autoStop)
 {}
 
 void
