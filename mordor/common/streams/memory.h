@@ -7,7 +7,10 @@
 class MemoryStream : public Stream
 {
 public:
+    typedef boost::shared_ptr<MemoryStream> ptr;
+public:
     MemoryStream();
+    MemoryStream(const Buffer &b);
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }

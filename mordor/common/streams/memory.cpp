@@ -12,6 +12,12 @@ MemoryStream::MemoryStream()
 : m_offset(0)
 {}
 
+MemoryStream::MemoryStream(const Buffer &b)
+: m_read(b),
+  m_original(b),
+  m_offset(0)
+{}
+
 size_t
 MemoryStream::read(Buffer &b, size_t len)
 {

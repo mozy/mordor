@@ -1,6 +1,13 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include <boost/bind.hpp>
+
 #include "mordor/common/http/parser.h"
+#include "mordor/common/http/server.h"
+#include "mordor/common/scheduler.h"
+#include "mordor/common/streams/duplex.h"
+#include "mordor/common/streams/memory.h"
+#include "mordor/common/streams/transfer.h"
 #include "mordor/test/test.h"
 
 // Simplest success case
@@ -158,4 +165,62 @@ TEST_WITH_SUITE(HTTP, quoting)
     TEST_ASSERT_EQUAL(HTTP::quote("tom"), "tom");
     TEST_ASSERT_EQUAL(HTTP::quote("\""), "\"\\\"\"");
     TEST_ASSERT_EQUAL(HTTP::quote("co\\dy"), "\"co\\\\dy\"");
+}
+
+static void
+httpRequest(HTTP::ServerRequest::ptr request)
+{
+    switch (request->request().requestLine.method) {
+        case HTTP::GET:
+        case HTTP::HEAD:
+        case HTTP::PUT:
+        case HTTP::POST:
+            request->response().entity.contentLength = request->request().entity.contentLength;
+            request->response().entity.contentType = request->request().entity.contentType;
+            request->response().general.transferEncoding = request->request().general.transferEncoding;
+            request->response().status.status = HTTP::OK;
+            request->response().entity.extension = request->request().entity.extension;
+            if (request->hasRequestBody()) {
+                if (request->request().requestLine.method != HTTP::HEAD) {
+                    if (request->request().entity.contentType.type == "multipart") {
+                        Multipart::ptr requestMultipart = request->requestMultipart();
+                        Multipart::ptr responseMultipart = request->responseMultipart();
+                        for (BodyPart::ptr requestPart = requestMultipart->nextPart();
+                            requestPart;
+                            requestPart = requestMultipart->nextPart()) {
+                            BodyPart::ptr responsePart = responseMultipart->nextPart();
+                            responsePart->headers() = requestPart->headers();
+                            transferStream(requestPart->stream(), responsePart->stream());
+                            responsePart->stream()->close();
+                        }
+                        responseMultipart->finish();
+                    } else {
+                        respondStream(request, request->requestStream());
+                        return;
+                    }
+                } else {
+                    request->finish();
+                }
+            } else {
+                request->response().entity.contentLength = 0;
+                request->finish();
+            }
+            break;
+        default:
+            respondError(request, HTTP::METHOD_NOT_ALLOWED);
+            break;
+    }
+}
+
+TEST_WITH_SUITE(HTTPServer, close10)
+{
+    Stream::ptr input(new MemoryStream(Buffer("GET / HTTP/1.0\r\n\r\n")));
+    MemoryStream::ptr output(new MemoryStream());
+    Stream::ptr stream(new DuplexStream(input, output));
+    HTTP::ServerConnection::ptr conn(new HTTP::ServerConnection(stream, &httpRequest));
+    Fiber::ptr mainfiber(new Fiber());
+    WorkerPool pool;
+    pool.schedule(Fiber::ptr(new Fiber(boost::bind(&HTTP::ServerConnection::processRequests, conn))));
+    pool.yieldTo();
+    TEST_ASSERT(output->buffer() == "HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
 }

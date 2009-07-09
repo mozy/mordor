@@ -125,9 +125,13 @@ bool runTest(TestListener *listener, const std::string &suite,
                 listener->testComplete(suite, testName);
         } catch (const TestAssertion &assertion) {
             std::ostringstream os;
-            os << "Assertion failed (" << assertion.file() << ":"
-               << assertion.line() << "):" << std::endl << assertion.what()
-               << std::endl;
+            os << "Assertion failed at " << assertion.file()
+#ifdef MSVC
+                << "(" << assertion.line() << ") : "
+#else
+                << ":" << assertion.line() << ": "
+#endif
+                << assertion.what() << std::endl;
             if (listener)
                 listener->testAsserted(suite, testName, os.str());
             return false;

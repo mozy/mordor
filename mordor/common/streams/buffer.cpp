@@ -149,6 +149,27 @@ Buffer::Buffer(const Buffer &copy)
     invariant();
 }
 
+Buffer::Buffer(const char *str)
+{
+    m_readAvailable = m_writeAvailable = 0;
+    m_writeIt = m_bufs.end();
+    copyIn(str, strlen(str));
+}
+
+Buffer::Buffer(const std::string &str)
+{
+    m_readAvailable = m_writeAvailable = 0;
+    m_writeIt = m_bufs.end();
+    copyIn(str.c_str(), str.size());
+}
+
+Buffer::Buffer(const void *data, size_t len)
+{
+    m_readAvailable = m_writeAvailable = 0;
+    m_writeIt = m_bufs.end();
+    copyIn(data, len);
+}
+
 size_t
 Buffer::readAvailable() const
 {

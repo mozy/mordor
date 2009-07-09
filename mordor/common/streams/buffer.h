@@ -57,6 +57,9 @@ private:
 public:
     Buffer();
     Buffer(const Buffer &copy);
+    Buffer(const char *str);
+    Buffer(const std::string &str);
+    Buffer(const void *data, size_t len);
 
     size_t readAvailable() const;
     size_t writeAvailable() const;

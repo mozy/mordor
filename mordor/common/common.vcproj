@@ -604,6 +604,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\duplex.h"
+				>
+			</File>
+			<File
 				RelativePath=".\exception.h"
 				>
 			</File>
@@ -668,11 +672,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.h"
+				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
+				RelativePath=".\xml\parser.h"
 				>
 			</File>
 			<File
