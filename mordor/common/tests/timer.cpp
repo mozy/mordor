@@ -18,7 +18,7 @@ TEST_WITH_SUITE(Timer, singleTimer)
     TimerManager manager;
     TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
     manager.registerTimer(0, boost::bind(&singleTimer, boost::ref(sequence), 1));
-    TEST_ASSERT_EQUAL(manager.nextTimer(), 0);
+    TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     TEST_ASSERT_EQUAL(sequence, 0);
     manager.processTimers();
     ++sequence;
@@ -33,7 +33,7 @@ TEST_WITH_SUITE(Timer, cancel)
     TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
     Timer::ptr timer =
         manager.registerTimer(0, boost::bind(&singleTimer, boost::ref(sequence), 1));
-    TEST_ASSERT_EQUAL(manager.nextTimer(), 0);
+    TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     timer->cancel();
     TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
     manager.processTimers();
@@ -49,13 +49,13 @@ TEST_WITH_SUITE(Timer, recurring)
     Timer::ptr timer =
         manager.registerTimer(0, boost::bind(&singleTimer, boost::ref(sequence),
         boost::ref(expected)), true);
-    TEST_ASSERT_EQUAL(manager.nextTimer(), 0);
+    TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     TEST_ASSERT_EQUAL(sequence, 0);
     expected = 1;
     manager.processTimers();
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 2);
-    TEST_ASSERT_EQUAL(manager.nextTimer(), 0);
+    TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     expected = 3;
     manager.processTimers();
     ++sequence;
@@ -72,7 +72,7 @@ TEST_WITH_SUITE(Timer, later)
     Timer::ptr timer = manager.registerTimer(1000 * 1000 * 1000,
         boost::bind(&singleTimer, boost::ref(sequence), 1));
     TEST_ASSERT_ABOUT_EQUAL(manager.nextTimer(),
-        1000 * 1000 * 1000, 100 * 1000 * 1000);
+        1000 * 1000 * 1000u, 100 * 1000 * 1000u);
     TEST_ASSERT_EQUAL(sequence, 0);
     manager.processTimers();
     ++sequence;

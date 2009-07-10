@@ -10,6 +10,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 
+class TimerManager;
+
 class Timer : public boost::noncopyable, public boost::enable_shared_from_this<Timer>
 {
     friend class TimerManager;
@@ -31,13 +33,20 @@ private:
     boost::function<void ()> m_dg;
     bool m_recurring;
     TimerManager *m_manager;
+
+private:
+    struct Comparator
+    {
+        bool operator()(const Timer::ptr &lhs, const Timer::ptr &rhs) const;
+    };
+
 };
 
 class TimerManager : public boost::noncopyable
 {
     friend class Timer;
 public:
-    ~TimerManager();
+    virtual ~TimerManager();
 
     virtual Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
         bool recurring = false);
@@ -47,12 +56,7 @@ public:
     void processTimers();
 
 private:
-    struct TimerComparator
-    {
-        bool operator()(const Timer::ptr &lhs, const Timer::ptr &rhs) const;
-    };
-
-    std::set<Timer::ptr, TimerComparator> m_timers;
+    std::set<Timer::ptr, Timer::Comparator> m_timers;
     boost::mutex m_mutex;
 };
 

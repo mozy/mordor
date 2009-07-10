@@ -94,7 +94,7 @@ Timer::cancel()
 {
     if (m_next != 0) {
         boost::mutex::scoped_lock lock(m_manager->m_mutex);
-        std::set<Timer::ptr, TimerManager::TimerComparator>::iterator it =
+        std::set<Timer::ptr, Timer::Comparator>::iterator it =
             m_manager->m_timers.find(shared_from_this());
         assert(it != m_manager->m_timers.end());
         m_next = 0;
@@ -126,7 +126,7 @@ TimerManager::nextTimer()
     boost::mutex::scoped_lock lock(m_mutex);
     if (m_timers.empty())
         return ~0ull;
-    Timer::ptr &next = *m_timers.begin();
+    const Timer::ptr &next = *m_timers.begin();
     unsigned long long now = nowUs();
     if (now >= next->m_next)
         return 0;
@@ -149,7 +149,7 @@ TimerManager::processTimers()
         Timer nowTimer(now);
         Timer::ptr nowTimerPtr(&nowTimer, &delete_nothing);
         // Find all timers that are expired
-        std::set<Timer::ptr, TimerComparator>::iterator it =
+        std::set<Timer::ptr, Timer::Comparator>::iterator it =
             m_timers.lower_bound(nowTimerPtr);
         while (it != m_timers.end() && (*it)->m_next == now ) ++it;
         // Copy to expired, remove from m_timers;
@@ -182,8 +182,8 @@ TimerManager::processTimers()
 }
 
 bool
-TimerManager::TimerComparator::operator()(const Timer::ptr &lhs,
-                                          const Timer::ptr &rhs) const
+Timer::Comparator::operator()(const Timer::ptr &lhs,
+                              const Timer::ptr &rhs) const
 {
     // Order NULL before everything else
     if (!lhs && !rhs)
