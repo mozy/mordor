@@ -12,7 +12,7 @@ singleTimer(int &sequence, int &expected)
     TEST_ASSERT_EQUAL(sequence, expected);
 }
 
-TEST_WITH_SUITE(Timer, singleTimer)
+TEST_WITH_SUITE(Timer, single)
 {
     int sequence = 0;
     TimerManager manager;
@@ -23,6 +23,23 @@ TEST_WITH_SUITE(Timer, singleTimer)
     manager.processTimers();
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 2);
+    TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+}
+
+TEST_WITH_SUITE(Timer, multiple)
+{
+    int sequence = 0;
+    TimerManager manager;
+    TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    manager.registerTimer(0, boost::bind(&singleTimer, boost::ref(sequence),
+        boost::ref(sequence)));
+    manager.registerTimer(0, boost::bind(&singleTimer, boost::ref(sequence),
+        boost::ref(sequence)));
+    TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
+    TEST_ASSERT_EQUAL(sequence, 0);
+    manager.processTimers();
+    ++sequence;
+    TEST_ASSERT_EQUAL(sequence, 3);
     TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
 }
 
