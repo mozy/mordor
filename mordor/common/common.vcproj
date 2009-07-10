@@ -546,6 +546,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\timer.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\transfer.cpp"
 				>
 			</File>
@@ -700,11 +704,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
@@ -721,6 +725,10 @@
 			</File>
 			<File
 				RelativePath=".\string.h"
+				>
+			</File>
+			<File
+				RelativePath=".\timer.h"
 				>
 			</File>
 			<File

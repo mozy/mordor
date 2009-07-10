@@ -143,6 +143,9 @@ NO_SERIALIZE_BARE(std::vector<T>)
 #define TEST_ASSERT_GREATER_THAN_OR_EQUAL(lhs, rhs)                             \
     assertGreaterThanOrEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
+#define TEST_ASSERT_ABOUT_EQUAL(lhs, rhs, variance)                             \
+    assertAboutEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs, variance)
+
 #define TEST_ASSERT_EXCEPTION(code, exception)                                  \
     try {                                                                       \
         code;                                                                   \
@@ -217,6 +220,15 @@ void assertGreaterThanOrEqual(const char *file, int line,
 {
     if (!(lhs >= rhs)) {
         assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">=");
+    }
+}
+
+template <class T, class U, class V>
+void assertAboutEqual(const char *file, int line,
+    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr, V variance)
+{
+    if (!(lhs - variance < rhs && lhs + variance > rhs)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "~==");
     }
 }
 

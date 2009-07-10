@@ -336,6 +336,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\timer.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\uri.cpp"
 				>
 			</File>

@@ -345,6 +345,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/streams/transfer.o		\
 	$(OBJDIR)/mordor/common/streams/zlib.o			\
 	$(OBJDIR)/mordor/common/string.o			\
+	$(OBJDIR)/mordor/common/timer.o				\
 	$(OBJDIR)/mordor/common/uri.o				\
 	$(OBJDIR)/mordor/common/xml/xml_parser.o
 ifeq ($(Q),@)
