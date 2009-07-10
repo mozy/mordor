@@ -248,7 +248,7 @@ TEST_WITH_SUITE(HTTPServer, close10)
     TEST_ASSERT(response.general.connection.find("close") != response.general.connection.end());
 }
 
-TEST_WITH_SUITE(HTTPServer, keepalive10)
+TEST_WITH_SUITE(HTTPServer, keepAlive10)
 {
     HTTP::Response response;
     doSingleRequest(
@@ -269,6 +269,7 @@ TEST_WITH_SUITE(HTTPServer, noHost11)
         "GET / HTTP/1.1\r\n"
         "\r\n",
         response);
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
     TEST_ASSERT_EQUAL(response.status.status, HTTP::BAD_REQUEST);
 }
 
