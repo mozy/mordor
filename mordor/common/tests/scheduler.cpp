@@ -85,7 +85,8 @@ TEST_WITH_SUITE(Scheduler, otherThread)
     TEST_ASSERT_EQUAL(f->state(), Fiber::INIT);
     TEST_ASSERT(!done);
     pool.schedule(f);
-    while (!done);
+    volatile bool &doneVolatile = done;
+    while (!doneVolatile);
     pool.stop();
     TEST_ASSERT_EQUAL(f->state(), Fiber::TERM);
 }
