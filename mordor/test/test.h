@@ -131,6 +131,18 @@ NO_SERIALIZE_BARE(std::vector<T>)
 #define TEST_ASSERT_NOT_EQUAL(lhs, rhs)                                         \
     assertNotEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
+#define TEST_ASSERT_LESS_THAN(lhs, rhs)                                         \
+    assertLessThan(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+
+#define TEST_ASSERT_LESS_THAN_OR_EQUAL(lhs, rhs)                                \
+    assertLessThanOrEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+
+#define TEST_ASSERT_GREATER_THAN(lhs, rhs)                                      \
+    assertGreaterThan(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+
+#define TEST_ASSERT_GREATER_THAN_OR_EQUAL(lhs, rhs)                             \
+    assertGreaterThanOrEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+
 #define TEST_ASSERT_EXCEPTION(code, exception)                                  \
     try {                                                                       \
         code;                                                                   \
@@ -142,15 +154,24 @@ NO_SERIALIZE_BARE(std::vector<T>)
 void assertion(const char *file, int line, const std::string &expr);
 
 template <class T, class U>
+void assertComparison(const char *file, int line,
+    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr,
+    const char *op)
+{
+    std::ostringstream os;
+    serializer<T> t(lhs);
+    serializer<U> u(rhs);
+    os << lhsExpr << " " << op << " " << rhsExpr
+        << "\n" << t << " " << op << " " << u;
+    assertion(file, line, os.str());
+}
+
+template <class T, class U>
 void assertEqual(const char *file, int line,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
 {
     if (!(lhs == rhs)) {
-        std::ostringstream os;
-        serializer<T> t(lhs);
-        serializer<U> u(rhs);
-        os << lhsExpr << " == " << rhsExpr << "\n" << t << " == " << u;
-        assertion(file, line, os.str());
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "==");
     }
 }
 
@@ -159,13 +180,44 @@ void assertNotEqual(const char *file, int line,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
 {
     if (!(lhs != rhs)) {
-        std::ostringstream os;
-        serializer<T> t(lhs);
-        serializer<U> u(rhs);
-        os << lhsExpr << " != " << rhsExpr << "\n" << t << " != " << u;
-        assertion(file, line, os.str());
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "!=");
     }
 }
 
+template <class T, class U>
+void assertLessThan(const char *file, int line,
+    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(lhs < rhs)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "<");
+    }
+}
+
+template <class T, class U>
+void assertLessThanOrEqual(const char *file, int line,
+    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(lhs <= rhs)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "<=");
+    }
+}
+
+template <class T, class U>
+void assertGreaterThan(const char *file, int line,
+    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(lhs > rhs)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">");
+    }
+}
+
+template <class T, class U>
+void assertGreaterThanOrEqual(const char *file, int line,
+    T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(lhs >= rhs)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">=");
+    }
+}
 
 #endif
