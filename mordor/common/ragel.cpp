@@ -4,29 +4,54 @@
 
 #include <cassert>
 
-void
-RagelParser::run(const std::string& str)
+size_t
+RagelParser::run(const void *buf, size_t len)
 {
     init();
-    p = str.c_str();
-    pe = p + str.length();
+    p = (const char *)buf;
+    pe = p + len;
     eof = pe;
 
     exec();
 
-    if (error()) {
-        return;
-    }
-    if (p == pe) {
-        return;
-    } else {
-        init();
-    }
+    assert(!(complete() && error()));
+    return len - (pe - p);
 }
 
-void
+size_t
+RagelParser::run(const char *str)
+{
+    return run(str, strlen(str));
+}
+
+size_t
+RagelParser::run(const std::string& str)
+{
+    return run(str.c_str(), str.length());
+}
+
+size_t
+RagelParser::run(const Buffer& b)
+{
+    init();
+    size_t total = 0;
+
+    const std::vector<iovec> bufs = b.readBufs();
+    for (size_t i = 0; i < bufs.size(); ++i) {
+        size_t consumed = run(bufs[i].iov_base, bufs[i].iov_len, false);
+        total += consumed;
+        if (error() || complete())
+            break;
+    }
+    if (!error() && !complete())
+        run(NULL, 0, true);
+    return total;
+}
+
+unsigned long long
 RagelParser::run(Stream &stream)
 {
+    unsigned long long total = 0;
     init();
     Buffer b;
     while (!complete() && !error()) {
@@ -38,7 +63,8 @@ RagelParser::run(Stream &stream)
         } else {
             const std::vector<iovec> bufs = b.readBufs();
             for (size_t i = 0; i < bufs.size(); ++i) {
-                size_t consumed = run((const char*)bufs[i].iov_base, bufs[i].iov_len, false);
+                size_t consumed = run(bufs[i].iov_base, bufs[i].iov_len, false);
+                total += consumed;
                 b.consume(consumed);
                 if (error() || complete())
                     break;
@@ -48,6 +74,7 @@ RagelParser::run(Stream &stream)
     if (stream.supportsUnread()) {
         stream.unread(b, b.readAvailable());
     }
+    return total;
 }
 
 void
@@ -58,7 +85,7 @@ RagelParser::init()
 }
 
 size_t
-RagelParser::run(const char *buf, size_t len, bool isEof)
+RagelParser::run(const void *buf, size_t len, bool isEof)
 {
     assert(!complete());
     assert(!error());
@@ -68,17 +95,19 @@ RagelParser::run(const char *buf, size_t len, bool isEof)
     // Remember and reset mark in case fullString gets moved
     if (mark) {
         markSpot = mark - m_fullString.c_str();
+        m_fullString.append((const char *)buf, len);
+
+        if (markSpot != (size_t)~0) {
+            mark = m_fullString.c_str() + markSpot;
+        }
+        p = m_fullString.c_str();
+        pe = p + m_fullString.length();
+        p = pe - len;
+    } else {
+        p = (const char *)buf;
+        pe = p + len;
     }
 
-    m_fullString.append(buf, len);
-
-    if (markSpot != (size_t)~0) {
-        mark = m_fullString.c_str() + markSpot;
-    }
-
-    p = m_fullString.c_str();
-    pe = p + m_fullString.length();
-    p = pe - len;
     if (isEof) {
         eof = pe;
     } else {
@@ -90,9 +119,14 @@ RagelParser::run(const char *buf, size_t len, bool isEof)
     if (!mark) {
         m_fullString.clear();
     } else {
-        markSpot = mark - m_fullString.c_str();
-        m_fullString = m_fullString.substr(markSpot);
-        mark = m_fullString.c_str();
+        if (m_fullString.empty()) {
+            m_fullString.append(mark, pe - mark);
+            mark = m_fullString.c_str();
+        } else {
+            markSpot = mark - m_fullString.c_str();
+            m_fullString = m_fullString.substr(markSpot);
+            mark = m_fullString.c_str();
+        }
     }
 
     return p - (pe - len);

@@ -212,9 +212,10 @@ httpRequest(HTTP::ServerRequest::ptr request)
     }
 }
 
-TEST_WITH_SUITE(HTTPServer, close10)
+static void
+doSingleRequest(const char *request, HTTP::Response &response)
 {
-    Stream::ptr input(new MemoryStream(Buffer("GET / HTTP/1.0\r\n\r\n")));
+    Stream::ptr input(new MemoryStream(Buffer(request)));
     MemoryStream::ptr output(new MemoryStream());
     Stream::ptr stream(new DuplexStream(input, output));
     HTTP::ServerConnection::ptr conn(new HTTP::ServerConnection(stream, &httpRequest));
@@ -222,5 +223,78 @@ TEST_WITH_SUITE(HTTPServer, close10)
     WorkerPool pool;
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&HTTP::ServerConnection::processRequests, conn))));
     pool.yieldTo();
-    TEST_ASSERT(output->buffer() == "HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+    HTTP::ResponseParser parser(response);
+    parser.run(output->buffer());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT(!parser.error());
+}
+
+TEST_WITH_SUITE(HTTPServer, badRequest)
+{
+    HTTP::Response response;
+    doSingleRequest("garbage", response);
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::BAD_REQUEST);
+}
+
+TEST_WITH_SUITE(HTTPServer, close10)
+{
+    HTTP::Response response;
+    doSingleRequest(
+        "GET / HTTP/1.0\r\n"
+        "\r\n",
+        response);
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 0));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT(response.general.connection.find("close") != response.general.connection.end());
+}
+
+TEST_WITH_SUITE(HTTPServer, keepalive10)
+{
+    HTTP::Response response;
+    doSingleRequest(
+        "GET / HTTP/1.0\r\n"
+        "Connection: Keep-Alive\r\n"
+        "\r\n",
+        response);
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 0));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT(response.general.connection.find("Keep-Alive") != response.general.connection.end());
+    TEST_ASSERT(response.general.connection.find("close") == response.general.connection.end());
+}
+
+TEST_WITH_SUITE(HTTPServer, noHost11)
+{
+    HTTP::Response response;
+    doSingleRequest(
+        "GET / HTTP/1.1\r\n"
+        "\r\n",
+        response);
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::BAD_REQUEST);
+}
+
+TEST_WITH_SUITE(HTTPServer, close11)
+{
+    HTTP::Response response;
+    doSingleRequest(
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "Connection: close\r\n"
+        "\r\n",
+        response);
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT(response.general.connection.find("close") != response.general.connection.end());
+}
+
+TEST_WITH_SUITE(HTTPServer, keepAlive11)
+{
+    HTTP::Response response;
+    doSingleRequest(
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n",
+        response);
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT(response.general.connection.find("close") == response.general.connection.end());
 }

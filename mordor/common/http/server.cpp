@@ -332,7 +332,14 @@ HTTP::ServerRequest::doRequest()
     try {
         // Read and parse headers
         RequestParser parser(m_request);
-        parser.run(m_conn->m_stream);
+        unsigned long long consumed = parser.run(m_conn->m_stream);
+        if (consumed == 0 && !parser.error() && !parser.complete()) {
+            // EOF; finish up as a dummy response
+            m_willClose = true;
+            m_responseInFlight = true;
+            m_conn->scheduleNextResponse(shared_from_this());
+            return;
+        }
         if (parser.error() || !parser.complete()) {
             respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
             return;

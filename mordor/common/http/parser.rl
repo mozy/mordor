@@ -34,9 +34,8 @@ static
 HTTP::Method
 parseMethod(const char *str, const char *end)
 {
-    *(char*)end = '\0';
     for(size_t i = 0; i < 8; ++i) {
-        if (stricmp(str, HTTP::methods[i]) == 0) {
+        if (strnicmp(str, HTTP::methods[i], end - str) == 0) {
             return (HTTP::Method)i;
         }
     }

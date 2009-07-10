@@ -13,8 +13,10 @@
 
 #ifdef WINDOWS
 #define stricmp _stricmp
+#define strnicmp _strnicmp
 #else
 #define stricmp strcasecmp
+#define strnicmp strncasecmp
 #endif
 
 class HTTPException : public std::runtime_error
