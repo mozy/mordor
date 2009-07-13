@@ -115,6 +115,24 @@ TEST_WITH_SUITE(Scheduler, spawnBasic)
     TEST_ASSERT_EQUAL(f->state(), Fiber::TERM);
 }
 
+TEST_WITH_SUITE(Scheduler, switchToStress)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool poolA(1, true), poolB(1, false);
+
+    // Ensure we return to poolA
+    SchedulerSwitcher switcher;
+    for (int i = 0; i < 10000; ++i) {
+        if (i % 2) {
+            poolA.switchTo();
+            TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);
+        } else {
+            poolB.switchTo();
+            TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolB);
+        }
+    }
+}
+
 void
 runInContext(Scheduler &poolA, Scheduler &poolB)
 {
