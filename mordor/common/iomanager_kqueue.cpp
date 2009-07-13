@@ -42,14 +42,13 @@ IOManagerKQueue::registerEvent(int fd, Event events)
     assert(Scheduler::getThis());
     assert(Fiber::getThis());
 
-    AsyncEvent event;
-    event.event.ident = fd;
-    event.event.flags = EV_ADD;
-    event.event.filter = (short)events;
     std::map<std::pair<int, Event>, AsyncEvent>::iterator it =
         m_pendingEvents.find(std::pair<int, Event>(fd, events));
     assert(it == m_pendingEvents.end());
     AsyncEvent& e = m_pendingEvents[std::pair<int, Event>(fd, events)];
+    e.event.ident = fd;
+    e.event.flags = EV_ADD;
+    e.event.filter = (short)events;
     e.m_scheduler = Scheduler::getThis();
     e.m_fiber = Fiber::getThis();
     if (kevent(m_kqfd, &e.event, 1, NULL, 0, NULL)) {
@@ -109,7 +108,7 @@ IOManagerKQueue::idle()
             }
             rc = kevent(m_kqfd, NULL, 0, events, 64, timeout);
         }
-        if (rc <= 0) {
+        if (rc < 0) {
             throwExceptionFromLastError();
         }
         processTimers();

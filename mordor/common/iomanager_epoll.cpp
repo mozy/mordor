@@ -130,7 +130,7 @@ IOManagerEPoll::idle()
                 timeout = (int)(nextTimeout / 1000);
             rc = epoll_wait(m_epfd, events, 64, timeout);
         }
-        if (rc <= 0) {
+        if (rc < 0) {
             throwExceptionFromLastError();
         }
         processTimers();
