@@ -43,6 +43,7 @@ ThreadPool2::join_all()
             (*it)->join();
         }
     }
+    m_threads.clear();
 }
 
 static void delete_nothing_scheduler(Scheduler* f) {}
@@ -51,11 +52,11 @@ static void delete_nothing(Fiber* f) {}
 boost::thread_specific_ptr<Scheduler> Scheduler::t_scheduler(&delete_nothing_scheduler);
 boost::thread_specific_ptr<Fiber> Scheduler::t_fiber(&delete_nothing);
 
-Scheduler::Scheduler(int threads, bool useCaller, bool autoStop)
-    : m_stopping(true)
+Scheduler::Scheduler(int threads, bool useCaller)
+    : m_stopping(true),
+      m_autoStop(false)
 {
     m_threads.init(boost::bind(&Scheduler::run, this));
-    m_autoStop = autoStop && useCaller && threads == 1;
     if (useCaller)
         assert(threads >= 1);
     if (useCaller) {
@@ -95,6 +96,14 @@ Scheduler::start()
 void
 Scheduler::stop()
 {
+    // Already stopped
+    if (m_rootFiber &&
+        m_threads.size() == 0 &&
+        (m_rootFiber->state() == Fiber::TERM || m_rootFiber->state() == Fiber::INIT)) {
+        m_stopping = true;
+        return;
+    }
+
     if (m_rootThread != boost::thread::id()) {
         // A thread-hijacking scheduler must be stopped
         // from within itself to return control to the
@@ -136,7 +145,18 @@ Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
 {
     assert(f);
     boost::mutex::scoped_lock lock(m_mutex);
-    FiberAndThread ft = {f, thread };
+    FiberAndThread ft = {f, NULL, thread };
+    m_fibers.push_back(ft);
+    if (m_fibers.size() == 1)
+        tickle();
+}
+
+void
+Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
+{
+    assert(dg);
+    boost::mutex::scoped_lock lock(m_mutex);
+    FiberAndThread ft = {Fiber::ptr(), dg, thread };
     m_fibers.push_back(ft);
     if (m_fibers.size() == 1)
         tickle();
@@ -169,6 +189,17 @@ Scheduler::yieldTo()
 }
 
 void
+Scheduler::dispatch()
+{
+    assert(m_rootThread == boost::this_thread::get_id() &&
+        m_threads.size() == 0);
+    m_stopping = true;
+    m_autoStop = true;
+    yieldTo();
+    m_autoStop = false;
+}
+
+void
 Scheduler::yieldTo(bool yieldToCallerOnTerminate)
 {
     assert(t_fiber.get());
@@ -176,7 +207,7 @@ Scheduler::yieldTo(bool yieldToCallerOnTerminate)
     if (yieldToCallerOnTerminate)
         assert(m_rootThread == boost::this_thread::get_id());
     if (t_fiber->state() != Fiber::HOLD) {
-        m_stopping = false;
+        m_stopping = m_autoStop || m_stopping;
         t_fiber->reset();
     }
     t_fiber->yieldTo(yieldToCallerOnTerminate);
@@ -199,10 +230,11 @@ Scheduler::run()
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this), 65536 * 4));
     while (true) {
         Fiber::ptr f;
+        boost::function<void ()> dg;
         bool loop = false;
         {
             boost::mutex::scoped_lock lock(m_mutex);
-            while (!f) {
+            while (!f && !dg) {
                 if (m_fibers.empty())
                     break;
                 std::list<FiberAndThread>::iterator it;
@@ -214,10 +246,15 @@ Scheduler::run()
                         loop = true;
                         break;
                     }
-                    f = it->fiber;
-                    if (f->state() == Fiber::EXEC) {
-                        f.reset();
-                        continue;
+                    assert(it->fiber || it->dg);
+                    if (it->fiber) {
+                        f = it->fiber;
+                        if (f->state() == Fiber::EXEC) {
+                            f.reset();
+                            continue;
+                        }
+                    } else {
+                        dg = it->dg;
                     }
                     m_fibers.erase(it);
                     break;
@@ -238,8 +275,9 @@ Scheduler::run()
                 f->yieldTo();
             }
             continue;
-        } else if (m_autoStop) {
-            m_stopping = true;
+        } else if (dg) {
+            dg();
+            continue;
         }
         if (idleFiber->state() == Fiber::TERM) {
             return;
@@ -248,8 +286,8 @@ Scheduler::run()
     }
 }
 
-WorkerPool::WorkerPool(int threads, bool useCaller, bool autoStop)
-    : Scheduler(threads, useCaller, autoStop)
+WorkerPool::WorkerPool(int threads, bool useCaller)
+    : Scheduler(threads, useCaller)
 {
     start();
 }

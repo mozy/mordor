@@ -35,7 +35,7 @@ private:
 class Scheduler
 {
 public:
-    Scheduler(int threads = 1, bool useCaller = true, bool autoStop = true);
+    Scheduler(int threads = 1, bool useCaller = true);
     virtual ~Scheduler();
 
     static Scheduler* getThis();
@@ -44,11 +44,17 @@ public:
     bool stopping();
 
     void schedule(Fiber::ptr f, boost::thread::id thread = boost::thread::id());
+    void schedule(boost::function<void ()> dg, boost::thread::id thread = boost::thread::id());
     void switchTo(boost::thread::id thread = boost::thread::id());
     void yieldTo();
+    // Useful for single thread hijacking scheduler only
+    // Calls yieldTo(), and yields back when there is no more work to be done
+    void dispatch();
 
 protected:
     void start();
+    // Call from derived destructors
+    void selfStop();
 
     virtual void idle() = 0;
     virtual void tickle() = 0;
@@ -60,6 +66,7 @@ private:
 private:
     struct FiberAndThread {
         Fiber::ptr fiber;
+        boost::function<void ()> dg;
         boost::thread::id thread;
     };
     static boost::thread_specific_ptr<Scheduler> t_scheduler;
@@ -70,14 +77,15 @@ private:
     Fiber::ptr m_rootFiber;
     ThreadPool2 m_threads;
     size_t m_threadCount;
-    bool m_autoStop;
     bool m_stopping;
+    bool m_autoStop;
 };
 
 class WorkerPool : public Scheduler
 {
 public:
-    WorkerPool(int threads = 1, bool useCaller = true, bool autoStop = true);
+    WorkerPool(int threads = 1, bool useCaller = true);
+    ~WorkerPool() { stop(); }
 
 protected:
     void idle();

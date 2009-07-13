@@ -336,6 +336,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\timer.cpp"
 				>
 			</File>

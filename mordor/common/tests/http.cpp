@@ -222,7 +222,7 @@ doSingleRequest(const char *request, HTTP::Response &response)
     Fiber::ptr mainfiber(new Fiber());
     WorkerPool pool;
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&HTTP::ServerConnection::processRequests, conn))));
-    pool.yieldTo();
+    pool.dispatch();
     HTTP::ResponseParser parser(response);
     parser.run(output->buffer());
     TEST_ASSERT(parser.complete());

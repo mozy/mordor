@@ -7,6 +7,7 @@
 
 #include "fiber.h"
 #include "scheduler.h"
+#include "timer.h"
 #include "version.h"
 
 #ifndef WINDOWS
@@ -24,16 +25,22 @@ struct AsyncEventIOCP
     DWORD lastError;
 
     Scheduler  *m_scheduler;
+    boost::thread::id m_thread;
     Fiber::ptr  m_fiber;
 };
 
-class IOManagerIOCP : public Scheduler
+class IOManagerIOCP : public Scheduler, public TimerManager
 {
 public:
     IOManagerIOCP(int threads = 1, bool useCaller = true);
+    ~IOManagerIOCP() { stop(); }
 
     void registerFile(HANDLE handle);
     void registerEvent(AsyncEventIOCP *e);
+    void cancelEvent(HANDLE hFile, AsyncEventIOCP *e);
+
+    Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
+        bool recurring = false);
     
 protected:
     void idle();

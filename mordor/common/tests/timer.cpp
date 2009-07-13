@@ -57,6 +57,39 @@ TEST_WITH_SUITE(Timer, cancel)
     TEST_ASSERT_EQUAL(sequence, 0);
 }
 
+TEST_WITH_SUITE(Timer, idempotentCancel)
+{
+    int sequence = 0;
+    TimerManager manager;
+    TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    Timer::ptr timer =
+        manager.registerTimer(0, boost::bind(&singleTimer, boost::ref(sequence), 1));
+    TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
+    timer->cancel();
+    timer->cancel();
+    TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    manager.processTimers();
+    TEST_ASSERT_EQUAL(sequence, 0);
+}
+
+TEST_WITH_SUITE(Timer, idempotentCancelAfterSuccess)
+{
+    int sequence = 0;
+    TimerManager manager;
+    TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    Timer::ptr timer =
+        manager.registerTimer(0, boost::bind(&singleTimer, boost::ref(sequence), 1));
+    TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
+    TEST_ASSERT_EQUAL(sequence, 0);
+    manager.processTimers();
+    ++sequence;
+    TEST_ASSERT_EQUAL(sequence, 2);
+    TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    timer->cancel();
+    timer->cancel();
+}
+
+
 TEST_WITH_SUITE(Timer, recurring)
 {
     int sequence = 0;

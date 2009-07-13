@@ -4,6 +4,8 @@
 
 #include <cassert>
 
+#include <boost/bind.hpp>
+
 #include "exception.h"
 
 AsyncEventIOCP::AsyncEventIOCP()
@@ -36,12 +38,41 @@ IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
     assert(Scheduler::getThis());
     assert(Fiber::getThis());
     e->m_scheduler = Scheduler::getThis();
+    e->m_thread = boost::this_thread::get_id();
     e->m_fiber = Fiber::getThis();
     {
         boost::mutex::scoped_lock lock(m_mutex);
         assert(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
         m_pendingEvents[&e->overlapped] = e;
     }
+}
+
+static void CancelIoShim(HANDLE hFile)
+{
+    CancelIo(hFile);
+}
+
+void
+IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
+{
+    // TODO: Use CancelIoEx if available
+    if (e->m_thread == boost::this_thread::get_id()) {
+        CancelIo(hFile);
+    } else {
+        // Have to marshal to the original thread
+        e->m_scheduler->schedule(boost::bind(&CancelIoShim, hFile), e->m_thread);
+    }
+}
+
+Timer::ptr
+IOManagerIOCP::registerTimer(unsigned long long us, boost::function<void ()> dg,
+        bool recurring)
+{
+    bool atFront;
+    Timer::ptr result = TimerManager::registerTimer(us, dg, recurring, atFront);
+    if (atFront)
+        tickle();
+    return result;
 }
 
 void
@@ -51,21 +82,30 @@ IOManagerIOCP::idle()
     ULONG_PTR completionKey;
     OVERLAPPED *overlapped;
     while (true) {
-        if (stopping()) {
+        unsigned long long nextTimeout = nextTimer();
+        if (nextTimeout == ~0ull && stopping()) {
             boost::mutex::scoped_lock lock(m_mutex);
             if (m_pendingEvents.empty()) {
                 return;
             }
         }
+        DWORD timeout = INFINITE;
+        if (nextTimeout != ~0ull)
+            timeout = (DWORD)(nextTimeout / 1000);
         BOOL ret = GetQueuedCompletionStatus(m_hCompletionPort,
-            &numberOfBytes, &completionKey, &overlapped, INFINITE);
+            &numberOfBytes, &completionKey, &overlapped, timeout);
         if (ret && completionKey == ~0) {
             Fiber::yield();
             continue;
         }
         if (!ret && overlapped == NULL) {
+            if (GetLastError() == WAIT_TIMEOUT) {
+                processTimers();
+                continue;
+            }
             throwExceptionFromLastError();
         }
+        processTimers();
 
         AsyncEventIOCP *e;
         {
@@ -82,6 +122,7 @@ IOManagerIOCP::idle()
         e->completionKey = completionKey;
         e->lastError = GetLastError();
         e->m_scheduler->schedule(e->m_fiber);
+        e->m_fiber.reset();
         Fiber::yield();
     }
 }

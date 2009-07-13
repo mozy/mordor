@@ -48,12 +48,23 @@ class TimerManager : public boost::noncopyable
 public:
     virtual ~TimerManager();
 
-    virtual Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
-        bool recurring = false);
+    virtual Timer::ptr registerTimer(unsigned long long us,
+        boost::function<void ()> dg, bool recurring = false);
 
     // How *long* until the next timer expires; ~0ull if no timers
     unsigned long long nextTimer();
     void processTimers();
+
+    // Return monotonically increasing count of microseconds.  The number returned
+    // isn't guaranteed to be relative to any particular start time, however,
+    // the difference between two successive calls to now() should be
+    // equal to the time that elapsed between calls.  This should be true
+    // even if the system clock is changed.
+    static unsigned long long now();
+
+protected:
+    Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
+        bool recurring, bool &atFront);
 
 private:
     std::set<Timer::ptr, Timer::Comparator> m_timers;

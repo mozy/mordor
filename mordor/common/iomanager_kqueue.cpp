@@ -29,6 +29,7 @@ IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
 
 IOManagerKQueue::~IOManagerKQueue()
 {
+    stop();
     close(m_kqfd);
     close(m_tickleFds[0]);
     close(m_tickleFds[1]);
@@ -45,15 +46,44 @@ IOManagerKQueue::registerEvent(int fd, Event events)
     event.event.ident = fd;
     event.event.flags = EV_ADD;
     event.event.filter = (short)events;
-    std::pair<std::set<AsyncEvent>::iterator, bool> it = m_pendingEvents.insert(event);
-    assert(it.second);
-    AsyncEvent& e = *((AsyncEvent*)&*it.first);
-    e.event.udata = &e;
+    std::map<std::pair<int, Event>, AsyncEvent>::iterator it =
+        m_pendingEvents.find(std::pair<int, Event>(fd, events));
+    assert(it == m_pendingEvents.end());
+    AsyncEvent& e = m_pendingEvents[std::pair<int, Event>(fd, events)];
     e.m_scheduler = Scheduler::getThis();
     e.m_fiber = Fiber::getThis();
-    if (kevent(m_kqfd, &it.first->event, 1, NULL, 0, NULL)) {
+    if (kevent(m_kqfd, &e.event, 1, NULL, 0, NULL)) {
         throwExceptionFromLastError();
     }
+}
+
+void
+IOManagerKQueue::cancelEvent(int fd, Event events)
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    std::map<std::pair<int, Event>, AsyncEvent>::iterator it =
+        m_pendingEvents.find(std::pair<int, Event>(fd, events));
+    if (it == m_pendingEvents.end())
+        return;
+    AsyncEvent &e = it->second;
+
+    e.event.flags = EV_DELETE;
+    if (kevent(m_kqfd, &e.event, 1, NULL, 0, NULL)) {
+        throwExceptionFromLastError();
+    }
+    e.m_scheduler->schedule(e.m_fiber);
+    m_pendingEvents.erase(it);
+}
+
+Timer::ptr
+IOManagerKQueue::registerTimer(unsigned long long us, boost::function<void ()> dg,
+        bool recurring)
+{
+    bool atFront;
+    Timer::ptr result = TimerManager::registerTimer(us, dg, recurring, atFront);
+    if (atFront)
+        tickle();
+    return result;
 }
 
 void
@@ -69,11 +99,20 @@ IOManagerKQueue::idle()
         }
         int rc = -1;
         errno = EINTR;
-        while (rc < 0 && errno == EINTR)
-            rc = kevent(m_kqfd, NULL, 0, events, 64, NULL);
+        while (rc < 0 && errno == EINTR) {
+            struct timespec *timeout = NULL, timeoutStorage;
+            unsigned long long nextTimeout = nextTimer();
+            if (nextTimeout != ~0ull) {
+                timeout = &timeoutStorage;
+                timeout->tv_sec = nextTimeout / 1000000;
+                timeout->tv_nsec = (nextTimeout % 1000000) * 1000;
+            }
+            rc = kevent(m_kqfd, NULL, 0, events, 64, timeout);
+        }
         if (rc <= 0) {
             throwExceptionFromLastError();
         }
+        processTimers();
 
         for(int i = 0; i < rc; ++i) {
             struct kevent &event = events[i];
@@ -85,15 +124,17 @@ IOManagerKQueue::idle()
             }
 
             boost::mutex::scoped_lock lock(m_mutex);
-            std::set<AsyncEvent>::iterator it = m_pendingEvents.find(*(AsyncEvent*)event.udata);
-            assert(it != m_pendingEvents.end());
-            const AsyncEvent &e = *it;
-            e.m_scheduler->schedule(e.m_fiber);
+            std::map<std::pair<int, Event>, AsyncEvent>::iterator it =
+                m_pendingEvents.find(std::pair<int, Event>((int)event.ident, (Event)event.filter));
+            if (it == m_pendingEvents.end())
+                continue;
+            const AsyncEvent &e = it->second;
 
             event.flags = EV_DELETE;
             if (kevent(m_kqfd, &event, 1, NULL, 0, NULL)) {
                 throwExceptionFromLastError();
             }
+            e.m_scheduler->schedule(e.m_fiber);
             m_pendingEvents.erase(it);
         }
         Fiber::yield();

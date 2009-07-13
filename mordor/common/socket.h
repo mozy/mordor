@@ -48,6 +48,11 @@ public:
     Socket(IOManager &ioManager, int family, int type, int protocol = 0);
     ~Socket();
 
+    unsigned long long receiveTimeout() { return m_receiveTimeout; }
+    void receiveTimeout(unsigned long long us) { m_receiveTimeout = us; }
+    unsigned long long sendTimeout() { return m_sendTimeout; }
+    void sendTimeout(unsigned long long us) { m_sendTimeout = us; }
+
     void bind(const Address &addr);
     void bind(const boost::shared_ptr<Address> addr)
     { bind(*addr.get()); }
@@ -87,9 +92,15 @@ public:
     int protocol() { return m_protocol; }
 
 private:
+#ifndef WINDOWS
+    void cancelIo(IOManager::Event event, bool &cancelled);
+#endif
+
+private:
     socket_t m_sock;
     int m_family, m_protocol;
     IOManager *m_ioManager;
+    unsigned long long m_receiveTimeout, m_sendTimeout;
 #ifdef WINDOWS
     AsyncEvent m_sendEvent, m_receiveEvent;
 #endif

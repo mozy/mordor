@@ -5,16 +5,17 @@
 #include <sys/types.h>
 #include <sys/event.h>
 
-#include <set>
+#include <map>
 
 #include "scheduler.h"
+#include "timer.h"
 #include "version.h"
 
 #ifndef BSD
 #error IOManagerKQueue is BSD only
 #endif
 
-class IOManagerKQueue : public Scheduler
+class IOManagerKQueue : public Scheduler, public TimerManager
 {
 public:
     enum Event {
@@ -39,6 +40,11 @@ public:
     ~IOManagerKQueue();
 
     void registerEvent(int fd, Event events);
+    void cancelEvent(int fd, Event events);
+
+    Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
+        bool recurring = false);
+
 protected:
     void idle();
     void tickle();
@@ -46,7 +52,7 @@ protected:
 private:
     int m_kqfd;
     int m_tickleFds[2];
-    std::set<AsyncEvent> m_pendingEvents;
+    std::map<std::pair<int, Event>, AsyncEvent> m_pendingEvents;
     boost::mutex m_mutex;
 };
 

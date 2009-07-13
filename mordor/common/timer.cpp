@@ -26,21 +26,15 @@ static unsigned long long queryFrequency()
 unsigned long long g_frequency = queryFrequency();
 #endif
 
-// Return monotonically increasing count of microseconds.  The number returned
-// isn't guaranteed to be relative to any particular start time, however,
-// the difference between two successive calls to nowUs() should be
-// equal to the time that elapsed between calls.  This should be true
-// even if the system clock is changed.
-
-static
-unsigned long long nowUs()
+unsigned long long
+TimerManager::now()
 {
 #ifdef WINDOWS
     LARGE_INTEGER count;
     if (!QueryPerformanceCounter(&count))
         throwExceptionFromLastError();
     unsigned long long countUll = (unsigned long long)count.QuadPart;
-    return countUll * g_frequency / 1000 / 1000;
+    return countUll * 1000000 / g_frequency;
 #else
     // the invariant described above is not really true.  The
     // current implementation is using gettimeofday and should be changed to
@@ -82,7 +76,7 @@ Timer::Timer(unsigned long long us, boost::function<void ()> dg, bool recurring,
       m_manager(manager)
 {
     assert(m_dg);
-    m_next = nowUs() + m_us;
+    m_next = TimerManager::now() + m_us;
 }
 
 Timer::Timer(unsigned long long next)
@@ -114,9 +108,17 @@ Timer::ptr
 TimerManager::registerTimer(unsigned long long us, boost::function<void ()> dg,
         bool recurring)
 {
+    bool atFront;
+    return registerTimer(us, dg, recurring, atFront);
+}
+
+Timer::ptr
+TimerManager::registerTimer(unsigned long long us, boost::function<void ()> dg,
+        bool recurring, bool &atFront)
+{
     Timer::ptr result(new Timer(us, dg, recurring, this));
     boost::mutex::scoped_lock lock(m_mutex);
-    m_timers.insert(result);
+    atFront = (m_timers.insert(result).first == m_timers.begin());
     return result;
 }
 
@@ -127,10 +129,10 @@ TimerManager::nextTimer()
     if (m_timers.empty())
         return ~0ull;
     const Timer::ptr &next = *m_timers.begin();
-    unsigned long long now = nowUs();
-    if (now >= next->m_next)
+    unsigned long long nowUs = now();
+    if (nowUs >= next->m_next)
         return 0;
-    return next->m_next - now;
+    return next->m_next - nowUs;
 }
 
 static
@@ -141,17 +143,17 @@ void
 TimerManager::processTimers()
 {
     std::vector<Timer::ptr> expired;
-    unsigned long long now = nowUs();
+    unsigned long long nowUs = now();
     {
         boost::mutex::scoped_lock lock(m_mutex);
-        if (m_timers.empty() || (*m_timers.begin())->m_next > now)
+        if (m_timers.empty() || (*m_timers.begin())->m_next > nowUs)
             return;
-        Timer nowTimer(now);
+        Timer nowTimer(nowUs);
         Timer::ptr nowTimerPtr(&nowTimer, &delete_nothing);
         // Find all timers that are expired
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
             m_timers.lower_bound(nowTimerPtr);
-        while (it != m_timers.end() && (*it)->m_next == now ) ++it;
+        while (it != m_timers.end() && (*it)->m_next == nowUs ) ++it;
         // Copy to expired, remove from m_timers;
         expired.insert(expired.begin(), m_timers.begin(), it);
         m_timers.erase(m_timers.begin(), it);
@@ -162,7 +164,7 @@ TimerManager::processTimers()
             ++it2) {
             Timer::ptr &timer = *it2;
             if (timer->m_recurring) {
-                timer->m_next = now + timer->m_us;
+                timer->m_next = nowUs + timer->m_us;
                 m_timers.insert(timer);
             }
         }                        

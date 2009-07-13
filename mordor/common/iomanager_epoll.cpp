@@ -30,6 +30,7 @@ IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
 
 IOManagerEPoll::~IOManagerEPoll()
 {
+    stop();
     close(m_epfd);
     close(m_tickleFds[0]);
     close(m_tickleFds[1]);
@@ -76,6 +77,40 @@ m_pendingEvents.find(fd);
 }
 
 void
+IOManagerEPoll::cancelEvent(int fd, Event events)
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    std::map<int, AsyncEvent>::iterator it = m_pendingEvents.find(fd);
+    if (it == m_pendingEvents.end())
+        return;
+    AsyncEvent &e = it->second;
+    if ((events & EPOLLIN) && (e.event.events & EPOLLIN)) {
+        e.m_schedulerIn->schedule(e.m_fiberIn);
+    }
+    if ((events & EPOLLOUT) && (e.event.events & EPOLLOUT)) {
+        e.m_schedulerOut->schedule(e.m_fiberOut);
+    }
+    e.event.events &= ~events;
+    if (e.event.events == 0) {
+        if (epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &e.event)) {
+            throwExceptionFromLastError();
+        }
+        m_pendingEvents.erase(it);
+    }
+}
+
+Timer::ptr
+IOManagerEPoll::registerTimer(unsigned long long us, boost::function<void ()> dg,
+        bool recurring)
+{
+    bool atFront;
+    Timer::ptr result = TimerManager::registerTimer(us, dg, recurring, atFront);
+    if (atFront)
+        tickle();
+    return result;
+}
+
+void
 IOManagerEPoll::idle()
 {
     epoll_event events[64];
@@ -88,11 +123,17 @@ IOManagerEPoll::idle()
         }
         int rc = -1;
         errno = EINTR;
-        while (rc < 0 && errno == EINTR)
-            rc = epoll_wait(m_epfd, events, 64, -1);
+        while (rc < 0 && errno == EINTR) {
+            int timeout = -1;
+            unsigned long long nextTimeout = nextTimer();
+            if (nextTimeout != ~0ull)
+                timeout = (int)(nextTimeout / 1000);
+            rc = epoll_wait(m_epfd, events, 64, timeout);
+        }
         if (rc <= 0) {
             throwExceptionFromLastError();
         }
+        processTimers();
 
         for(int i = 0; i < rc; ++i) {
             epoll_event &event = events[i];
@@ -106,7 +147,8 @@ IOManagerEPoll::idle()
             boost::mutex::scoped_lock lock(m_mutex);
             std::map<int, AsyncEvent>::iterator it = 
 m_pendingEvents.find(event.data.fd);
-            assert(it != m_pendingEvents.end());
+            if (it == m_pendingEvents.end())
+                continue;
             AsyncEvent &e = it->second;
             if ((event.events & EPOLLIN) ||
                 (err && (e.event.events & EPOLLIN))) {

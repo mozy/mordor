@@ -5,13 +5,14 @@
 #include <sys/epoll.h>
 
 #include "scheduler.h"
+#include "timer.h"
 #include "version.h"
 
 #ifndef LINUX
 #error IOManagerEPoll is Linux only
 #endif
 
-class IOManagerEPoll : public Scheduler
+class IOManagerEPoll : public Scheduler, public TimerManager
 {
 public:
     enum Event {
@@ -33,6 +34,11 @@ public:
     ~IOManagerEPoll();
 
     void registerEvent(int fd, Event events);
+    void cancelEvent(int fd, Event events);
+
+    Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
+        bool recurring = false);
+
 protected:
     void idle();
     void tickle();
@@ -45,4 +51,3 @@ private:
 };
 
 #endif
-

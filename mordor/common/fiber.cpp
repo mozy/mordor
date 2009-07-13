@@ -208,15 +208,13 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, bool terminateMe)
     m_yielderNextState = terminateMe ? TERM : HOLD;
     Fiber *curp = cur.get();
     // Relinguish our reference
-    if (terminateMe) {
-        cur.reset();
-    }
+    cur.reset();
     fiber_switchContext(&curp->m_sp, m_sp);
     assert(!terminateMe);
-    setThis(cur.get());
-    if (cur->m_yielder) {
-        cur->m_yielder->m_state = cur->m_yielderNextState;
-        cur->m_yielder.reset();
+    setThis(curp);
+    if (curp->m_yielder) {
+        curp->m_yielder->m_state = curp->m_yielderNextState;
+        curp->m_yielder.reset();
     }
 }
 

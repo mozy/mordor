@@ -215,7 +215,7 @@ DEPS := $(shell test -d $(OBJDIR) && find $(OBJDIR) -name "*.d")
 all: cat echoserver fibers simpleclient wget list
 
 .PHONY: check
-check: $(OBJDIR)/mordor/common/run_tests
+check: $(OBJDIR)/mordor/common/run_tests all
 	$(Q)$(OBJDIR)/mordor/common/run_tests
 
 

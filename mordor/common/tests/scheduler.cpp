@@ -16,11 +16,35 @@ static void doNothing()
 {
 }
 
+// Stop can be called multiple times without consequence
+TEST_WITH_SUITE(Scheduler, idempotentStopHijack)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool;
+    pool.stop();
+    pool.stop();
+}
+
+TEST_WITH_SUITE(Scheduler, idempotentStopHybrid)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool(2);
+    pool.stop();
+    pool.stop();
+}
+
+TEST_WITH_SUITE(Scheduler, idempotentStopSpawn)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool(1, false);
+    pool.stop();
+    pool.stop();
+}
+
 // When hijacking the calling thread, you don't need to explicitly start
-// or stop the scheduler; it starts on construction, and stops when
-// there are no more fibers waiting to be scheduled (returning to the
-// fiber that first yielded to it)
-TEST_WITH_SUITE(Scheduler, hijackThread)
+// or stop the scheduler; it starts on the first yieldTo, and stops on
+// destruction
+TEST_WITH_SUITE(Scheduler, hijackBasic)
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr doNothingFiber(new Fiber(&doNothing));
@@ -28,13 +52,13 @@ TEST_WITH_SUITE(Scheduler, hijackThread)
     TEST_ASSERT_EQUAL(Scheduler::getThis(), &pool);
     pool.schedule(doNothingFiber);
     TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::INIT);
-    pool.yieldTo();
+    pool.dispatch();
     TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::TERM);
 }
 
 // Similar to above, but after the scheduler has stopped, yielding
 // to it again should implicitly restart it
-TEST_WITH_SUITE(Scheduler, hijackThreadAutoReset)
+TEST_WITH_SUITE(Scheduler, hijackMultipleDispatch)
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr doNothingFiber(new Fiber(&doNothing));
@@ -42,29 +66,29 @@ TEST_WITH_SUITE(Scheduler, hijackThreadAutoReset)
     TEST_ASSERT_EQUAL(Scheduler::getThis(), &pool);
     pool.schedule(doNothingFiber);
     TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::INIT);
-    pool.yieldTo();
+    pool.dispatch();
     TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::TERM);
     doNothingFiber->reset();
     pool.schedule(doNothingFiber);
     TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::INIT);
-    pool.yieldTo();
+    pool.dispatch();
     TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::TERM);
 }
 
 // TODO: could improve this test by having two fibers that
 // synchronize and assert that they are on different threads
-TEST_WITH_SUITE(Scheduler, hijackThreadPlusMore)
+TEST_WITH_SUITE(Scheduler, hybridBasic)
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr doNothingFiber(new Fiber(&doNothing));
     WorkerPool pool(2);
     TEST_ASSERT_EQUAL(Scheduler::getThis(), &pool);
-    pool.schedule(doNothingFiber);
     TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::INIT);
+    pool.schedule(doNothingFiber);
     pool.schedule(Fiber::getThis());
     pool.yieldTo();
-    TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::TERM);
     pool.stop();
+    TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::TERM);
 }
 
 void
@@ -74,7 +98,7 @@ otherThreadProc(Scheduler *scheduler, bool &done)
     done = true;
 }
 
-TEST_WITH_SUITE(Scheduler, otherThread)
+TEST_WITH_SUITE(Scheduler, spawnBasic)
 {
     bool done = false;
     Fiber::ptr mainFiber(new Fiber());
@@ -103,7 +127,7 @@ runInContext(Scheduler &poolA, Scheduler &poolB)
 TEST_WITH_SUITE(Scheduler, switcherExceptions)
 {
     Fiber::ptr mainFiber(new Fiber());
-    WorkerPool poolA(1, true, false), poolB(1, false);
+    WorkerPool poolA(1, true), poolB(1, false);
 
     TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);
     TEST_ASSERT_NOT_EQUAL(Scheduler::getThis(), &poolB);
@@ -112,6 +136,4 @@ TEST_WITH_SUITE(Scheduler, switcherExceptions)
 
     TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);
     TEST_ASSERT_NOT_EQUAL(Scheduler::getThis(), &poolB);
-    poolB.stop();
-    poolA.stop();
 }
