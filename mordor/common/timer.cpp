@@ -9,7 +9,9 @@
 #include "mordor/common/exception.h"
 #include "mordor/common/version.h"
 
-#ifndef WINDOWS
+#ifdef OSX
+#include <mach/mach_time.h>
+#elif !defined(WINDOWS)
 #include <sys/time.h>
 #include <time.h>
 #endif
@@ -24,6 +26,14 @@ static unsigned long long queryFrequency()
 }
 
 unsigned long long g_frequency = queryFrequency();
+#elif defined (OSX)
+static mach_timebase_info_data_t queryTimebase()
+{
+    mach_timebase_info_data_t timebase;
+    mach_timebase_info(&timebase);
+    return timebase;
+}
+mach_timebase_info_data_t g_timebase = queryTimebase();
 #endif
 
 unsigned long long
@@ -35,36 +45,15 @@ TimerManager::now()
         throwExceptionFromLastError();
     unsigned long long countUll = (unsigned long long)count.QuadPart;
     return countUll * 1000000 / g_frequency;
+#elif defined(OSX)
+    unsigned long long absoluteTime = mach_absolute_time();
+    return absoluteTime * g_timebase.numer / g_timebase.denom / 1000;
 #else
-    // the invariant described above is not really true.  The
-    // current implementation is using gettimeofday and should be changed to
-    // use the timestamp counters, with frequency adjustment based on the
-    // tsc_quotient provided by the kernel.
-    //
-    // Doing it that way has the added benefit that we can tell time using an
-    // ultrafast method that takes about 100 cycles rather than the ~10,000
-    // required to make the gettimeofday system call.
+    struct timespec ts;
 
-    struct timeval tv;
-
-    gettimeofday(&tv, NULL);
-#ifdef LINUX
-    // To work around a kernel bug where gettimeofday periodically jumps 4398s
-    // into the future, call gettimeofday() twice and return the lower of the
-    // two. This doubles the performance suckiness of this call.
-    //
-    // See http://kerneltrap.org/mailarchive/linux-kernel/2007/8/23/163943
-    //
-    unsigned long long v1 = tv.tv_sec * 1000000ull + tv.tv_usec;
-
-    gettimeofday(&tv, NULL);
-    unsigned long long v2 = tv.tv_sec * 1000000ull + tv.tv_usec;
-
-    return v1 < v2 ? v1 : v2;
-#else
-    return tv.tv_sec * 1000000ull + tv.tv_usec;
-#endif
-
+    if (clock_gettime(CLOCK_MONOTONIC, &ts))
+        throwExceptionFromLastError();
+    return ts.tv_sec * 1000000ull + ts.tv_nsec / 1000;
 #endif
 }
 
