@@ -123,7 +123,7 @@ BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 # remove the no-unused-variable.  this was added when moving to gcc4 since
 # it started complaining about our logger variables.  Same with
 # no-strict-aliasing
-CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
+CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD -DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 
 RLCODEGEN	:= $(shell which rlcodegen rlgen-cd)
