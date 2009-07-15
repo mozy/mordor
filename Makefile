@@ -215,9 +215,9 @@ DEPS := $(shell test -d $(OBJDIR) && find $(OBJDIR) -name "*.d")
 all: cat echoserver simpleclient wget list
 
 .PHONY: check
-check: $(OBJDIR)/mordor/common/run_tests all
+check: all $(OBJDIR)/mordor/common/run_tests $(OBJDIR)/mordor/kalypso/run_tests
 	$(Q)$(OBJDIR)/mordor/common/run_tests
-
+	$(Q)$(OBJDIR)/mordor/kalypso/run_tests
 
 $(OBJDIR)/mordor/common/run_tests:						\
 	$(patsubst %.cpp,$(OBJDIR)/%.o,$(wildcard mordor/common/tests/*.cpp))	\
@@ -228,6 +228,18 @@ ifeq ($(Q),@)
 endif
 	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
+
+$(OBJDIR)/mordor/kalypso/run_tests:						\
+	$(patsubst %.cpp,$(OBJDIR)/%.o,$(wildcard mordor/kalypso/tests/*.cpp))	\
+	$(OBJDIR)/lib/libkalypso.a						\
+	$(OBJDIR)/lib/libmordortest.a						\
+	$(OBJDIR)/lib/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(COMPLINK)
+
 
 .PHONY: cat
 cat: $(OBJDIR)/bin/examples/cat
@@ -349,6 +361,16 @@ $(OBJDIR)/lib/libtritonclient.a:				\
 	$(OBJDIR)/mordor/triton/client/get.o			\
 	$(OBJDIR)/mordor/triton/client/list.o			\
 	$(OBJDIR)/mordor/triton/client/put.o
+ifeq ($(Q),@)
+	@echo ar $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AR) ruc $@ $(filter %.o,$?)
+
+$(OBJDIR)/lib/libkalypso.a:					\
+	$(OBJDIR)/mordor/kalypso/vfs/helpers.o			\
+	$(OBJDIR)/mordor/kalypso/vfs/manager.o			\
+	$(OBJDIR)/mordor/kalypso/vfs/vfs.o
 ifeq ($(Q),@)
 	@echo ar $@
 endif

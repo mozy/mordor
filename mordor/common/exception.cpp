@@ -43,6 +43,8 @@ void throwExceptionFromLastError()
 void throwExceptionFromLastError(unsigned int lastError)
 {
     switch (lastError) {
+        case ERROR_FILE_NOT_FOUND:
+            throw FileNotFoundException();
         case ERROR_OPERATION_ABORTED:
             throw OperationAbortedException();
         default:
@@ -72,6 +74,8 @@ void throwExceptionFromLastError()
 void throwExceptionFromLastError(int error)
 {
     switch (error) {
+        case ENOENT:
+            throw FileNotFoundException();
         case ECANCELED:
             throw OperationAbortedException();
         default:

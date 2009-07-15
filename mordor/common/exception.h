@@ -54,15 +54,26 @@ typedef ErrnoError NativeError;
 typedef int error_t;
 #endif
 
-class OperationAbortedException : public NativeError
-{
-public:
 #ifdef WINDOWS
-    OperationAbortedException() : Win32Error(ERROR_OPERATION_ABORTED) {}
+#define CREATE_NATIVE_EXCEPTION(Name, win32error, errnoerror)                   \
+    class Name ## Exception : public NativeError                                \
+    {                                                                           \
+    public:                                                                     \
+        Name ## Exception() : NativeError(win32error) {}                        \
+    };
 #else
-    OperationAbortedException() : ErrnoError(ECANCELED) {}
+#define CREATE_NATIVE_EXCEPTION(Name, win32error, errnoerror)                   \
+    class Name ## Exception : public NativeError                                \
+    {                                                                           \
+    public:                                                                     \
+        Name ## Exception() : NativeError(errnoerror) {}                        \
+    };
 #endif
-};
+
+CREATE_NATIVE_EXCEPTION(FileNotFound, ERROR_FILE_NOT_FOUND, ENOENT);
+CREATE_NATIVE_EXCEPTION(OperationAborted, ERROR_OPERATION_ABORTED, ECANCELED);
+
+#undef CREATE_NATIVE_EXCEPTION
 
 class SocketException : public NativeError
 {
@@ -76,17 +87,17 @@ public:
 #define WSA(error) error
 #endif
 
-class ConnectionAbortedException : public SocketException
-{
-public:
-    ConnectionAbortedException() : SocketException(WSA(ECONNABORTED)) {}
-};
+#define CREATE_SOCKET_EXCEPTION(Name, errnoerror)                               \
+    class Name ## Exception : public SocketException                            \
+    {                                                                           \
+    public:                                                                     \
+        Name ## Exception() : SocketException(WSA(errnoerror)) {}               \
+    };
 
-class ConnectionResetException : public SocketException
-{
-public:
-    ConnectionResetException() : SocketException(WSA(ECONNRESET)) {}
-};
+CREATE_SOCKET_EXCEPTION(ConnectionAborted, ECONNABORTED);
+CREATE_SOCKET_EXCEPTION(ConnectionReset, ECONNRESET);
+
+#undef CREATE_SOCKET_EXCEPTION
 
 void throwExceptionFromLastError();
 void throwExceptionFromLastError(error_t lastError);
