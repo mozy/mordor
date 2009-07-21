@@ -16,6 +16,7 @@ public:
     typedef boost::shared_ptr<Stream> ptr;
 
     enum CloseType {
+        NONE  = 0x00,
         READ  = 0x01,
         WRITE = 0x02,
         BOTH  = 0x03

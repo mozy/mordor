@@ -340,6 +340,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/streams/memory.o		\
 	$(OBJDIR)/mordor/common/streams/null.o			\
 	$(OBJDIR)/mordor/common/streams/openssl.o		\
+	$(OBJDIR)/mordor/common/streams/pipe.o			\
 	$(OBJDIR)/mordor/common/streams/socket_stream.o		\
 	$(OBJDIR)/mordor/common/streams/ssl.o			\
 	$(OBJDIR)/mordor/common/streams/std.o			\

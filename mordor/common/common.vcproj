@@ -474,6 +474,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\streams\pipe.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ragel.cpp"
 				>
 			</File>
@@ -487,6 +491,10 @@
 			</File>
 			<File
 				RelativePath=".\http\server.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
 				>
 			</File>
 			<File
@@ -524,10 +532,6 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\socket.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\streams\ssl.cpp"
@@ -676,11 +680,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\xml\parser.h"
+				>
+			</File>
+			<File
 				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.h"
+				RelativePath=".\streams\pipe.h"
 				>
 			</File>
 			<File
