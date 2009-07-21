@@ -24,8 +24,12 @@ ifdef INSURE
 	INSURE_CC := insure
 endif
 
-PLATFORM := $(shell uname)
-DPKG := $(shell which dpkg)
+PLATFORM := $(shell uname -o 2>/dev/null)
+ifneq ($(PLATFORM), Cygwin)
+    PLATFORM := $(shell uname)
+endif
+
+DPKG := $(shell which dpkg 2>/dev/null)
 ifdef DPKG
     ARCH := $(shell dpkg --print-architecture 2>/dev/null)
 endif
@@ -126,7 +130,7 @@ BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD -DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 
-RLCODEGEN	:= $(shell which rlcodegen rlgen-cd)
+RLCODEGEN	:= $(shell which rlcodegen rlgen-cd 2>/dev/null)
 RAGEL   	:= ragel
 
 RAGEL_MAJOR	:= $(shell ragel -v | sed -n 's/.*\([0-9]\)\.[0-9]\+.*/\1/p')

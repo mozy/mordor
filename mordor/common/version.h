@@ -7,6 +7,10 @@
 #else
 #   define POSIX
 #endif
+#ifdef __CYGWIN__
+#   define WINDOWS
+#   define CYGWIN
+#endif
 
 #ifdef linux
 #   define LINUX

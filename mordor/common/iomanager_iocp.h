@@ -52,4 +52,4 @@ private:
     boost::mutex m_mutex;
 };
 
-#endif __IOMANAGER_IOCP_H__
+#endif
