@@ -77,17 +77,17 @@ TEST_WITH_SUITE(PipeStream, writerGone)
 
 void threadStress(Stream::ptr stream)
 {
-    int totalRead = 0;
-    int totalWritten = 0;
-    int buf[64];
+    size_t totalRead = 0;
+    size_t totalWritten = 0;
+    size_t buf[64];
     Buffer buffer;
     for (int i = 0; i < 10000; ++i) {
         if (i % 2) {
             size_t toRead = 64;
-            size_t read = stream->read(buffer, toRead * sizeof(int));
-            TEST_ASSERT(read % sizeof(int) == 0);
+            size_t read = stream->read(buffer, toRead * sizeof(size_t));
+            TEST_ASSERT(read % sizeof(size_t) == 0);
             buffer.copyOut(&buf, read);
-            for (size_t j = 0; read > 0; read -= sizeof(int), ++j) {
+            for (size_t j = 0; read > 0; read -= sizeof(size_t), ++j) {
                 TEST_ASSERT_EQUAL(buf[j], ++totalRead);
             }
             buffer.clear();
@@ -96,9 +96,9 @@ void threadStress(Stream::ptr stream)
             for (size_t j = 0; j < toWrite; ++j) {
                 buf[j] = ++totalWritten;
             }
-            buffer.copyIn(buf, toWrite * sizeof(int));
-            size_t written = stream->write(buffer, toWrite * sizeof(int));
-            totalWritten -= (toWrite - written / sizeof(int));
+            buffer.copyIn(buf, toWrite * sizeof(size_t));
+            size_t written = stream->write(buffer, toWrite * sizeof(size_t));
+            totalWritten -= (toWrite - written / sizeof(size_t));
             buffer.clear();
         }
     }
@@ -108,9 +108,9 @@ void threadStress(Stream::ptr stream)
         size_t read = stream->read(buffer, toRead);
         if (read == 0)
             break;
-        TEST_ASSERT(read % sizeof(int) == 0);
+        TEST_ASSERT(read % sizeof(size_t) == 0);
         buffer.copyOut(&buf, read);
-        for (size_t i = 0; read > 0; read -= sizeof(int), ++i) {
+        for (size_t i = 0; read > 0; read -= sizeof(size_t), ++i) {
             TEST_ASSERT_EQUAL(buf[i], ++totalRead);
         }
         buffer.clear();

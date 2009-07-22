@@ -74,6 +74,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)\mordor.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -142,6 +143,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)\mordor.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -210,6 +212,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)\mordor.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -279,6 +282,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)\mordor.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"

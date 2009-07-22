@@ -216,7 +216,7 @@ endif
 DEPS := $(shell test -d $(OBJDIR) && find $(OBJDIR) -name "*.d")
 -include $(DEPS)
 
-all: cat echoserver simpleclient wget list
+all: cat echoserver simpleclient wget list $(OBJDIR)/lib/libtritonvfs.a
 
 .PHONY: check
 check: all $(OBJDIR)/mordor/common/run_tests $(OBJDIR)/mordor/kalypso/run_tests
@@ -390,3 +390,15 @@ ifeq ($(Q),@)
 endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
+
+$(OBJDIR)/lib/libtritonvfs.a:					\
+	$(OBJDIR)/mordor/kalypso/vfs/triton/container.o		\
+	$(OBJDIR)/mordor/kalypso/vfs/triton/transfer.o		\
+	$(OBJDIR)/mordor/kalypso/vfs/triton/vfs.o		\
+	$(OBJDIR)/mordor/kalypso/vfs/triton/user.o
+ifeq ($(Q),@)
+	@echo ar $@
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AR) ruc $@ $(filter %.o,$?)
+
