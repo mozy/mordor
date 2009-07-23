@@ -70,7 +70,7 @@ public:
 private:
     void run()
     {
-        m_result = m_dg(shared_from_this(), m_arg);
+        m_result = m_dg(boost::enable_shared_from_this<Coroutine<Result, Arg> >::shared_from_this(), m_arg);
     }
 
 private:
@@ -79,6 +79,7 @@ private:
     Arg m_arg;
     Fiber::ptr m_fiber;    
 };
+
 
 template <class Result>
 class Coroutine<Result, DummyVoid> : public boost::enable_shared_from_this<Coroutine<Result> >
@@ -129,7 +130,7 @@ public:
 private:
     void run()
     {
-        m_result = m_dg(shared_from_this());
+        m_result = m_dg(boost::enable_shared_from_this<Coroutine<Result> >::shared_from_this());
     }
 
 private:
