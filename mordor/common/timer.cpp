@@ -10,10 +10,12 @@
 #include "mordor/common/version.h"
 
 #ifdef OSX
-#include <mach/mach_time.h>
-#elif !defined(WINDOWS)
-#include <sys/time.h>
-#include <time.h>
+ #include <mach/mach_time.h>
+#elif defined(WINDOWS)
+ #include <windows.h>  // for LARGE_INTEGER, QueryPerformanceFrequency()
+#else
+ #include <sys/time.h>
+ #include <time.h>
 #endif
 
 #ifdef WINDOWS
