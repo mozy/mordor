@@ -62,6 +62,19 @@ static void delete_nothing(Fiber* f) {}
 
 boost::thread_specific_ptr<Fiber> Fiber::t_fiber(&delete_nothing);
 
+std::list<boost::function<void (std::exception &)> > FiberException::m_handlers;
+
+FiberException::FiberException(Fiber::ptr fiber, std::exception &ex)
+: NestedException(ex),
+  m_fiber(fiber)
+{}
+
+void
+FiberException::registerExceptionHandler(boost::function<void (std::exception &)> handler)
+{
+    m_handlers.push_back(handler);
+}
+
 Fiber::Fiber()
 {
     assert(!getThis());
@@ -69,6 +82,7 @@ Fiber::Fiber()
     m_stack = NULL;
     m_stacksize = 0;
     m_sp = NULL;
+    m_exception = NULL;
     setThis(this);
 #ifdef NATIVE_WINDOWS_FIBERS
     m_sp = ConvertThreadToFiber(NULL);
@@ -83,12 +97,17 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
     m_state = INIT;
     m_stack = NULL;
     m_stacksize = stacksize;
+    m_exception = NULL;
     allocStack(&m_stack, &m_sp, &m_stacksize);
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
 }
 
 Fiber::~Fiber()
 {
+    if (m_state == EXCEPT) {
+        call(true);
+        m_state = TERM;
+    }
     if (!m_stack) {
         assert(!m_dg);
         assert(m_state == EXEC);
@@ -108,21 +127,27 @@ Fiber::~Fiber()
 void
 Fiber::reset()
 {
+    if (m_state == EXCEPT)
+        call(true);
     assert(m_stack);
     assert(m_state == TERM || m_state == INIT);
     assert(m_dg);
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = INIT;
+    m_exception = NULL;
 }
 
 void
 Fiber::reset(boost::function<void ()> dg)
 {
+    if (m_state == EXCEPT)
+        call(true);
     assert(m_stack);
     assert(m_state == TERM || m_state == INIT);
     m_dg = dg;
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = INIT;
+    m_exception = NULL;
 }
 
 Fiber::ptr
@@ -142,27 +167,13 @@ Fiber::setThis(Fiber* f)
 void
 Fiber::call()
 {
-    assert(m_state == HOLD || m_state == INIT);
-    assert(!m_outer);
-    ptr cur = getThis();
-    assert(cur);
-    assert(cur.get() != this);
-    setThis(this);
-    m_outer = cur;
-    m_state = EXEC;
-    fiber_switchContext(&cur->m_sp, m_sp);
-    setThis(cur.get());
-    assert(cur->m_yielder);
-    assert(cur->m_yielder.get() == this);
-    cur->m_yielder->m_state = cur->m_yielderNextState;
-    cur->m_yielder.reset();
-    m_outer.reset();
+    call(false);
 }
 
 void
 Fiber::yieldTo(bool yieldToCallerOnTerminate)
 {
-    yieldTo(yieldToCallerOnTerminate, false);
+    yieldTo(yieldToCallerOnTerminate, HOLD);
 }
 
 void
@@ -188,9 +199,38 @@ Fiber::state()
 }
 
 void
-Fiber::yieldTo(bool yieldToCallerOnTerminate, bool terminateMe)
+Fiber::call(bool destructor)
+{
+    assert(!m_outer);
+    ptr cur = getThis();
+    if (destructor) {
+        assert(m_state == EXCEPT);
+    } else {
+        assert(m_state == HOLD || m_state == INIT);
+        assert(cur);
+        assert(cur.get() != this);
+    }
+    setThis(this);
+    m_outer = cur;
+    m_state = EXEC;
+    fiber_switchContext(&cur->m_sp, m_sp);
+    setThis(cur.get());
+    assert(cur->m_yielder || destructor);
+    m_outer.reset();
+    if (cur->m_yielder) {
+        assert(cur->m_yielder.get() == this);
+        Fiber::ptr yielder = cur->m_yielder;
+        yielder->m_state = cur->m_yielderNextState;
+        cur->m_yielder.reset();
+        yielder->throwExceptions();
+    }
+}
+
+void
+Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
 {
     assert(m_state == HOLD || m_state == INIT);
+    assert(targetState == HOLD || targetState == TERM || targetState == EXCEPT);
     ptr cur = getThis();
     assert(cur);
     setThis(this);
@@ -205,16 +245,19 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, bool terminateMe)
     }
     m_state = EXEC;
     m_yielder = cur;
-    m_yielderNextState = terminateMe ? TERM : HOLD;
+    m_yielderNextState = targetState;
     Fiber *curp = cur.get();
     // Relinguish our reference
     cur.reset();
     fiber_switchContext(&curp->m_sp, m_sp);
-    assert(!terminateMe);
+    assert(targetState != TERM);
     setThis(curp);
+    assert(curp->m_yielder || targetState == EXCEPT);
     if (curp->m_yielder) {
-        curp->m_yielder->m_state = curp->m_yielderNextState;
+        Fiber::ptr yielder = curp->m_yielder;
+        yielder->m_state = curp->m_yielderNextState;
         curp->m_yielder.reset();
+        yielder->throwExceptions();
     }
 }
 
@@ -229,28 +272,90 @@ Fiber::entryPoint()
     }
     assert(cur->m_dg);
     assert(cur->m_state == EXEC);
-    cur->m_dg();
+    Fiber *curp = cur.get();
+    try {
+        cur->m_dg();
+    } catch (std::exception &ex) {
+        cur->m_exception = &ex;
+        exitPoint(cur, curp, EXCEPT);
+        if (curp->m_state == EXCEPT)
+            throw;
+    } catch (...) {
+        Fiber::weak_ptr dummy = cur;
+        exitPoint(cur, curp, EXCEPT);
+        if (curp->m_state == EXCEPT)
+            throw;
+    }
 
-    if (!cur->m_terminateOuter.expired() && !cur->m_outer) {
-        ptr terminateOuter(cur->m_terminateOuter);
+    exitPoint(cur, curp, TERM);
+    assert(false);
+}
+
+void
+Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
+{
+    if (!curp->m_terminateOuter.expired() && !curp->m_outer) {
+        ptr terminateOuter(curp->m_terminateOuter);
         // Have to set this reference before calling yieldTo()
         // so we can reset cur before we call yieldTo()
         // (since it's not ever going to destruct)
         terminateOuter->m_yielder = cur;
+        terminateOuter->m_yielderNextState = targetState;
         Fiber* terminateOuterp = terminateOuter.get();
-        assert(!cur.unique());
+        if (cur) {
+            assert(!cur.unique());
+            cur.reset();
+        }
         assert(!terminateOuter.unique());
-        cur.reset();
         terminateOuter.reset();
-        terminateOuterp->yieldTo(false, true);
+        terminateOuterp->yieldTo(false, targetState);
+        return;
     }
-    assert(cur->m_outer);
-    cur->m_outer->m_yielder = cur;
-    cur->m_outer->m_yielderNextState = TERM;
-    Fiber* curp = cur.get();
-    assert(!cur.unique());
-    cur.reset();
+    if (!curp->m_outer)
+        return;
+    curp->m_outer->m_yielder = cur;
+    curp->m_outer->m_yielderNextState = targetState;
+    if (cur) {
+        assert(!cur.unique());
+        cur.reset();
+    }
     fiber_switchContext(&curp->m_sp, curp->m_outer->m_sp);
+}
+
+void
+Fiber::throwExceptions()
+{
+    if (m_state == EXCEPT) {
+        if (!m_exception)
+            throw 1;
+        // NOTE: You *cannot* throw *m_exception directly, because the throw statement
+        // will invoke the copy constructor, and you'll lose the original exception
+        for (std::list<boost::function<void (std::exception &)> >::const_iterator it(
+            FiberException::m_handlers.begin());
+            it != FiberException::m_handlers.end();
+            ++it) {
+            (*it)(*m_exception);
+        }
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::exception);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::bad_alloc);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::logic_error);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::domain_error);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::invalid_argument);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::length_error);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::out_of_range);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::runtime_error);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::overflow_error);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::range_error);
+        THROW_ORIGINAL_EXCEPTION(m_exception, std::underflow_error);
+
+        THROW_ORIGINAL_EXCEPTION(m_exception, FiberException);
+
+        NativeError *nativeError = dynamic_cast<NativeError *>(m_exception);
+        if (nativeError)
+            throwExceptionFromLastError(nativeError->error());
+
+        throw FiberException(shared_from_this(), *m_exception);
+    }
 }
 
 static

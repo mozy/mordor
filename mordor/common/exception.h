@@ -7,6 +7,20 @@
 
 #include "version.h"
 
+class NestedException : public std::exception
+{
+public:
+    NestedException(std::exception &inner)
+        : m_inner(&inner)
+    {}
+
+    std::exception &inner() { return *m_inner; }
+    const char *what() const throw () { return m_inner->what(); }
+
+private:
+    std::exception *m_inner;
+};
+
 class StreamError : public std::runtime_error
 {
 public:
@@ -27,7 +41,7 @@ public:
     Win32Error(unsigned int lastError);
     const char *what() const { return m_message.c_str(); }
 
-    unsigned int lastError() { return m_lastError; }
+    unsigned int error() const { return m_lastError; }
 
 private:
     int m_lastError;
@@ -44,7 +58,7 @@ public:
     ~ErrnoError() throw() {}
     const char *what() const throw() { return m_message.c_str(); }
 
-    int error() { return m_error; }
+    int error() const { return m_error; }
 
 private:
     int m_error;

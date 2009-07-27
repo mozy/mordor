@@ -310,3 +310,86 @@ TEST_WITH_SUITE(Fibers, reset)
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     TEST_ASSERT(a->state() == Fiber::TERM);
 }
+
+static void throwBadAlloc()
+{
+    throw std::bad_alloc();
+}
+
+TEST_WITH_SUITE(Fibers, badAlloc)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr fiber(new Fiber(&throwBadAlloc));
+    TEST_ASSERT_EXCEPTION(fiber->call(), std::bad_alloc);
+}
+
+static void throwFileNotFound()
+{
+    throw FileNotFoundException();
+}
+
+TEST_WITH_SUITE(Fibers, nativeException)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr fiber(new Fiber(&throwFileNotFound));
+    TEST_ASSERT_EXCEPTION(fiber->call(), FileNotFoundException);
+}
+
+static void throwRuntimeError()
+{
+    throw std::runtime_error("message");
+}
+
+TEST_WITH_SUITE(Fibers, runtimeError)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr fiber(new Fiber(&throwRuntimeError));
+    try {
+        fiber->call();
+    } catch (std::runtime_error &ex) {
+        TEST_ASSERT_EQUAL(std::string(ex.what()), "message");
+    }
+}
+
+TEST_WITH_SUITE(Fibers, badAllocYieldTo)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr fiber(new Fiber(&throwBadAlloc));
+    TEST_ASSERT_EXCEPTION(fiber->yieldTo(), std::bad_alloc);
+}
+
+class GenericException : public std::runtime_error
+{
+public:
+    GenericException() : std::runtime_error("message")
+    {}
+};
+
+static void throwGenericException()
+{
+    throw GenericException();
+}
+
+TEST_WITH_SUITE(Fibers, genericException)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr fiber(new Fiber(&throwGenericException));
+    try {
+        fiber->call();
+    } catch (FiberException &ex) {
+        TEST_ASSERT(typeid(ex.inner()) == typeid(GenericException));
+        TEST_ASSERT_EQUAL(std::string(ex.inner().what()), "message");
+    }
+}
+
+TEST_WITH_SUITE(Fibers, fiberThrowingExceptionOutOfScope)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    try {
+        Fiber::ptr fiber(new Fiber(&throwGenericException));
+        fiber->call();
+    } catch (FiberException &ex) {
+        TEST_ASSERT(typeid(ex.inner()) == typeid(GenericException));
+        TEST_ASSERT_EQUAL(std::string(ex.inner().what()), "message");
+    }
+}
