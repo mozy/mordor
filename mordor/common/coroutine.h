@@ -24,7 +24,13 @@ public:
     }
 
     Coroutine(boost::function<Result (typename Coroutine<Result, Arg>::ptr, Arg)> dg)
-        : m_dg(dg)
+        : m_dg1(dg)
+    {
+        m_fiber = Fiber::ptr(new Fiber(boost::bind(&Coroutine::run, this)));
+    }
+
+    Coroutine(boost::function<void (typename Coroutine<Result, Arg>::ptr, Arg)> dg)
+        : m_dg2(dg)
     {
         m_fiber = Fiber::ptr(new Fiber(boost::bind(&Coroutine::run, this)));
     }
@@ -37,7 +43,15 @@ public:
     void reset(boost::function<Result (typename Coroutine<Result, Arg>::ptr, Arg)> dg)
     {
         m_fiber->reset();
-        m_dg = dg;        
+        m_dg1 = dg;
+        m_dg2 = NULL;
+    }
+
+    void reset(boost::function<void (typename Coroutine<Result, Arg>::ptr, Arg)> dg)
+    {
+        m_fiber->reset();
+        m_dg2 = NULL;
+        m_dg2 = dg;
     }
 
     Result call(Arg arg)
@@ -70,11 +84,17 @@ public:
 private:
     void run()
     {
-        m_result = m_dg(boost::enable_shared_from_this<Coroutine<Result, Arg> >::shared_from_this(), m_arg);
+        if (m_dg1) {
+            m_result = m_dg1(boost::enable_shared_from_this<Coroutine<Result, Arg> >::shared_from_this(), m_arg);
+        } else {
+            m_dg2(boost::enable_shared_from_this<Coroutine<Result, Arg> >::shared_from_this(), m_arg);
+            m_result = Result();
+        }
     }
 
 private:
-    boost::function<Result (typename Coroutine<Result, Arg>::ptr, Arg)> m_dg;
+    boost::function<Result (typename Coroutine<Result, Arg>::ptr, Arg)> m_dg1;
+    boost::function<void (typename Coroutine<Result, Arg>::ptr, Arg)> m_dg2;
     Result m_result;
     Arg m_arg;
     Fiber::ptr m_fiber;    

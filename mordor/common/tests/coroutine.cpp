@@ -35,7 +35,7 @@ static int echo(Coroutine<int, int>::ptr self, int arg)
 TEST_WITH_SUITE(Coroutine, basicWithArg)
 {
     Fiber::ptr mainFiber(new Fiber());
-    Coroutine<int, int>::ptr coro(new Coroutine<int, int>(&echo));
+    Coroutine<int, int>::ptr coro(new Coroutine<int, int>(boost::function<int (Coroutine<int, int>::ptr, int)>(&echo)));
     TEST_ASSERT_EQUAL(coro->state(), Fiber::INIT);
     for (int i = 0; i <= 5; ++i) {
         TEST_ASSERT(coro->state() == Fiber::INIT || coro->state() == Fiber::HOLD);
