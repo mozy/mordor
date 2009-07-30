@@ -42,6 +42,9 @@ public:
 #endif
 
     FileStream(std::string filename, Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING);
+#ifdef WINDOWS
+    FileStream(std::wstring filename, Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING);
+#endif
 
     bool supportsRead() { return m_supportsRead && NativeStream::supportsRead(); }
     bool supportsWrite() { return m_supportsWrite && NativeStream::supportsWrite(); }

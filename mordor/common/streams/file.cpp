@@ -50,3 +50,28 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
     m_supportsRead = flags == READ || flags == READWRITE;
     m_supportsWrite = flags == WRITE || flags == READWRITE;
 }
+
+#ifdef WINDOWS
+FileStream::FileStream(std::wstring filename, Flags flags, CreateFlags createFlags)
+{
+    NativeHandle handle;
+    DWORD access = 0;
+    if (flags & READ)
+        access |= GENERIC_READ;
+    if (flags & WRITE)
+        access |= GENERIC_WRITE;
+    handle = CreateFileW(filename.c_str(),
+        access,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        createFlags,
+        0,
+        NULL);
+    if (handle == (NativeHandle)-1) {
+        throwExceptionFromLastError();
+    }
+    init(handle);
+    m_supportsRead = flags == READ || flags == READWRITE;
+    m_supportsWrite = flags == WRITE || flags == READWRITE;
+}
+#endif
