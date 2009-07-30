@@ -134,19 +134,9 @@ Buffer::Buffer()
 
 Buffer::Buffer(const Buffer &copy)
 {
-    m_bufs = copy.m_bufs;
-    m_readAvailable = copy.m_readAvailable;
-    m_writeAvailable = copy.m_writeAvailable;
+    m_readAvailable = m_writeAvailable = 0;
     m_writeIt = m_bufs.end();
-    for (std::list<Data>::iterator it = m_bufs.begin();
-        it != m_bufs.end();
-        ++it) {
-        if (it->writeAvailable() > 0) {
-            m_writeIt = it;
-            break;
-        }
-    }
-    invariant();
+    copyIn(copy);
 }
 
 Buffer::Buffer(const char *str)
