@@ -19,12 +19,12 @@ TEST_WITH_SUITE(Socket, acceptTimeout)
     TEST_ASSERT(!addresses.empty());
     // TODO: random port
     Socket::ptr s = addresses.front()->createSocket(ioManager);
-    s->receiveTimeout(100000);
+    s->receiveTimeout(1000000);
     s->bind(addresses.front());
     s->listen();
     unsigned long long start = TimerManager::now();
     TEST_ASSERT_EXCEPTION(s->accept(), OperationAbortedException);
-    TEST_ASSERT_ABOUT_EQUAL(start + 100000, TimerManager::now(), 10000);
+    TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
 }
 
 TEST_WITH_SUITE(Socket, receiveTimeout)

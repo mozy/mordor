@@ -15,6 +15,29 @@
 #include <boost/thread/tss.hpp>
 
 #include "exception.h"
+#include "version.h"
+
+// Fiber impl selection
+
+#ifdef X86_64
+#   ifdef WINDOWS
+#       define NATIVE_WINDOWS_FIBERS
+#   elif defined(POSIX)
+#       define ASM_X86_64_POSIX_FIBERS
+#   endif
+#elif defined(X86)
+#   ifdef WINDOWS
+#       define NATIVE_WINDOWS_FIBERS
+#   elif defined(POSIX)
+#       define ASM_X86_POSIX_FIBERS
+#   endif
+#else
+#   error Platform not supported
+#endif
+
+#ifdef UCONTEXT_FIBERS
+#include <ucontext.h>
+#endif
 
 class Fiber : public boost::enable_shared_from_this<Fiber>
 {
@@ -60,6 +83,9 @@ private:
     boost::function<void ()> m_dg;
     void *m_stack, *m_sp;
     size_t m_stacksize;
+#ifdef UCONTEXT_FIBERS
+    ucontext_t m_ctx;
+#endif
     State m_state, m_yielderNextState;
     ptr m_outer, m_yielder;
     weak_ptr m_terminateOuter;

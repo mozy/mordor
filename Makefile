@@ -60,6 +60,9 @@ PLATFORMDIR := $(PLATFORM)/$(ARCH)
 ifeq ($(PLATFORM), Darwin)
     IOMANAGER := kqueue
     UNDERSCORE := _underscore
+    ifeq ($(ARCH), amd64)
+        MACH_TARGET := -arch x86_64
+    endif
 endif
 ifeq ($(PLATFORM), FreeBSD)
     IOMANAGER := kqueue
@@ -127,7 +130,7 @@ BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 # remove the no-unused-variable.  this was added when moving to gcc4 since
 # it started complaining about our logger variables.  Same with
 # no-strict-aliasing
-CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD -DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
+CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD -DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET)
 CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 
 RLCODEGEN	:= $(shell which rlcodegen rlgen-cd 2>/dev/null)
@@ -191,7 +194,7 @@ ifeq ($(Q),@)
 	@echo as $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(AS) $(ASFLAGS) $(TARGET_MACH) -o $@ $<
+	$(Q)$(AS) $(ASFLAGS) $(MACH_TARGET) -o $@ $<
 
 
 #

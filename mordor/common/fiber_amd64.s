@@ -12,10 +12,12 @@ fiber_switchContext:
   sub $4, %rsp;
   fstcw (%rsp);
   fwait;
+  sub $8, %rsp;
 
   mov %rsp, (%rdi)
   mov %rsi, %rsp
 
+  add $8, %rsp;
   fldcw (%rsp);
   add $4, %rsp;
   ldmxcsr (%rsp);

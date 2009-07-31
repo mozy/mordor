@@ -6,38 +6,20 @@
 #include <cassert>
 
 #ifdef WINDOWS
-
-#define NATIVE_WINDOWS_FIBERS
-
 #include <windows.h>
 #else
 #include <sys/mman.h>
 #include <pthread.h>
 #endif
 
-#ifdef X86_64
-#   ifdef WINDOWS
-#       define ASM_X86_64_WINDOWS
-#   elif defined(POSIX)
-#       define ASM_X86_64_POSIX
-#   endif
-#elif defined(X86)
-#   ifdef WINDOWS
-#       define ASM_X86_WINDOWS
-#   elif defined(POSIX)
-#       define ASM_X86_POSIX
-#   endif
-#else
-#   error Platform not supported
-#endif
-
-static void push(void **sp, size_t v);
 static void allocStack(void **stack, void **sp, size_t *stacksize);
 static void freeStack(void *stack, size_t stacksize);
 static void initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)());
-extern "C"
-#ifdef NATIVE_WINDOWS_FIBERS
+#if defined(NATIVE_WINDOWS_FIBERS) || defined(UCONTEXT_FIBERS)
 static
+#else
+static void push(void **sp, size_t v);
+extern "C"
 #endif
 void fiber_switchContext(void **oldsp, void *newsp);
 
@@ -86,6 +68,8 @@ Fiber::Fiber()
     setThis(this);
 #ifdef NATIVE_WINDOWS_FIBERS
     m_sp = ConvertThreadToFiber(NULL);
+#elif defined(UCONTEXT_FIBERS)
+    m_sp = &m_ctx;
 #endif
 }
 
@@ -99,6 +83,9 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
     m_stacksize = stacksize;
     m_exception = NULL;
     allocStack(&m_stack, &m_sp, &m_stacksize);
+#ifdef UCONTEXT_FIBERS
+    m_sp = &m_ctx;
+#endif
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
 }
 
@@ -358,6 +345,7 @@ Fiber::throwExceptions()
     }
 }
 
+#if !defined(NATIVE_WINDOWS_FIBERS) && !defined(UCONTEXT_FIBERS)
 static
 void
 push(void **sp, size_t v)
@@ -366,6 +354,7 @@ push(void **sp, size_t v)
     *--ssp = v;
     *(size_t**)sp = ssp;
 }
+#endif
 
 #ifdef NATIVE_WINDOWS_FIBERS
 static VOID CALLBACK native_fiber_entryPoint(PVOID lpParameter)
@@ -417,20 +406,25 @@ freeStack(void *stack, size_t stacksize)
 
 #ifdef __GNUC__
 
-#ifdef ASM_X86_POSIX
+#ifdef ASM_X86_POSIX_FIBERS
 extern "C" { int getEbx(); }
 #endif
 #endif
 
 #ifdef NATIVE_WINDOWS_FIBERS
-extern "C" static void
+static void
 fiber_switchContext(void **oldsp, void *newsp)
 {
     SwitchToFiber(newsp);
 }
-#else
-#ifdef _MSC_VER
-#ifdef ASM_X86_WINDOWS
+#elif defined(UCONTEXT_FIBERS)
+static void
+fiber_switchContext(void **oldsp, void *newsp)
+{
+    int rc = swapcontext(*(ucontext_t**)oldsp, (ucontext_t*)newsp);
+    assert(rc == 0);
+}
+#elif defined(_MSC_VER) && defined(ASM_X86_WINDOWS_FIBERS)
 static
 void
 __declspec(naked)  __cdecl
@@ -468,8 +462,6 @@ fiber_switchContext(void **oldsp, void *newsp)
     }
 }
 #endif
-#endif
-#endif
 
 static
 void
@@ -482,7 +474,14 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
     if (!*stack) {
         assert(false);
     }
-#elif defined(ASM_X86_64_WINDOWS)
+#elif defined(UCONTEXT_FIBERS)
+    ucontext_t *ctx = *(ucontext_t**)sp;
+    int rc = getcontext(ctx);
+    assert(rc == 0);
+    ctx->uc_stack.ss_sp = *stack;
+    ctx->uc_stack.ss_size = stacksize;
+    makecontext(ctx, entryPoint, 0);
+#elif defined(ASM_X86_64_WINDOWS_FIBERS)
     // Shadow space (4 registers + return address)
     for (int i = 0; i < 5; ++i)
         push(sp, 0x0000000000000000ull);
@@ -503,7 +502,7 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
         push(sp, 0x0000000000000000ull);
         push(sp, 0x0000000000000000ull);
     };
-#elif defined(ASM_X86_WINDOWS)
+#elif defined(ASM_X86_WINDOWS_FIBERS)
     push(sp, (size_t)entryPoint);     // EIP
     push(sp, 0xffffffff);             // EBP
     push(sp, 0xffffffff);             // Exception handler
@@ -512,7 +511,8 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
     push(sp, 0x00000000);             // EBX
     push(sp, 0x00000000);             // ESI
     push(sp, 0x00000000);             // EDI
-#elif defined(ASM_X86_64_POSIX)
+#elif defined(ASM_X86_64_POSIX_FIBERS)
+    push(sp, 0x0000000000000000ull);             // empty space to align to 16 bytes
     push(sp, (size_t)entryPoint);     // RIP
     push(sp, (size_t)*sp + 8);        // RBP
     push(sp, 0x0000000000000000ull);  // RBX
@@ -521,7 +521,8 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
     push(sp, 0x0000000000000000ull);  // R14
     push(sp, 0x0000000000000000ull);  // R15
     push(sp, 0x00001f8001df0000ull);  // MXCSR (32 bits), x87 control (16 bits), (unused)
-#elif defined(ASM_X86_POSIX)
+    push(sp, 0x0000000000000000ull);  // empty space to align to 16 bytes
+#elif defined(ASM_X86_POSIX_FIBERS)
     push(sp, 0x00000000);             // empty space to align to 16 bytes
     push(sp, (size_t)entryPoint);     // EIP
     push(sp, (size_t)*sp + 8);        // EBP
