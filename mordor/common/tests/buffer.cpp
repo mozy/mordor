@@ -58,7 +58,7 @@ TEST_WITH_SUITE(Buffer, truncateBeforeWriteSegments)
     buf.reserve(5);
     buf.truncate(3);
     TEST_ASSERT(buf == "hel");
-    TEST_ASSERT_GREATER_THAN_OR_EQUAL(buf.writeAvailable(), 5);
+    TEST_ASSERT_GREATER_THAN_OR_EQUAL(buf.writeAvailable(), 5u);
 }
 
 TEST_WITH_SUITE(Buffer, truncateAtWriteSegments)
@@ -68,5 +68,5 @@ TEST_WITH_SUITE(Buffer, truncateAtWriteSegments)
     buf.copyIn("world");
     buf.truncate(8);
     TEST_ASSERT(buf == "hellowor");
-    TEST_ASSERT_GREATER_THAN_OR_EQUAL(buf.writeAvailable(), 10);
+    TEST_ASSERT_GREATER_THAN_OR_EQUAL(buf.writeAvailable(), 10u);
 }
