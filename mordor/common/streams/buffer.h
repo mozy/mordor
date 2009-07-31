@@ -44,6 +44,7 @@ private:
         size_t length() const;
         void produce(size_t len);
         void consume(size_t len);
+        void truncate(size_t len);
         const DataBuf readBuf() const;
         DataBuf writeBuf();
 
@@ -69,6 +70,7 @@ public:
     void clear();
     void produce(size_t len);
     void consume(size_t len);
+    void truncate(size_t len);
 
     const std::vector<iovec> readBufs(size_t len = ~0) const;
     const DataBuf readBuf(size_t len) const;

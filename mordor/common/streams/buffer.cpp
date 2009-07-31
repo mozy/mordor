@@ -104,6 +104,16 @@ Buffer::Data::consume(size_t len)
     invariant();
 }
 
+void
+Buffer::Data::truncate(size_t len)
+{
+    assert(len <= readAvailable());
+    assert(m_writeIndex = readAvailable());
+    m_writeIndex = len;
+    m_buf = m_buf.slice(0, len);
+    invariant();
+}
+
 const Buffer::DataBuf
 Buffer::Data::readBuf() const
 {
@@ -256,6 +266,36 @@ Buffer::consume(size_t len)
         }
     }
     assert(len == 0);
+    invariant();
+}
+
+void
+Buffer::truncate(size_t len)
+{
+    assert(len <= readAvailable());
+    // Split any mixed read/write bufs
+    if (m_writeIt != m_bufs.end() && m_writeIt->readAvailable() != 0) {
+        m_bufs.insert(m_writeIt, Data(m_writeIt->readBuf()));
+        m_writeIt->consume(m_writeIt->readAvailable());
+    }
+    m_readAvailable = len;
+    std::list<Data>::iterator it;
+    for (it = m_bufs.begin(); it != m_writeIt && len > 0; ++it) {
+        Data &buf = *it;
+        if (len <= buf.readAvailable()) {
+            buf.truncate(len);
+            len = 0;
+            ++it;
+            break;
+        } else {
+            len -= buf.readAvailable();
+        }
+    }
+    assert(len == 0);
+    while (it != m_writeIt && it->readAvailable() > 0) {
+        assert(it->writeAvailable() == 0);
+        it = m_bufs.erase(it);
+    }
     invariant();
 }
 

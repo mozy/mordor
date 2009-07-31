@@ -28,3 +28,45 @@ TEST_WITH_SUITE(Buffer, copyConstructorImmutability)
     TEST_ASSERT(buf1 == "hello");
     TEST_ASSERT(buf2 == "tommy");
 }
+
+TEST_WITH_SUITE(Buffer, truncate)
+{
+    Buffer buf("hello");
+    buf.truncate(3);
+    TEST_ASSERT(buf == "hel");
+}
+
+TEST_WITH_SUITE(Buffer, truncateMultipleSegments1)
+{
+    Buffer buf("hello");
+    buf.copyIn("world");
+    buf.truncate(3);
+    TEST_ASSERT(buf == "hel");
+}
+
+TEST_WITH_SUITE(Buffer, truncateMultipleSegments2)
+{
+    Buffer buf("hello");
+    buf.copyIn("world");
+    buf.truncate(8);
+    TEST_ASSERT(buf == "hellowor");
+}
+
+TEST_WITH_SUITE(Buffer, truncateBeforeWriteSegments)
+{
+    Buffer buf("hello");
+    buf.reserve(5);
+    buf.truncate(3);
+    TEST_ASSERT(buf == "hel");
+    TEST_ASSERT_GREATER_THAN_OR_EQUAL(buf.writeAvailable(), 5);
+}
+
+TEST_WITH_SUITE(Buffer, truncateAtWriteSegments)
+{
+    Buffer buf("hello");
+    buf.reserve(10);
+    buf.copyIn("world");
+    buf.truncate(8);
+    TEST_ASSERT(buf == "hellowor");
+    TEST_ASSERT_GREATER_THAN_OR_EQUAL(buf.writeAvailable(), 10);
+}
