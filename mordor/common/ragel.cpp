@@ -2,7 +2,7 @@
 
 #include "ragel.h"
 
-#include <cassert>
+#include "assert.h"
 
 size_t
 RagelParser::run(const void *buf, size_t len)
@@ -14,7 +14,7 @@ RagelParser::run(const void *buf, size_t len)
 
     exec();
 
-    assert(!(complete() && error()));
+    ASSERT(!(complete() && error()));
     return len - (pe - p);
 }
 
@@ -87,8 +87,8 @@ RagelParser::init()
 size_t
 RagelParser::run(const void *buf, size_t len, bool isEof)
 {
-    assert(!complete());
-    assert(!error());
+    ASSERT(!complete());
+    ASSERT(!error());
 
     size_t markSpot = ~0;
 

@@ -2,10 +2,9 @@
 
 #include "iomanager_iocp.h"
 
-#include <cassert>
-
 #include <boost/bind.hpp>
 
+#include "assert.h"
 #include "exception.h"
 
 AsyncEventIOCP::AsyncEventIOCP()
@@ -34,15 +33,15 @@ IOManagerIOCP::registerFile(HANDLE handle)
 void
 IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
 {
-    assert(e);
-    assert(Scheduler::getThis());
-    assert(Fiber::getThis());
+    ASSERT(e);
+    ASSERT(Scheduler::getThis());
+    ASSERT(Fiber::getThis());
     e->m_scheduler = Scheduler::getThis();
     e->m_thread = boost::this_thread::get_id();
     e->m_fiber = Fiber::getThis();
     {
         boost::mutex::scoped_lock lock(m_mutex);
-        assert(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
+        ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
         m_pendingEvents[&e->overlapped] = e;
     }
 }
@@ -112,7 +111,7 @@ IOManagerIOCP::idle()
             boost::mutex::scoped_lock lock(m_mutex);
             std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
                 m_pendingEvents.find(overlapped);
-            assert(it != m_pendingEvents.end());
+            ASSERT(it != m_pendingEvents.end());
             e = it->second;
             m_pendingEvents.erase(it);
         }

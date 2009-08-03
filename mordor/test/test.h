@@ -7,6 +7,8 @@
 #include <typeinfo>
 #include <vector>
 
+#include "mordor/common/assert.h"
+
 class TestInstance;
 
 typedef void (*TestDg)();
@@ -152,6 +154,9 @@ NO_SERIALIZE_BARE(std::vector<T>)
         assertion(__FILE__, __LINE__, "Expected " #exception " from " #code);   \
     } catch (exception) {                                                       \
     }
+
+#define TEST_ASSERT_ASSERTED(code)                                              \
+    TEST_ASSERT_EXCEPTION(code, Assertion)
 
 // Assertion internal functions
 void assertion(const char *file, int line, const std::string &expr);

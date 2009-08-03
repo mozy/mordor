@@ -26,7 +26,7 @@ Stream::getDelimited(char delim)
         return std::string();
     Buffer buf;
     size_t readResult = read(buf, offset);
-    assert(readResult == offset);
+    ASSERT(readResult == offset);
     // Don't copyOut the delimiter itself
     std::string result;
     result.resize(readResult - 1);

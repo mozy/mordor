@@ -3,11 +3,11 @@
 #include "timer.h"
 
 #include <algorithm>
-#include <cassert>
 #include <vector>
 
-#include "mordor/common/exception.h"
-#include "mordor/common/version.h"
+#include "assert.h"
+#include "exception.h"
+#include "version.h"
 
 #ifdef OSX
  #include <mach/mach_time.h>
@@ -23,7 +23,7 @@ static unsigned long long queryFrequency()
 {
     LARGE_INTEGER frequency;
     BOOL bRet = QueryPerformanceFrequency(&frequency);
-    assert(bRet);
+    ASSERT(bRet);
     return (unsigned long long)frequency.QuadPart;
 }
 
@@ -66,7 +66,7 @@ Timer::Timer(unsigned long long us, boost::function<void ()> dg, bool recurring,
       m_recurring(recurring),
       m_manager(manager)
 {
-    assert(m_dg);
+    ASSERT(m_dg);
     m_next = TimerManager::now() + m_us;
 }
 
@@ -81,7 +81,7 @@ Timer::cancel()
         boost::mutex::scoped_lock lock(m_manager->m_mutex);
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
             m_manager->m_timers.find(shared_from_this());
-        assert(it != m_manager->m_timers.end());
+        ASSERT(it != m_manager->m_timers.end());
         m_next = 0;
         m_manager->m_timers.erase(it);
     }
@@ -91,7 +91,7 @@ TimerManager::~TimerManager()
 {
 #ifndef NDEBUG
     boost::mutex::scoped_lock lock(m_mutex);
-    assert(m_timers.empty());
+    ASSERT(m_timers.empty());
 #endif
 }
 

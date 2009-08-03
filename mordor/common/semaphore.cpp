@@ -2,8 +2,7 @@
 
 #include "semaphore.h"
 
-#include <cassert>
-
+#include "assert.h"
 #include "exception.h"
 
 #ifndef WINDOWS
@@ -53,16 +52,16 @@ Semaphore::~Semaphore()
 {
 #ifdef WINDOWS
     BOOL bRet = CloseHandle(m_semaphore);
-    assert(bRet);
+    ASSERT(bRet);
 #elif defined(OSX)
     int rc = semaphore_destroy(m_task, m_semaphore);
-    assert(!rc);
+    ASSERT(!rc);
 #elif defined(FREEBSD)
     int rc = semctl(m_semaphore, 0, IPC_RMID);
-    assert(rc >= 0);
+    ASSERT(rc >= 0);
 #else
     int rc = sem_destroy(&m_semaphore);
-    assert(!rc);
+    ASSERT(!rc);
 #endif
 }
 

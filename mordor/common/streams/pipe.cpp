@@ -61,8 +61,8 @@ PipeStream::~PipeStream()
     boost::mutex::scoped_lock lock(*m_mutex);
     if (!m_otherStream.expired()) {
         PipeStream::ptr otherStream(m_otherStream);
-        assert(!otherStream->m_pendingReader);
-        assert(!otherStream->m_pendingWriter);
+        ASSERT(!otherStream->m_pendingReader);
+        ASSERT(!otherStream->m_pendingWriter);
     }
     if (m_pendingReader) {
         m_pendingReaderScheduler->schedule(m_pendingReader);
@@ -98,7 +98,7 @@ PipeStream::read(Buffer &b, size_t len)
 {
     {
         boost::mutex::scoped_lock lock(*m_mutex);
-        assert(!(m_closed & READ));
+        ASSERT(!(m_closed & READ));
         if (m_otherStream.expired() && !(m_otherClosed & WRITE)) {
             throw ConnectionResetException();
         }
@@ -120,7 +120,7 @@ PipeStream::read(Buffer &b, size_t len)
         PipeStream::ptr otherStream(m_otherStream);
 
         // Wait for the other stream to schedule us
-        assert(!otherStream->m_pendingReader);
+        ASSERT(!otherStream->m_pendingReader);
         otherStream->m_pendingReader = Fiber::getThis();
         otherStream->m_pendingReaderScheduler = Scheduler::getThis();
     }
@@ -134,7 +134,7 @@ PipeStream::write(const Buffer &b, size_t len)
 {
     {
         boost::mutex::scoped_lock lock(*m_mutex);
-        assert(!(m_closed & WRITE));
+        ASSERT(!(m_closed & WRITE));
         if (m_otherStream.expired()) {
             throw ConnectionResetException();
         }
@@ -152,7 +152,7 @@ PipeStream::write(const Buffer &b, size_t len)
             return len;
         }
         // Wait for the other stream to schedule us
-        assert(!otherStream->m_pendingWriter);
+        ASSERT(!otherStream->m_pendingWriter);
         otherStream->m_pendingWriter = Fiber::getThis();
         otherStream->m_pendingWriterScheduler = Scheduler::getThis();
     }
@@ -179,7 +179,7 @@ PipeStream::flush()
                 return;
             }
             // Wait for the other stream to schedule us
-            assert(!otherStream->m_pendingWriter);
+            ASSERT(!otherStream->m_pendingWriter);
             otherStream->m_pendingWriter = Fiber::getThis();
             otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }

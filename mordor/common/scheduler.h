@@ -7,7 +7,6 @@
 #include <stddef.h>
 #endif
 
-#include <cassert>
 #include <list>
 #include <string>
 #include <vector>

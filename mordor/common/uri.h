@@ -2,9 +2,10 @@
 #define __URI_H__
 // Copyright (c) 2009 - Decho Corp.
 
-#include <cassert>
 #include <string>
 #include <vector>
+
+#include "assert.h"
 
 struct URI
 {
@@ -17,7 +18,7 @@ struct URI
 
     void reset();
 
-    std::string scheme() const { assert(m_schemeDefined); return m_scheme; }
+    std::string scheme() const { ASSERT(m_schemeDefined); return m_scheme; }
     void scheme(const std::string& s) { m_schemeDefined = true; m_scheme = s; }
     bool schemeDefined() const { return m_schemeDefined; }
     void schemeDefined(bool d) { if (!d) m_scheme.clear(); m_schemeDefined = d; }
@@ -26,17 +27,17 @@ struct URI
     {
         Authority();
 
-        std::string userinfo() const { assert(m_userinfoDefined); return m_userinfo; }
+        std::string userinfo() const { ASSERT(m_userinfoDefined); return m_userinfo; }
         void userinfo(const std::string& ui) { m_userinfoDefined = true; m_hostDefined = true; m_userinfo = ui; }
         bool userinfoDefined() const { return m_userinfoDefined; }
         void userinfoDefined(bool d) { if (!d) m_userinfo.clear(); if (d) m_hostDefined = true; m_userinfoDefined = d; }
 
-        std::string host() const { assert(m_hostDefined); return m_host; }
+        std::string host() const { ASSERT(m_hostDefined); return m_host; }
         void host(const std::string& h) { m_hostDefined = true; m_host = h; }
         bool hostDefined() const { return m_hostDefined; }
         void hostDefined(bool d) { if (!d) { m_host.clear(); userinfoDefined(false); portDefined(false); } m_hostDefined = d; }
 
-        int port() const { assert(m_portDefined); return m_port; }
+        int port() const { ASSERT(m_portDefined); return m_port; }
         void port(int p) { m_portDefined = true; m_hostDefined = true; m_port = p; }
         bool portDefined() const { return m_portDefined; }
         void portDefined(bool d) { if (!d) m_port = -1; if (d) m_hostDefined = true; m_portDefined = d; }
@@ -102,12 +103,12 @@ struct URI
     };
     Path path;
 
-    std::string query() const { assert(m_queryDefined); return m_query; }
+    std::string query() const { ASSERT(m_queryDefined); return m_query; }
     void query(const std::string& q) { m_queryDefined = true; m_query = q; }
     bool queryDefined() const { return m_queryDefined; }
     void queryDefined(bool d) { if (!d) m_query.clear(); m_queryDefined = d; }
 
-    std::string fragment() const { assert(m_fragmentDefined); return m_fragment; }
+    std::string fragment() const { ASSERT(m_fragmentDefined); return m_fragment; }
     void fragment(const std::string& f) { m_fragmentDefined = true; m_fragment = f; }
     bool fragmentDefined() const { return m_fragmentDefined; }
     void fragmentDefined(bool d) { if (!d) m_fragment.clear(); m_fragmentDefined = d; }

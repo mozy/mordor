@@ -16,9 +16,9 @@ public:
         : FilterStream(parent, own),
           m_type(type)
     {
-        assert(type == READ || type == WRITE);
-        if (type == READ) assert(parent->supportsRead());
-        if (type == WRITE) assert(parent->supportsWrite());
+        ASSERT(type == READ || type == WRITE);
+        if (type == READ) ASSERT(parent->supportsRead());
+        if (type == WRITE) ASSERT(parent->supportsWrite());
     }
 
     bool supportsRead() { return m_type == READ; }
@@ -38,17 +38,17 @@ public:
 
     size_t read(Buffer &b, size_t len)
     {
-        assert(m_type == READ);
+        ASSERT(m_type == READ);
         return FilterStream::read(b, len);
     }
     size_t write(const Buffer &b, size_t len)
     {
-        assert(m_type == WRITE);
+        ASSERT(m_type == WRITE);
         return FilterStream::write(b, len);
     }
     void truncate(long long size)
     {
-        assert(m_type == WRITE);
+        ASSERT(m_type == WRITE);
         return FilterStream::truncate(size);
     }
     void flush()
@@ -59,17 +59,17 @@ public:
     }
     size_t find(char delim)
     {
-        assert(m_type == READ);
+        ASSERT(m_type == READ);
         return FilterStream::find(delim);
     }
     size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)
     {
-        assert(m_type == READ);
+        ASSERT(m_type == READ);
         return FilterStream::find(str, sanitySize, throwIfNotFound);
     }
     void unread(const Buffer &b, size_t len)
     {
-        assert(m_type == READ);
+        ASSERT(m_type == READ);
         return FilterStream::unread(b, len);
     }
 

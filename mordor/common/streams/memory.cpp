@@ -113,7 +113,7 @@ MemoryStream::seek(long long offset, Anchor anchor)
             // seek
             return seek(size + offset - m_offset, CURRENT);
         default:
-            assert(false);
+            ASSERT(false);
             return 0;
     }
 }
@@ -127,7 +127,7 @@ MemoryStream::size()
 void
 MemoryStream::truncate(long long size)
 {
-    assert(size >= 0);
+    ASSERT(size >= 0);
     if ((unsigned long long)size > (size_t)~0) {
         throw std::invalid_argument(
             "Memory stream size cannot exceed virtual address space.");
@@ -158,7 +158,7 @@ MemoryStream::truncate(long long size)
         m_read.consume(std::min(m_offset, (size_t)size));
     }
 
-    assert(m_original.readAvailable() == (size_t)size);
+    ASSERT(m_original.readAvailable() == (size_t)size);
 }
 
 size_t

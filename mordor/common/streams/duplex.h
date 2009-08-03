@@ -13,10 +13,10 @@ public:
           m_writeParent(writeParent),
           m_own(own)
     {
-        assert(readParent);
-        assert(writeParent);
-        assert(readParent->supportsRead());
-        assert(writeParent->supportsWrite());
+        ASSERT(readParent);
+        ASSERT(writeParent);
+        ASSERT(readParent->supportsRead());
+        ASSERT(writeParent->supportsWrite());
     }
 
     Stream::ptr readParent() { return m_readParent; }
@@ -44,18 +44,18 @@ public:
     size_t write(const Buffer &b, size_t len) { return m_writeParent->write(b, len); }
     long long seek(long long offset, Anchor anchor)
     {
-        assert(supportsSeek());
+        ASSERT(supportsSeek());
         long long result1 = m_readParent->seek(offset, anchor);
         long long result2 = m_writeParent->seek(offset, anchor);
-        assert(result1 == result2);
+        ASSERT(result1 == result2);
         return result1;
     }
     long long size()
     {
-        assert(supportsSize());
+        ASSERT(supportsSize());
         long long result1 = m_readParent->size();
         long long result2 = m_writeParent->size();
-        assert(result1 == result2);
+        ASSERT(result1 == result2);
         return result1;
     }
     void truncate(long long size) { m_writeParent->truncate(size); }

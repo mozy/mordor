@@ -4,6 +4,7 @@
 
 #include <boost/bind.hpp>
 
+#include "assert.h"
 #include "exception.h"
 #include "version.h"
 
@@ -123,7 +124,7 @@ Socket::~Socket()
 void
 Socket::bind(const Address &addr)
 {
-    assert(addr.family() == m_family);
+    ASSERT(addr.family() == m_family);
     if (::bind(m_sock, addr.name(), addr.nameLen())) {
         throwExceptionFromLastError();
     }
@@ -132,7 +133,7 @@ Socket::bind(const Address &addr)
 void
 Socket::connect(const Address &to)
 {
-    assert(to.family() == m_family);
+    ASSERT(to.family() == m_family);
     if (!m_ioManager) {
         if (::connect(m_sock, to.name(), to.nameLen())) {
             throwExceptionFromLastError();
@@ -166,7 +167,7 @@ Socket::connect(const Address &to)
                     break;
                 }
             default:
-                assert(false);
+                ASSERT(false);
         }
 
         ptr self = shared_from_this();
@@ -239,15 +240,15 @@ Socket::accept(Socket &target)
 {
 #ifdef WINDOWS
     if (m_ioManager) {
-        assert(target.m_sock != -1);
+        ASSERT(target.m_sock != -1);
     } else {
-        assert(target.m_sock == -1);
+        ASSERT(target.m_sock == -1);
     }
 #else
-    assert(target.m_sock == -1);
+    ASSERT(target.m_sock == -1);
 #endif
-    assert(target.m_family == m_family);
-    assert(target.m_protocol == m_protocol);
+    ASSERT(target.m_family == m_family);
+    ASSERT(target.m_protocol == m_protocol);
     if (!m_ioManager) {
         socket_t newsock = ::accept(m_sock, NULL, NULL);
         if (newsock == -1) {
@@ -389,7 +390,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
     if (m_ioManager) {
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
-        assert(len <= 0xffffffff);
+        ASSERT(len <= 0xffffffff);
         int ret = WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
             &m_sendEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
@@ -408,7 +409,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         return m_sendEvent.numberOfBytes;
     } else {
         DWORD sent;
-        assert(len <= 0xffffffff);
+        ASSERT(len <= 0xffffffff);
         if (WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, flags,
             NULL, NULL)) {
             throwExceptionFromLastError();
@@ -446,7 +447,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
 size_t
 Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
 {
-    assert(to.family() == family());
+    ASSERT(to.family() == family());
 #ifdef WINDOWS
     if (m_ioManager) {
         if (len > 0xfffffff)
@@ -504,12 +505,12 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
 size_t
 Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
 {
-    assert(to.family() == family());
+    ASSERT(to.family() == family());
 #ifdef WINDOWS
     if (m_ioManager) {
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
-        assert(len <= 0xffffffff);
+        ASSERT(len <= 0xffffffff);
         int ret = WSASendTo(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
             to.name(), to.nameLen(),
             &m_sendEvent.overlapped, NULL);
@@ -529,7 +530,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         return m_sendEvent.numberOfBytes;
     } else {
         DWORD sent;
-        assert(len <= 0xffffffff);
+        ASSERT(len <= 0xffffffff);
         if (WSASendTo(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, flags,
             to.name(), to.nameLen(),
             NULL, NULL)) {
@@ -630,7 +631,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
     if (m_ioManager) {
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
-        assert(len <= 0xffffffff);
+        ASSERT(len <= 0xffffffff);
         int ret = WSARecv(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)&flags,
             &m_receiveEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
@@ -649,7 +650,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         return m_receiveEvent.numberOfBytes;
     } else {
         DWORD received;
-        assert(len <= 0xffffffff);
+        ASSERT(len <= 0xffffffff);
         if (WSARecv(m_sock, (LPWSABUF)bufs, (DWORD)len, &received, (LPDWORD)&flags,
             NULL, NULL)) {
             throwExceptionFromLastError();
@@ -687,7 +688,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
 size_t
 Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
 {
-    assert(from->family() == family());
+    ASSERT(from->family() == family());
 #ifdef WINDOWS
     if (len > 0xffffffff)
         len = 0xffffffff;
@@ -761,13 +762,13 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
 size_t
 Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
 {
-    assert(from->family() == family());
+    ASSERT(from->family() == family());
 #ifdef WINDOWS
     int namelen = from->nameLen();
     if (m_ioManager) {
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
-        assert(len <= 0xffffffff);
+        ASSERT(len <= 0xffffffff);
         int ret = WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)flags,
             from->name(), &namelen,
             &m_sendEvent.overlapped, NULL);
@@ -787,7 +788,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
         return m_sendEvent.numberOfBytes;
     } else {
         DWORD sent;
-        assert(len <= 0xffffffff);
+        ASSERT(len <= 0xffffffff);
         if (WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, (LPDWORD)flags,
             from->name(), &namelen,
             NULL, NULL)) {
@@ -875,7 +876,7 @@ Socket::remoteAddress()
     if (getpeername(m_sock, result->name(), &namelen)) {
         throwExceptionFromLastError();
     }
-    assert(namelen <= result->nameLen());
+    ASSERT(namelen <= result->nameLen());
     return result;
 }
 
@@ -898,7 +899,7 @@ Socket::localAddress()
     if (getsockname(m_sock, result->name(), &namelen)) {
         throwExceptionFromLastError();
     }
-    assert(namelen <= result->nameLen());
+    ASSERT(namelen <= result->nameLen());
     return result;
 }
 
@@ -955,17 +956,17 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
         switch (next->ai_family) {
             case AF_INET:
                 addr.reset(new IPv4Address(next->ai_socktype, next->ai_protocol));
-                assert(next->ai_addrlen <= (size_t)addr->nameLen());
+                ASSERT(next->ai_addrlen <= (size_t)addr->nameLen());
                 memcpy(addr->name(), next->ai_addr, next->ai_addrlen);
                 break;
             case AF_INET6:
                 addr.reset(new IPv6Address(next->ai_socktype, next->ai_protocol));
-                assert(next->ai_addrlen <= (size_t)addr->nameLen());
+                ASSERT(next->ai_addrlen <= (size_t)addr->nameLen());
                 memcpy(addr->name(), next->ai_addr, next->ai_addrlen);
                 break;
             default:
                 addr.reset(new UnknownAddress(next->ai_family, next->ai_socktype, next->ai_protocol));
-                assert(next->ai_addrlen <= (size_t)addr->nameLen());
+                ASSERT(next->ai_addrlen <= (size_t)addr->nameLen());
                 memcpy(addr->name(), next->ai_addr, next->ai_addrlen);
                 break;
         }

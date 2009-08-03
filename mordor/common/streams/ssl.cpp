@@ -21,14 +21,14 @@ static SSLInitializer g_init;
 SSLStream::SSLStream(Stream::ptr parent, bool client, bool own)
 : OpenSSLStream(BIO_new_stream(parent, own))
 {
-    assert(parent);
+    ASSERT(parent);
     m_ctx = SSL_CTX_new(client ? SSLv23_client_method() :
         SSLv23_server_method());
-    assert(m_ctx);
+    ASSERT(m_ctx);
     // TODO: exception
     m_ssl = SSL_new(m_ctx);
     // TODO: exception
-    assert(m_ssl);
+    ASSERT(m_ssl);
     SSL_set_bio(m_ssl, OpenSSLStream::parent(), OpenSSLStream::parent());
     ownsParent(false);
     if (client) {

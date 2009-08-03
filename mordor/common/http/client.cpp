@@ -3,10 +3,10 @@
 #include "client.h"
 
 #include <algorithm>
-#include <cassert>
 
 #include <boost/bind.hpp>
 
+#include "mordor/common/assert.h"
 #include "mordor/common/log.h"
 #include "mordor/common/scheduler.h"
 #include "mordor/common/streams/null.h"
@@ -38,10 +38,10 @@ HTTP::ClientConnection::scheduleNextRequest(ClientRequest::ptr request)
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
-        assert(m_currentRequest != m_pendingRequests.end());
-        assert(request == *m_currentRequest);
-        assert(!request->m_requestDone);
-        assert(request->m_requestInFlight);
+        ASSERT(m_currentRequest != m_pendingRequests.end());
+        ASSERT(request == *m_currentRequest);
+        ASSERT(!request->m_requestDone);
+        ASSERT(request->m_requestInFlight);
         std::list<ClientRequest::ptr>::iterator it(m_currentRequest);
         if (++it == m_pendingRequests.end()) {
             // Do *not* advance m_currentRequest, because we can't let someone else
@@ -63,7 +63,7 @@ HTTP::ClientConnection::scheduleNextRequest(ClientRequest::ptr request)
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
         ClientRequest::ptr request = *m_currentRequest;
-        assert(request->m_fiber == Fiber::getThis());
+        ASSERT(request->m_fiber == Fiber::getThis());
         request->m_requestInFlight = false;
         request->m_requestDone = true;
         ++m_currentRequest;
@@ -80,21 +80,21 @@ HTTP::ClientConnection::scheduleNextResponse(ClientRequest::ptr request)
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
-        assert(!m_pendingRequests.empty());
-        assert(request == m_pendingRequests.front());
-        assert(!request->m_responseDone);
-        assert(request->m_responseInFlight);
+        ASSERT(!m_pendingRequests.empty());
+        ASSERT(request == m_pendingRequests.front());
+        ASSERT(!request->m_responseDone);
+        ASSERT(request->m_responseInFlight);
         request->m_responseDone = true;
         request->m_responseInFlight = false;
         m_pendingRequests.pop_front();
         request.reset();
         if (!m_pendingRequests.empty()) {
             request = m_pendingRequests.front();
-            assert(!request->m_responseDone);
-            assert(!request->m_responseInFlight);
+            ASSERT(!request->m_responseDone);
+            ASSERT(!request->m_responseInFlight);
             std::set<ClientRequest::ptr>::iterator it = m_waitingResponses.find(request);
             if (request->m_cancelled) {
-                assert(it == m_waitingResponses.end());
+                ASSERT(it == m_waitingResponses.end());
                 request->m_responseInFlight = true;
             } else if (it != m_waitingResponses.end()) {
                 m_waitingResponses.erase(it);                
@@ -107,7 +107,7 @@ HTTP::ClientConnection::scheduleNextResponse(ClientRequest::ptr request)
         }
     }
     if (request.get()) {
-        assert(request->m_cancelled);
+        ASSERT(request->m_cancelled);
         request->finish();
     }
 }
@@ -115,13 +115,13 @@ HTTP::ClientConnection::scheduleNextResponse(ClientRequest::ptr request)
 void
 HTTP::ClientConnection::scheduleAllWaitingRequests()
 {
-    assert(*m_requestException.what() || *m_responseException.what());
-    // assert(m_mutex.locked());
+    ASSERT(*m_requestException.what() || *m_responseException.what());
+    // ASSERT(m_mutex.locked());
     
     for (std::list<ClientRequest::ptr>::iterator it(m_currentRequest);
         it != m_pendingRequests.end();
         ) {
-        assert(!(*it)->m_requestDone);
+        ASSERT(!(*it)->m_requestDone);
         if (!(*it)->m_requestInFlight) {
             (*it)->m_scheduler->schedule((*it)->m_fiber);
             if (m_currentRequest == it) {
@@ -138,8 +138,8 @@ HTTP::ClientConnection::scheduleAllWaitingRequests()
 void
 HTTP::ClientConnection::scheduleAllWaitingResponses()
 {
-    assert(*m_responseException.what());
-    // assert(m_mutex.locked());
+    ASSERT(*m_responseException.what());
+    // ASSERT(m_mutex.locked());
     for (std::list<ClientRequest::ptr>::iterator it(m_pendingRequests.begin());
         it != m_currentRequest;
         ++it) {
@@ -159,40 +159,40 @@ HTTP::ClientConnection::scheduleAllWaitingResponses()
 void
 HTTP::ClientConnection::invariant() const
 {
-    // assert(m_mutex.locked());
+    // ASSERT(m_mutex.locked());
     bool seenFirstUnrequested = false;
     for (std::list<ClientRequest::ptr>::const_iterator it(m_pendingRequests.begin());
         it != m_pendingRequests.end();
         ++it) {
         ClientRequest::ptr request = *it;
         if (!request->m_requestDone)
-            assert(!request->m_responseDone);
-        assert (!request->m_responseDone);
+            ASSERT(!request->m_responseDone);
+        ASSERT(!request->m_responseDone);
         if (!seenFirstUnrequested) {
             if (!request->m_requestDone) {
                 seenFirstUnrequested = true;
-                assert(m_currentRequest == it);
+                ASSERT(m_currentRequest == it);
             } else if (it != m_pendingRequests.begin()) {
                 // Response that's not the first can't be in flight
-                assert(!request->m_responseInFlight);
+                ASSERT(!request->m_responseInFlight);
             }
         } else {
-            assert(!request->m_requestDone);
+            ASSERT(!request->m_requestDone);
             // Request that's not the first (caught by previous iteration above)
             // can't be in flight
-            assert(!request->m_requestInFlight);            
+            ASSERT(!request->m_requestInFlight);            
         }
     }
     if (!seenFirstUnrequested) {
-        assert(m_currentRequest == m_pendingRequests.end());
+        ASSERT(m_currentRequest == m_pendingRequests.end());
     }
     for (std::set<ClientRequest::ptr>::const_iterator it(m_waitingResponses.begin());
         it != m_waitingResponses.end();
         ++it) {
         ClientRequest::ptr request = *it;
-        assert(!request->m_responseDone);
-        assert(!request->m_responseInFlight);
-        assert(std::find<std::list<ClientRequest::ptr>::const_iterator>
+        ASSERT(!request->m_responseDone);
+        ASSERT(!request->m_responseInFlight);
+        ASSERT(std::find<std::list<ClientRequest::ptr>::const_iterator>
             (m_pendingRequests.begin(), m_currentRequest, request) != m_currentRequest);
     }
 }
@@ -224,8 +224,8 @@ HTTP::ClientRequest::requestStream()
 {
     if (m_requestStream)
         return m_requestStream;
-    assert(!m_requestMultipart);
-    assert(m_request.entity.contentType.type != "multipart");
+    ASSERT(!m_requestMultipart);
+    ASSERT(m_request.entity.contentType.type != "multipart");
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ClientRequest::requestDone, this),
@@ -237,8 +237,8 @@ HTTP::ClientRequest::requestMultipart()
 {
     if (m_requestMultipart)
         return m_requestMultipart;
-    assert(m_request.entity.contentType.type == "multipart");
-    assert(!m_requestStream);
+    ASSERT(m_request.entity.contentType.type == "multipart");
+    ASSERT(!m_requestStream);
     HTTP::StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
     if (it == m_request.entity.contentType.parameters.end()) {
         throw std::runtime_error("No boundary with multipart");
@@ -257,7 +257,7 @@ HTTP::ClientRequest::requestTrailer()
 {
     // If transferEncoding is not empty, it must include chunked,
     // and it must include chunked in order to have a trailer
-    assert(!m_request.general.transferEncoding.empty());
+    ASSERT(!m_request.general.transferEncoding.empty());
     return m_requestTrailer;
 }
 
@@ -288,9 +288,9 @@ HTTP::ClientRequest::responseStream()
 {
     if (m_responseStream)
         return m_responseStream;
-    assert(!m_responseMultipart);
+    ASSERT(!m_responseMultipart);
     ensureResponse();
-    assert(m_response.entity.contentType.type != "multipart");
+    ASSERT(m_response.entity.contentType.type != "multipart");
     return m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
         boost::bind(&ClientRequest::responseDone, this),
@@ -309,7 +309,7 @@ HTTP::ClientRequest::responseMultipart()
     if (m_responseMultipart)
         return m_responseMultipart;
     ensureResponse();
-    assert(m_response.entity.contentType.type == "multipart");
+    ASSERT(m_response.entity.contentType.type == "multipart");
     HTTP::StringMap::const_iterator it = m_response.entity.contentType.parameters.find("boundary");
     if (it == m_response.entity.contentType.parameters.end()) {
         throw std::runtime_error("No boundary with multipart");
@@ -336,13 +336,13 @@ HTTP::ClientRequest::cancel(bool abort)
             // Just abandon it
             std::list<ClientRequest::ptr>::iterator it =
                 std::find(m_conn->m_pendingRequests.begin(), m_conn->m_pendingRequests.end(), shared_from_this());
-            assert(it != m_conn->m_pendingRequests.end());
+            ASSERT(it != m_conn->m_pendingRequests.end());
             m_conn->m_pendingRequests.erase(it);
         }
         return;
     }
     if (!abort && m_requestDone) {
-        assert(m_responseInFlight);
+        ASSERT(m_responseInFlight);
         finish();
         return;
     }
@@ -376,7 +376,7 @@ HTTP::ClientRequest::finish()
             if (!m_responseStream) {
                 m_responseStream = responseStream();
             }
-            assert(m_responseStream);
+            ASSERT(m_responseStream);
             transferStream(m_responseStream, NullStream::get());
         }
     }
@@ -387,24 +387,24 @@ HTTP::ClientRequest::doRequest()
 {
     RequestLine &requestLine = m_request.requestLine;
     // 1.0, 1.1, or defaulted
-    assert(requestLine.ver == Version() ||
+    ASSERT(requestLine.ver == Version() ||
            requestLine.ver == Version(1, 0) ||
            requestLine.ver == Version(1, 1));
     // Have to request *something*
-    assert(requestLine.uri.isDefined());
+    ASSERT(requestLine.uri.isDefined());
     // Host header required with HTTP/1.1
-    assert(!m_request.request.host.empty() || requestLine.ver != Version(1, 1));
+    ASSERT(!m_request.request.host.empty() || requestLine.ver != Version(1, 1));
     // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
     const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
     if (!transferEncoding.empty()) {
-        assert(transferEncoding.back().value == "chunked");
+        ASSERT(transferEncoding.back().value == "chunked");
         for (ParameterizedList::const_iterator it(transferEncoding.begin());
             it + 1 != transferEncoding.end();
             ++it) {
             // Only the last one can be chunked
-            assert(it->value != "chunked");
+            ASSERT(it->value != "chunked");
             // identity is only acceptable in the TE header field
-            assert(it->value != "identity");
+            ASSERT(it->value != "identity");
             if (it->value == "gzip" ||
                 it->value == "x-gzip" ||
                 it->value == "deflate") {
@@ -413,10 +413,10 @@ HTTP::ClientRequest::doRequest()
             } else if (it->value == "compress" ||
                 it->value == "x-compress") {
                 // Unsupported Transfer-Codings
-                assert(false);
+                ASSERT(false);
             } else {
                 // Unknown Transfer-Coding
-                assert(false);
+                ASSERT(false);
             }
         }
     }
@@ -521,7 +521,7 @@ HTTP::ClientRequest::ensureResponse()
     // TODO: need to queue up other people waiting for this response if m_responseInFlight
     if (m_responseHeadersDone)
         return;
-    assert(!m_responseInFlight);
+    ASSERT(!m_responseInFlight);
     bool wait = false;
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
@@ -530,15 +530,15 @@ HTTP::ClientRequest::ensureResponse()
             std::list<ClientRequest::ptr>::iterator it;
             it = std::find(m_conn->m_pendingRequests.begin(), m_conn->m_pendingRequests.end(),
                 shared_from_this());
-            assert(it != m_conn->m_pendingRequests.end());             
+            ASSERT(it != m_conn->m_pendingRequests.end());             
             m_conn->m_pendingRequests.erase(it);
             throw m_conn->m_responseException;
         }
-        assert(!m_conn->m_pendingRequests.empty());
+        ASSERT(!m_conn->m_pendingRequests.empty());
         ClientRequest::ptr request = m_conn->m_pendingRequests.front();
         if (request.get() != this) {
             bool inserted = m_conn->m_waitingResponses.insert(shared_from_this()).second;
-            assert(inserted);
+            ASSERT(inserted);
             wait = true;
         } else {
             m_responseInFlight = true;
@@ -643,7 +643,7 @@ HTTP::ClientRequest::ensureResponse()
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         m_conn->m_responseException = std::runtime_error("No more requests are possible because a prior request failed");
-        assert(m_conn->m_pendingRequests.front() == shared_from_this());
+        ASSERT(m_conn->m_pendingRequests.front() == shared_from_this());
         m_conn->m_pendingRequests.pop_front();
         m_conn->scheduleAllWaitingRequests();
         m_conn->scheduleAllWaitingResponses();
@@ -683,7 +683,7 @@ HTTP::ClientRequest::responseDone()
             cancel(true);
             throw std::runtime_error("Error parsing trailer");
         }
-        assert(parser.complete());
+        ASSERT(parser.complete());
         LOG_TRACE(g_log) << m_responseTrailer;
     }
     m_conn->scheduleNextResponse(shared_from_this());

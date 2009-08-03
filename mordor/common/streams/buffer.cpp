@@ -4,7 +4,8 @@
 
 #include <string.h>
 #include <algorithm>
-#include <cassert>
+
+#include "mordor/common/assert.h"
 
 #ifdef min
 #undef min
@@ -18,7 +19,7 @@ Buffer::DataBuf::DataBuf()
 
 Buffer::DataBuf::DataBuf(size_t length)
 {
-    assert(length <= 0xffffffff);
+    ASSERT(length <= 0xffffffff);
     m_array.reset(new unsigned char[length]);
     start(m_array.get());
     this->length(length);
@@ -30,8 +31,8 @@ Buffer::DataBuf::slice(size_t start, size_t length)
     if (length == (size_t)~0) {
         length = this->length() - start;
     }
-    assert(start <= this->length());
-    assert(length + start <= this->length());
+    ASSERT(start <= this->length());
+    ASSERT(length + start <= this->length());
     DataBuf result;
     result.m_array = m_array;
     result.start((unsigned char*)this->start() + start);
@@ -45,8 +46,8 @@ Buffer::DataBuf::slice(size_t start, size_t length) const
     if (length == (size_t)~0) {
         length = this->length() - start;
     }
-    assert(start <= this->length());
-    assert(length + start <= this->length());
+    ASSERT(start <= this->length());
+    ASSERT(length + start <= this->length());
     DataBuf result;
     result.m_array = m_array;
     result.start((unsigned char*)this->start() + start);
@@ -90,7 +91,7 @@ Buffer::Data::length() const
 void
 Buffer::Data::produce(size_t len)
 {
-    assert(len <= writeAvailable());
+    ASSERT(len <= writeAvailable());
     m_writeIndex += len;
     invariant();
 }
@@ -98,7 +99,7 @@ Buffer::Data::produce(size_t len)
 void
 Buffer::Data::consume(size_t len)
 {
-    assert(len <= readAvailable());
+    ASSERT(len <= readAvailable());
     m_writeIndex -= len;
     m_buf = m_buf.slice(len);
     invariant();
@@ -107,8 +108,8 @@ Buffer::Data::consume(size_t len)
 void
 Buffer::Data::truncate(size_t len)
 {
-    assert(len <= readAvailable());
-    assert(m_writeIndex = readAvailable());
+    ASSERT(len <= readAvailable());
+    ASSERT(m_writeIndex = readAvailable());
     m_writeIndex = len;
     m_buf = m_buf.slice(0, len);
     invariant();
@@ -131,7 +132,7 @@ Buffer::Data::writeBuf()
 void
 Buffer::Data::invariant() const
 {
-    assert(m_writeIndex <= m_buf.length());
+    ASSERT(m_writeIndex <= m_buf.length());
 }
 
 
@@ -217,7 +218,7 @@ Buffer::compact()
         m_writeIt = m_bufs.erase(m_writeIt, m_bufs.end());
         m_writeAvailable = 0;
     }
-    assert(writeAvailable() == 0);
+    ASSERT(writeAvailable() == 0);
 }
 
 void
@@ -228,14 +229,14 @@ Buffer::clear()
     m_bufs.clear();
     m_writeIt = m_bufs.end();
     invariant();
-    assert(m_readAvailable == 0);
-    assert(m_writeAvailable == 0);
+    ASSERT(m_readAvailable == 0);
+    ASSERT(m_writeAvailable == 0);
 }
 
 void
 Buffer::produce(size_t len)
 {
-    assert(len <= writeAvailable());
+    ASSERT(len <= writeAvailable());
     m_readAvailable += len;
     m_writeAvailable -= len;
     while (len > 0) {
@@ -247,14 +248,14 @@ Buffer::produce(size_t len)
             ++m_writeIt;
         }
     }
-    assert(len == 0);
+    ASSERT(len == 0);
     invariant();
 }
 
 void
 Buffer::consume(size_t len)
 {
-    assert(len <= readAvailable());
+    ASSERT(len <= readAvailable());
     m_readAvailable -= len;
     while (len > 0) {
         Data& buf = *m_bufs.begin();
@@ -265,14 +266,14 @@ Buffer::consume(size_t len)
             m_bufs.pop_front();
         }
     }
-    assert(len == 0);
+    ASSERT(len == 0);
     invariant();
 }
 
 void
 Buffer::truncate(size_t len)
 {
-    assert(len <= readAvailable());
+    ASSERT(len <= readAvailable());
     // Split any mixed read/write bufs
     if (m_writeIt != m_bufs.end() && m_writeIt->readAvailable() != 0) {
         m_bufs.insert(m_writeIt, Data(m_writeIt->readBuf()));
@@ -291,9 +292,9 @@ Buffer::truncate(size_t len)
             len -= buf.readAvailable();
         }
     }
-    assert(len == 0);
+    ASSERT(len == 0);
     while (it != m_writeIt && it->readAvailable() > 0) {
-        assert(it->writeAvailable() == 0);
+        ASSERT(it->writeAvailable() == 0);
         it = m_bufs.erase(it);
     }
     invariant();
@@ -304,7 +305,7 @@ Buffer::readBufs(size_t len) const
 {
     if (len == (size_t)~0)
         len = readAvailable();
-    assert(len <= readAvailable());
+    ASSERT(len <= readAvailable());
     std::vector<iovec> result;
     result.reserve(m_bufs.size());
     size_t remaining = len;
@@ -331,7 +332,7 @@ Buffer::readBufs(size_t len) const
             break;
         }
     }
-    assert(remaining == 0);
+    ASSERT(remaining == 0);
     invariant();
     return result;
 }
@@ -339,7 +340,7 @@ Buffer::readBufs(size_t len) const
 const Buffer::DataBuf
 Buffer::readBuf(size_t len) const
 {
-    assert(len <= readAvailable());
+    ASSERT(len <= readAvailable());
     if (readAvailable() == 0) {
         return DataBuf();
     }
@@ -403,7 +404,7 @@ Buffer::writeBufs(size_t len)
         remaining -= toProduce;
         ++it;
     }
-    assert(remaining == 0);
+    ASSERT(remaining == 0);
     invariant();
     return result;
 }
@@ -414,8 +415,8 @@ Buffer::writeBuf(size_t len)
     // Must allocate just the write buf
     if (writeAvailable() == 0) {
         reserve(len);
-        assert(m_writeIt != m_bufs.end());
-        assert(m_writeIt->writeAvailable() >= len);
+        ASSERT(m_writeIt != m_bufs.end());
+        ASSERT(m_writeIt->writeAvailable() >= len);
         return m_writeIt->writeBuf().slice(0, len);
     }
     // Can use an existing write buf
@@ -425,8 +426,8 @@ Buffer::writeBuf(size_t len)
     // Existing bufs are insufficient... remove them and reserve anew
     compact();
     reserve(len);
-    assert(m_writeIt != m_bufs.end());
-    assert(m_writeIt->writeAvailable() >= len);
+    ASSERT(m_writeIt != m_bufs.end());
+    ASSERT(m_writeIt->writeAvailable() >= len);
     return m_writeIt->writeBuf().slice(0, len);
 }
 
@@ -435,7 +436,7 @@ Buffer::copyIn(const Buffer &buf, size_t len)
 {
     if (len == (size_t)~0)
         len = buf.readAvailable();
-    assert(buf.readAvailable() >= len);
+    ASSERT(buf.readAvailable() >= len);
     invariant();
     // Split any mixed read/write bufs
     if (m_writeIt != m_bufs.end() && m_writeIt->readAvailable() != 0) {
@@ -453,8 +454,8 @@ Buffer::copyIn(const Buffer &buf, size_t len)
         if (len == 0)
             break;
     }
-    assert(len == 0);
-    assert(readAvailable() >= len);
+    ASSERT(len == 0);
+    ASSERT(readAvailable() >= len);
 }
 
 void
@@ -483,7 +484,7 @@ Buffer::copyIn(const void *data, size_t len)
         m_readAvailable += len;
     }
 
-    assert(readAvailable() >= len);
+    ASSERT(readAvailable() >= len);
 }
 
 void
@@ -495,7 +496,7 @@ Buffer::copyIn(const char *sz)
 void
 Buffer::copyOut(void *buf, size_t len) const
 {
-    assert(len <= readAvailable());
+    ASSERT(len <= readAvailable());
     unsigned char *next = (unsigned char*)buf;
     std::list<Data>::const_iterator it;
     for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
@@ -506,7 +507,7 @@ Buffer::copyOut(void *buf, size_t len) const
         if (len == 0)
             break;
     }
-    assert(len == 0);
+    ASSERT(len == 0);
 }
 
 ptrdiff_t
@@ -514,7 +515,7 @@ Buffer::find(char delim, size_t len) const
 {
     if (len == (size_t)~0)
         len = readAvailable();
-    assert(len <= readAvailable());
+    ASSERT(len <= readAvailable());
 
     size_t totalLength = 0;
     bool success = false;
@@ -545,7 +546,7 @@ Buffer::find(const std::string &str, size_t len) const
 {
     if (len == (size_t)~0)
         len = readAvailable();
-    assert(len <= readAvailable());
+    ASSERT(len <= readAvailable());
 
     size_t totalLength = 0;
     size_t foundSoFar = 0;
@@ -571,7 +572,7 @@ Buffer::find(const std::string &str, size_t len) const
                     continue;
                 }
             }
-            assert(foundSoFar != 0);
+            ASSERT(foundSoFar != 0);
             size_t tocompare = std::min(toscan, str.size() - foundSoFar);
             if (memcmp(start, str.c_str() + foundSoFar, tocompare) == 0) {
                 foundSoFar += tocompare;
@@ -659,15 +660,15 @@ Buffer::invariant() const
     for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
         const Data& buf = *it;
         // Strict ordering
-        assert(!seenWrite || (seenWrite && buf.readAvailable() == 0));
+        ASSERT(!seenWrite || (seenWrite && buf.readAvailable() == 0));
         read += buf.readAvailable();
         write += buf.writeAvailable();
         if (!seenWrite && buf.writeAvailable() != 0) {
             seenWrite = true;
-            assert(m_writeIt == it);
+            ASSERT(m_writeIt == it);
         }
     }
-    assert(read == m_readAvailable);
-    assert(write == m_writeAvailable);
-    assert(write != 0 || (write == 0 && m_writeIt == m_bufs.end()));
+    ASSERT(read == m_readAvailable);
+    ASSERT(write == m_writeAvailable);
+    ASSERT(write != 0 || (write == 0 && m_writeIt == m_bufs.end()));
 }

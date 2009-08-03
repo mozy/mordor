@@ -73,7 +73,7 @@ BufferedStream::write(const Buffer &b, size_t len)
     m_writeBuffer.copyIn(b, len);
     size_t result = flushWrite(len);
     // Partial writes not allowed
-    assert(result == len);
+    ASSERT(result == len);
     return result;
 }
 
@@ -84,7 +84,7 @@ BufferedStream::write(const void *b, size_t len)
     m_writeBuffer.copyIn(b, len);
     size_t result = flushWrite(len);
     // Partial writes not allowed
-    assert(result == len);
+    ASSERT(result == len);
     return result;
 }
 
@@ -164,7 +164,7 @@ BufferedStream::flush()
 {
     while (m_writeBuffer.readAvailable()) {
         size_t result = FilterStream::write(m_writeBuffer, m_writeBuffer.readAvailable());
-        assert(result > 0);
+        ASSERT(result > 0);
         m_writeBuffer.consume(result);
     }
     FilterStream::flush();

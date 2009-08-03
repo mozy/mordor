@@ -39,7 +39,7 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
             oflags |= O_TRUNC;
             break;
         default:
-            assert(false);
+            ASSERT(false);
     }
     handle = open(filename.c_str(), oflags, 0777);
 #endif

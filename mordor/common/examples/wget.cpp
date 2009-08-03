@@ -56,8 +56,8 @@ int main(int argc, const char *argv[])
     IOManager ioManager;
     try {
         URI uri = argv[1];
-        assert(uri.authority.hostDefined());
-        assert(!uri.schemeDefined() || uri.scheme() == "http" || uri.scheme() == "https");
+        ASSERT(uri.authority.hostDefined());
+        ASSERT(!uri.schemeDefined() || uri.scheme() == "http" || uri.scheme() == "https");
 
         CredentialStore store;
 
@@ -84,7 +84,7 @@ int main(int argc, const char *argv[])
         Address::lookup(proxy.empty() ? uri.authority.host() : proxy, AF_UNSPEC, SOCK_STREAM);
         if (proxy.empty()) {
             IPAddress *addr = dynamic_cast<IPAddress *>(addresses[0].get());
-            assert(addr);
+            ASSERT(addr);
             if (uri.authority.portDefined()) {
                 addr->port(uri.authority.port());
             } else if (uri.schemeDefined() && uri.scheme() == "https") {

@@ -1,9 +1,9 @@
 // Copyright (c) 2009 - Decho Corp.
 
 #include "fiber.h"
-#include "version.h"
 
-#include <cassert>
+#include "assert.h"
+#include "version.h"
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -59,7 +59,7 @@ FiberException::registerExceptionHandler(boost::function<void (std::exception &)
 
 Fiber::Fiber()
 {
-    assert(!getThis());
+    ASSERT(!getThis());
     m_state = EXEC;
     m_stack = NULL;
     m_stacksize = 0;
@@ -96,17 +96,17 @@ Fiber::~Fiber()
         m_state = TERM;
     }
     if (!m_stack) {
-        assert(!m_dg);
-        assert(m_state == EXEC);
+        ASSERT(!m_dg);
+        ASSERT(m_state == EXEC);
         Fiber *cur = t_fiber.get();
-        assert(cur);
-        assert(cur == this);
+        ASSERT(cur);
+        ASSERT(cur == this);
         setThis(NULL);
 #ifdef NATIVE_WINDOWS_FIBERS
         ConvertFiberToThread();
 #endif
     } else {
-        assert(m_state == TERM || m_state == INIT);
+        ASSERT(m_state == TERM || m_state == INIT);
         freeStack(m_stack, m_stacksize);
     }
 }
@@ -116,9 +116,9 @@ Fiber::reset()
 {
     if (m_state == EXCEPT)
         call(true);
-    assert(m_stack);
-    assert(m_state == TERM || m_state == INIT);
-    assert(m_dg);
+    ASSERT(m_stack);
+    ASSERT(m_state == TERM || m_state == INIT);
+    ASSERT(m_dg);
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = INIT;
     m_exception = NULL;
@@ -129,8 +129,8 @@ Fiber::reset(boost::function<void ()> dg)
 {
     if (m_state == EXCEPT)
         call(true);
-    assert(m_stack);
-    assert(m_state == TERM || m_state == INIT);
+    ASSERT(m_stack);
+    ASSERT(m_state == TERM || m_state == INIT);
     m_dg = dg;
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = INIT;
@@ -167,9 +167,9 @@ void
 Fiber::yield()
 {
     ptr cur = getThis();
-    assert(cur);
-    assert(cur->m_state == EXEC);
-    assert(cur->m_outer);
+    ASSERT(cur);
+    ASSERT(cur->m_state == EXEC);
+    ASSERT(cur->m_outer);
     cur->m_outer->m_yielder = cur;
     cur->m_outer->m_yielderNextState = Fiber::HOLD;
     fiber_switchContext(&cur->m_sp, cur->m_outer->m_sp);
@@ -188,24 +188,24 @@ Fiber::state()
 void
 Fiber::call(bool destructor)
 {
-    assert(!m_outer);
+    ASSERT(!m_outer);
     ptr cur = getThis();
     if (destructor) {
-        assert(m_state == EXCEPT);
+        ASSERT(m_state == EXCEPT);
     } else {
-        assert(m_state == HOLD || m_state == INIT);
-        assert(cur);
-        assert(cur.get() != this);
+        ASSERT(m_state == HOLD || m_state == INIT);
+        ASSERT(cur);
+        ASSERT(cur.get() != this);
     }
     setThis(this);
     m_outer = cur;
     m_state = EXEC;
     fiber_switchContext(&cur->m_sp, m_sp);
     setThis(cur.get());
-    assert(cur->m_yielder || destructor);
+    ASSERT(cur->m_yielder || destructor);
     m_outer.reset();
     if (cur->m_yielder) {
-        assert(cur->m_yielder.get() == this);
+        ASSERT(cur->m_yielder.get() == this);
         Fiber::ptr yielder = cur->m_yielder;
         yielder->m_state = cur->m_yielderNextState;
         cur->m_yielder.reset();
@@ -216,10 +216,10 @@ Fiber::call(bool destructor)
 void
 Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
 {
-    assert(m_state == HOLD || m_state == INIT);
-    assert(targetState == HOLD || targetState == TERM || targetState == EXCEPT);
+    ASSERT(m_state == HOLD || m_state == INIT);
+    ASSERT(targetState == HOLD || targetState == TERM || targetState == EXCEPT);
     ptr cur = getThis();
-    assert(cur);
+    ASSERT(cur);
     setThis(this);
     if (yieldToCallerOnTerminate) {
         Fiber::ptr outer = shared_from_this();
@@ -237,9 +237,9 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
     // Relinguish our reference
     cur.reset();
     fiber_switchContext(&curp->m_sp, m_sp);
-    assert(targetState != TERM);
+    ASSERT(targetState != TERM);
     setThis(curp);
-    assert(curp->m_yielder || targetState == EXCEPT);
+    ASSERT(curp->m_yielder || targetState == EXCEPT);
     if (curp->m_yielder) {
         Fiber::ptr yielder = curp->m_yielder;
         yielder->m_state = curp->m_yielderNextState;
@@ -252,13 +252,13 @@ void
 Fiber::entryPoint()
 {
     ptr cur = getThis();
-    assert(cur);
+    ASSERT(cur);
     if (cur->m_yielder) {
         cur->m_yielder->m_state = cur->m_yielderNextState;
         cur->m_yielder.reset();
     }
-    assert(cur->m_dg);
-    assert(cur->m_state == EXEC);
+    ASSERT(cur->m_dg);
+    ASSERT(cur->m_state == EXEC);
     Fiber *curp = cur.get();
     try {
         cur->m_dg();
@@ -275,7 +275,7 @@ Fiber::entryPoint()
     }
 
     exitPoint(cur, curp, TERM);
-    assert(false);
+    ASSERT(false);
 }
 
 void
@@ -290,10 +290,10 @@ Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
         terminateOuter->m_yielderNextState = targetState;
         Fiber* terminateOuterp = terminateOuter.get();
         if (cur) {
-            assert(!cur.unique());
+            ASSERT(!cur.unique());
             cur.reset();
         }
-        assert(!terminateOuter.unique());
+        ASSERT(!terminateOuter.unique());
         terminateOuter.reset();
         terminateOuterp->yieldTo(false, targetState);
         return;
@@ -303,7 +303,7 @@ Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
     curp->m_outer->m_yielder = cur;
     curp->m_outer->m_yielderNextState = targetState;
     if (cur) {
-        assert(!cur.unique());
+        ASSERT(!cur.unique());
         cur.reset();
     }
     fiber_switchContext(&curp->m_sp, curp->m_outer->m_sp);
@@ -368,8 +368,8 @@ static
 void
 allocStack(void **stack, void **sp, size_t *stacksize)
 {
-    assert(stack);
-    assert(sp);
+    ASSERT(stack);
+    ASSERT(sp);
     if (*stacksize == 0)
         *stacksize = g_pagesize;
 #ifdef NATIVE_WINDOWS_FIBERS
@@ -377,7 +377,7 @@ allocStack(void **stack, void **sp, size_t *stacksize)
 #elif defined(WINDOWS)
     *stack = VirtualAlloc(NULL, *stacksize + g_pagesize, MEM_RESERVE, PAGE_NOACCESS);
     if (!*stack) {
-        assert(false);
+        ASSERT(false);
     }
     VirtualAlloc(*stack, g_pagesize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
     VirtualAlloc((char*)*stack + g_pagesize, *stacksize, MEM_COMMIT, PAGE_READWRITE);
@@ -385,7 +385,7 @@ allocStack(void **stack, void **sp, size_t *stacksize)
 #elif defined(POSIX)
     *stack = mmap(NULL, *stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     if (*stack == MAP_FAILED) {
-        assert(false);
+        ASSERT(false);
     }
     *sp = (char*)*stack + *stacksize;
 #endif
@@ -422,7 +422,7 @@ static void
 fiber_switchContext(void **oldsp, void *newsp)
 {
     int rc = swapcontext(*(ucontext_t**)oldsp, (ucontext_t*)newsp);
-    assert(rc == 0);
+    ASSERT(rc == 0);
 }
 #elif defined(_MSC_VER) && defined(ASM_X86_WINDOWS_FIBERS)
 static
@@ -472,12 +472,12 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
         freeStack(*stack, stacksize);
     *sp = *stack = CreateFiber(stacksize, &native_fiber_entryPoint, entryPoint);
     if (!*stack) {
-        assert(false);
+        ASSERT(false);
     }
 #elif defined(UCONTEXT_FIBERS)
     ucontext_t *ctx = *(ucontext_t**)sp;
     int rc = getcontext(ctx);
-    assert(rc == 0);
+    ASSERT(rc == 0);
     ctx->uc_stack.ss_sp = *stack;
     ctx->uc_stack.ss_size = stacksize;
     makecontext(ctx, entryPoint, 0);

@@ -76,7 +76,7 @@ TEST_WITH_SUITE(Scheduler, hijackMultipleDispatch)
 }
 
 // TODO: could improve this test by having two fibers that
-// synchronize and assert that they are on different threads
+// synchronize and ASSERT( that they are on different threads
 TEST_WITH_SUITE(Scheduler, hybridBasic)
 {
     Fiber::ptr mainFiber(new Fiber());

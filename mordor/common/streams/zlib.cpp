@@ -2,8 +2,7 @@
 
 #include "zlib.h"
 
-#include <cassert>
-
+#include "mordor/common/assert.h"
 #include "mordor/common/exception.h"
 
 #ifdef MSVC
@@ -21,11 +20,11 @@ ZlibStream::ZlibStream(Stream::ptr parent, bool own, Type type, int level,
 void
 ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy strategy)
 {
-    assert(supportsRead() || supportsWrite());
-    assert(!(supportsRead() && supportsWrite()));
-    assert((level >= 0 && level <= 9) || level == Z_DEFAULT_COMPRESSION);
-    assert(windowBits >= 8 && windowBits <= 15);
-    assert(memlevel >= 1 && memlevel <= 9);
+    ASSERT(supportsRead() || supportsWrite());
+    ASSERT(!(supportsRead() && supportsWrite()));
+    ASSERT((level >= 0 && level <= 9) || level == Z_DEFAULT_COMPRESSION);
+    ASSERT(windowBits >= 8 && windowBits <= 15);
+    ASSERT(memlevel >= 1 && memlevel <= 9);
     switch (type) {
         case ZLIB:
             break;
@@ -36,7 +35,7 @@ ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy st
             windowBits += 16;
             break;
         default:
-            assert(false);
+            ASSERT(false);
     }
     int rc;
     memset(&m_strm, 0, sizeof(z_stream));
@@ -61,7 +60,7 @@ ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy st
             throw std::runtime_error(message);
         }
         default:
-            assert(false);
+            ASSERT(false);
     }
 }
 
@@ -155,8 +154,8 @@ ZlibStream::read(Buffer &b, size_t len)
             case Z_BUF_ERROR:
                 // no progress... we need to provide more input (since we're
                 // guaranteed to provide output)
-                assert(m_strm.avail_in == 0);
-                assert(inbufs.empty());
+                ASSERT(m_strm.avail_in == 0);
+                ASSERT(inbufs.empty());
                 result = MutatingFilterStream::read(m_inBuffer, m_bufferSize);
                 if (result == 0)
                     throw UnexpectedEofError();
@@ -170,7 +169,7 @@ ZlibStream::read(Buffer &b, size_t len)
 size_t
 ZlibStream::write(const Buffer &b, size_t len)
 {
-    assert(!m_closed);
+    ASSERT(!m_closed);
     flushBuffer();
     while (true) {
         if (m_outBuffer.writeAvailable() == 0)
@@ -183,9 +182,9 @@ ZlibStream::write(const Buffer &b, size_t len)
         m_strm.avail_out = outbuf.iov_len;
         int rc = deflate(&m_strm, Z_NO_FLUSH);
         // We are always providing both input and output
-        assert(rc != Z_BUF_ERROR);
+        ASSERT(rc != Z_BUF_ERROR);
         // We're not doing Z_FINISH, so we shouldn't get EOF
-        assert(rc != Z_STREAM_END);
+        ASSERT(rc != Z_STREAM_END);
         size_t result;
         switch(rc) {
             case Z_OK:
@@ -224,7 +223,7 @@ ZlibStream::flush(int flush)
         m_strm.avail_out = outbuf.iov_len;
         int rc = deflate(&m_strm, flush);
         m_outBuffer.produce(outbuf.iov_len - m_strm.avail_out);
-        assert(flush == Z_FINISH || rc != Z_STREAM_END);
+        ASSERT(flush == Z_FINISH || rc != Z_STREAM_END);
         switch (rc) {
             case Z_STREAM_END:
                 m_closed = true;

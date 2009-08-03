@@ -2,7 +2,7 @@
 
 #include "mordor/common/string.h"
 
-#include <cassert>
+#include "assert.h"
 
 std::string
 base64decode(std::string src)
@@ -42,11 +42,11 @@ base64decode(std::string src)
             packed = (packed << 6) | val;
         }
         if (i != 4)
-            assert(false);
+            ASSERT(false);
         if (padding > 0 && ptr != end)
-            assert(false);
+            ASSERT(false);
         if (padding > 2)
-            assert(false);
+            ASSERT(false);
 
         *writeBuf++ = (char)((packed >> 16) & 0xff);
         if(padding != 2)

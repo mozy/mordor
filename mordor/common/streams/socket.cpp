@@ -2,15 +2,14 @@
 
 #include "socket.h"
 
-#include <cassert>
-
+#include "mordor/common/assert.h"
 #include "mordor/common/socket.h"
 
 SocketStream::SocketStream(boost::shared_ptr<Socket> s, bool own)
 : m_socket(s),
   m_own(own)
 {
-    assert(s);
+    ASSERT(s);
 }
 
 void
@@ -42,7 +41,7 @@ SocketStream::close(CloseType type)
 size_t
 SocketStream::read(Buffer &b, size_t len)
 {
-    assert(m_socket);
+    ASSERT(m_socket);
     if (len == 0)
         return 0;
     std::vector<iovec> bufs = b.writeBufs(len);
@@ -54,11 +53,11 @@ SocketStream::read(Buffer &b, size_t len)
 size_t
 SocketStream::write(const Buffer &b, size_t len)
 {
-    assert(m_socket);
+    ASSERT(m_socket);
     if (len == 0)
         return 0;
     const std::vector<iovec> bufs = b.readBufs(len);
     size_t result = m_socket->send(&bufs[0], bufs.size());
-    assert(result > 0);
+    ASSERT(result > 0);
     return result;
 }

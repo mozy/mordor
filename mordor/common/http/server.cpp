@@ -17,7 +17,7 @@ HTTP::ServerConnection::ServerConnection(Stream::ptr stream, boost::function<voi
   m_dg(dg),
   m_exception("")
 {
-    assert(m_dg);
+    ASSERT(m_dg);
 }
 
 void
@@ -34,9 +34,9 @@ HTTP::ServerConnection::scheduleNextRequest(ServerRequest::ptr request)
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
         if (request.get()) {
-            assert(!m_pendingRequests.empty());
-            assert(request == m_pendingRequests.back());
-            assert(!request->m_requestDone);
+            ASSERT(!m_pendingRequests.empty());
+            ASSERT(request == m_pendingRequests.back());
+            ASSERT(!request->m_requestDone);
             request->m_requestDone = true;
             if (request->m_responseDone) {
                 m_pendingRequests.pop_back();
@@ -63,11 +63,11 @@ HTTP::ServerConnection::scheduleNextResponse(ServerRequest::ptr request)
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
-        assert(!request->m_responseDone);
-        assert(request->m_responseInFlight);
+        ASSERT(!request->m_responseDone);
+        ASSERT(request->m_responseInFlight);
         std::list<ServerRequest::ptr>::iterator it =
             std::find(m_pendingRequests.begin(), m_pendingRequests.end(), request);
-        assert(it != m_pendingRequests.end());
+        ASSERT(it != m_pendingRequests.end());
         std::list<ServerRequest::ptr>::iterator next(it);
         ++next;
         if (next != m_pendingRequests.end()) {
@@ -88,7 +88,7 @@ HTTP::ServerConnection::scheduleNextResponse(ServerRequest::ptr request)
     m_stream->flush();
     boost::mutex::scoped_lock lock(m_mutex);
     invariant();
-    assert(request == m_pendingRequests.front());
+    ASSERT(request == m_pendingRequests.front());
     request->m_responseInFlight = false;
     request->m_responseDone = true;
     if (request->m_willClose) {
@@ -96,7 +96,7 @@ HTTP::ServerConnection::scheduleNextResponse(ServerRequest::ptr request)
     }
     std::list<ServerRequest::ptr>::iterator it =
             std::find(m_pendingRequests.begin(), m_pendingRequests.end(), request);
-    assert(it != m_pendingRequests.end());
+    ASSERT(it != m_pendingRequests.end());
     if (request->m_requestDone) {
         it = m_pendingRequests.erase(it);
     } else {
@@ -118,8 +118,8 @@ HTTP::ServerConnection::scheduleNextResponse(ServerRequest::ptr request)
 void
 HTTP::ServerConnection::scheduleAllWaitingResponses()
 {
-    assert(*m_exception.what());
-    // assert(m_mutex.locked());
+    ASSERT(*m_exception.what());
+    // ASSERT(m_mutex.locked());
     for (std::list<ServerRequest::ptr>::iterator it(m_pendingRequests.begin());
         it != m_pendingRequests.end();
         ++it) {
@@ -136,20 +136,21 @@ HTTP::ServerConnection::scheduleAllWaitingResponses()
 void
 HTTP::ServerConnection::invariant() const
 {
-    // assert(m_mutex.locked());
+    // ASSERT(m_mutex.locked());
     bool seenResponseNotDone = false;
     for (std::list<ServerRequest::ptr>::const_iterator it(m_pendingRequests.begin());
         it != m_pendingRequests.end();
         ++it) {
         ServerRequest::ptr request = *it;
-        assert (!(request->m_requestDone && request->m_responseDone));
-        if (seenResponseNotDone)
-            assert(!request->m_responseDone);
-        else
+        ASSERT(!(request->m_requestDone && request->m_responseDone));
+        if (seenResponseNotDone) {
+            ASSERT(!request->m_responseDone);
+        } else {
             seenResponseNotDone = !request->m_responseDone;
+        }
         if (!request->m_requestDone) {
             ++it;
-            assert(it == m_pendingRequests.end());
+            ASSERT(it == m_pendingRequests.end());
             break;
         }
     }
@@ -157,8 +158,8 @@ HTTP::ServerConnection::invariant() const
         it != m_waitingResponses.end();
         ++it) {
         ServerRequest::ptr request = *it;
-        assert(!request->m_responseDone);
-        assert(!request->m_responseInFlight);
+        ASSERT(!request->m_responseDone);
+        ASSERT(!request->m_responseInFlight);
     }
 }
 
@@ -196,8 +197,8 @@ HTTP::ServerRequest::requestStream()
 {
     if (m_requestStream)
         return m_requestStream;
-    assert(!m_requestMultipart);
-    assert(m_request.entity.contentType.type != "multipart");
+    ASSERT(!m_requestMultipart);
+    ASSERT(m_request.entity.contentType.type != "multipart");
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ServerRequest::requestDone, this),
@@ -209,8 +210,8 @@ HTTP::ServerRequest::requestMultipart()
 {
     if (m_requestMultipart)
         return m_requestMultipart;
-    assert(m_request.entity.contentType.type == "multipart");
-    assert(!m_requestStream);
+    ASSERT(m_request.entity.contentType.type == "multipart");
+    ASSERT(!m_requestStream);
     HTTP::StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
     if (it == m_request.entity.contentType.parameters.end() || it->second.empty()) {
         throw std::runtime_error("No boundary with multipart");
@@ -229,8 +230,8 @@ HTTP::ServerRequest::requestTrailer() const
 {
     // If transferEncoding is not empty, it must include chunked,
     // and it must include chunked in order to have a trailer
-    assert(!m_request.general.transferEncoding.empty());
-    assert(m_requestDone);
+    ASSERT(!m_request.general.transferEncoding.empty());
+    ASSERT(m_requestDone);
     return m_requestTrailer;
 }
 
@@ -245,8 +246,8 @@ HTTP::ServerRequest::responseStream()
 {
     if (m_responseStream)
         return m_responseStream;
-    assert(!m_responseMultipart);
-    assert(m_response.entity.contentType.type != "multipart");
+    ASSERT(!m_responseMultipart);
+    ASSERT(m_response.entity.contentType.type != "multipart");
     commit();    
     return m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
@@ -259,8 +260,8 @@ HTTP::ServerRequest::responseMultipart()
 {
     if (m_responseMultipart)
         return m_responseMultipart;
-    assert(m_response.entity.contentType.type == "multipart");
-    assert(!m_responseStream);
+    ASSERT(m_response.entity.contentType.type == "multipart");
+    ASSERT(!m_responseStream);
     HTTP::StringMap::const_iterator it = m_response.entity.contentType.parameters.find("boundary");
     if (it == m_response.entity.contentType.parameters.end()) {
         throw std::runtime_error("No boundary with multipart");
@@ -278,7 +279,7 @@ HTTP::ServerRequest::responseMultipart()
 HTTP::EntityHeaders &
 HTTP::ServerRequest::responseTrailer()
 {
-    assert(!m_response.general.transferEncoding.empty());
+    ASSERT(!m_response.general.transferEncoding.empty());
     return m_responseTrailer;
 }
 
@@ -318,7 +319,7 @@ HTTP::ServerRequest::finish()
             if (!m_requestStream) {
                 m_requestStream = requestStream();
             }
-            assert(m_requestStream);
+            ASSERT(m_requestStream);
             transferStream(m_requestStream, NullStream::get());
         }
     }
@@ -327,7 +328,7 @@ HTTP::ServerRequest::finish()
 void
 HTTP::ServerRequest::doRequest()
 {
-    assert(!m_requestDone);
+    ASSERT(!m_requestDone);
 
     try {
         // Read and parse headers
@@ -445,7 +446,7 @@ HTTP::ServerRequest::doRequest()
                     if (!m_responseStream) {
                         m_responseStream = responseStream();
                     }
-                    assert(m_responseStream);
+                    ASSERT(m_responseStream);
                     m_responseStream->write(ex.what(), whatLen);
                     m_responseStream->close();
                 } else {
@@ -477,14 +478,14 @@ HTTP::ServerRequest::commit()
     // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
     const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
     if (!transferEncoding.empty()) {
-        assert(transferEncoding.back().value == "chunked");
+        ASSERT(transferEncoding.back().value == "chunked");
         for (ParameterizedList::const_iterator it(transferEncoding.begin());
             it + 1 != transferEncoding.end();
             ++it) {
             // Only the last one can be chunked
-            assert(it->value != "chunked");
+            ASSERT(it->value != "chunked");
             // identity is only acceptable in the TE header field
-            assert(it->value != "identity");
+            ASSERT(it->value != "identity");
             if (it->value == "gzip" ||
                 it->value == "x-gzip" ||
                 it->value == "deflate") {
@@ -492,17 +493,17 @@ HTTP::ServerRequest::commit()
             } else if (it->value == "compress" ||
                 it->value == "x-compress") {
                 // Unsupported Transfer-Codings
-                assert(false);
+                ASSERT(false);
             } else {
                 // Unknown Transfer-Coding
-                assert(false);
+                ASSERT(false);
             }
         }
     }
     if (m_response.status.status == UNAUTHORIZED) {
-        assert(!m_response.response.wwwAuthenticate.empty());
+        ASSERT(!m_response.response.wwwAuthenticate.empty());
     } else if (m_response.status.status == PROXY_AUTHENTICATION_REQUIRED) {
-        assert(!m_response.response.proxyAuthenticate.empty());
+        ASSERT(!m_response.response.proxyAuthenticate.empty());
     }
 
     bool wait = false;
@@ -513,15 +514,15 @@ HTTP::ServerRequest::commit()
             std::list<ServerRequest::ptr>::iterator it;
             it = std::find(m_conn->m_pendingRequests.begin(), m_conn->m_pendingRequests.end(),
                 shared_from_this());
-            assert(it != m_conn->m_pendingRequests.end());             
+            ASSERT(it != m_conn->m_pendingRequests.end());             
             m_conn->m_pendingRequests.erase(it);
             throw m_conn->m_exception;
         }
-        assert(!m_conn->m_pendingRequests.empty());
+        ASSERT(!m_conn->m_pendingRequests.empty());
         ServerRequest::ptr request = m_conn->m_pendingRequests.front();
         if (request.get() != this) {
             bool inserted = m_conn->m_waitingResponses.insert(shared_from_this()).second;
-            assert(inserted);
+            ASSERT(inserted);
             wait = true;
         } else {
             m_responseInFlight = true;
@@ -549,7 +550,7 @@ HTTP::ServerRequest::commit()
         if (m_response.status.ver == Version())
             m_response.status.ver = Version(1, 1);
     }
-    assert(m_response.status.ver == Version(1, 0) ||
+    ASSERT(m_response.status.ver == Version(1, 0) ||
            m_response.status.ver == Version(1, 1));
 
     if (m_willClose) {
@@ -595,7 +596,7 @@ HTTP::ServerRequest::requestDone()
             cancel();
             throw std::runtime_error("Error parsing trailer");
         }
-        assert(parser.complete());
+        ASSERT(parser.complete());
         LOG_TRACE(g_log) << m_requestTrailer;
     }
     m_conn->scheduleNextRequest(shared_from_this());
@@ -610,7 +611,7 @@ HTTP::ServerRequest::responseMultipartDone()
 void
 HTTP::ServerRequest::responseDone()
 {
-    // TODO: assert they wrote enough
+    // TODO: ASSERT( they wrote enough
     m_responseStream.reset();
     if (!m_response.general.transferEncoding.empty()) {
         std::ostringstream os;
@@ -625,7 +626,7 @@ HTTP::ServerRequest::responseDone()
         if (!m_requestStream) {
             m_requestStream = requestStream();
         }
-        assert(m_requestStream);
+        ASSERT(m_requestStream);
         transferStream(m_requestStream, NullStream::get());
     }
 }
@@ -634,7 +635,7 @@ HTTP::ServerRequest::responseDone()
 void
 HTTP::respondError(ServerRequest::ptr request, Status status, const std::string &message, bool closeConnection)
 {
-    assert(!request->committed());
+    ASSERT(!request->committed());
     request->response().status.status = status;
     if (closeConnection)
         request->response().general.connection.insert("close");
@@ -659,7 +660,7 @@ HTTP::respondError(ServerRequest::ptr request, Status status, const std::string 
 void
 HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
 {
-    assert(!request->committed());
+    ASSERT(!request->committed());
     unsigned long long size = ~0ull;
     request->response().response.acceptRanges.insert("bytes");
     if (response->supportsSize()) {

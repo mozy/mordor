@@ -393,3 +393,11 @@ TEST_WITH_SUITE(Fibers, fiberThrowingExceptionOutOfScope)
         TEST_ASSERT_EQUAL(std::string(ex.inner().what()), "message");
     }
 }
+
+#ifdef DEBUG
+TEST_WITH_SUITE(Fibers, assertNeedCallingFiber)
+{
+    Fiber::ptr fiber(new Fiber(&throwGenericException));
+    TEST_ASSERT_ASSERTED(fiber->call());
+}
+#endif

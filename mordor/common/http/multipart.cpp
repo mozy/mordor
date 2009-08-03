@@ -2,10 +2,9 @@
 
 #include "multipart.h"
 
-#include <cassert>
-
 #include <boost/bind.hpp>
 
+#include "mordor/common/assert.h"
 #include "mordor/common/streams/notify.h"
 #include "mordor/common/streams/null.h"
 #include "mordor/common/streams/transfer.h"
@@ -30,24 +29,24 @@ Multipart::Multipart(Stream::ptr stream, std::string boundary)
   m_boundary(boundary),
   m_finished(false)
 {
-    assert(m_stream);
-    assert(m_stream->supportsRead() || m_stream->supportsWrite());
-    assert(!(m_stream->supportsRead() && m_stream->supportsWrite()));
+    ASSERT(m_stream);
+    ASSERT(m_stream->supportsRead() || m_stream->supportsWrite());
+    ASSERT(!(m_stream->supportsRead() && m_stream->supportsWrite()));
     while (!m_boundary.empty() && m_boundary[m_boundary.size() - 1] == ' ')
         m_boundary.resize(m_boundary.size() - 1);
-    assert(!m_boundary.empty());
-    assert(m_boundary.size() <= 70);
+    ASSERT(!m_boundary.empty());
+    ASSERT(m_boundary.size() <= 70);
     if (m_boundary.find_first_not_of(allowedBoundaryChars) != std::string::npos) {
         if (stream->supportsWrite()) {
-            assert(false);
+            ASSERT(false);
         } else {
             throw std::runtime_error("Invalid multipart boundary");
         }
     }
     m_boundary = "\r\n--" + m_boundary;
     if (m_stream->supportsRead()) {
-        assert(m_stream->supportsFind());
-        assert(m_stream->supportsUnread());
+        ASSERT(m_stream->supportsFind());
+        ASSERT(m_stream->supportsUnread());
     }
 }
 
@@ -55,27 +54,27 @@ BodyPart::ptr
 Multipart::nextPart()
 {
     if (m_stream->supportsWrite()) {
-        assert(!m_finished);
-        assert(!m_currentPart);
+        ASSERT(!m_finished);
+        ASSERT(!m_currentPart);
         m_currentPart.reset(new BodyPart(shared_from_this()));
         std::string boundary = m_boundary + "\r\n";
         m_stream->write(boundary.c_str(), boundary.size());
         return m_currentPart;
     } else {
         if (m_finished) {
-            assert(!m_currentPart);
+            ASSERT(!m_currentPart);
             return m_currentPart;
         }
         if (m_currentPart) {
             transferStream(m_currentPart->stream(), NullStream::get());
             // Changed by the notification callback
-            assert(!m_currentPart);
+            ASSERT(!m_currentPart);
         }
         size_t offsetToBoundary = m_stream->find(m_boundary);
 
         Buffer b;
         size_t result = m_stream->read(b, offsetToBoundary + m_boundary.size());
-        assert(result == offsetToBoundary + m_boundary.size());
+        ASSERT(result == offsetToBoundary + m_boundary.size());
         b.clear();
         result = m_stream->read(b, 2);
         if (b == "--") {
@@ -104,8 +103,8 @@ Multipart::nextPart()
 void
 Multipart::finish()
 {
-    assert(m_stream->supportsWrite());
-    assert(!m_finished);
+    ASSERT(m_stream->supportsWrite());
+    ASSERT(!m_finished);
     std::string finalBoundary = m_boundary + "--\r\n";
     m_stream->write(finalBoundary.c_str(), finalBoundary.size());
     m_finished = true;
@@ -169,10 +168,10 @@ Stream::ptr
 BodyPart::stream()
 {
     if (m_multipart->m_stream->supportsWrite()) {
-        assert(m_headers.contentType.type != "multipart");
+        ASSERT(m_headers.contentType.type != "multipart");
     }
     if (!m_stream) {
-        assert(m_multipart->m_stream->supportsWrite());
+        ASSERT(m_multipart->m_stream->supportsWrite());
         std::ostringstream os;
         os << m_headers << "\r\n";
         std::string headers = os.str();
@@ -189,9 +188,9 @@ BodyPart::multipart()
 {
     if (m_childMultipart)
         return m_childMultipart;
-    assert(m_headers.contentType.type == "multipart");
+    ASSERT(m_headers.contentType.type == "multipart");
     if (!m_stream) {
-        assert(m_multipart->m_stream->supportsWrite());
+        ASSERT(m_multipart->m_stream->supportsWrite());
         std::ostringstream os;
         os << m_headers;
         std::string headers = os.str();
@@ -202,7 +201,7 @@ BodyPart::multipart()
     }
     HTTP::StringMap::const_iterator it = m_headers.contentType.parameters.find("boundary");
     if (it == m_headers.contentType.parameters.end()) {
-        assert(!m_multipart->m_stream->supportsWrite());
+        ASSERT(!m_multipart->m_stream->supportsWrite());
         throw std::runtime_error("No boundary with multipart");
     }
     m_childMultipart.reset(new Multipart(m_stream, it->second));

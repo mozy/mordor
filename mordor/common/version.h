@@ -45,4 +45,8 @@
 #   endif
 #endif
 
+#ifdef _DEBUG
+#define DEBUG
+#endif
+
 #endif

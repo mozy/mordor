@@ -10,7 +10,7 @@ public:
     FilterStream(Stream::ptr parent, bool own = true)
         : m_parent(parent), m_own(own)
     {
-        assert(parent);
+        ASSERT(parent);
     }
 
     Stream::ptr parent() { return m_parent; }
@@ -61,9 +61,9 @@ protected:
     bool supportsUnread() { return false; }
 
 public:
-    size_t find(char delim) { assert(false); return 0; }
-    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { assert(false); return ~0; }
-    void unread(const Buffer &b, size_t len) { assert(false); }
+    size_t find(char delim) { ASSERT(false); return 0; }
+    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { ASSERT(false); return ~0; }
+    void unread(const Buffer &b, size_t len) { ASSERT(false); }
 };
 
 #endif

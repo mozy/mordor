@@ -16,7 +16,7 @@ HTTP::ChunkedStream::ChunkedStream(Stream::ptr parent, bool own)
   m_nextChunk(~0)
 {
     if (parent->supportsRead()) {
-        assert(parent->supportsFind());
+        ASSERT(parent->supportsFind());
     }
 }
 

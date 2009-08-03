@@ -27,9 +27,9 @@ static void writeOne(Stream &dst, Buffer &buffer, long long *totalWritten)
 void transferStream(Stream &src, Stream &dst, long long toTransfer,
                     long long *totalRead, long long *totalWritten)
 {
-    assert(src.supportsRead());
-    assert(dst.supportsWrite());
-    assert(toTransfer >= 0 || toTransfer == -1);
+    ASSERT(src.supportsRead());
+    ASSERT(dst.supportsWrite());
+    ASSERT(toTransfer >= 0 || toTransfer == -1);
     Buffer buf1, buf2;
     Buffer *readBuffer, *writeBuffer;
     size_t chunkSize = 65536;

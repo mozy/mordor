@@ -14,8 +14,8 @@ HandleStream::HandleStream()
 void
 HandleStream::init(HANDLE hFile, bool own)
 {
-    assert(hFile != NULL);
-    assert(hFile != INVALID_HANDLE_VALUE);
+    ASSERT(hFile != NULL);
+    ASSERT(hFile != INVALID_HANDLE_VALUE);
     m_hFile = hFile;
     m_own = own;
 }
@@ -30,15 +30,15 @@ HandleStream::init(IOManagerIOCP *ioManager, HANDLE hFile, bool own)
 HandleStream::HandleStream(HANDLE hFile, bool own)
 : m_ioManager(NULL), m_hFile(hFile), m_own(own)
 {
-    assert(m_hFile != NULL);
-    assert(m_hFile != INVALID_HANDLE_VALUE);
+    ASSERT(m_hFile != NULL);
+    ASSERT(m_hFile != INVALID_HANDLE_VALUE);
 }
 
 HandleStream::HandleStream(IOManagerIOCP &ioManager, HANDLE hFile, bool own)
 : m_ioManager(&ioManager), m_pos(0), m_hFile(hFile), m_own(own)
 {
-    assert(m_hFile != NULL);
-    assert(m_hFile != INVALID_HANDLE_VALUE);
+    ASSERT(m_hFile != NULL);
+    ASSERT(m_hFile != INVALID_HANDLE_VALUE);
     try {
         m_ioManager->registerFile(m_hFile);
     } catch(...) {
@@ -57,7 +57,7 @@ HandleStream::~HandleStream()
 void
 HandleStream::close(CloseType type)
 {
-    assert(type == BOTH);
+    ASSERT(type == BOTH);
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
         if (!CloseHandle(m_hFile)) {
             throwExceptionFromLastError();
@@ -72,7 +72,7 @@ HandleStream::read(Buffer &b, size_t len)
     DWORD read;
     OVERLAPPED *overlapped = NULL;
     if (m_ioManager) {
-        assert(Scheduler::getThis());
+        ASSERT(Scheduler::getThis());
         m_ioManager->registerEvent(&m_readEvent);
         overlapped = &m_readEvent.overlapped;
         if (supportsSeek()) {
@@ -123,7 +123,7 @@ HandleStream::write(const Buffer &b, size_t len)
     DWORD written;
     OVERLAPPED *overlapped = NULL;
     if (m_ioManager) {
-        assert(Scheduler::getThis());
+        ASSERT(Scheduler::getThis());
         m_ioManager->registerEvent(&m_writeEvent);
         overlapped = &m_writeEvent.overlapped;
         if (supportsSeek()) {
@@ -180,10 +180,10 @@ HandleStream::seek(long long offset, Anchor anchor)
                         return m_pos = end + offset;
                     }
                 default:
-                    assert(false);
+                    ASSERT(false);
             }
         } else {
-            assert(false);
+            ASSERT(false);
         }
     }
 

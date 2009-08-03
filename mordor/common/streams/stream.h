@@ -2,12 +2,12 @@
 #define __STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
-#include <cassert>
 #include <string>
 
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "mordor/common/assert.h"
 #include "buffer.h"
 
 class Stream : boost::noncopyable
@@ -39,15 +39,15 @@ public:
     virtual bool supportsUnread() { return false; }
 
     virtual void close(CloseType type = BOTH) {}
-    virtual size_t read(Buffer &b, size_t len) { assert(supportsRead()); return 0; }
-    virtual size_t write(const Buffer &b, size_t len) { assert(supportsWrite()); return len; }
-    virtual long long seek(long long offset, Anchor anchor) { assert(supportsSeek()); return 0ll; }
-    virtual long long size() { assert(supportsSize()); return 0ll; }
-    virtual void truncate(long long size) { assert(supportsTruncate()); }
+    virtual size_t read(Buffer &b, size_t len) { ASSERT(supportsRead()); return 0; }
+    virtual size_t write(const Buffer &b, size_t len) { ASSERT(supportsWrite()); return len; }
+    virtual long long seek(long long offset, Anchor anchor) { ASSERT(supportsSeek()); return 0ll; }
+    virtual long long size() { ASSERT(supportsSize()); return 0ll; }
+    virtual void truncate(long long size) { ASSERT(supportsTruncate()); }
     virtual void flush() {}
-    virtual size_t find(char delim) { assert(false); return 0; }
-    virtual size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { assert(false); return ~0; }
-    virtual void unread(const Buffer &b, size_t len) { assert(false); }
+    virtual size_t find(char delim) { ASSERT(false); return 0; }
+    virtual size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { ASSERT(false); return ~0; }
+    virtual void unread(const Buffer &b, size_t len) { ASSERT(false); }
 
     // Convenience functions - do *not* implement in FilterStream, so that
     // filters do not need to implement these

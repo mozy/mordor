@@ -13,7 +13,7 @@ LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
   m_pos(0),
   m_size(size)
 {
-    assert(size >= 0);
+    ASSERT(size >= 0);
 }
 
 size_t

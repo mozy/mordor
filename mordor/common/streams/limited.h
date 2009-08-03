@@ -16,7 +16,7 @@ public:
     size_t write(const Buffer &b, size_t len);
     long long seek(long long offset, Anchor anchor);
     long long size();
-    void truncate(long long size) { assert(false); }
+    void truncate(long long size) { ASSERT(false); }
     void unread(const Buffer &b, size_t len);
 
 private:

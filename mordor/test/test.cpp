@@ -2,7 +2,6 @@
 
 #include "test.h"
 
-#include <cassert>
 #include <iostream>
 
 #include "mordor/common/version.h"
@@ -65,33 +64,14 @@ registerSuiteInvariant(const std::string &suite, TestDg invariant)
 {
     if (!g_allTests)
         g_allTests = new TestSuites();
-    assert((*g_allTests)[suite].first == NULL);
+    ASSERT((*g_allTests)[suite].first == NULL);
     (*g_allTests)[suite].first = invariant;
 }
-
-
-class TestAssertion : public std::exception
-{
-public:
-    TestAssertion(const char *file, int line, const std::string &msg)
-        : m_file(file), m_line(line), m_msg(msg)
-    {}
-   ~TestAssertion() throw() {}
-
-    const char *file() const { return m_file; }
-    int line() const { return m_line; }
-    const char *what() const throw() { return m_msg.c_str(); }
-
-private:
-    const char *m_file;
-    int m_line;
-    std::string m_msg;
-};
 
 void
 assertion(const char *file, int line, const std::string &expr)
 {
-    throw TestAssertion(file, line, expr);
+    throw Assertion(expr, file, line);
 }
 
 bool runTest(TestListener *listener, const std::string &suite,
@@ -123,7 +103,7 @@ bool runTest(TestListener *listener, const std::string &suite,
             test();
             if (listener)
                 listener->testComplete(suite, testName);
-        } catch (const TestAssertion &assertion) {
+        } catch (const Assertion &assertion) {
             std::ostringstream os;
             os << "Assertion failed at " << assertion.file()
 #ifdef MSVC

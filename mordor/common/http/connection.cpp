@@ -13,9 +13,9 @@
 HTTP::Connection::Connection(Stream::ptr stream)
 : m_stream(stream)
 {
-    assert(stream);
-    assert(stream->supportsRead());
-    assert(stream->supportsWrite());
+    ASSERT(stream);
+    ASSERT(stream->supportsRead());
+    ASSERT(stream->supportsWrite());
     if (!stream->supportsUnread() || !stream->supportsFind()) {
         BufferedStream *buffered = new BufferedStream(stream);
         buffered->allowPartialReads(true);
@@ -89,7 +89,7 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
                             boost::function<void()> notifyOnException,
                             bool forRead)
 {
-    assert(hasMessageBody(general, entity, method, status));
+    ASSERT(hasMessageBody(general, entity, method, status));
     Stream::ptr stream;
     if (forRead) {
         stream.reset(new SingleplexStream(m_stream, SingleplexStream::READ, false));
@@ -110,11 +110,11 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
             stream.reset(new GzipStream(stream));
         } else if (stricmp(it->value.c_str(), "compress") == 0 ||
             stricmp(it->value.c_str(), "x-compress") == 0) {
-            assert(false);
+            ASSERT(false);
         } else if (stricmp(it->value.c_str(), "identity") == 0) {
-            assert(false);
+            ASSERT(false);
         } else {
-            assert(false);
+            ASSERT(false);
         }
     }
     if (stream != baseStream) {

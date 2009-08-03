@@ -4,7 +4,8 @@
 
 #include <iostream>
 
-#include "mordor/common/fiber.h"
+#include "assert.h"
+#include "fiber.h"
 
 void
 StdoutLogSink::log(const std::string &logger, tid_t thread,
@@ -163,6 +164,6 @@ static const char *levelStrs[] = {
 
 std::ostream &operator <<(std::ostream &os, Log::Level level)
 {
-    assert(level >= Log::FATAL && level <= Log::VERBOSE);
+    ASSERT(level >= Log::FATAL && level <= Log::VERBOSE);
     return os << levelStrs[level];
 }

@@ -6,7 +6,7 @@ OpenSSLStream::OpenSSLStream(BIO *bio, bool own)
 : m_bio(bio),
   m_own(own)
 {
-    assert(bio);
+    ASSERT(bio);
 }
 
 OpenSSLStream::~OpenSSLStream()
@@ -26,9 +26,9 @@ OpenSSLStream::close(CloseType type)
 size_t
 OpenSSLStream::read(Buffer &b, size_t len)
 {
-    assert(m_bio);
+    ASSERT(m_bio);
     std::vector<iovec> bufs = b.writeBufs(len);
-    assert(!bufs.empty());
+    ASSERT(!bufs.empty());
     int toRead = (int)std::min<size_t>(0x0fffffff, bufs[0].iov_len);
     int result = BIO_read(m_bio, bufs[0].iov_base, toRead);
     if (result > 0) {
@@ -37,7 +37,7 @@ OpenSSLStream::read(Buffer &b, size_t len)
     } else if (BIO_eof(m_bio)) {
         return 0;
     } else {
-        assert(false);
+        ASSERT(false);
         return -1;
     }
 }
@@ -45,15 +45,15 @@ OpenSSLStream::read(Buffer &b, size_t len)
 size_t
 OpenSSLStream::write(const Buffer &b, size_t len)
 {
-    assert(m_bio);
+    ASSERT(m_bio);
     std::vector<iovec> bufs = b.readBufs(len);
-    assert(!bufs.empty());
+    ASSERT(!bufs.empty());
     int toWrite = (int)std::min<size_t>(0x0fffffff, bufs[0].iov_len);
     int result = BIO_read(m_bio, bufs[0].iov_base, toWrite);
     if (result > 0) {
         return result;
     } else {
-        assert(false);
+        ASSERT(false);
         return -1;
     }
 }
@@ -61,24 +61,24 @@ OpenSSLStream::write(const Buffer &b, size_t len)
 long long
 OpenSSLStream::seek(long long offset, Anchor anchor)
 {
-    assert(m_bio);
-    assert(anchor == BEGIN || anchor == CURRENT);
+    ASSERT(m_bio);
+    ASSERT(anchor == BEGIN || anchor == CURRENT);
     if (anchor == CURRENT && offset == 0) {
         int result = BIO_tell(m_bio);
-        assert(result >= 0);
+        ASSERT(result >= 0);
         return result;
     } else if (anchor == CURRENT) {
         int cur = BIO_tell(m_bio);
-        assert(cur >= 0);
+        ASSERT(cur >= 0);
         offset += cur;
         anchor = BEGIN;
     } 
     if (anchor == BEGIN) {
         int result = BIO_seek(m_bio, (int)offset);
-        assert(result >= 0);
+        ASSERT(result >= 0);
         return result;
     }
-    assert(false);
+    ASSERT(false);
     return 0;
 }
 
@@ -86,7 +86,7 @@ void
 OpenSSLStream::flush()
 {
     int result = BIO_flush(m_bio);
-    assert(result == 1);
+    ASSERT(result == 1);
 }
 
 static int stream_write(BIO *bio, const char *buf, int size);
