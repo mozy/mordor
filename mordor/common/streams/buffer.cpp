@@ -595,6 +595,22 @@ Buffer::find(const std::string &str, size_t len) const
 }
 
 bool
+Buffer::operator == (const Buffer &rhs) const
+{
+    if (rhs.readAvailable() != readAvailable())
+        return false;
+    return opCmp(rhs) == 0;
+}
+
+bool
+Buffer::operator != (const Buffer &rhs) const
+{
+    if (rhs.readAvailable() != readAvailable())
+        return true;
+    return opCmp(rhs) != 0;
+}
+
+bool
 Buffer::operator== (const std::string &str) const
 {
     if (str.size() != readAvailable())
@@ -629,6 +645,40 @@ Buffer::operator!= (const char *str) const
 }
 
 int
+Buffer::opCmp(const Buffer &rhs) const
+{
+    std::list<Data>::const_iterator leftIt, rightIt;
+    int lengthResult = (int)((ptrdiff_t)readAvailable() - (ptrdiff_t)rhs.readAvailable());
+    leftIt = m_bufs.begin(); rightIt = rhs.m_bufs.begin();
+    size_t leftOffset = 0, rightOffset = 0;
+    while (leftIt != m_writeIt && rightIt != rhs.m_writeIt)
+    {
+        ASSERT(leftOffset < leftIt->readAvailable());
+        ASSERT(rightOffset < rightIt->readAvailable());
+        size_t tocompare = std::min(leftIt->readAvailable() - leftOffset,
+            rightIt->readAvailable() - rightOffset);
+        ASSERT(tocompare != 0);
+        int result = memcmp(
+            (const unsigned char *)leftIt->readBuf().start() + leftOffset,
+            (const unsigned char *)rightIt->readBuf().start() + rightOffset,
+            tocompare);
+        if (result != 0)
+            return result;
+        leftOffset += tocompare;
+        rightOffset += tocompare;
+        if (leftOffset == leftIt->readAvailable()) {
+            leftOffset = 0;
+            ++leftIt;
+        }
+        if (rightOffset == rightIt->readAvailable()) {
+            rightOffset = 0;
+            ++rightIt;
+        }
+    }
+    return lengthResult;
+}
+
+int
 Buffer::opCmp(const char *str, size_t len) const
 {
     size_t offset = 0;
@@ -636,7 +686,7 @@ Buffer::opCmp(const char *str, size_t len) const
     int lengthResult = (int)((ptrdiff_t)readAvailable() - (ptrdiff_t)len);
     if (lengthResult > 0)
         len = readAvailable();
-    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
+    for (it = m_bufs.begin(); it != m_writeIt; ++it) {
         const void *start = it->readBuf().start();
         size_t tocompare = std::min(it->readAvailable(), len);
         int result = memcmp(it->readBuf().start(), str + offset, tocompare);

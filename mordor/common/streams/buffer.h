@@ -86,6 +86,8 @@ public:
     ptrdiff_t find(char delim, size_t len = ~0) const;
     ptrdiff_t find(const std::string &str, size_t len = ~0) const;
 
+    bool operator== (const Buffer &rhs) const;
+    bool operator!= (const Buffer &rhs) const;
     bool operator== (const std::string &str) const;
     bool operator!= (const std::string &str) const;
     bool operator== (const char *str) const;
@@ -97,6 +99,7 @@ private:
     size_t m_writeAvailable;
     std::list<Data>::iterator m_writeIt;
 
+    int opCmp(const Buffer &rhs) const;
     int opCmp(const char *str, size_t len) const;
 
     void invariant() const;

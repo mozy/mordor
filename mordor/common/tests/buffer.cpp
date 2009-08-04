@@ -70,3 +70,138 @@ TEST_WITH_SUITE(Buffer, truncateAtWriteSegments)
     TEST_ASSERT(buf == "hellowor");
     TEST_ASSERT_GREATER_THAN_OR_EQUAL(buf.writeAvailable(), 10u);
 }
+
+TEST_WITH_SUITE(Buffer, compareEmpty)
+{
+    Buffer buf1, buf2;
+    TEST_ASSERT(buf1 == buf2);
+    TEST_ASSERT(!(buf1 != buf2));
+}
+
+TEST_WITH_SUITE(Buffer, compareSimpleInequality)
+{
+    Buffer buf1, buf2("h");
+    TEST_ASSERT(buf1 != buf2);
+    TEST_ASSERT(!(buf1 == buf2));
+}
+
+TEST_WITH_SUITE(Buffer, compareIdentical)
+{
+    Buffer buf1("hello"), buf2("hello");
+    TEST_ASSERT(buf1 == buf2);
+    TEST_ASSERT(!(buf1 != buf2));
+}
+
+TEST_WITH_SUITE(Buffer, compareLotsOfSegmentsOnTheLeft)
+{
+    Buffer buf1, buf2("hello world!");
+    buf1.copyIn("he");
+    buf1.copyIn("l");
+    buf1.copyIn("l");
+    buf1.copyIn("o wor");
+    buf1.copyIn("ld!");
+    TEST_ASSERT(buf1 == buf2);
+    TEST_ASSERT(!(buf1 != buf2));
+}
+
+TEST_WITH_SUITE(Buffer, compareLotOfSegmentsOnTheRight)
+{
+    Buffer buf1("hello world!"), buf2;
+    buf2.copyIn("he");
+    buf2.copyIn("l");
+    buf2.copyIn("l");
+    buf2.copyIn("o wor");
+    buf2.copyIn("ld!");
+    TEST_ASSERT(buf1 == buf2);
+    TEST_ASSERT(!(buf1 != buf2));
+}
+
+TEST_WITH_SUITE(Buffer, compareLotsOfSegments)
+{
+    Buffer buf1, buf2;
+    buf1.copyIn("he");
+    buf1.copyIn("l");
+    buf1.copyIn("l");
+    buf1.copyIn("o wor");
+    buf1.copyIn("ld!");
+    buf2.copyIn("he");
+    buf2.copyIn("l");
+    buf2.copyIn("l");
+    buf2.copyIn("o wor");
+    buf2.copyIn("ld!");
+    TEST_ASSERT(buf1 == buf2);
+    TEST_ASSERT(!(buf1 != buf2));
+}
+
+TEST_WITH_SUITE(buffer, compareLotsOfMismatchedSegments)
+{
+    Buffer buf1, buf2;
+    buf1.copyIn("hel");
+    buf1.copyIn("lo ");
+    buf1.copyIn("wo");
+    buf1.copyIn("rld!");
+    buf2.copyIn("he");
+    buf2.copyIn("l");
+    buf2.copyIn("l");
+    buf2.copyIn("o wor");
+    buf2.copyIn("ld!");
+    TEST_ASSERT(buf1 == buf2);
+    TEST_ASSERT(!(buf1 != buf2));
+}
+
+TEST_WITH_SUITE(Buffer, compareLotsOfSegmentsOnTheLeftInequality)
+{
+    Buffer buf1, buf2("hello world!");
+    buf1.copyIn("he");
+    buf1.copyIn("l");
+    buf1.copyIn("l");
+    buf1.copyIn("o wor");
+    buf1.copyIn("ld! ");
+    TEST_ASSERT(buf1 != buf2);
+    TEST_ASSERT(!(buf1 == buf2));
+}
+
+TEST_WITH_SUITE(Buffer, compareLotOfSegmentsOnTheRightInequality)
+{
+    Buffer buf1("hello world!"), buf2;
+    buf2.copyIn("he");
+    buf2.copyIn("l");
+    buf2.copyIn("l");
+    buf2.copyIn("o wor");
+    buf2.copyIn("ld! ");
+    TEST_ASSERT(buf1 != buf2);
+    TEST_ASSERT(!(buf1 == buf2));
+}
+
+TEST_WITH_SUITE(Buffer, compareLotsOfSegmentsInequality)
+{
+    Buffer buf1, buf2;
+    buf1.copyIn("he");
+    buf1.copyIn("l");
+    buf1.copyIn("l");
+    buf1.copyIn("o wor");
+    buf1.copyIn("ld!");
+    buf2.copyIn("he");
+    buf2.copyIn("l");
+    buf2.copyIn("l");
+    buf2.copyIn("o wor");
+    buf2.copyIn("ld! ");
+    TEST_ASSERT(buf1 != buf2);
+    TEST_ASSERT(!(buf1 == buf2));
+}
+
+TEST_WITH_SUITE(buffer, compareLotsOfMismatchedSegmentsInequality)
+{
+    Buffer buf1, buf2;
+    buf1.copyIn("hel");
+    buf1.copyIn("lo ");
+    buf1.copyIn("wo");
+    buf1.copyIn("rld!");
+    buf2.copyIn("he");
+    buf2.copyIn("l");
+    buf2.copyIn("l");
+    buf2.copyIn("o wor");
+    buf2.copyIn("ld! ");
+    TEST_ASSERT(buf1 != buf2);
+    TEST_ASSERT(!(buf1 == buf2));
+}
