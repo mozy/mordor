@@ -703,6 +703,7 @@ Buffer::opCmp(const char *str, size_t len) const
 void
 Buffer::invariant() const
 {
+#ifdef DEBUG
     size_t read = 0;
     size_t write = 0;
     bool seenWrite = false;
@@ -721,4 +722,5 @@ Buffer::invariant() const
     ASSERT(read == m_readAvailable);
     ASSERT(write == m_writeAvailable);
     ASSERT(write != 0 || (write == 0 && m_writeIt == m_bufs.end()));
+#endif
 }
