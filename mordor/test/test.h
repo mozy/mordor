@@ -156,7 +156,17 @@ NO_SERIALIZE_BARE(std::vector<T>)
     }
 
 #define TEST_ASSERT_ASSERTED(code)                                              \
-    TEST_ASSERT_EXCEPTION(code, Assertion)
+    {                                                                           \
+        bool __selfAsserted = false;                                            \
+        try {                                                                   \
+            code;                                                               \
+            __selfAsserted = true;                                              \
+            assertion(__FILE__, __LINE__, "Expected Assertion from " #code);    \
+        } catch (Assertion) {                                                   \
+            if (__selfAsserted)                                                 \
+                throw;                                                          \
+        }                                                                       \
+    }
 
 // Assertion internal functions
 void assertion(const char *file, int line, const std::string &expr);
