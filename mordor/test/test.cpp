@@ -224,3 +224,63 @@ runTests(const TestSuites &suites, TestListener &listener)
 {
     return runTests(&suites, &listener);
 }
+
+template <>
+void assertEqual<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr)
+{
+    if (!(strcmp(lhs, rhs) == 0)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "==");
+    }
+}
+
+template <>
+void assertNotEqual<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr)
+{
+    if (!(strcmp(lhs, rhs) != 0)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "!=");
+    }
+}
+
+template <>
+void assertLessThan<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr)
+{
+    if (!(strcmp(lhs, rhs) < 0)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "<");
+    }
+}
+
+template <>
+void assertLessThanOrEqual<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr)
+{
+    if (!(strcmp(lhs, rhs) <= 0)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "<=");
+    }
+}
+
+template <>
+void assertGreaterThan<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr)
+{
+    if (!(strcmp(lhs, rhs) > 0)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">");
+    }
+}
+
+template <>
+void assertGreaterThanOrEqual<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr)
+{
+    if (!(strcmp(lhs, rhs) == 0)) {
+        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">=");
+    }
+}

@@ -193,6 +193,11 @@ void assertEqual(const char *file, int line,
     }
 }
 
+template <>
+void assertEqual<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr);
+
 template <class T, class U>
 void assertNotEqual(const char *file, int line,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
@@ -201,6 +206,11 @@ void assertNotEqual(const char *file, int line,
         assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "!=");
     }
 }
+
+template <>
+void assertNotEqual<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr);
 
 template <class T, class U>
 void assertLessThan(const char *file, int line,
@@ -211,6 +221,11 @@ void assertLessThan(const char *file, int line,
     }
 }
 
+template <>
+void assertLessThan<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr);
+
 template <class T, class U>
 void assertLessThanOrEqual(const char *file, int line,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
@@ -219,6 +234,11 @@ void assertLessThanOrEqual(const char *file, int line,
         assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "<=");
     }
 }
+
+template <>
+void assertLessThanOrEqual<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr);
 
 template <class T, class U>
 void assertGreaterThan(const char *file, int line,
@@ -229,6 +249,11 @@ void assertGreaterThan(const char *file, int line,
     }
 }
 
+template <>
+void assertGreaterThan<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr);
+
 template <class T, class U>
 void assertGreaterThanOrEqual(const char *file, int line,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
@@ -237,6 +262,11 @@ void assertGreaterThanOrEqual(const char *file, int line,
         assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">=");
     }
 }
+
+template <>
+void assertGreaterThanOrEqual<const char *, const char *>(const char *file,
+    int line, const char *lhs, const char *rhs, const char *lhsExpr,
+    const char *rhsExpr);
 
 template <class T, class U, class V>
 void assertAboutEqual(const char *file, int line,
