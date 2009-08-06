@@ -628,6 +628,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\endian.h"
+				>
+			</File>
+			<File
 				RelativePath=".\exception.h"
 				>
 			</File>
@@ -692,11 +696,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.h"
+				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
+				RelativePath=".\xml\parser.h"
 				>
 			</File>
 			<File
@@ -724,11 +728,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File

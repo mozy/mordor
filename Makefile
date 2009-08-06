@@ -341,6 +341,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/socket.o			\
 	$(OBJDIR)/mordor/common/streams/buffer.o		\
 	$(OBJDIR)/mordor/common/streams/buffered.o		\
+	$(OBJDIR)/mordor/common/streams/crypto.o		\
 	$(OBJDIR)/mordor/common/streams/fd.o			\
 	$(OBJDIR)/mordor/common/streams/file.o			\
 	$(OBJDIR)/mordor/common/streams/limited.o		\

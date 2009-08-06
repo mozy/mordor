@@ -26,10 +26,13 @@ private:
 #define VERIFY(x)                                                               \
     if (!(x)) throw Assertion(# x, __FILE__, __LINE__);
 
+#define NOTREACHED()                                                            \
+    throw Assertion("Not Reached", __FILE__, __LINE__);
+
 #ifdef DEBUG
 #define ASSERT VERIFY
 #else
-#define ASSERT(x)
+#define ASSERT(x) {}
 #endif
 
 #endif
