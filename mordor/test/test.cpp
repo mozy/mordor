@@ -172,7 +172,7 @@ allTests()
 }
 
 TestSuites
-testsForArguments(int argc, char **argv)
+testsForArguments(int argc, const char **argv)
 {
     TestSuites tests;
     const TestSuites &all = allTests();

@@ -148,7 +148,7 @@ LIBS := -lboost_thread -lssl -lcrypto -lz
 
 # compile and link a binary.  this *must* be defined using = and not :=
 # because it uses target variables
-COMPLINK = $(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $^ $(CXXLDFLAGS) $(LDFLAGS) $(LIBS) -o $@
+COMPLINK = $(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(filter %.o %.a, $^) $(CXXLDFLAGS) $(LDFLAGS) $(LIBS) -o $@
 
 # Eliminate default suffix rules
 .SUFFIXES:
@@ -219,24 +219,33 @@ endif
 DEPS := $(shell test -d $(OBJDIR) && find $(OBJDIR) -name "*.d")
 -include $(DEPS)
 
-all: cat echoserver simpleclient wget list $(OBJDIR)/lib/libtritonvfs.a
+all: cat echoserver simpleclient wget list $(OBJDIR)/lib/libtritonvfs.a		\
+	$(OBJDIR)/mordor/common/tests/run_tests					\
+	$(OBJDIR)/mordor/kalypso/tests/run_tests
 
 .PHONY: check
-check: all $(OBJDIR)/mordor/common/run_tests $(OBJDIR)/mordor/kalypso/run_tests
-	$(Q)$(OBJDIR)/mordor/common/run_tests
-	$(Q)$(OBJDIR)/mordor/kalypso/run_tests
+check: all
+	$(Q)$(OBJDIR)/mordor/common/tests/run_tests
+	$(Q)$(OBJDIR)/mordor/kalypso/tests/run_tests
 
-$(OBJDIR)/mordor/common/run_tests:						\
+TESTDATA_COMMON := $(patsubst %,$(OBJDIR)/%,$(wildcard mordor/common/tests/data/*))
+
+$(TESTDATA_COMMON): $(OBJDIR)/%: %
+	$(Q)mkdir -p $(@D)
+	$(Q)cp -f $< $@
+
+$(OBJDIR)/mordor/common/tests/run_tests:					\
 	$(patsubst %.cpp,$(OBJDIR)/%.o,$(wildcard mordor/common/tests/*.cpp))	\
 	$(OBJDIR)/lib/libmordortest.a						\
-	$(OBJDIR)/lib/libmordor.a
+	$(OBJDIR)/lib/libmordor.a						\
+	$(TESTDATA_COMMON)
 ifeq ($(Q),@)
 	@echo ld $@
 endif
 	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
 
-$(OBJDIR)/mordor/kalypso/run_tests:						\
+$(OBJDIR)/mordor/kalypso/tests/run_tests:					\
 	$(patsubst %.cpp,$(OBJDIR)/%.o,$(wildcard mordor/kalypso/tests/*.cpp))	\
 	$(OBJDIR)/lib/libkalypso.a						\
 	$(OBJDIR)/lib/libmordortest.a						\
