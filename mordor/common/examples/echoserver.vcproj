@@ -45,12 +45,13 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../.."
-				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG"
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
+				WarnAsError="true"
 				DebugInformationFormat="4"
 			/>
 			<Tool
@@ -117,12 +118,13 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../.."
-				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG"
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
+				WarnAsError="true"
 				DebugInformationFormat="3"
 			/>
 			<Tool
@@ -190,11 +192,12 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../../.."
-				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG"
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
+				WarnAsError="true"
 				DebugInformationFormat="3"
 			/>
 			<Tool
@@ -265,11 +268,12 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../../.."
-				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG"
+				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
+				WarnAsError="true"
 				DebugInformationFormat="3"
 			/>
 			<Tool
