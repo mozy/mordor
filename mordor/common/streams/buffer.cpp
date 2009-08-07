@@ -198,8 +198,10 @@ Buffer::reserve(size_t len)
             m_writeIt = m_bufs.begin();
         } else {
             m_bufs.push_back(newBuf);
-            m_writeIt = m_bufs.end();
-            --m_writeIt;
+            if (m_writeAvailable == 0) {
+                m_writeIt = m_bufs.end();
+                --m_writeIt;
+            }
         }
         m_writeAvailable += newBuf.length();
         invariant();

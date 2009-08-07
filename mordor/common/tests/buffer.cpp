@@ -133,7 +133,7 @@ TEST_WITH_SUITE(Buffer, compareLotsOfSegments)
     TEST_ASSERT(!(buf1 != buf2));
 }
 
-TEST_WITH_SUITE(buffer, compareLotsOfMismatchedSegments)
+TEST_WITH_SUITE(Buffer, compareLotsOfMismatchedSegments)
 {
     Buffer buf1, buf2;
     buf1.copyIn("hel");
@@ -190,7 +190,7 @@ TEST_WITH_SUITE(Buffer, compareLotsOfSegmentsInequality)
     TEST_ASSERT(!(buf1 == buf2));
 }
 
-TEST_WITH_SUITE(buffer, compareLotsOfMismatchedSegmentsInequality)
+TEST_WITH_SUITE(Buffer, compareLotsOfMismatchedSegmentsInequality)
 {
     Buffer buf1, buf2;
     buf1.copyIn("hel");
@@ -204,4 +204,34 @@ TEST_WITH_SUITE(buffer, compareLotsOfMismatchedSegmentsInequality)
     buf2.copyIn("ld! ");
     TEST_ASSERT(buf1 != buf2);
     TEST_ASSERT(!(buf1 == buf2));
+}
+
+TEST_WITH_SUITE(Buffer, reserveWithReadAvailable)
+{
+    Buffer buf1("hello");
+    buf1.reserve(10);
+    TEST_ASSERT_EQUAL(buf1.readAvailable(), 5u);
+    TEST_ASSERT_GREATER_THAN_OR_EQUAL(buf1.writeAvailable(), 10u);
+}
+
+TEST_WITH_SUITE(Buffer, reserveWithWriteAvailable)
+{
+    Buffer buf1;
+    buf1.reserve(5);
+    // Internal knowledge that reserve doubles the reservation
+    TEST_ASSERT_EQUAL(buf1.writeAvailable(), 10u);
+    buf1.reserve(11);
+    TEST_ASSERT_EQUAL(buf1.writeAvailable(), 22u);
+}
+
+TEST_WITH_SUITE(Buffer, reserveWithReadAndWriteAvailable)
+{
+    Buffer buf1("hello");
+    buf1.reserve(5);
+    // Internal knowledge that reserve doubles the reservation
+    TEST_ASSERT_EQUAL(buf1.readAvailable(), 5u);
+    TEST_ASSERT_EQUAL(buf1.writeAvailable(), 10u);
+    buf1.reserve(11);
+    TEST_ASSERT_EQUAL(buf1.readAvailable(), 5u);
+    TEST_ASSERT_EQUAL(buf1.writeAvailable(), 22u);
 }
