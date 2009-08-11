@@ -11,13 +11,13 @@
 #undef min
 #endif
 
-Buffer::DataBuf::DataBuf()
+Buffer::SegmentData::SegmentData()
 {
     start(NULL);
     length(0);
 }
 
-Buffer::DataBuf::DataBuf(size_t length)
+Buffer::SegmentData::SegmentData(size_t length)
 {
     ASSERT(length <= 0xffffffff);
     m_array.reset(new unsigned char[length]);
@@ -25,71 +25,78 @@ Buffer::DataBuf::DataBuf(size_t length)
     this->length(length);
 }
 
-Buffer::DataBuf
-Buffer::DataBuf::slice(size_t start, size_t length)
+Buffer::SegmentData
+Buffer::SegmentData::slice(size_t start, size_t length)
 {
     if (length == (size_t)~0) {
         length = this->length() - start;
     }
     ASSERT(start <= this->length());
     ASSERT(length + start <= this->length());
-    DataBuf result;
+    SegmentData result;
     result.m_array = m_array;
     result.start((unsigned char*)this->start() + start);
     result.length(length);
     return result;
 }
 
-const Buffer::DataBuf
-Buffer::DataBuf::slice(size_t start, size_t length) const
+const Buffer::SegmentData
+Buffer::SegmentData::slice(size_t start, size_t length) const
 {
     if (length == (size_t)~0) {
         length = this->length() - start;
     }
     ASSERT(start <= this->length());
     ASSERT(length + start <= this->length());
-    DataBuf result;
+    SegmentData result;
     result.m_array = m_array;
     result.start((unsigned char*)this->start() + start);
     result.length(length);
     return result;
 }
 
-Buffer::Data::Data(size_t len)
-: m_writeIndex(0), m_buf(len)
+void
+Buffer::SegmentData::extend(size_t len)
+{
+    // NO CHECKS FOR BUFFER OVERRUN!!
+    m_length += len;
+}
+
+Buffer::Segment::Segment(size_t len)
+: m_writeIndex(0), m_data(len)
 {
     invariant();
 }
 
-Buffer::Data::Data(Buffer::DataBuf buf)
-: m_writeIndex(buf.length()), m_buf(buf)
+Buffer::Segment::Segment(Buffer::SegmentData data)
+: m_writeIndex(data.length()), m_data(data)
 {
     invariant();
 }
 
 size_t
-Buffer::Data::readAvailable() const
+Buffer::Segment::readAvailable() const
 {
     invariant();
     return m_writeIndex;
 }
 
 size_t
-Buffer::Data::writeAvailable() const
+Buffer::Segment::writeAvailable() const
 {
     invariant();
-    return m_buf.length() - m_writeIndex;
+    return m_data.length() - m_writeIndex;
 }
 
 size_t
-Buffer::Data::length() const
+Buffer::Segment::length() const
 {
     invariant();
-    return m_buf.length();
+    return m_data.length();
 }
 
 void
-Buffer::Data::produce(size_t len)
+Buffer::Segment::produce(size_t len)
 {
     ASSERT(len <= writeAvailable());
     m_writeIndex += len;
@@ -97,77 +104,91 @@ Buffer::Data::produce(size_t len)
 }
 
 void
-Buffer::Data::consume(size_t len)
+Buffer::Segment::consume(size_t len)
 {
     ASSERT(len <= readAvailable());
     m_writeIndex -= len;
-    m_buf = m_buf.slice(len);
+    m_data = m_data.slice(len);
     invariant();
 }
 
 void
-Buffer::Data::truncate(size_t len)
+Buffer::Segment::truncate(size_t len)
 {
     ASSERT(len <= readAvailable());
     ASSERT(m_writeIndex = readAvailable());
     m_writeIndex = len;
-    m_buf = m_buf.slice(0, len);
+    m_data = m_data.slice(0, len);
     invariant();
-}
-
-const Buffer::DataBuf
-Buffer::Data::readBuf() const
-{
-    invariant();
-    return m_buf.slice(0, m_writeIndex);
-}
-
-Buffer::DataBuf
-Buffer::Data::writeBuf()
-{
-    invariant();
-    return m_buf.slice(m_writeIndex);
 }
 
 void
-Buffer::Data::invariant() const
+Buffer::Segment::extend(size_t len)
 {
-    ASSERT(m_writeIndex <= m_buf.length());
+    m_data.extend(len);
+    m_writeIndex += len;
+}
+
+const Buffer::SegmentData
+Buffer::Segment::readBuf() const
+{
+    invariant();
+    return m_data.slice(0, m_writeIndex);
+}
+
+Buffer::SegmentData
+Buffer::Segment::writeBuf()
+{
+    invariant();
+    return m_data.slice(m_writeIndex);
+}
+
+const Buffer::SegmentData
+Buffer::Segment::writeBuf() const
+{
+    invariant();
+    return m_data.slice(m_writeIndex);
+}
+
+void
+Buffer::Segment::invariant() const
+{
+    ASSERT(m_writeIndex <= m_data.length());
 }
 
 
 Buffer::Buffer()
 {
     m_readAvailable = m_writeAvailable = 0;
-    m_writeIt = m_bufs.end();
+    m_writeIt = m_segments.end();
     invariant();
 }
 
 Buffer::Buffer(const Buffer &copy)
 {
     m_readAvailable = m_writeAvailable = 0;
-    m_writeIt = m_bufs.end();
+    m_writeIt = m_segments.end();
     copyIn(copy);
 }
 
 Buffer::Buffer(const char *str)
 {
     m_readAvailable = m_writeAvailable = 0;
-    m_writeIt = m_bufs.end();
+    m_writeIt = m_segments.end();
     copyIn(str, strlen(str));
 }
 
 Buffer::Buffer(const std::string &str)
 {
     m_readAvailable = m_writeAvailable = 0;
-    m_writeIt = m_bufs.end();
+    m_writeIt = m_segments.end();
     copyIn(str.c_str(), str.size());
 }
 
 Buffer::Buffer(const void *data, size_t len)
 {
     m_readAvailable = m_writeAvailable = 0;
-    m_writeIt = m_bufs.end();
+    m_writeIt = m_segments.end();
     copyIn(data, len);
 }
 
@@ -185,21 +206,28 @@ Buffer::writeAvailable() const
     return m_writeAvailable;
 }
 
+size_t
+Buffer::segments() const
+{
+    invariant();
+    return m_segments.size();
+}
+
 void
 Buffer::reserve(size_t len)
 {
     if (writeAvailable() < len) {
         // over-reserve to avoid fragmentation
-        Data newBuf(len * 2 - writeAvailable());
+        Segment newBuf(len * 2 - writeAvailable());
         if (readAvailable() == 0) {
             // put the new buffer at the front if possible to avoid
             // fragmentation
-            m_bufs.push_front(newBuf);
-            m_writeIt = m_bufs.begin();
+            m_segments.push_front(newBuf);
+            m_writeIt = m_segments.begin();
         } else {
-            m_bufs.push_back(newBuf);
+            m_segments.push_back(newBuf);
             if (m_writeAvailable == 0) {
-                m_writeIt = m_bufs.end();
+                m_writeIt = m_segments.end();
                 --m_writeIt;
             }
         }
@@ -212,12 +240,12 @@ void
 Buffer::compact()
 {
     invariant();
-    if (m_writeIt != m_bufs.end()) {
+    if (m_writeIt != m_segments.end()) {
         if (m_writeIt->readAvailable() > 0) {
-            Data newBuf = Data(m_writeIt->readBuf());
-            m_bufs.insert(m_writeIt, newBuf);
+            Segment newBuf = Segment(m_writeIt->readBuf());
+            m_segments.insert(m_writeIt, newBuf);
         }
-        m_writeIt = m_bufs.erase(m_writeIt, m_bufs.end());
+        m_writeIt = m_segments.erase(m_writeIt, m_segments.end());
         m_writeAvailable = 0;
     }
     ASSERT(writeAvailable() == 0);
@@ -228,8 +256,8 @@ Buffer::clear()
 {
     invariant();
     m_readAvailable = m_writeAvailable = 0;
-    m_bufs.clear();
-    m_writeIt = m_bufs.end();
+    m_segments.clear();
+    m_writeIt = m_segments.end();
     invariant();
     ASSERT(m_readAvailable == 0);
     ASSERT(m_writeAvailable == 0);
@@ -242,7 +270,7 @@ Buffer::produce(size_t len)
     m_readAvailable += len;
     m_writeAvailable -= len;
     while (len > 0) {
-        Data& buf = *m_writeIt;
+        Segment& buf = *m_writeIt;
         size_t toProduce = std::min(buf.writeAvailable(), len);
         buf.produce(toProduce);
         len -= toProduce;
@@ -260,12 +288,12 @@ Buffer::consume(size_t len)
     ASSERT(len <= readAvailable());
     m_readAvailable -= len;
     while (len > 0) {
-        Data& buf = *m_bufs.begin();
+        Segment& buf = *m_segments.begin();
         size_t toConsume = std::min(buf.readAvailable(), len);
         buf.consume(toConsume);
         len -= toConsume;
         if (buf.length() == 0) {
-            m_bufs.pop_front();
+            m_segments.pop_front();
         }
     }
     ASSERT(len == 0);
@@ -277,14 +305,14 @@ Buffer::truncate(size_t len)
 {
     ASSERT(len <= readAvailable());
     // Split any mixed read/write bufs
-    if (m_writeIt != m_bufs.end() && m_writeIt->readAvailable() != 0) {
-        m_bufs.insert(m_writeIt, Data(m_writeIt->readBuf()));
+    if (m_writeIt != m_segments.end() && m_writeIt->readAvailable() != 0) {
+        m_segments.insert(m_writeIt, Segment(m_writeIt->readBuf()));
         m_writeIt->consume(m_writeIt->readAvailable());
     }
     m_readAvailable = len;
-    std::list<Data>::iterator it;
-    for (it = m_bufs.begin(); it != m_bufs.end() && len > 0; ++it) {
-        Data &buf = *it;
+    std::list<Segment>::iterator it;
+    for (it = m_segments.begin(); it != m_segments.end() && len > 0; ++it) {
+        Segment &buf = *it;
         if (len <= buf.readAvailable()) {
             buf.truncate(len);
             len = 0;
@@ -295,9 +323,9 @@ Buffer::truncate(size_t len)
         }
     }
     ASSERT(len == 0);
-    while (it != m_bufs.end() && it->readAvailable() > 0) {
+    while (it != m_segments.end() && it->readAvailable() > 0) {
         ASSERT(it->writeAvailable() == 0);
-        it = m_bufs.erase(it);
+        it = m_segments.erase(it);
     }
     invariant();
 }
@@ -309,12 +337,12 @@ Buffer::readBufs(size_t len) const
         len = readAvailable();
     ASSERT(len <= readAvailable());
     std::vector<iovec> result;
-    result.reserve(m_bufs.size());
+    result.reserve(m_segments.size());
     size_t remaining = len;
-    std::list<Data>::const_iterator it;
-    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
+    std::list<Segment>::const_iterator it;
+    for (it = m_segments.begin(); it != m_segments.end(); ++it) {
         size_t toConsume = std::min(it->readAvailable(), remaining);
-        DataBuf buf = it->readBuf().slice(0, toConsume);
+        SegmentData buf = it->readBuf().slice(0, toConsume);
 #ifdef WINDOWS
         while (buf.length() > 0) {
             iovec wsabuf;
@@ -339,38 +367,38 @@ Buffer::readBufs(size_t len) const
     return result;
 }
 
-const Buffer::DataBuf
+const Buffer::SegmentData
 Buffer::readBuf(size_t len) const
 {
     ASSERT(len <= readAvailable());
     if (readAvailable() == 0) {
-        return DataBuf();
+        return SegmentData();
     }
     // Optimize case where all that is requested is contained in the first
     // buffer
-    if (m_bufs.front().readAvailable() >= len) {
-        return m_bufs.front().readBuf().slice(0, len);
+    if (m_segments.front().readAvailable() >= len) {
+        return m_segments.front().readBuf().slice(0, len);
     }
     // Breaking constness!
     Buffer* _this = const_cast<Buffer*>(this);
     // try to avoid allocation
-    if (m_writeIt != m_bufs.end() && m_writeIt->writeAvailable() >= readAvailable()) {
+    if (m_writeIt != m_segments.end() && m_writeIt->writeAvailable() >= readAvailable()) {
         copyOut(m_writeIt->writeBuf().start(), readAvailable());
-        Data newBuf = Data(m_writeIt->writeBuf().slice(0, readAvailable()));
-        _this->m_bufs.clear();
-        _this->m_bufs.push_back(newBuf);
+        Segment newBuf = Segment(m_writeIt->writeBuf().slice(0, readAvailable()));
+        _this->m_segments.clear();
+        _this->m_segments.push_back(newBuf);
         _this->m_writeAvailable = 0;
-        _this->m_writeIt = _this->m_bufs.end();
+        _this->m_writeIt = _this->m_segments.end();
         invariant();
         return newBuf.readBuf().slice(0, len);
     }
-    Data newBuf = Data(readAvailable());
+    Segment newBuf = Segment(readAvailable());
     copyOut(newBuf.writeBuf().start(), readAvailable());
     newBuf.produce(readAvailable());
-    _this->m_bufs.clear();
-    _this->m_bufs.push_back(newBuf);
+    _this->m_segments.clear();
+    _this->m_segments.push_back(newBuf);
     _this->m_writeAvailable = 0;
-    _this->m_writeIt = _this->m_bufs.end();
+    _this->m_writeIt = _this->m_segments.end();
     invariant();
     return newBuf.readBuf().slice(0, len);
 }
@@ -382,13 +410,13 @@ Buffer::writeBufs(size_t len)
         len = writeAvailable();
     reserve(len);
     std::vector<iovec> result;
-    result.reserve(m_bufs.size());
+    result.reserve(m_segments.size());
     size_t remaining = len;
-    std::list<Data>::iterator it = m_writeIt;
+    std::list<Segment>::iterator it = m_writeIt;
     while (remaining > 0) {
-        Data& data = *it;
+        Segment& data = *it;
         size_t toProduce = std::min(data.writeAvailable(), remaining);
-        DataBuf buf = data.writeBuf().slice(0, toProduce);
+        SegmentData buf = data.writeBuf().slice(0, toProduce);
 #ifdef WINDOWS    
         while (buf.length() > 0) {
             iovec wsabuf;
@@ -411,13 +439,13 @@ Buffer::writeBufs(size_t len)
     return result;
 }
 
-Buffer::DataBuf
+Buffer::SegmentData
 Buffer::writeBuf(size_t len)
 {
     // Must allocate just the write buf
     if (writeAvailable() == 0) {
         reserve(len);
-        ASSERT(m_writeIt != m_bufs.end());
+        ASSERT(m_writeIt != m_segments.end());
         ASSERT(m_writeIt->writeAvailable() >= len);
         return m_writeIt->writeBuf().slice(0, len);
     }
@@ -428,7 +456,7 @@ Buffer::writeBuf(size_t len)
     // Existing bufs are insufficient... remove them and reserve anew
     compact();
     reserve(len);
-    ASSERT(m_writeIt != m_bufs.end());
+    ASSERT(m_writeIt != m_segments.end());
     ASSERT(m_writeIt->writeAvailable() >= len);
     return m_writeIt->writeBuf().slice(0, len);
 }
@@ -440,17 +468,34 @@ Buffer::copyIn(const Buffer &buf, size_t len)
         len = buf.readAvailable();
     ASSERT(buf.readAvailable() >= len);
     invariant();
+    if (len == 0)
+        return;
+
     // Split any mixed read/write bufs
-    if (m_writeIt != m_bufs.end() && m_writeIt->readAvailable() != 0) {
-        m_bufs.insert(m_writeIt, Data(m_writeIt->readBuf()));
+    if (m_writeIt != m_segments.end() && m_writeIt->readAvailable() != 0) {
+        m_segments.insert(m_writeIt, Segment(m_writeIt->readBuf()));
         m_writeIt->consume(m_writeIt->readAvailable());
+        invariant();
     }
 
-    std::list<Data>::const_iterator it;
-    for (it = buf.m_bufs.begin(); it != buf.m_bufs.end(); ++it) {
+    std::list<Segment>::const_iterator it;
+    for (it = buf.m_segments.begin(); it != buf.m_segments.end(); ++it) {
         size_t toConsume = std::min(it->readAvailable(), len);
-        Data newBuf = Data(it->readBuf().slice(0, toConsume));
-        m_bufs.insert(m_writeIt, newBuf);
+        if (m_readAvailable != 0 && it == buf.m_segments.begin()) {
+            std::list<Segment>::iterator previousIt = m_writeIt;
+            --previousIt;
+            if ((unsigned char *)previousIt->readBuf().start() +
+                previousIt->readBuf().length() == it->readBuf().start()) {
+                ASSERT(previousIt->writeAvailable() == 0);
+                previousIt->extend(toConsume);
+                m_readAvailable += toConsume;
+                len -= toConsume;
+                if (len == 0)
+                    break;
+            }
+        }
+        Segment newBuf = Segment(it->readBuf().slice(0, toConsume));
+        m_segments.insert(m_writeIt, newBuf);
         m_readAvailable += toConsume;
         len -= toConsume;
         if (len == 0)
@@ -465,7 +510,7 @@ Buffer::copyIn(const void *data, size_t len)
 {
     invariant();
     
-    while (m_writeIt != m_bufs.end() && len > 0) {
+    while (m_writeIt != m_segments.end() && len > 0) {
         size_t todo = std::min(len, m_writeIt->writeAvailable());
         memcpy(m_writeIt->writeBuf().start(), data, todo);
         m_writeIt->produce(todo);
@@ -479,10 +524,10 @@ Buffer::copyIn(const void *data, size_t len)
     }
 
     if (len > 0) {
-        Data newBuf(len);
+        Segment newBuf(len);
         memcpy(newBuf.writeBuf().start(), data, len);
         newBuf.produce(len);
-        m_bufs.push_back(newBuf);
+        m_segments.push_back(newBuf);
         m_readAvailable += len;
     }
 
@@ -500,8 +545,8 @@ Buffer::copyOut(void *buf, size_t len) const
 {
     ASSERT(len <= readAvailable());
     unsigned char *next = (unsigned char*)buf;
-    std::list<Data>::const_iterator it;
-    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
+    std::list<Segment>::const_iterator it;
+    for (it = m_segments.begin(); it != m_segments.end(); ++it) {
         size_t todo = std::min(len, it->readAvailable());
         memcpy(next, it->readBuf().start(), todo);
         next += todo;
@@ -522,8 +567,8 @@ Buffer::find(char delim, size_t len) const
     size_t totalLength = 0;
     bool success = false;
 
-    std::list<Data>::const_iterator it;
-    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
+    std::list<Segment>::const_iterator it;
+    for (it = m_segments.begin(); it != m_segments.end(); ++it) {
         const void *start = it->readBuf().start();
         size_t toscan = std::min(len, it->readAvailable());
         const void *point = memchr(start, delim, toscan);
@@ -553,8 +598,8 @@ Buffer::find(const std::string &str, size_t len) const
     size_t totalLength = 0;
     size_t foundSoFar = 0;
 
-    std::list<Data>::const_iterator it;
-    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
+    std::list<Segment>::const_iterator it;
+    for (it = m_segments.begin(); it != m_segments.end(); ++it) {
         const void *start = it->readBuf().start();
         size_t toscan = std::min(len, it->readAvailable());
         while (toscan > 0) {
@@ -603,8 +648,8 @@ Buffer::visit(boost::function<void (const void *, size_t)> dg, size_t len) const
         len = readAvailable();
     ASSERT(len <= readAvailable());
 
-    std::list<Data>::const_iterator it;
-    for (it = m_bufs.begin(); it != m_bufs.end() && len > 0; ++it) {
+    std::list<Segment>::const_iterator it;
+    for (it = m_segments.begin(); it != m_segments.end() && len > 0; ++it) {
         size_t todo = std::min(len, it->readAvailable());
         ASSERT(todo != 0);
         dg(it->readBuf().start(), todo);
@@ -666,11 +711,11 @@ Buffer::operator!= (const char *str) const
 int
 Buffer::opCmp(const Buffer &rhs) const
 {
-    std::list<Data>::const_iterator leftIt, rightIt;
+    std::list<Segment>::const_iterator leftIt, rightIt;
     int lengthResult = (int)((ptrdiff_t)readAvailable() - (ptrdiff_t)rhs.readAvailable());
-    leftIt = m_bufs.begin(); rightIt = rhs.m_bufs.begin();
+    leftIt = m_segments.begin(); rightIt = rhs.m_segments.begin();
     size_t leftOffset = 0, rightOffset = 0;
-    while (leftIt != m_bufs.end() && rightIt != rhs.m_bufs.end())
+    while (leftIt != m_segments.end() && rightIt != rhs.m_segments.end())
     {
         ASSERT(leftOffset <= leftIt->readAvailable());
         ASSERT(rightOffset <= rightIt->readAvailable());
@@ -702,11 +747,11 @@ int
 Buffer::opCmp(const char *str, size_t len) const
 {
     size_t offset = 0;
-    std::list<Data>::const_iterator it;
+    std::list<Segment>::const_iterator it;
     int lengthResult = (int)((ptrdiff_t)readAvailable() - (ptrdiff_t)len);
     if (lengthResult > 0)
         len = readAvailable();
-    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
+    for (it = m_segments.begin(); it != m_segments.end(); ++it) {
         const void *start = it->readBuf().start();
         size_t tocompare = std::min(it->readAvailable(), len);
         int result = memcmp(it->readBuf().start(), str + offset, tocompare);
@@ -727,20 +772,35 @@ Buffer::invariant() const
     size_t read = 0;
     size_t write = 0;
     bool seenWrite = false;
-    std::list<Data>::const_iterator it;
-    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
-        const Data& buf = *it;
+    std::list<Segment>::const_iterator it;
+    for (it = m_segments.begin(); it != m_segments.end(); ++it) {
+        const Segment& segment = *it;
         // Strict ordering
-        ASSERT(!seenWrite || (seenWrite && buf.readAvailable() == 0));
-        read += buf.readAvailable();
-        write += buf.writeAvailable();
-        if (!seenWrite && buf.writeAvailable() != 0) {
+        ASSERT(!seenWrite || (seenWrite && segment.readAvailable() == 0));
+        read += segment.readAvailable();
+        write += segment.writeAvailable();
+        if (!seenWrite && segment.writeAvailable() != 0) {
             seenWrite = true;
             ASSERT(m_writeIt == it);
+        }
+        // We should keep segments optimally merged together
+        std::list<Segment>::const_iterator nextIt = it;
+        ++nextIt;
+        if (nextIt != m_segments.end()) {
+            const Segment& next = *nextIt;
+            if (segment.writeAvailable() == 0 &&
+                next.readAvailable() != 0) {
+                ASSERT((const unsigned char*)segment.readBuf().start() +
+                    segment.readAvailable() != next.readBuf().start());
+            } else if (segment.writeAvailable() != 0 &&
+                next.readAvailable() == 0) {
+                ASSERT((const unsigned char*)segment.writeBuf().start () +
+                    segment.writeAvailable() != next.writeBuf().start());
+            }
         }
     }
     ASSERT(read == m_readAvailable);
     ASSERT(write == m_writeAvailable);
-    ASSERT(write != 0 || (write == 0 && m_writeIt == m_bufs.end()));
+    ASSERT(write != 0 || (write == 0 && m_writeIt == m_segments.end()));
 #endif
 }

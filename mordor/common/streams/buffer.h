@@ -12,14 +12,16 @@
 struct Buffer
 {
 public:
-    struct DataBuf
+    struct SegmentData
     {
     public:
-        DataBuf();
-        DataBuf(size_t length);
+        SegmentData();
+        SegmentData(size_t length);
 
-        DataBuf slice(size_t start, size_t length = ~0);
-        const DataBuf slice(size_t start, size_t length = ~0) const;
+        SegmentData slice(size_t start, size_t length = ~0);
+        const SegmentData slice(size_t start, size_t length = ~0) const;
+
+        void extend(size_t len);
 
     public:
         void *start() { return m_start; }
@@ -35,10 +37,10 @@ public:
     };
 
 private:
-    struct Data
+    struct Segment
     {
-        Data(size_t len);
-        Data(DataBuf);
+        Segment(size_t len);
+        Segment(SegmentData);
 
         size_t readAvailable() const;
         size_t writeAvailable() const;
@@ -46,12 +48,14 @@ private:
         void produce(size_t len);
         void consume(size_t len);
         void truncate(size_t len);
-        const DataBuf readBuf() const;
-        DataBuf writeBuf();
+        void extend(size_t len);
+        const SegmentData readBuf() const;
+        const SegmentData writeBuf() const;
+        SegmentData writeBuf();
 
     private:
         size_t m_writeIndex;
-        DataBuf m_buf;
+        SegmentData m_data;
 
         void invariant() const;
     };
@@ -65,6 +69,8 @@ public:
 
     size_t readAvailable() const;
     size_t writeAvailable() const;
+    // Primarily for unit tests
+    size_t segments() const;
 
     void reserve(size_t len);
     void compact();
@@ -74,9 +80,9 @@ public:
     void truncate(size_t len);
 
     const std::vector<iovec> readBufs(size_t len = ~0) const;
-    const DataBuf readBuf(size_t len) const;
+    const SegmentData readBuf(size_t len) const;
     std::vector<iovec> writeBufs(size_t len = ~0);
-    DataBuf writeBuf(size_t len);
+    SegmentData writeBuf(size_t len);
 
     void copyIn(const Buffer& buf, size_t len = ~0);
     void copyIn(const char* sz);
@@ -97,10 +103,10 @@ public:
     bool operator!= (const char *str) const;
 
 private:
-    std::list<Data> m_bufs;
+    std::list<Segment> m_segments;
     size_t m_readAvailable;
     size_t m_writeAvailable;
-    std::list<Data>::iterator m_writeIt;
+    std::list<Segment>::iterator m_writeIt;
 
     int opCmp(const Buffer &rhs) const;
     int opCmp(const char *str, size_t len) const;

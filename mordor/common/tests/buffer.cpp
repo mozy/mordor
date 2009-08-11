@@ -5,6 +5,133 @@
 #include "mordor/common/streams/buffer.h"
 #include "mordor/test/test.h"
 
+TEST_WITH_SUITE(Buffer, copyInString)
+{
+    Buffer b;
+    b.copyIn("hello");
+    TEST_ASSERT_EQUAL(b.readAvailable(), 5u);
+    TEST_ASSERT_EQUAL(b.writeAvailable(), 0u);
+    TEST_ASSERT_EQUAL(b.segments(), 1u);
+    TEST_ASSERT(b == "hello");
+}
+
+TEST_WITH_SUITE(Buffer, copyInOtherBuffer)
+{
+    Buffer b1, b2("hello");
+    b1.copyIn(b2);
+    TEST_ASSERT_EQUAL(b1.readAvailable(), 5u);
+    TEST_ASSERT_EQUAL(b1.writeAvailable(), 0u);
+    TEST_ASSERT_EQUAL(b1.segments(), 1u);
+    TEST_ASSERT(b1 == "hello");
+}
+
+TEST_WITH_SUITE(Buffer, copyInPartial)
+{
+    Buffer b1, b2("hello");
+    b1.copyIn(b2, 3);
+    TEST_ASSERT_EQUAL(b1.readAvailable(), 3u);
+    TEST_ASSERT_EQUAL(b1.writeAvailable(), 0u);
+    TEST_ASSERT_EQUAL(b1.segments(), 1u);
+    TEST_ASSERT(b1 == "hel");
+}
+
+TEST_WITH_SUITE(Buffer, copyInStringToReserved)
+{
+    Buffer b;
+    b.reserve(5);
+    b.copyIn("hello");
+    TEST_ASSERT_EQUAL(b.readAvailable(), 5u);
+    TEST_ASSERT_EQUAL(b.segments(), 1u);
+    TEST_ASSERT(b == "hello");
+}
+
+TEST_WITH_SUITE(Buffer, copyInStringAfterAnotherSegment)
+{
+    Buffer b("hello");
+    b.copyIn("world");
+    TEST_ASSERT_EQUAL(b.readAvailable(), 10u);
+    TEST_ASSERT_EQUAL(b.writeAvailable(), 0u);
+    TEST_ASSERT_EQUAL(b.segments(), 2u);
+    TEST_ASSERT(b == "helloworld");
+}
+
+TEST_WITH_SUITE(Buffer, copyInStringToReservedAfterAnotherSegment)
+{
+    Buffer b("hello");
+    b.reserve(5);
+    b.copyIn("world");
+    TEST_ASSERT_EQUAL(b.readAvailable(), 10u);
+    TEST_ASSERT_EQUAL(b.segments(), 2u);
+    TEST_ASSERT(b == "helloworld");
+}
+
+TEST_WITH_SUITE(Buffer, copyInStringToSplitSegment)
+{
+    Buffer b;
+    b.reserve(10);
+    b.copyIn("hello");
+    TEST_ASSERT_EQUAL(b.readAvailable(), 5u);
+    TEST_ASSERT_GREATER_THAN_OR_EQUAL(b.writeAvailable(), 5u);
+    TEST_ASSERT_EQUAL(b.segments(), 1u);
+    b.copyIn("world");
+    TEST_ASSERT_EQUAL(b.readAvailable(), 10u);
+    TEST_ASSERT_EQUAL(b.segments(), 1u);
+    TEST_ASSERT(b == "helloworld");
+}
+
+TEST_WITH_SUITE(Buffer, copyInWithReserve)
+{
+    Buffer b1, b2("hello");
+    b1.reserve(10);
+    TEST_ASSERT_GREATER_THAN_OR_EQUAL(b1.writeAvailable(), 10u);
+    TEST_ASSERT_EQUAL(b1.segments(), 1u);
+    size_t writeAvailable = b1.writeAvailable();
+    b1.copyIn(b2);
+    TEST_ASSERT_EQUAL(b1.readAvailable(), 5u);
+    // Shouldn't have eaten any
+    TEST_ASSERT_EQUAL(b1.writeAvailable(), writeAvailable);
+    TEST_ASSERT_EQUAL(b1.segments(), 2u);
+    TEST_ASSERT(b1 == "hello");
+}
+
+TEST_WITH_SUITE(Buffer, copyInToSplitSegment)
+{
+    Buffer b1, b2("world");
+    b1.reserve(10);
+    b1.copyIn("hello");
+    TEST_ASSERT_EQUAL(b1.readAvailable(), 5u);
+    TEST_ASSERT_GREATER_THAN_OR_EQUAL(b1.writeAvailable(), 5u);
+    TEST_ASSERT_EQUAL(b1.segments(), 1u);
+    size_t writeAvailable = b1.writeAvailable();
+    b1.copyIn(b2, 5);
+    TEST_ASSERT_EQUAL(b1.readAvailable(), 10u);
+    // Shouldn't have eaten any
+    TEST_ASSERT_EQUAL(b1.writeAvailable(), writeAvailable);
+    TEST_ASSERT_EQUAL(b1.segments(), 3u);
+    TEST_ASSERT(b1 == "helloworld");
+}
+
+#ifdef DEBUG
+TEST_WITH_SUITE(Buffer, copyInMoreThanThereIs)
+{
+    Buffer b1, b2;
+    TEST_ASSERT_ASSERTED(b1.copyIn(b2, 1));
+    b2.copyIn("hello");
+    TEST_ASSERT_ASSERTED(b1.copyIn(b2, 6));
+}
+#endif
+
+TEST_WITH_SUITE(Buffer, copyInMerge)
+{
+    Buffer b1, b2("hello");
+    b1.copyIn(b2, 2);
+    b2.consume(2);
+    b1.copyIn(b2, 3);
+    TEST_ASSERT_EQUAL(b1.readAvailable(), 5u);
+    TEST_ASSERT_EQUAL(b1.segments(), 1u);
+    TEST_ASSERT(b1 == "hello");
+}
+
 TEST_WITH_SUITE(Buffer, copyConstructor)
 {
     Buffer buf1;

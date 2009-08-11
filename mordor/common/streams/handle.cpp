@@ -82,7 +82,7 @@ HandleStream::read(Buffer &b, size_t len)
     }
     if (len > 0xffffffff)
         len = 0xffffffff;
-    Buffer::DataBuf buf = b.writeBuf(len);
+    Buffer::SegmentData buf = b.writeBuf(len);
     BOOL ret = ReadFile(m_hFile, buf.start(), (DWORD)len, &read, overlapped);
     if (m_ioManager) {
         if (!ret &&
@@ -133,7 +133,7 @@ HandleStream::write(const Buffer &b, size_t len)
     }
     if (len > 0xffffffff)
         len = 0xffffffff;
-    const Buffer::DataBuf buf = b.readBuf(len);
+    const Buffer::SegmentData buf = b.readBuf(len);
     BOOL ret = WriteFile(m_hFile, buf.start(), (DWORD)len, &written, overlapped);
     if (m_ioManager) {
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
