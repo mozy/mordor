@@ -202,7 +202,7 @@ DEPS := $(shell find $(SRCDIR) -name "*.d")
 #
 .PHONY: clean
 clean:
-	$(Q)git clean -dfx
+	$(Q)git clean -dfx 2>/dev/null || rm -rf *
 
 all:	mordor/common/examples/cat						\
 	mordor/common/examples/echoserver					\
@@ -217,6 +217,18 @@ all:	mordor/common/examples/cat						\
 check: all
 	$(Q)mordor/common/tests/run_tests
 	$(Q)mordor/kalypso/tests/run_tests
+
+.PHONY: lcov
+lcov:
+	$(Q)lcov -d $(CURDIR) -z >/dev/null 2>&1
+	$(Q)$(MAKE) clean -f $(SRCDIR)/Makefile $(MAKEFLAGS)
+	$(Q)$(MAKE) check -f $(SRCDIR)/Makefile $(MAKEFLAGS) GCOV=1
+	$(Q)lcov -b $(SRCDIR) -d $(CURDIR) -c -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info '/usr/*' -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info mordor/common/uri.cpp -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info mordor/common/http/parser.cpp -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info mordor/common/xml/parser.cpp -o lcov.info >/dev/null 2>&1
+	$(Q)mkdir -p lcov && cd lcov && genhtml ../lcov.info >/dev/null && tar -czf lcov.tgz *
 
 TESTDATA_COMMON := $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/mordor/common/tests/data/*))
 
