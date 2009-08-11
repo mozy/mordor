@@ -260,7 +260,7 @@ static void
 visitor2(const void *b, size_t len, int &sequence)
 {
     TEST_ASSERT_EQUAL(++sequence, 1);
-    TEST_ASSERT_EQUAL(len, 5);
+    TEST_ASSERT_EQUAL(len, 5u);
     TEST_ASSERT(memcmp(b, "hello", 5) == 0);
 }
 
