@@ -3,12 +3,12 @@
    ragel uri.rl -G2 -o uri.cpp
 */
 
-#include "uri.h"
+#include "mordor/common/uri.h"
 
 #include <sstream>
 
-#include "ragel.h"
-#include "version.h"
+#include "mordor/common/ragel.h"
+#include "mordor/common/version.h"
 
 #ifdef ABSOLUTE
 #undef ABSOLUTE

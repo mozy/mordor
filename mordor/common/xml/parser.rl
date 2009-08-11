@@ -1,6 +1,6 @@
 // Copyright (c) 2009 - Decho Corp.
 
-#include "parser.h"
+#include "mordor/common/xml/parser.h"
 
 %%{    
     machine xml_parser;

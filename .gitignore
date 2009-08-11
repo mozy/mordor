@@ -3,4 +3,6 @@ x64
 *.suo
 *.user
 *.ncb
-obj
+*.o
+*.a
+*.d

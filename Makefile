@@ -1,7 +1,8 @@
-# Makefile for cmordor
-#
-# recursive make considered harmful
-# see: http://aegis.sourceforge.net/auug97.pdf
+ifndef SRCDIR
+    SRCDIR=.
+endif
+
+VPATH=$(SRCDIR)
 
 # make sure the 'all' target is listed first
 all:
@@ -71,14 +72,6 @@ ifeq ($(shell uname), Linux)
     IOMANAGER := epoll
 endif
 
-# output directory for the build is prefixed with debug v.s. nondebug
-ifdef GITVER
-	OBJTOPDIR := obj-$(RELEASEVER)
-else
-	OBJTOPDIR := obj
-endif
-
-OBJDIR := $(OBJTOPDIR)/$(PLATFORMDIR)/$(BUILDTYPE)
 
 # set optimization level (disable for gcov builds)
 # example: 'make OPT=2' will add -O2 to the compilation options
@@ -114,7 +107,7 @@ ifdef GPROF
 endif
 
 # add current dir to include dir
-INC_FLAGS := -I.
+INC_FLAGS := -I$(SRCDIR)
 
 # run with 'make V=1' for verbose make output
 ifeq ($(V),1)
@@ -164,19 +157,19 @@ COMPLINK = $(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(filter %.o %.a, $^) $(CXXLDFLAGS
 #
 
 # cpp rules
-$(OBJDIR)/%.o: %.cpp
+%.o: %.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) -I $(OBJDIR)/$(dir $*) $(CXXFLAGS) -c -o $@ $<
+	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-$(OBJDIR)/%.o: %.c
+%.o: %.c
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
+	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
 %.cpp: %.rl
 ifeq ($(Q),@)
@@ -189,7 +182,7 @@ else
 	$(Q)$(RAGEL) $(RAGEL_FLAGS) $< | $(RLCODEGEN) $(RLCODEGEN_FLAGS) -o $@
 endif
 
-$(OBJDIR)/%.o: %.s
+%.o: %.s
 ifeq ($(Q),@)
 	@echo as $<
 endif
@@ -198,221 +191,195 @@ endif
 
 
 #
-# clean up all builds
-#
-#
-# clean current build
-#
-.PHONY: clean
-clean:
-ifeq ($(Q),@)
-	@echo rm $(OBJDIR)
-endif
-	$(Q)rm -rf $(OBJDIR)
-	$(Q)rm -f mordor/common/uri.cpp mordor/common/http/parser.cpp
-
-#
 # Include the dependency information generated during the previous compile
 # phase (note that since the .d is generated during the compile, editing
 # the .cpp will cause it to be regenerated for the next build.)
 #
-DEPS := $(shell test -d $(OBJDIR) && find $(OBJDIR) -name "*.d")
+DEPS := $(shell find $(SRCDIR) -name "*.d")
 -include $(DEPS)
 
-all: cat echoserver simpleclient wget list $(OBJDIR)/lib/libtritonvfs.a		\
-	$(OBJDIR)/mordor/common/tests/run_tests					\
-	$(OBJDIR)/mordor/kalypso/tests/run_tests
+# clean current build
+#
+.PHONY: clean
+clean:
+	$(Q)git clean -dfx
+
+all:	mordor/common/examples/cat						\
+	mordor/common/examples/echoserver					\
+	mordor/common/examples/simpleclient					\
+	mordor/common/examples/wget						\
+	mordor/common/tests/run_tests						\
+	mordor/kalypso/vfs/triton/libtritonvfs.a				\
+	mordor/kalypso/tests/run_tests						\
+	mordor/triton/client/list
 
 .PHONY: check
 check: all
-	$(Q)$(OBJDIR)/mordor/common/tests/run_tests
-	$(Q)$(OBJDIR)/mordor/kalypso/tests/run_tests
+	$(Q)mordor/common/tests/run_tests
+	$(Q)mordor/kalypso/tests/run_tests
 
-TESTDATA_COMMON := $(patsubst %,$(OBJDIR)/%,$(wildcard mordor/common/tests/data/*))
+TESTDATA_COMMON := $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/mordor/common/tests/data/*))
 
-$(TESTDATA_COMMON): $(OBJDIR)/%: %
-	$(Q)mkdir -p $(@D)
-	$(Q)cp -f $< $@
-
-$(OBJDIR)/mordor/common/tests/run_tests:					\
-	$(patsubst %.cpp,$(OBJDIR)/%.o,$(wildcard mordor/common/tests/*.cpp))	\
-	$(OBJDIR)/lib/libmordortest.a						\
-	$(OBJDIR)/lib/libmordor.a						\
+mordor/common/tests/run_tests:							\
+	$(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/common/tests/*.cpp))\
+	mordor/test/libmordortest.a						\
+        mordor/common/libmordor.a						\
 	$(TESTDATA_COMMON)
 ifeq ($(Q),@)
 	@echo ld $@
 endif
-	$(Q)mkdir -p $(@D)
+	$(Q)mkdir -p mordor/common/tests/data
+	$(Q)cp -Ru $(SRCDIR)/mordor/common/tests/data/* mordor/common/tests/data/ 2>/dev/null || true
 	$(COMPLINK)
 
-$(OBJDIR)/mordor/kalypso/tests/run_tests:					\
-	$(patsubst %.cpp,$(OBJDIR)/%.o,$(wildcard mordor/kalypso/tests/*.cpp))	\
-	$(OBJDIR)/lib/libkalypso.a						\
-	$(OBJDIR)/lib/libmordortest.a						\
-	$(OBJDIR)/lib/libmordor.a
+mordor/kalypso/tests/run_tests:							\
+	$(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/kalypso/tests/*.cpp))\
+        mordor/kalypso/libkalypso.a						\
+	mordor/test/libmordortest.a						\
+        mordor/common/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
 
 
-.PHONY: cat
-cat: $(OBJDIR)/bin/examples/cat
-
-$(OBJDIR)/bin/examples/cat: $(OBJDIR)/mordor/common/examples/cat.o $(OBJDIR)/lib/libmordor.a
+mordor/common/examples/cat: mordor/common/examples/cat.o			\
+	mordor/common/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
 
 
-.PHONY: echoserver
-echoserver: $(OBJDIR)/bin/examples/echoserver
-
-$(OBJDIR)/bin/examples/echoserver: $(OBJDIR)/mordor/common/examples/echoserver.o $(OBJDIR)/lib/libmordor.a
+mordor/common/examples/echoserver: mordor/common/examples/echoserver.o		\
+	mordor/common/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
 
-.PHONY: simpleclient
-simpleclient: $(OBJDIR)/bin/examples/simpleclient
-
-$(OBJDIR)/bin/examples/simpleclient: $(OBJDIR)/mordor/common/examples/simpleclient.o $(OBJDIR)/lib/libmordor.a
+mordor/common/examples/simpleclient: mordor/common/examples/simpleclient.o	\
+	mordor/common/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@ 
 endif
-	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
 
-.PHONY: wget
-wget: $(OBJDIR)/bin/examples/wget
-
-$(OBJDIR)/bin/examples/wget: $(OBJDIR)/mordor/common/examples/wget.o $(OBJDIR)/lib/libmordor.a
+mordor/common/examples/wget: mordor/common/examples/wget.o			\
+	mordor/common/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
 
-.PHONY: list
-list: $(OBJDIR)/bin/triton/list
-
-$(OBJDIR)/bin/triton/list: $(OBJDIR)/mordor/triton/client/list_main.o $(OBJDIR)/lib/libtritonclient.a $(OBJDIR)/lib/libmordor.a
+mordor/triton/client/list: mordor/triton/client/list_main.o			\
+	mordor/triton/client/libtritonclient.a 					\
+	mordor/common/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(COMPLINK)
 
-$(OBJDIR)/mordor/common/http/http_parser.o: mordor/common/http/parser.cpp
+mordor/common/http/http_parser.o: mordor/common/http/parser.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) -I $(OBJDIR)/$(dir $*) $(CXXFLAGS) -c -o $@ $<
+	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
    
-$(OBJDIR)/mordor/common/streams/socket_stream.o: mordor/common/streams/socket.cpp
+mordor/common/streams/socket_stream.o: mordor/common/streams/socket.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) -I $(OBJDIR)/$(dir $*) $(CXXFLAGS) -c -o $@ $<
+	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
    
-$(OBJDIR)/mordor/common/xml/xml_parser.o: mordor/common/xml/parser.cpp
+mordor/common/xml/xml_parser.o: mordor/common/xml/parser.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) -I $(OBJDIR)/$(dir $*) $(CXXFLAGS) -c -o $@ $<
+	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 
-$(OBJDIR)/lib/libmordor.a:					\
-	$(OBJDIR)/mordor/common/exception.o			\
-	$(OBJDIR)/mordor/common/fiber.o				\
-	$(OBJDIR)/mordor/common/fiber_$(ARCH)$(UNDERSCORE).o	\
-	$(OBJDIR)/mordor/common/http/basic.o			\
-	$(OBJDIR)/mordor/common/http/chunked.o			\
-	$(OBJDIR)/mordor/common/http/client.o			\
-	$(OBJDIR)/mordor/common/http/connection.o		\
-	$(OBJDIR)/mordor/common/http/http.o			\
-	$(OBJDIR)/mordor/common/http/multipart.o		\
-	$(OBJDIR)/mordor/common/http/http_parser.o		\
-	$(OBJDIR)/mordor/common/http/server.o			\
-	$(OBJDIR)/mordor/common/iomanager_$(IOMANAGER).o	\
-	$(OBJDIR)/mordor/common/log.o				\
-	$(OBJDIR)/mordor/common/ragel.o				\
-	$(OBJDIR)/mordor/common/scheduler.o			\
-	$(OBJDIR)/mordor/common/semaphore.o			\
-	$(OBJDIR)/mordor/common/socket.o			\
-	$(OBJDIR)/mordor/common/streams/buffer.o		\
-	$(OBJDIR)/mordor/common/streams/buffered.o		\
-	$(OBJDIR)/mordor/common/streams/crypto.o		\
-	$(OBJDIR)/mordor/common/streams/fd.o			\
-	$(OBJDIR)/mordor/common/streams/file.o			\
-	$(OBJDIR)/mordor/common/streams/hash.o			\
-	$(OBJDIR)/mordor/common/streams/limited.o		\
-	$(OBJDIR)/mordor/common/streams/memory.o		\
-	$(OBJDIR)/mordor/common/streams/null.o			\
-	$(OBJDIR)/mordor/common/streams/openssl.o		\
-	$(OBJDIR)/mordor/common/streams/pipe.o			\
-	$(OBJDIR)/mordor/common/streams/socket_stream.o		\
-	$(OBJDIR)/mordor/common/streams/ssl.o			\
-	$(OBJDIR)/mordor/common/streams/std.o			\
-	$(OBJDIR)/mordor/common/streams/stream.o		\
-	$(OBJDIR)/mordor/common/streams/transfer.o		\
-	$(OBJDIR)/mordor/common/streams/zlib.o			\
-	$(OBJDIR)/mordor/common/string.o			\
-	$(OBJDIR)/mordor/common/timer.o				\
-	$(OBJDIR)/mordor/common/uri.o				\
-	$(OBJDIR)/mordor/common/xml/xml_parser.o
+mordor/common/libmordor.a:							\
+	mordor/common/exception.o						\
+	mordor/common/fiber.o							\
+	mordor/common/fiber_$(ARCH)$(UNDERSCORE).o				\
+	mordor/common/http/basic.o						\
+	mordor/common/http/chunked.o						\
+	mordor/common/http/client.o						\
+	mordor/common/http/connection.o						\
+	mordor/common/http/http.o						\
+	mordor/common/http/multipart.o						\
+	mordor/common/http/http_parser.o					\
+	mordor/common/http/server.o						\
+	mordor/common/iomanager_$(IOMANAGER).o					\
+	mordor/common/log.o							\
+	mordor/common/ragel.o							\
+	mordor/common/scheduler.o						\
+	mordor/common/semaphore.o						\
+	mordor/common/socket.o							\
+	mordor/common/streams/buffer.o						\
+	mordor/common/streams/buffered.o					\
+	mordor/common/streams/crypto.o						\
+	mordor/common/streams/fd.o						\
+	mordor/common/streams/file.o						\
+	mordor/common/streams/hash.o						\
+	mordor/common/streams/limited.o						\
+	mordor/common/streams/memory.o						\
+	mordor/common/streams/null.o						\
+	mordor/common/streams/openssl.o						\
+	mordor/common/streams/pipe.o						\
+	mordor/common/streams/socket_stream.o					\
+	mordor/common/streams/ssl.o						\
+	mordor/common/streams/std.o						\
+	mordor/common/streams/stream.o						\
+	mordor/common/streams/transfer.o					\
+	mordor/common/streams/zlib.o						\
+	mordor/common/string.o							\
+	mordor/common/timer.o							\
+	mordor/common/uri.o							\
+	mordor/common/xml/xml_parser.o
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
-$(OBJDIR)/lib/libtritonclient.a:				\
-	$(OBJDIR)/mordor/triton/client/client.o			\
-	$(OBJDIR)/mordor/triton/client/get.o			\
-	$(OBJDIR)/mordor/triton/client/list.o			\
-	$(OBJDIR)/mordor/triton/client/put.o
+mordor/triton/client/libtritonclient.a:						\
+	mordor/triton/client/client.o						\
+	mordor/triton/client/get.o						\
+	mordor/triton/client/list.o						\
+	mordor/triton/client/put.o
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
-$(OBJDIR)/lib/libkalypso.a:					\
-	$(OBJDIR)/mordor/kalypso/vfs/helpers.o			\
-	$(OBJDIR)/mordor/kalypso/vfs/manager.o			\
-	$(OBJDIR)/mordor/kalypso/vfs/vfs.o
+mordor/kalypso/libkalypso.a:							\
+	mordor/kalypso/vfs/helpers.o						\
+	mordor/kalypso/vfs/manager.o						\
+	mordor/kalypso/vfs/vfs.o
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
-$(OBJDIR)/lib/libmordortest.a:					\
-	$(OBJDIR)/mordor/test/test.o				\
-	$(OBJDIR)/mordor/test/stdoutlistener.o
+mordor/test/libmordortest.a:							\
+	mordor/test/test.o							\
+	mordor/test/stdoutlistener.o
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
-$(OBJDIR)/lib/libtritonvfs.a:					\
-	$(OBJDIR)/mordor/kalypso/vfs/triton/container.o		\
-	$(OBJDIR)/mordor/kalypso/vfs/triton/transfer.o		\
-	$(OBJDIR)/mordor/kalypso/vfs/triton/vfs.o		\
-	$(OBJDIR)/mordor/kalypso/vfs/triton/user.o
+mordor/kalypso/vfs/triton/libtritonvfs.a:					\
+	mordor/kalypso/vfs/triton/container.o					\
+	mordor/kalypso/vfs/triton/transfer.o					\
+	mordor/kalypso/vfs/triton/vfs.o						\
+	mordor/kalypso/vfs/triton/user.o
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
