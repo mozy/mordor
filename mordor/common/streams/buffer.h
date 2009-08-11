@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <boost/shared_array.hpp>
+#include <boost/function.hpp>
 
 #include "mordor/common/socket.h"
 
@@ -85,6 +86,8 @@ public:
 
     ptrdiff_t find(char delim, size_t len = ~0) const;
     ptrdiff_t find(const std::string &str, size_t len = ~0) const;
+
+    void visit(boost::function<void (const void *, size_t)> dg, size_t len = ~0) const;
 
     bool operator== (const Buffer &rhs) const;
     bool operator!= (const Buffer &rhs) const;

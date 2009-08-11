@@ -283,7 +283,7 @@ Buffer::truncate(size_t len)
     }
     m_readAvailable = len;
     std::list<Data>::iterator it;
-    for (it = m_bufs.begin(); it != m_writeIt && len > 0; ++it) {
+    for (it = m_bufs.begin(); it != m_bufs.end() && len > 0; ++it) {
         Data &buf = *it;
         if (len <= buf.readAvailable()) {
             buf.truncate(len);
@@ -295,7 +295,7 @@ Buffer::truncate(size_t len)
         }
     }
     ASSERT(len == 0);
-    while (it != m_writeIt && it->readAvailable() > 0) {
+    while (it != m_bufs.end() && it->readAvailable() > 0) {
         ASSERT(it->writeAvailable() == 0);
         it = m_bufs.erase(it);
     }
@@ -596,6 +596,23 @@ Buffer::find(const std::string &str, size_t len) const
     return -1;
 }
 
+void
+Buffer::visit(boost::function<void (const void *, size_t)> dg, size_t len) const
+{
+    if (len == (size_t)~0)
+        len = readAvailable();
+    ASSERT(len <= readAvailable());
+
+    std::list<Data>::const_iterator it;
+    for (it = m_bufs.begin(); it != m_bufs.end() && len > 0; ++it) {
+        size_t todo = std::min(len, it->readAvailable());
+        ASSERT(todo != 0);
+        dg(it->readBuf().start(), todo);
+        len -= todo;
+    }
+    ASSERT(len == 0);
+}
+
 bool
 Buffer::operator == (const Buffer &rhs) const
 {
@@ -653,13 +670,14 @@ Buffer::opCmp(const Buffer &rhs) const
     int lengthResult = (int)((ptrdiff_t)readAvailable() - (ptrdiff_t)rhs.readAvailable());
     leftIt = m_bufs.begin(); rightIt = rhs.m_bufs.begin();
     size_t leftOffset = 0, rightOffset = 0;
-    while (leftIt != m_writeIt && rightIt != rhs.m_writeIt)
+    while (leftIt != m_bufs.end() && rightIt != rhs.m_bufs.end())
     {
-        ASSERT(leftOffset < leftIt->readAvailable());
-        ASSERT(rightOffset < rightIt->readAvailable());
+        ASSERT(leftOffset <= leftIt->readAvailable());
+        ASSERT(rightOffset <= rightIt->readAvailable());
         size_t tocompare = std::min(leftIt->readAvailable() - leftOffset,
             rightIt->readAvailable() - rightOffset);
-        ASSERT(tocompare != 0);
+        if (tocompare == 0)
+            break;
         int result = memcmp(
             (const unsigned char *)leftIt->readBuf().start() + leftOffset,
             (const unsigned char *)rightIt->readBuf().start() + rightOffset,
@@ -688,7 +706,7 @@ Buffer::opCmp(const char *str, size_t len) const
     int lengthResult = (int)((ptrdiff_t)readAvailable() - (ptrdiff_t)len);
     if (lengthResult > 0)
         len = readAvailable();
-    for (it = m_bufs.begin(); it != m_writeIt; ++it) {
+    for (it = m_bufs.begin(); it != m_bufs.end(); ++it) {
         const void *start = it->readBuf().start();
         size_t tocompare = std::min(it->readAvailable(), len);
         int result = memcmp(it->readBuf().start(), str + offset, tocompare);
