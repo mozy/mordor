@@ -353,6 +353,7 @@ $(OBJDIR)/lib/libmordor.a:					\
 	$(OBJDIR)/mordor/common/streams/crypto.o		\
 	$(OBJDIR)/mordor/common/streams/fd.o			\
 	$(OBJDIR)/mordor/common/streams/file.o			\
+	$(OBJDIR)/mordor/common/streams/hash.o			\
 	$(OBJDIR)/mordor/common/streams/limited.o		\
 	$(OBJDIR)/mordor/common/streams/memory.o		\
 	$(OBJDIR)/mordor/common/streams/null.o			\
