@@ -202,7 +202,7 @@ DEPS := $(shell find $(SRCDIR) -name "*.d")
 #
 .PHONY: clean
 clean:
-	$(Q)git clean -dfx 2>/dev/null || rm -rf *
+	$(Q)git clean -dfx >/dev/null 2>&1 || rm -rf *
 
 all:	mordor/common/examples/cat						\
 	mordor/common/examples/echoserver					\
@@ -221,13 +221,19 @@ check: all
 .PHONY: lcov
 lcov:
 	$(Q)lcov -d $(CURDIR) -z >/dev/null 2>&1
-	$(Q)$(MAKE) clean -f $(SRCDIR)/Makefile $(MAKEFLAGS)
-	$(Q)$(MAKE) check -f $(SRCDIR)/Makefile $(MAKEFLAGS) GCOV=1
+ifndef NOCLEAN
+	$(Q)$(MAKE) -f $(SRCDIR)/Makefile --no-print-directory $(MAKEFLAGS) clean
+endif
+	$(Q)$(MAKE) -f $(SRCDIR)/Makefile --no-print-directory $(MAKEFLAGS) check GCOV=1
+	$(Q)lcov -b $(SRCDIR) -d $(CURDIR) -c -i -o lcov_base.info >/dev/null
 	$(Q)lcov -b $(SRCDIR) -d $(CURDIR) -c -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -a lcov.info -a lcov_base.info -o lcov.info >/dev/null
 	$(Q)lcov -r lcov.info '/usr/*' -o lcov.info >/dev/null 2>&1
 	$(Q)lcov -r lcov.info mordor/common/uri.cpp -o lcov.info >/dev/null 2>&1
 	$(Q)lcov -r lcov.info mordor/common/http/parser.cpp -o lcov.info >/dev/null 2>&1
 	$(Q)lcov -r lcov.info mordor/common/xml/parser.cpp -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info 'mordor/common/examples/*' -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info './*' -o lcov.info >/dev/null 2>&1
 	$(Q)mkdir -p lcov && cd lcov && genhtml ../lcov.info >/dev/null && tar -czf lcov.tgz *
 
 TESTDATA_COMMON := $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/mordor/common/tests/data/*))
