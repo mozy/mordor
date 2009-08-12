@@ -210,11 +210,11 @@ std::string unescape(const std::string& str)
     
     hier_part = ("//" authority path_abempty) | path_absolute | path_rootless | path_empty;
 
-    relative_part = "//" authority path_abempty | path_absolute | path_noscheme | path_empty;
+    relative_part = ("//" authority path_abempty) | path_absolute | path_noscheme | path_empty;
     relative_ref = relative_part ( "?" query )? ( "#" fragment )?;
     
     absolute_URI = scheme ":" hier_part ( "?" query )? ;
-    
+
     URI = scheme ":" hier_part ( "?" query )? ( "#" fragment )?;
     URI_reference = URI | relative_ref;
 }%%
