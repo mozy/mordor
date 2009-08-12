@@ -462,3 +462,125 @@ TEST_WITH_SUITE(Buffer, visitMoreThanThereIs)
     TEST_ASSERT_ASSERTED(b.visit(&visitor1, 1));
 }
 #endif
+
+TEST_WITH_SUITE(Buffer, findCharEmpty)
+{
+    Buffer b;
+    TEST_ASSERT_EQUAL(b.segments(), 0u);
+    TEST_ASSERT_EQUAL(b.find('\n'), -1);
+
+#ifdef DEBUG
+    TEST_ASSERT_ASSERTED(b.find('\n', 1));
+#endif
+
+    // Put a write segment on the end
+    b.reserve(10);
+    TEST_ASSERT_EQUAL(b.segments(), 1u);
+    TEST_ASSERT_EQUAL(b.find('\n'), -1);
+
+#ifdef DEBUG
+    TEST_ASSERT_ASSERTED(b.find('\n', 1));
+#endif
+}
+
+TEST_WITH_SUITE(Buffer, findCharSimple)
+{
+    Buffer b("\nhello");
+    TEST_ASSERT_EQUAL(b.segments(), 1u);
+
+    TEST_ASSERT_EQUAL(b.find('\r'), -1);
+    TEST_ASSERT_EQUAL(b.find('\n'), 0);
+    TEST_ASSERT_EQUAL(b.find('h'), 1);
+    TEST_ASSERT_EQUAL(b.find('e'), 2);
+    TEST_ASSERT_EQUAL(b.find('l'), 3);
+    TEST_ASSERT_EQUAL(b.find('o'), 5);
+
+    TEST_ASSERT_EQUAL(b.find('\r', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('\n', 2), 0);
+    TEST_ASSERT_EQUAL(b.find('h', 2), 1);
+    TEST_ASSERT_EQUAL(b.find('e', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('l', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('o', 2), -1);
+}
+
+TEST_WITH_SUITE(Buffer, findCharTwoSegments)
+{
+    Buffer b("\nhe");
+    b.copyIn("llo");
+    TEST_ASSERT_EQUAL(b.segments(), 2u);
+
+    TEST_ASSERT_EQUAL(b.find('\r'), -1);
+    TEST_ASSERT_EQUAL(b.find('\n'), 0);
+    TEST_ASSERT_EQUAL(b.find('h'), 1);
+    TEST_ASSERT_EQUAL(b.find('e'), 2);
+    TEST_ASSERT_EQUAL(b.find('l'), 3);
+    TEST_ASSERT_EQUAL(b.find('o'), 5);
+
+    TEST_ASSERT_EQUAL(b.find('\r', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('\n', 2), 0);
+    TEST_ASSERT_EQUAL(b.find('h', 2), 1);
+    TEST_ASSERT_EQUAL(b.find('e', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('l', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('o', 2), -1);
+
+    TEST_ASSERT_EQUAL(b.find('\r', 4), -1);
+    TEST_ASSERT_EQUAL(b.find('\n', 4), 0);
+    TEST_ASSERT_EQUAL(b.find('h', 4), 1);
+    TEST_ASSERT_EQUAL(b.find('e', 4), 2);
+    TEST_ASSERT_EQUAL(b.find('l', 4), 3);
+    TEST_ASSERT_EQUAL(b.find('o', 4), -1);
+
+    // Put a write segment on the end
+    b.reserve(10);
+    TEST_ASSERT_EQUAL(b.segments(), 3u);
+
+    TEST_ASSERT_EQUAL(b.find('\r'), -1);
+    TEST_ASSERT_EQUAL(b.find('\n'), 0);
+    TEST_ASSERT_EQUAL(b.find('h'), 1);
+    TEST_ASSERT_EQUAL(b.find('e'), 2);
+    TEST_ASSERT_EQUAL(b.find('l'), 3);
+    TEST_ASSERT_EQUAL(b.find('o'), 5);
+
+    TEST_ASSERT_EQUAL(b.find('\r', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('\n', 2), 0);
+    TEST_ASSERT_EQUAL(b.find('h', 2), 1);
+    TEST_ASSERT_EQUAL(b.find('e', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('l', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('o', 2), -1);
+
+    TEST_ASSERT_EQUAL(b.find('\r', 4), -1);
+    TEST_ASSERT_EQUAL(b.find('\n', 4), 0);
+    TEST_ASSERT_EQUAL(b.find('h', 4), 1);
+    TEST_ASSERT_EQUAL(b.find('e', 4), 2);
+    TEST_ASSERT_EQUAL(b.find('l', 4), 3);
+    TEST_ASSERT_EQUAL(b.find('o', 4), -1);
+}
+
+TEST_WITH_SUITE(Buffer, findCharMixedSegment)
+{
+    Buffer b("\nhe");
+    b.reserve(10);
+    b.copyIn("llo");
+    TEST_ASSERT_EQUAL(b.segments(), 2u);
+
+    TEST_ASSERT_EQUAL(b.find('\r'), -1);
+    TEST_ASSERT_EQUAL(b.find('\n'), 0);
+    TEST_ASSERT_EQUAL(b.find('h'), 1);
+    TEST_ASSERT_EQUAL(b.find('e'), 2);
+    TEST_ASSERT_EQUAL(b.find('l'), 3);
+    TEST_ASSERT_EQUAL(b.find('o'), 5);
+
+    TEST_ASSERT_EQUAL(b.find('\r', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('\n', 2), 0);
+    TEST_ASSERT_EQUAL(b.find('h', 2), 1);
+    TEST_ASSERT_EQUAL(b.find('e', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('l', 2), -1);
+    TEST_ASSERT_EQUAL(b.find('o', 2), -1);
+
+    TEST_ASSERT_EQUAL(b.find('\r', 4), -1);
+    TEST_ASSERT_EQUAL(b.find('\n', 4), 0);
+    TEST_ASSERT_EQUAL(b.find('h', 4), 1);
+    TEST_ASSERT_EQUAL(b.find('e', 4), 2);
+    TEST_ASSERT_EQUAL(b.find('l', 4), 3);
+    TEST_ASSERT_EQUAL(b.find('o', 4), -1);
+}

@@ -583,7 +583,7 @@ Buffer::find(char delim, size_t len) const
             break;
     }
     if (success) {
-        return totalLength + 1;
+        return totalLength;
     }
     return -1;
 }
