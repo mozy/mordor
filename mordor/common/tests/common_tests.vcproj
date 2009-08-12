@@ -328,6 +328,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\buffered_stream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\coroutine.cpp"
 				>
 			</File>

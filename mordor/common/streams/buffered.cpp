@@ -29,6 +29,7 @@ BufferedStream::close(CloseType type)
 size_t
 BufferedStream::read(Buffer &b, size_t len)
 {
+    ASSERT(!m_writeBuffer.readAvailable());
     size_t remaining = len;
 
     size_t buffered = std::min(m_readBuffer.readAvailable(), remaining);
@@ -41,11 +42,11 @@ BufferedStream::read(Buffer &b, size_t len)
     }
 
     if (buffered == 0 || !m_allowPartialReads) {
+        size_t result;
         do {
             // Read enough to satisfy this request, plus up to a multiple of
             // the buffer size
             size_t todo = ((remaining - 1) / m_bufferSize + 1) * m_bufferSize;
-            size_t result;
             try {
                 result = FilterStream::read(m_readBuffer, todo);
             } catch (...) {
@@ -61,7 +62,7 @@ BufferedStream::read(Buffer &b, size_t len)
             b.copyIn(m_readBuffer, buffered);
             m_readBuffer.consume(buffered);
             remaining -= buffered;
-        } while (remaining > 0 && !m_allowPartialReads);
+        } while (remaining > 0 && !m_allowPartialReads && result != 0);
     }
 
     return len - remaining;
@@ -70,6 +71,7 @@ BufferedStream::read(Buffer &b, size_t len)
 size_t
 BufferedStream::write(const Buffer &b, size_t len)
 {
+    ASSERT(!m_readBuffer.readAvailable());
     m_writeBuffer.copyIn(b, len);
     size_t result = flushWrite(len);
     // Partial writes not allowed
@@ -80,6 +82,7 @@ BufferedStream::write(const Buffer &b, size_t len)
 size_t
 BufferedStream::write(const void *b, size_t len)
 {
+    ASSERT(!m_readBuffer.readAvailable());
     m_writeBuffer.reserve(std::max(m_bufferSize, len));
     m_writeBuffer.copyIn(b, len);
     size_t result = flushWrite(len);
@@ -122,9 +125,17 @@ BufferedStream::flushWrite(size_t len)
 long long
 BufferedStream::seek(long long offset, Anchor anchor)
 {
+    // My head asplodes!  Deal with it when someone actually does random access
+    // read and writes;
+    ASSERT(!(m_readBuffer.readAvailable() && m_writeBuffer.readAvailable()));
+    if (offset == 0 && anchor == CURRENT) {
+        return FilterStream::seek(offset, anchor)
+            - m_readBuffer.readAvailable()
+            + m_writeBuffer.readAvailable();
+    }
     flush();
     // TODO: optimized forward seek
-    if (anchor == CURRENT) {
+    if (anchor == CURRENT) {        
         // adjust the buffer having modified the actual stream position
         offset -= m_readBuffer.readAvailable();
     }
@@ -137,13 +148,11 @@ BufferedStream::size()
 {
     long long size = FilterStream::size();
     if (supportsSeek()) {
-        long long pos;
         try {
-            pos = seek(0, CURRENT);
+            return std::max(size, seek(0, CURRENT));
         } catch(...) {
             return size + m_writeBuffer.readAvailable();
         }
-        size = std::max(pos + (long long)m_writeBuffer.readAvailable(), size);
     } else {
         // not a seekable stream; we can only write to the end
         size += m_writeBuffer.readAvailable();
