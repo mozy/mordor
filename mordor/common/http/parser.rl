@@ -104,6 +104,8 @@ unquote(char *p, char *pe)
 
 %%{
     machine http_parser;
+    
+    # See RFC 2616: http://www.w3.org/Protocols/rfc2616/rfc2616.html
 
     action mark { mark = fpc; }
     action done { fbreak; }
@@ -459,7 +461,9 @@ unquote(char *p, char *pe)
         ':' field_value;
 
     Method = token >mark %parse_Method;
-    Request_URI = ( "*" | absolute_URI | hier_part | authority);
+    # we explicitly add query to hier_part, because the URI spec changed from RFC 2396 to RFC 3986
+    # with the query not being part of hier_part
+    Request_URI = ( "*" | absolute_URI | (hier_part ( "?" query )?) | authority);
     Request_Line = Method SP Request_URI SP HTTP_Version CRLF;
     Request = Request_Line ((general_header | request_header | entity_header | extension_header) CRLF)* CRLF @done;
 

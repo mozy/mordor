@@ -24,6 +24,19 @@ TEST_WITH_SUITE(HTTP, simpleRequest)
     TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
 }
 
+TEST_WITH_SUITE(HTTP, requestWithQuery)
+{
+    HTTP::Request request;
+    HTTP::RequestParser parser(request);
+
+    parser.run("POST /ab/d/e/wasdkfe/?ohai=1 HTTP/1.1\r\n\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::POST);
+    TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/ab/d/e/wasdkfe/?ohai=1"));
+    TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 1));
+}
+
 TEST_WITH_SUITE(HTTP, emptyRequest)
 {
     HTTP::Request request;

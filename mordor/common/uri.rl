@@ -105,6 +105,7 @@ std::string unescape(const std::string& str)
 }
 
 %%{
+    # See RFC 3986: http://www.ietf.org/rfc/rfc3986.txt
 
     machine uri_parser;
 
@@ -207,7 +208,7 @@ std::string unescape(const std::string& str)
     query = (pchar | "/" | "?")* >marku %save_query;
     fragment = (pchar | "/" | "?")* >marku %save_fragment;
     
-    hier_part = "//" authority path_abempty | path_absolute | path_rootless | path_empty;
+    hier_part = ("//" authority path_abempty) | path_absolute | path_rootless | path_empty;
 
     relative_part = "//" authority path_abempty | path_absolute | path_noscheme | path_empty;
     relative_ref = relative_part ( "?" query )? ( "#" fragment )?;
