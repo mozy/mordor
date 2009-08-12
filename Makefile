@@ -221,9 +221,6 @@ check: all
 .PHONY: lcov
 lcov:
 	$(Q)lcov -d $(CURDIR) -z >/dev/null 2>&1
-ifndef NOCLEAN
-	$(Q)$(MAKE) -f $(SRCDIR)/Makefile --no-print-directory $(MAKEFLAGS) clean
-endif
 	$(Q)$(MAKE) -f $(SRCDIR)/Makefile --no-print-directory $(MAKEFLAGS) check GCOV=1
 	$(Q)lcov -b $(SRCDIR) -d $(CURDIR) -c -i -o lcov_base.info >/dev/null
 	$(Q)lcov -b $(SRCDIR) -d $(CURDIR) -c -o lcov.info >/dev/null 2>&1
