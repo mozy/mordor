@@ -432,7 +432,7 @@ unquote(char *p, char *pe)
     }
 
 
-    Authorization = 'Authorization:'i @set_authorization credentials;
+    Authorization = 'Authorization:'i @set_authorization LWS* credentials;
 
     Host = 'Host:'i @set_host LWS* (host (':' port)?) >mark %save_string LWS*;
     
