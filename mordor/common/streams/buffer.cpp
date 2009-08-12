@@ -594,6 +594,7 @@ Buffer::find(const std::string &str, size_t len) const
     if (len == (size_t)~0)
         len = readAvailable();
     ASSERT(len <= readAvailable());
+    ASSERT(!str.empty());
 
     size_t totalLength = 0;
     size_t foundSoFar = 0;
@@ -628,6 +629,7 @@ Buffer::find(const std::string &str, size_t len) const
                 if (foundSoFar == str.size())
                     break;
             } else {
+                totalLength += foundSoFar;
                 foundSoFar = 0;
             }
         }

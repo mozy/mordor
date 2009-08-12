@@ -468,6 +468,7 @@ TEST_WITH_SUITE(Buffer, findCharEmpty)
     Buffer b;
     TEST_ASSERT_EQUAL(b.segments(), 0u);
     TEST_ASSERT_EQUAL(b.find('\n'), -1);
+    TEST_ASSERT_EQUAL(b.find('\n', 0), -1);
 
 #ifdef DEBUG
     TEST_ASSERT_ASSERTED(b.find('\n', 1));
@@ -501,6 +502,8 @@ TEST_WITH_SUITE(Buffer, findCharSimple)
     TEST_ASSERT_EQUAL(b.find('e', 2), -1);
     TEST_ASSERT_EQUAL(b.find('l', 2), -1);
     TEST_ASSERT_EQUAL(b.find('o', 2), -1);
+
+    TEST_ASSERT_EQUAL(b.find('\n', 0), -1);
 }
 
 TEST_WITH_SUITE(Buffer, findCharTwoSegments)
@@ -583,4 +586,121 @@ TEST_WITH_SUITE(Buffer, findCharMixedSegment)
     TEST_ASSERT_EQUAL(b.find('e', 4), 2);
     TEST_ASSERT_EQUAL(b.find('l', 4), 3);
     TEST_ASSERT_EQUAL(b.find('o', 4), -1);
+}
+
+TEST_WITH_SUITE(Buffer, findStringEmpty)
+{
+    Buffer b;
+
+    TEST_ASSERT_EQUAL(b.find("h"), -1);
+    TEST_ASSERT_EQUAL(b.find("h", 0), -1);
+#ifdef DEBUG
+    TEST_ASSERT_ASSERTED(b.find(""));
+    TEST_ASSERT_ASSERTED(b.find("h", 1));
+#endif
+
+    // Put a write segment on the end
+    b.reserve(10);
+    TEST_ASSERT_EQUAL(b.segments(), 1u);
+    TEST_ASSERT_EQUAL(b.find("h"), -1);
+    TEST_ASSERT_EQUAL(b.find("h", 0), -1);
+
+#ifdef DEBUG
+    TEST_ASSERT_ASSERTED(b.find(""));
+    TEST_ASSERT_ASSERTED(b.find("h", 1));
+#endif
+}
+
+TEST_WITH_SUITE(Buffer, findStringSimple)
+{
+    Buffer b("helloworld");
+    TEST_ASSERT_EQUAL(b.segments(), 1u);
+
+    TEST_ASSERT_EQUAL(b.find("abc"), -1);
+    TEST_ASSERT_EQUAL(b.find("helloworld"), 0);
+    TEST_ASSERT_EQUAL(b.find("helloworld2"), -1);
+    TEST_ASSERT_EQUAL(b.find("elloworld"), 1);
+    TEST_ASSERT_EQUAL(b.find("helloworl"), 0);
+    TEST_ASSERT_EQUAL(b.find("h"), 0);
+    TEST_ASSERT_EQUAL(b.find("l"), 2);
+    TEST_ASSERT_EQUAL(b.find("o"), 4);
+    TEST_ASSERT_EQUAL(b.find("lo"), 3);
+    TEST_ASSERT_EQUAL(b.find("d"), 9);
+
+    TEST_ASSERT_EQUAL(b.find("abc", 5), -1);
+    TEST_ASSERT_EQUAL(b.find("helloworld", 5), -1);
+    TEST_ASSERT_EQUAL(b.find("hello", 5), 0);
+    TEST_ASSERT_EQUAL(b.find("ello", 5), 1);
+    TEST_ASSERT_EQUAL(b.find("helloworld2", 5), -1);
+    TEST_ASSERT_EQUAL(b.find("elloworld", 5), -1);
+    TEST_ASSERT_EQUAL(b.find("hell", 5), 0);
+    TEST_ASSERT_EQUAL(b.find("h", 5), 0);
+    TEST_ASSERT_EQUAL(b.find("l", 5), 2);
+    TEST_ASSERT_EQUAL(b.find("o", 5), 4);
+    TEST_ASSERT_EQUAL(b.find("lo", 5), 3);
+    TEST_ASSERT_EQUAL(b.find("ow", 5), -1);
+
+    TEST_ASSERT_EQUAL(b.find("h", 0), -1);
+}
+
+TEST_WITH_SUITE(Buffer, findStringTwoSegments)
+{
+    Buffer b("hello");
+    b.copyIn("world");
+    TEST_ASSERT_EQUAL(b.segments(), 2u);
+
+    TEST_ASSERT_EQUAL(b.find("abc"), -1);
+    TEST_ASSERT_EQUAL(b.find("helloworld"), 0);
+    TEST_ASSERT_EQUAL(b.find("helloworld2"), -1);
+    TEST_ASSERT_EQUAL(b.find("elloworld"), 1);
+    TEST_ASSERT_EQUAL(b.find("helloworl"), 0);
+    TEST_ASSERT_EQUAL(b.find("h"), 0);
+    TEST_ASSERT_EQUAL(b.find("l"), 2);
+    TEST_ASSERT_EQUAL(b.find("o"), 4);
+    TEST_ASSERT_EQUAL(b.find("lo"), 3);
+    TEST_ASSERT_EQUAL(b.find("d"), 9);
+
+    TEST_ASSERT_EQUAL(b.find("abc", 7), -1);
+    TEST_ASSERT_EQUAL(b.find("helloworld", 7), -1);
+    TEST_ASSERT_EQUAL(b.find("hellowo", 7), 0);
+    TEST_ASSERT_EQUAL(b.find("ellowo", 7), 1);
+    TEST_ASSERT_EQUAL(b.find("helloworld2", 7), -1);
+    TEST_ASSERT_EQUAL(b.find("elloworld", 7), -1);
+    TEST_ASSERT_EQUAL(b.find("hellow", 7), 0);
+    TEST_ASSERT_EQUAL(b.find("h", 7), 0);
+    TEST_ASSERT_EQUAL(b.find("l", 7), 2);
+    TEST_ASSERT_EQUAL(b.find("o", 7), 4);
+    TEST_ASSERT_EQUAL(b.find("lo", 7), 3);
+    TEST_ASSERT_EQUAL(b.find("or", 7), -1);
+
+    TEST_ASSERT_EQUAL(b.find("h", 0), -1);
+}
+
+TEST_WITH_SUITE(Buffer, findStringAcrossMultipleSegments)
+{
+    Buffer b("hello");
+    b.copyIn("world");
+    b.copyIn("foo");
+    TEST_ASSERT_EQUAL(b.segments(), 3u);
+
+    TEST_ASSERT_EQUAL(b.find("lloworldfo"), 2);
+}
+
+TEST_WITH_SUITE(Buffer, findStringLongFalsePositive)
+{
+    Buffer b("100000011");
+
+    TEST_ASSERT_EQUAL(b.find("000011"), 3);
+}
+
+TEST_WITH_SUITE(Buffer, findStringFalsePositiveAcrossMultipleSegments)
+{
+    Buffer b("10");
+    b.copyIn("00");
+    b.copyIn("00");
+    b.copyIn("00");
+    b.copyIn("11");
+    TEST_ASSERT_EQUAL(b.segments(), 5u);
+
+    TEST_ASSERT_EQUAL(b.find("000011"), 4);
 }
