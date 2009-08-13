@@ -4,6 +4,8 @@
 
 #include "stream.h"
 
+// When inheriting from FilterStream, use parent()->xxx to call
+// method xxx on the parent stream.
 class FilterStream : public Stream
 {
 public:
@@ -50,6 +52,10 @@ private:
     bool m_own;
 };
 
+// A mutating filter stream is one that declares that it changes the data
+// as it flows through it.  It implicitly turns off and asserts features
+// that would need to be implemented by the inheritor, instead of defaulting
+// to the parent streams implementation.
 class MutatingFilterStream : public FilterStream
 {
 protected:
@@ -57,13 +63,19 @@ protected:
         : FilterStream(parent, owns)
     {}
 
+    bool supportsSeek() { return false; }
+    bool supportsSize() { return false; }
+    bool supportsTruncate() { return false; }
     bool supportsFind() { return false; }
     bool supportsUnread() { return false; }
 
 public:
-    size_t find(char delim) { ASSERT(false); return 0; }
-    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { ASSERT(false); return ~0; }
-    void unread(const Buffer &b, size_t len) { ASSERT(false); }
+    long long seek(long long offset, Anchor anchor) { NOTREACHED(); }
+    long long size() { NOTREACHED(); }
+    void truncate(long long size) { NOTREACHED(); }
+    size_t find(char delim) { NOTREACHED(); }
+    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
+    void unread(const Buffer &b, size_t len) { NOTREACHED(); }
 };
 
 #endif

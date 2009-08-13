@@ -22,14 +22,12 @@ std::string
 Stream::getDelimited(char delim)
 {
     size_t offset = find(delim);
-    if (offset == 0)
-        return std::string();
     Buffer buf;
-    size_t readResult = read(buf, offset);
-    ASSERT(readResult == offset);
+    size_t readResult = read(buf, offset + 1);
+    ASSERT(readResult == offset + 1);
     // Don't copyOut the delimiter itself
     std::string result;
-    result.resize(readResult - 1);
-    buf.copyOut(const_cast<char*>(result.data()), readResult - 1);
+    result.resize(offset);
+    buf.copyOut(const_cast<char*>(result.data()), offset);
     return result;
 }

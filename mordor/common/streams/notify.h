@@ -20,7 +20,7 @@ public:
     void close(CloseType type = BOTH)
     {
         try {
-            FilterStream::close(type);
+            parent()->close(type);
         } catch (...) {
             if (notifyOnException)
                 notifyOnException();
@@ -34,7 +34,7 @@ public:
     {
         size_t result;
         try {
-            result = FilterStream::read(b, len);
+            result = parent()->read(b, len);
         } catch(...) {
             if (notifyOnException)
                 notifyOnException();
@@ -48,7 +48,7 @@ public:
     size_t write(const Buffer &b, size_t len)
     {
         try {
-            return FilterStream::write(b, len);
+            return parent()->write(b, len);
         } catch(...) {
             if (notifyOnException)
                 notifyOnException();

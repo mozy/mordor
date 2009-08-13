@@ -26,7 +26,7 @@ HTTP::ChunkedStream::close(Stream::CloseType type)
     if (supportsWrite() && (type & Stream::WRITE)) {
         parent()->write("0\r\n", 3);
     }
-    MutatingFilterStream::close(type);
+    parent()->close(type);
 }
 
 size_t
@@ -43,7 +43,7 @@ HTTP::ChunkedStream::read(Buffer &b, size_t len)
     if (m_nextChunk == 0)
         return 0;
     size_t toRead = (size_t)std::min<unsigned long long>(len, m_nextChunk);
-    size_t result = MutatingFilterStream::read(b, toRead);
+    size_t result = parent()->read(b, toRead);
     m_nextChunk -= result;
     if (m_nextChunk == 0) {
         std::string chunk = parent()->getDelimited();
@@ -65,7 +65,7 @@ HTTP::ChunkedStream::write(const Buffer &b, size_t len)
     Buffer copy;
     copy.copyIn(b, len);
     while (copy.readAvailable()) {
-        size_t result = MutatingFilterStream::write(copy, copy.readAvailable());
+        size_t result = parent()->write(copy, copy.readAvailable());
         copy.consume(result);
     }
     parent()->write("\r\n", 2);

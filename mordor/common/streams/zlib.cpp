@@ -96,7 +96,7 @@ ZlibStream::close(CloseType type)
     if ((type == READ && supportsWrite()) ||
         (type == WRITE && supportsRead()) ||
         m_closed) {
-        MutatingFilterStream::close(type);
+        parent()->close(type);
         return;
     }
 
@@ -107,7 +107,7 @@ ZlibStream::close(CloseType type)
         deflateEnd(&m_strm);
     }
     m_closed = true;
-    MutatingFilterStream::close(type);
+    parent()->close(type);
 }
 
 size_t
@@ -156,7 +156,7 @@ ZlibStream::read(Buffer &b, size_t len)
                 // guaranteed to provide output)
                 ASSERT(m_strm.avail_in == 0);
                 ASSERT(inbufs.empty());
-                result = MutatingFilterStream::read(m_inBuffer, m_bufferSize);
+                result = parent()->read(m_inBuffer, m_bufferSize);
                 if (result == 0)
                     throw UnexpectedEofError();
                 break;
@@ -208,7 +208,7 @@ void
 ZlibStream::flush()
 {
     flush(Z_SYNC_FLUSH);
-    MutatingFilterStream::flush();
+    parent()->flush();
 }
 
 void
@@ -245,6 +245,6 @@ void
 ZlibStream::flushBuffer()
 {
     while (m_outBuffer.readAvailable() > 0) {
-        m_outBuffer.consume(MutatingFilterStream::write(m_outBuffer, m_outBuffer.readAvailable()));
+        m_outBuffer.consume(parent()->write(m_outBuffer, m_outBuffer.readAvailable()));
     }
 }

@@ -39,15 +39,15 @@ public:
     virtual bool supportsUnread() { return false; }
 
     virtual void close(CloseType type = BOTH) {}
-    virtual size_t read(Buffer &b, size_t len) { ASSERT(supportsRead()); return 0; }
-    virtual size_t write(const Buffer &b, size_t len) { ASSERT(supportsWrite()); return len; }
-    virtual long long seek(long long offset, Anchor anchor) { ASSERT(supportsSeek()); return 0ll; }
-    virtual long long size() { ASSERT(supportsSize()); return 0ll; }
-    virtual void truncate(long long size) { ASSERT(supportsTruncate()); }
+    virtual size_t read(Buffer &b, size_t len) { NOTREACHED(); }
+    virtual size_t write(const Buffer &b, size_t len) { NOTREACHED(); }
+    virtual long long seek(long long offset, Anchor anchor) { NOTREACHED(); }
+    virtual long long size() { NOTREACHED(); }
+    virtual void truncate(long long size) { NOTREACHED(); }
     virtual void flush() {}
-    virtual size_t find(char delim) { ASSERT(false); return 0; }
-    virtual size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { ASSERT(false); return ~0; }
-    virtual void unread(const Buffer &b, size_t len) { ASSERT(false); }
+    virtual size_t find(char delim) { NOTREACHED(); }
+    virtual size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
+    virtual void unread(const Buffer &b, size_t len) { NOTREACHED(); }
 
     // Convenience functions - do *not* implement in FilterStream, so that
     // filters do not need to implement these

@@ -23,7 +23,7 @@ BufferedStream::close(CloseType type)
 {
     if ((type & WRITE) && m_writeBuffer.readAvailable())
         flush();
-    FilterStream::close(type);
+    parent()->close(type);
 }
 
 size_t
@@ -48,7 +48,7 @@ BufferedStream::read(Buffer &b, size_t len)
             // the buffer size
             size_t todo = ((remaining - 1) / m_bufferSize + 1) * m_bufferSize;
             try {
-                result = FilterStream::read(m_readBuffer, todo);
+                result = parent()->read(m_readBuffer, todo);
             } catch (...) {
                 if (remaining == len) {
                     throw;
@@ -98,7 +98,7 @@ BufferedStream::flushWrite(size_t len)
     {
         size_t result;
         try {
-            result = FilterStream::write(m_writeBuffer, m_writeBuffer.readAvailable());
+            result = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
         } catch (...) {
             // If this entire write is still in our buffer,
             // back it out and report the error
@@ -129,7 +129,7 @@ BufferedStream::seek(long long offset, Anchor anchor)
     // read and writes;
     ASSERT(!(m_readBuffer.readAvailable() && m_writeBuffer.readAvailable()));
     if (offset == 0 && anchor == CURRENT) {
-        return FilterStream::seek(offset, anchor)
+        return parent()->seek(offset, anchor)
             - m_readBuffer.readAvailable()
             + m_writeBuffer.readAvailable();
     }
@@ -140,13 +140,13 @@ BufferedStream::seek(long long offset, Anchor anchor)
         offset -= m_readBuffer.readAvailable();
     }
     m_readBuffer.clear();
-    return FilterStream::seek(offset, anchor);
+    return parent()->seek(offset, anchor);
 }
 
 long long
 BufferedStream::size()
 {
-    long long size = FilterStream::size();
+    long long size = parent()->size();
     if (supportsSeek()) {
         try {
             return std::max(size, seek(0, CURRENT));
@@ -165,18 +165,18 @@ BufferedStream::truncate(long long size)
 {
     flush();
     // TODO: truncate m_readBuffer at the end
-    FilterStream::truncate(size);
+    parent()->truncate(size);
 }
 
 void
 BufferedStream::flush()
 {
     while (m_writeBuffer.readAvailable()) {
-        size_t result = FilterStream::write(m_writeBuffer, m_writeBuffer.readAvailable());
+        size_t result = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
         ASSERT(result > 0);
         m_writeBuffer.consume(result);
     }
-    FilterStream::flush();
+    parent()->flush();
 }
 
 size_t
@@ -195,7 +195,7 @@ BufferedStream::find(char delim)
             }
         }
 
-        size_t result = FilterStream::read(m_readBuffer, m_bufferSize);
+        size_t result = parent()->read(m_readBuffer, m_bufferSize);
         if (result == 0) {
             // EOF
             throw std::runtime_error("Unexpected EOF");
@@ -223,7 +223,7 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
             }
         }
 
-        size_t result = FilterStream::read(m_readBuffer, m_bufferSize);
+        size_t result = parent()->read(m_readBuffer, m_bufferSize);
         if (result == 0) {
             // EOF
             if (throwIfNotFound)

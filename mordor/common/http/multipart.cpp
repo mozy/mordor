@@ -122,20 +122,20 @@ Multipart::partDone()
 #undef min
 #endif
 
-class BodyPartStream : public FilterStream
+class BodyPartStream : public MutatingFilterStream
 {
 public:
-    BodyPartStream(FilterStream::ptr parent, std::string boundary)
-        : FilterStream(parent),
+    BodyPartStream(Stream::ptr parent, std::string boundary)
+        : MutatingFilterStream(parent),
           m_boundary(boundary)
     {}
 
     size_t read(Buffer &b, size_t len)
     {
-        size_t boundary = find(m_boundary, len, false);
+        size_t boundary = parent()->find(m_boundary, len, false);
         if (boundary != (size_t)~0)
             len = std::min(boundary, len);
-        return FilterStream::read(b, len);
+        return parent()->read(b, len);
     }
 
 private:

@@ -9,7 +9,7 @@
 #endif
 
 LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
-: FilterStream(parent, own),
+: MutatingFilterStream(parent, own),
   m_pos(0),
   m_size(size)
 {
@@ -23,7 +23,7 @@ LimitedStream::read(Buffer &b, size_t len)
         return 0;
 
     len = (size_t)std::min<long long>(len, m_size - m_pos);
-    size_t result = FilterStream::read(b, len);
+    size_t result = parent()->read(b, len);
     m_pos += result;
     return result;
 }
@@ -34,7 +34,7 @@ LimitedStream::write(const Buffer &b, size_t len)
     if (m_pos >= m_size)
         throw std::runtime_error("Write beyond EOF");
     len = (size_t)std::min<long long>(len, m_size - m_pos);
-    size_t result = FilterStream::write(b, len);
+    size_t result = parent()->write(b, len);
     m_pos += result;
     return result;
 }
@@ -46,22 +46,22 @@ LimitedStream::seek(long long offset, Anchor anchor)
         offset += size();
         anchor = BEGIN;
     }
-    return m_pos = FilterStream::seek(offset, anchor);
+    return m_pos = parent()->seek(offset, anchor);
 }
 
 long long
 LimitedStream::size()
 {
-    if (!FilterStream::supportsSize()) {
+    if (!parent()->supportsSize()) {
         return m_size;
     }
-    return std::min(m_size, FilterStream::size());
+    return std::min(m_size, parent()->size());
 }
 
 
 void
 LimitedStream::unread(const Buffer &b, size_t len)
 {
-    FilterStream::unread(b, len);
+    parent()->unread(b, len);
     m_pos -= len;
 }
