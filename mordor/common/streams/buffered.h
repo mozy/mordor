@@ -28,7 +28,7 @@ public:
     long long size();
     void truncate(long long size);
     void flush();
-    size_t find(char delim);
+    size_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true);
     size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true);
     void unread(const Buffer &b, size_t len = ~0);
 

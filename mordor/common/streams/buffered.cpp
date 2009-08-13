@@ -2,7 +2,7 @@
 
 #include "buffered.h"
 
-#include <stdexcept>
+#include "mordor/common/exception.h"
 
 #ifdef min
 #undef min
@@ -180,25 +180,31 @@ BufferedStream::flush()
 }
 
 size_t
-BufferedStream::find(char delim)
+BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 {
-    const size_t sanitySize = 65536;
+    if (sanitySize == (size_t)~0)
+        sanitySize = 2 * m_bufferSize;
+    ++sanitySize;
     while (true) {
         size_t readAvailable = m_readBuffer.readAvailable();
-        if (readAvailable >= sanitySize) {
-            throw std::runtime_error("Buffer overflow!");
-        }
         if (readAvailable > 0) {
-            ptrdiff_t result = m_readBuffer.find(delim);
+            ptrdiff_t result = m_readBuffer.find(delim, std::min(sanitySize, readAvailable));
             if (result != -1) {
                 return result;
             }
+        }
+        if (readAvailable >= sanitySize) {
+            if (throwIfNotFound)
+                throw BufferOverflowError();
+            return ~0;
         }
 
         size_t result = parent()->read(m_readBuffer, m_bufferSize);
         if (result == 0) {
             // EOF
-            throw std::runtime_error("Unexpected EOF");
+            if (throwIfNotFound)
+                throw UnexpectedEofError();
+            return ~0;
         }
     }
 }
@@ -207,27 +213,27 @@ size_t
 BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFound)
 {
     if (sanitySize == (size_t)~0)
-        sanitySize = m_bufferSize;
+        sanitySize = 2 * m_bufferSize;
     sanitySize += str.size();
     while (true) {
         size_t readAvailable = m_readBuffer.readAvailable();
-        if (readAvailable >= sanitySize) {
-            if (throwIfNotFound)
-                throw std::runtime_error("Buffer overflow!");
-            return ~0;
-        }
         if (readAvailable > 0) {
-            ptrdiff_t result = m_readBuffer.find(str);
+            ptrdiff_t result = m_readBuffer.find(str, std::min(sanitySize, readAvailable));
             if (result != -1) {
                 return result;
             }
+        }
+        if (readAvailable >= sanitySize) {
+            if (throwIfNotFound)
+                throw BufferOverflowError();
+            return ~0;
         }
 
         size_t result = parent()->read(m_readBuffer, m_bufferSize);
         if (result == 0) {
             // EOF
             if (throwIfNotFound)
-                throw std::runtime_error("Unexpected EOF");
+                throw UnexpectedEofError();
             return ~0;
         }
     }

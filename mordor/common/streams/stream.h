@@ -45,7 +45,7 @@ public:
     virtual long long size() { NOTREACHED(); }
     virtual void truncate(long long size) { NOTREACHED(); }
     virtual void flush() {}
-    virtual size_t find(char delim) { NOTREACHED(); }
+    virtual size_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
     virtual size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
     virtual void unread(const Buffer &b, size_t len) { NOTREACHED(); }
 

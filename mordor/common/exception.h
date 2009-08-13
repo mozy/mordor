@@ -33,6 +33,12 @@ public:
     UnexpectedEofError() {}
 };
 
+class BufferOverflowError : public StreamError
+{
+public:
+    BufferOverflowError() {}
+};
+
 #ifdef WINDOWS
 #include <winerror.h>
 class Win32Error : public std::runtime_error

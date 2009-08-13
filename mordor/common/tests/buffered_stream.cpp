@@ -123,3 +123,43 @@ TEST_WITH_SUITE(BufferedStream, unread)
     TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
     TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 15);
 }
+
+TEST_WITH_SUITE(BufferedStream, find)
+{
+    MemoryStream::ptr baseStream(new MemoryStream(Buffer("01234567890123456789")));
+    BufferedStream::ptr bufferedStream(new BufferedStream(baseStream));
+    bufferedStream->bufferSize(5);
+    
+    TEST_ASSERT(bufferedStream->supportsFind());
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 0);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+    TEST_ASSERT_EQUAL(bufferedStream->find('0'), 0u);
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 5);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+    TEST_ASSERT_EQUAL(bufferedStream->find("01234"), 0u);
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 5);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+    Buffer output;
+    TEST_ASSERT_EQUAL(bufferedStream->read(output, 1), 1u);
+    TEST_ASSERT_EQUAL(bufferedStream->find("0123"), 9u);
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 1);
+}
+
+TEST_WITH_SUITE(BufferedStream, findSanityChecks)
+{
+    MemoryStream::ptr baseStream(new MemoryStream(Buffer("01234567890123456789")));
+    BufferedStream::ptr bufferedStream(new BufferedStream(baseStream));
+    bufferedStream->bufferSize(5);
+
+    // Buffer size is 5, default sanity size is twice the buffer size
+    TEST_ASSERT_EXCEPTION(bufferedStream->find('\n'), BufferOverflowError);
+    TEST_ASSERT_EXCEPTION(bufferedStream->find("\r\n"), BufferOverflowError);
+    TEST_ASSERT_EXCEPTION(bufferedStream->find('\n', 20), UnexpectedEofError);
+    TEST_ASSERT_EXCEPTION(bufferedStream->find("\r\n", 20), UnexpectedEofError);
+
+    TEST_ASSERT_EQUAL(bufferedStream->find('\n', ~0, false), ~0u);
+    TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", ~0, false), ~0u);
+    TEST_ASSERT_EQUAL(bufferedStream->find('\n', 20, false), ~0u);
+    TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", 20, false), ~0u);
+}

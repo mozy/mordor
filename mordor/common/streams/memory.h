@@ -25,7 +25,7 @@ public:
     long long seek(long long offset, Anchor anchor);
     long long size();
     void truncate(long long size);
-    size_t find(char delim);
+    size_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true);
     size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true);
 
     // Direct access to memory

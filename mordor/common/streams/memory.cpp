@@ -162,18 +162,20 @@ MemoryStream::truncate(long long size)
 }
 
 size_t
-MemoryStream::find(char delim)
+MemoryStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 {
-    ptrdiff_t result = m_read.find(delim);
+    ptrdiff_t result = m_read.find(delim, std::min(sanitySize, m_read.readAvailable()));
     if (result != -1)
         return result;
-    throw std::runtime_error("Unexpected EOF");
+    if (throwIfNotFound)
+        throw std::runtime_error("Unexpected EOF");
+    return ~0;
 }
 
 size_t
 MemoryStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFound)
 {
-    ptrdiff_t result = m_read.find(str);
+    ptrdiff_t result = m_read.find(str, std::min(sanitySize, m_read.readAvailable()));
     if (result != -1)
         return result;
     if (throwIfNotFound)

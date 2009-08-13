@@ -38,9 +38,10 @@ public:
     long long size() { return m_parent->size(); }
     void truncate(long long size) { m_parent->truncate(size); }
     void flush() { m_parent->flush(); }
-    size_t find(char delim) { return m_parent->find(delim); }
-    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwOnNotFound = true)
-    { return m_parent->find(str, sanitySize, throwOnNotFound); }
+    size_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true)
+    { return m_parent->find(delim, sanitySize, throwIfNotFound); }
+    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)
+    { return m_parent->find(str, sanitySize, throwIfNotFound); }
     void unread(const Buffer &b, size_t len) { return m_parent->unread(b, len); }
 
 protected:
@@ -73,7 +74,7 @@ public:
     long long seek(long long offset, Anchor anchor) { NOTREACHED(); }
     long long size() { NOTREACHED(); }
     void truncate(long long size) { NOTREACHED(); }
-    size_t find(char delim) { NOTREACHED(); }
+    size_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
     size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
     void unread(const Buffer &b, size_t len) { NOTREACHED(); }
 };
