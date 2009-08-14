@@ -55,7 +55,11 @@ LimitedStream::size()
     if (!parent()->supportsSize()) {
         return m_size;
     }
-    return std::min(m_size, parent()->size());
+    try {
+        return std::min(m_size, parent()->size());
+    } catch (std::runtime_error) {
+        return m_size;
+    }
 }
 
 
