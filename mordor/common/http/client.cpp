@@ -679,11 +679,16 @@ HTTP::ClientRequest::responseDone()
         // Read and parse the trailer
         TrailerParser parser(m_responseTrailer);
         parser.run(m_conn->m_stream);
+        // TODO: these exceptions should be thrown when you try to access
+        // responseTrailer(), not in here, because this is a callback
         if (parser.error()) {
             cancel(true);
             throw std::runtime_error("Error parsing trailer");
         }
-        ASSERT(parser.complete());
+        if (!parser.complete()) {
+            cancel(true);
+            throw IncompleteMessageHeaderException();
+        }
         LOG_TRACE(g_log) << m_responseTrailer;
     }
     m_conn->scheduleNextResponse(shared_from_this());
