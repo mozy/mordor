@@ -335,6 +335,7 @@ Fiber::throwExceptions()
         THROW_ORIGINAL_EXCEPTION(m_exception, std::range_error);
         THROW_ORIGINAL_EXCEPTION(m_exception, std::underflow_error);
 
+        THROW_ORIGINAL_EXCEPTION(m_exception, Assertion);
         THROW_ORIGINAL_EXCEPTION(m_exception, FiberException);
 
         NativeError *nativeError = dynamic_cast<NativeError *>(m_exception);
