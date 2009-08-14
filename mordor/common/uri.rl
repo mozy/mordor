@@ -54,9 +54,9 @@ static std::string escape(const std::string& str, const std::string& allowedChar
     }
 
     if (differed) {
-        assert(result.length() > str.length());
+        ASSERT(result.length() > str.length());
     } else {
-        assert(result == str);
+        ASSERT(result == str);
     }
     return result;
 }
@@ -71,7 +71,7 @@ std::string unescape(const std::string& str)
     while (c < end)
     {
         if (*c == '%') {
-            assert(c + 2 < end);
+            ASSERT(c + 2 < end);
             if (!differed) {
                 result.resize(c - str.c_str());
                 differed = true;
@@ -83,7 +83,7 @@ std::string unescape(const std::string& str)
             else if (*c >= 'A' && *c <= 'F')
                 decoded = (*c - 'A' + 10) << 4;
             else {
-                assert(*c >= '0' && *c <='9');
+                ASSERT(*c >= '0' && *c <='9');
                 decoded = (*c - '0') << 4;
             }
             ++c;
@@ -92,7 +92,7 @@ std::string unescape(const std::string& str)
             else if (*c >= 'A' && *c <= 'F')
                 decoded |= *c - 'A' + 10;
             else {
-                assert(*c >= '0' && *c <='9');
+                ASSERT(*c >= '0' && *c <='9');
                 decoded |= *c - '0';
             }
             result.append(1, decoded);                            
@@ -400,7 +400,7 @@ URI::Authority::operator==(const Authority &rhs) const
 std::ostream&
 operator<<(std::ostream& os, const URI::Authority& authority)
 {
-    assert(authority.hostDefined());
+    ASSERT(authority.hostDefined());
     if (authority.userinfoDefined()) {
         os << escape(authority.userinfo(), userinfo) << "@";
     }
@@ -478,7 +478,7 @@ URI::Path::normalize(bool emptyPathValid)
 void
 URI::Path::merge(const Path& rhs)
 {
-    assert(rhs.type == RELATIVE);
+    ASSERT(rhs.type == RELATIVE);
     if (!segments.empty()) {
         segments.pop_back();
         segments.insert(segments.end(), rhs.segments.begin(), rhs.segments.end());
@@ -586,7 +586,7 @@ operator<<(std::ostream& os, const URI& uri)
 URI
 URI::transform(const URI& base, const URI& relative)
 {
-    assert(base.schemeDefined());
+    ASSERT(base.schemeDefined());
 
     URI target;
     if (relative.schemeDefined()) {

@@ -80,8 +80,8 @@ unquote(char *p, char *pe)
     char *start = p;
     char *pw = p;
 
-    assert(*p == '"');
-    assert(*(pe - 1) == '"');
+    ASSERT(*p == '"');
+    ASSERT(*(pe - 1) == '"');
     ++p; ++pw; ++start;
     --pe;
     bool escaping = false;
@@ -198,7 +198,7 @@ unquote(char *p, char *pe)
     }
     
     action save_element {
-        assert(m_list || m_set);
+        ASSERT(m_list || m_set);
         if (m_list)
             m_list->push_back(std::string(mark, fpc - mark));
         else
