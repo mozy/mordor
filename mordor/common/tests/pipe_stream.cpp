@@ -11,6 +11,21 @@ TEST_WITH_SUITE(PipeStream, basic)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
 
+    TEST_ASSERT(pipe.first->supportsRead());
+    TEST_ASSERT(pipe.first->supportsWrite());
+    TEST_ASSERT(!pipe.first->supportsSeek());
+    TEST_ASSERT(!pipe.first->supportsSize());
+    TEST_ASSERT(!pipe.first->supportsTruncate());
+    TEST_ASSERT(!pipe.first->supportsFind());
+    TEST_ASSERT(!pipe.first->supportsUnread());
+    TEST_ASSERT(pipe.second->supportsRead());
+    TEST_ASSERT(pipe.second->supportsWrite());
+    TEST_ASSERT(!pipe.second->supportsSeek());
+    TEST_ASSERT(!pipe.second->supportsSize());
+    TEST_ASSERT(!pipe.second->supportsTruncate());
+    TEST_ASSERT(!pipe.second->supportsFind());
+    TEST_ASSERT(!pipe.second->supportsUnread());
+
     Buffer read;
     TEST_ASSERT_EQUAL(pipe.first->write("a"), 1u);
     TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 1u);
@@ -19,7 +34,7 @@ TEST_WITH_SUITE(PipeStream, basic)
     TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 0u);
 }
 
-void basicInFibers(Stream::ptr stream, int &sequence)
+static void basicInFibers(Stream::ptr stream, int &sequence)
 {
     TEST_ASSERT_EQUAL(sequence, 1);
     TEST_ASSERT_EQUAL(stream->write("a"), 1u);
@@ -56,6 +71,7 @@ TEST_WITH_SUITE(PipeStream, readerClosed)
 
     pipe.second->close();
     TEST_ASSERT_EXCEPTION(pipe.first->write("a"), ConnectionAbortedException);
+    TEST_ASSERT_EXCEPTION(pipe.first->flush(), ConnectionAbortedException);
 }
 
 TEST_WITH_SUITE(PipeStream, readerGone)
@@ -64,6 +80,7 @@ TEST_WITH_SUITE(PipeStream, readerGone)
 
     pipe.second.reset();
     TEST_ASSERT_EXCEPTION(pipe.first->write("a"), ConnectionResetException);
+    TEST_ASSERT_EXCEPTION(pipe.first->flush(), ConnectionResetException);
 }
 
 TEST_WITH_SUITE(PipeStream, writerGone)
@@ -73,6 +90,169 @@ TEST_WITH_SUITE(PipeStream, writerGone)
     pipe.first.reset();
     Buffer read;
     TEST_ASSERT_EXCEPTION(pipe.second->read(read, 10), ConnectionResetException);
+}
+
+static void blockingRead(Stream::ptr stream, int &sequence)
+{
+    TEST_ASSERT_EQUAL(++sequence, 2);
+    TEST_ASSERT_EQUAL(stream->write("hello"), 5u);    
+    TEST_ASSERT_EQUAL(++sequence, 3);
+}
+
+TEST_WITH_SUITE(PipeStream, blockingRead)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
+    WorkerPool pool;
+    int sequence = 1;
+
+    pool.schedule(Fiber::ptr(new Fiber(boost::bind(&blockingRead, pipe.second,
+        boost::ref(sequence)))));
+
+    Buffer output;
+    TEST_ASSERT_EQUAL(pipe.first->read(output, 10), 5u);
+    TEST_ASSERT_EQUAL(++sequence, 4);
+    TEST_ASSERT(output == "hello");
+}
+
+static void blockingWrite(Stream::ptr stream, int &sequence)
+{
+    TEST_ASSERT_EQUAL(++sequence, 3);
+    Buffer output;
+    TEST_ASSERT_EQUAL(stream->read(output, 10), 5u);
+    TEST_ASSERT(output == "hello");
+}
+
+TEST_WITH_SUITE(PipeStream, blockingWrite)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
+    WorkerPool pool;
+    int sequence = 1;
+
+    pool.schedule(Fiber::ptr(new Fiber(boost::bind(&blockingWrite, pipe.second,
+        boost::ref(sequence)))));
+
+    TEST_ASSERT_EQUAL(pipe.first->write("hello"), 5u);
+    TEST_ASSERT_EQUAL(++sequence, 2);
+    TEST_ASSERT_EQUAL(pipe.first->write("world"), 5u);
+    TEST_ASSERT_EQUAL(++sequence, 4);
+    Buffer output;
+    TEST_ASSERT_EQUAL(pipe.second->read(output, 10), 5u);
+    TEST_ASSERT_EQUAL(++sequence, 5);
+    TEST_ASSERT(output == "world");
+}
+
+TEST_WITH_SUITE(PipeStream, oversizedWrite)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
+
+    TEST_ASSERT_EQUAL(pipe.first->write("helloworld"), 5u);
+    Buffer output;
+    TEST_ASSERT_EQUAL(pipe.second->read(output, 10), 5u);
+    TEST_ASSERT(output == "hello");
+}
+
+static void closeOnBlockingReader(Stream::ptr stream, int &sequence)
+{
+    TEST_ASSERT_EQUAL(++sequence, 2);
+    stream->close();
+    TEST_ASSERT_EQUAL(++sequence, 3);
+}
+
+TEST_WITH_SUITE(PipeStream, closeOnBlockingReader)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+    WorkerPool pool;
+    int sequence = 1;
+
+    pool.schedule(Fiber::ptr(new Fiber(boost::bind(&closeOnBlockingReader,
+        pipe.first, boost::ref(sequence)))));
+
+    Buffer output;
+    TEST_ASSERT_EQUAL(pipe.second->read(output, 10), 0u);
+    TEST_ASSERT_EQUAL(++sequence, 4);
+}
+
+static void closeOnBlockingWriter(Stream::ptr stream, int &sequence)
+{
+    TEST_ASSERT_EQUAL(++sequence, 3);
+    stream->close();
+    TEST_ASSERT_EQUAL(++sequence, 4);
+}
+
+TEST_WITH_SUITE(PipeStream, closeOnBlockingWriter)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
+    WorkerPool pool;
+    int sequence = 1;
+
+    pool.schedule(Fiber::ptr(new Fiber(boost::bind(&closeOnBlockingWriter, pipe.first,
+        boost::ref(sequence)))));
+
+    TEST_ASSERT_EQUAL(pipe.second->write("hello"), 5u);
+    TEST_ASSERT_EQUAL(++sequence, 2);
+    TEST_ASSERT_EXCEPTION(pipe.second->write("world"), ConnectionAbortedException);
+    TEST_ASSERT_EQUAL(++sequence, 5);
+}
+
+static void destructOnBlockingReader(boost::weak_ptr<Stream> weakStream, int &sequence)
+{
+    Stream::ptr stream(weakStream);
+    Fiber::yield();
+    TEST_ASSERT_EQUAL(++sequence, 2);
+    TEST_ASSERT(stream.unique());
+    stream.reset();
+    TEST_ASSERT_EQUAL(++sequence, 3);
+}
+
+TEST_WITH_SUITE(PipeStream, destructOnBlockingReader)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+    WorkerPool pool;
+    int sequence = 1;
+
+    Fiber::ptr f = Fiber::ptr(new Fiber(boost::bind(&destructOnBlockingReader,
+        boost::weak_ptr<Stream>(pipe.first), boost::ref(sequence))));
+    f->call();
+    pipe.first.reset();
+    pool.schedule(f);
+
+    Buffer output;
+    TEST_ASSERT_EXCEPTION(pipe.second->read(output, 10), ConnectionResetException);
+    TEST_ASSERT_EQUAL(++sequence, 4);
+}
+
+static void destructOnBlockingWriter(boost::weak_ptr<Stream> weakStream, int &sequence)
+{
+    Stream::ptr stream(weakStream);
+    Fiber::yield();
+    TEST_ASSERT_EQUAL(++sequence, 3);
+    TEST_ASSERT(stream.unique());
+    stream.reset();
+    TEST_ASSERT_EQUAL(++sequence, 4);
+}
+
+TEST_WITH_SUITE(PipeStream, destructOnBlockingWriter)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
+    WorkerPool pool;
+    int sequence = 1;
+
+    Fiber::ptr f = Fiber::ptr(new Fiber(boost::bind(&destructOnBlockingWriter,
+        boost::weak_ptr<Stream>(pipe.first), boost::ref(sequence))));
+    f->call();
+    pipe.first.reset();
+    pool.schedule(f);
+
+    TEST_ASSERT_EQUAL(pipe.second->write("hello"), 5u);
+    TEST_ASSERT_EQUAL(++sequence, 2);
+    TEST_ASSERT_EXCEPTION(pipe.second->write("world"), ConnectionResetException);
+    TEST_ASSERT_EQUAL(++sequence, 5);
 }
 
 void threadStress(Stream::ptr stream)

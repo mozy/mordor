@@ -4,6 +4,6 @@
 
 #include "stream.h"
 
-std::pair<Stream::ptr, Stream::ptr> pipeStream();
+std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t bufferSize = ~0);
 
 #endif

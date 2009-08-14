@@ -13,13 +13,13 @@
 
 class PipeStream : public Stream
 {
-    friend std::pair<Stream::ptr, Stream::ptr> pipeStream();
+    friend std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t);
 public:
     typedef boost::shared_ptr<PipeStream> ptr;
     typedef boost::weak_ptr<PipeStream> weak_ptr;
 
 public:
-    PipeStream();
+    PipeStream(size_t bufferSize);
     ~PipeStream();
 
     bool supportsRead() { return true; }
@@ -34,16 +34,17 @@ private:
     PipeStream::weak_ptr m_otherStream;
     boost::shared_ptr<boost::mutex> m_mutex;
     Buffer m_readBuffer;
+    size_t m_bufferSize;
     CloseType m_closed, m_otherClosed;
     Scheduler *m_pendingWriterScheduler, *m_pendingReaderScheduler;
     Fiber::ptr m_pendingWriter, m_pendingReader;
 };
 
-std::pair<Stream::ptr, Stream::ptr> pipeStream()
+std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t bufferSize)
 {
     std::pair<PipeStream::ptr, PipeStream::ptr> result;
-    result.first.reset(new PipeStream());
-    result.second.reset(new PipeStream());
+    result.first.reset(new PipeStream(bufferSize));
+    result.second.reset(new PipeStream(bufferSize));
     result.first->m_otherStream = result.second;
     result.second->m_otherStream = result.first;
     result.first->m_mutex.reset(new boost::mutex());
@@ -51,8 +52,9 @@ std::pair<Stream::ptr, Stream::ptr> pipeStream()
     return result;
 }
 
-PipeStream::PipeStream()
-: m_closed(NONE),
+PipeStream::PipeStream(size_t bufferSize)
+: m_bufferSize(bufferSize),
+  m_closed(NONE),
   m_otherClosed(NONE)
 {}
 
@@ -132,33 +134,35 @@ PipeStream::read(Buffer &b, size_t len)
 size_t
 PipeStream::write(const Buffer &b, size_t len)
 {
-    {
-        boost::mutex::scoped_lock lock(*m_mutex);
-        ASSERT(!(m_closed & WRITE));
-        if (m_otherStream.expired()) {
-            throw ConnectionResetException();
-        }
-        PipeStream::ptr otherStream(m_otherStream);
-        if (otherStream->m_closed & READ) {
-            throw ConnectionAbortedException();            
-        }
+    if (len > m_bufferSize)
+        len = m_bufferSize;
+    while (true) {
+        {
+            boost::mutex::scoped_lock lock(*m_mutex);
+            ASSERT(!(m_closed & WRITE));
+            if (m_otherStream.expired()) {
+                throw ConnectionResetException();
+            }
+            PipeStream::ptr otherStream(m_otherStream);
+            if (otherStream->m_closed & READ) {
+                throw ConnectionAbortedException();            
+            }
 
-        if (otherStream->m_readBuffer.readAvailable() + len <= 65536) {
-            otherStream->m_readBuffer.copyIn(b, len);
-            if (m_pendingReader) {
-                m_pendingReaderScheduler->schedule(m_pendingReader);
-                m_pendingReader.reset();
-            }            
-            return len;
+            if (otherStream->m_readBuffer.readAvailable() + len <= m_bufferSize) {
+                otherStream->m_readBuffer.copyIn(b, len);
+                if (m_pendingReader) {
+                    m_pendingReaderScheduler->schedule(m_pendingReader);
+                    m_pendingReader.reset();
+                }            
+                return len;
+            }
+            // Wait for the other stream to schedule us
+            ASSERT(!otherStream->m_pendingWriter);
+            otherStream->m_pendingWriter = Fiber::getThis();
+            otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }
-        // Wait for the other stream to schedule us
-        ASSERT(!otherStream->m_pendingWriter);
-        otherStream->m_pendingWriter = Fiber::getThis();
-        otherStream->m_pendingWriterScheduler = Scheduler::getThis();
+        Scheduler::getThis()->yieldTo();
     }
-    Scheduler::getThis()->yieldTo();
-    // And recurse
-    return write(b, len);
 }
 
 void
