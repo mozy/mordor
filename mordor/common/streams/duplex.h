@@ -4,6 +4,10 @@
 
 #include "stream.h"
 
+// A DuplexStream combines a read and a write stream to form a stream that can
+// be read and written to.  It *disables* seek(), size(), and truncate(),
+// because the parent streams are disparate, and those concepts are supposed
+// to be shared
 class DuplexStream : public Stream
 {
 public:
@@ -25,9 +29,6 @@ public:
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
-    bool supportsSeek() { return m_readParent->supportsSeek() && m_writeParent->supportsSeek(); }
-    bool supportsSize() { return m_readParent->supportsSize() && m_writeParent->supportsSize(); }
-    bool supportsTruncate() { return m_writeParent->supportsTruncate(); }
     bool supportsFind() { return m_readParent->supportsFind(); }
     bool supportsUnread() { return m_readParent->supportsUnread(); }
 
@@ -42,23 +43,6 @@ public:
     }
     size_t read(Buffer &b, size_t len) { return m_readParent->read(b, len); }
     size_t write(const Buffer &b, size_t len) { return m_writeParent->write(b, len); }
-    long long seek(long long offset, Anchor anchor)
-    {
-        ASSERT(supportsSeek());
-        long long result1 = m_readParent->seek(offset, anchor);
-        long long result2 = m_writeParent->seek(offset, anchor);
-        ASSERT(result1 == result2);
-        return result1;
-    }
-    long long size()
-    {
-        ASSERT(supportsSize());
-        long long result1 = m_readParent->size();
-        long long result2 = m_writeParent->size();
-        ASSERT(result1 == result2);
-        return result1;
-    }
-    void truncate(long long size) { m_writeParent->truncate(size); }
     void flush() { m_writeParent->flush(); }
     size_t find(char delim) { return m_readParent->find(delim); }
     size_t find(const std::string &str, size_t sanitySize = ~0, bool throwOnNotFound = true)
