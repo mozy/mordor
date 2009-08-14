@@ -29,7 +29,7 @@ TEST_WITH_SUITE(ChunkedStream, readSome)
 
     Buffer output;
     TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
     TEST_ASSERT(output == "helloworld");
 
     output.clear();
@@ -48,7 +48,7 @@ TEST_WITH_SUITE(ChunkedStream, readUppercaseHex)
 
     Buffer output;
     TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
     TEST_ASSERT(output == "helloworld");
 }
 
@@ -59,7 +59,7 @@ TEST_WITH_SUITE(ChunkedStream, ignoreExtensions)
 
     Buffer output;
     TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 28);
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 26);
     TEST_ASSERT(output == "helloworld");
 }
 
@@ -70,7 +70,7 @@ TEST_WITH_SUITE(ChunkedStream, dontReadPastEnd)
 
     Buffer output;
     TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
     TEST_ASSERT(output == "helloworld");
 
     output.clear();
@@ -85,6 +85,38 @@ TEST_WITH_SUITE(ChunkedStream, dontReadPastEnd)
     TEST_ASSERT_EQUAL(baseStream->read(output, 15), 10u);
     TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 28);
     TEST_ASSERT(output == "more stuff");
+}
+
+TEST_WITH_SUITE(ChunkedStream, invalidChunkSize)
+{
+    Stream::ptr baseStream(new MemoryStream(Buffer("hello\r\n0\r\n")));
+    Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
+
+    try {
+        Buffer output;
+        chunkedStream->read(output, 15);
+        NOTREACHED();
+    } catch (const HTTP::InvalidChunkError &ex) {
+        TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkError::HEADER);
+        TEST_ASSERT_EQUAL(ex.line(), "hello");
+    }
+}
+
+TEST_WITH_SUITE(ChunkedStream, invalidChunkData)
+{
+    Stream::ptr baseStream(new MemoryStream(Buffer("3\r\nhello\r\n0\r\n")));
+    Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
+
+    Buffer output;
+    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 3u);
+    TEST_ASSERT(output == "hel");
+    try {
+        chunkedStream->read(output, 15);        
+        NOTREACHED();
+    } catch (const HTTP::InvalidChunkError &ex) {
+        TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkError::FOOTER);
+        TEST_ASSERT_EQUAL(ex.line(), "lo");
+    }
 }
 
 TEST_WITH_SUITE(ChunkedStream, writeEmpty)

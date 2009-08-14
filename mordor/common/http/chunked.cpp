@@ -11,6 +11,12 @@
 #define strtoull _strtoui64
 #endif
 
+HTTP::InvalidChunkError::InvalidChunkError(const std::string &line,
+                                           Type type)
+: m_line(line),
+  m_type(type)
+{}  
+
 HTTP::ChunkedStream::ChunkedStream(Stream::ptr parent, bool own)
 : MutatingFilterStream(parent, own),
   m_nextChunk(~0)
@@ -32,12 +38,23 @@ HTTP::ChunkedStream::close(Stream::CloseType type)
 size_t
 HTTP::ChunkedStream::read(Buffer &b, size_t len)
 {
+    if (m_nextChunk == ~0ull - 1) {
+        std::string chunk = parent()->getDelimited();
+        if (!chunk.empty() && chunk[chunk.size() - 1] == '\r')
+            chunk.resize(chunk.size() - 1);
+        if (!chunk.empty()) {
+            throw InvalidChunkError(chunk, InvalidChunkError::FOOTER);
+        }
+        m_nextChunk = ~0;
+    }
     if (m_nextChunk == ~0ull) {
         std::string chunk = parent()->getDelimited();
+        if (!chunk.empty() && chunk[chunk.size() - 1] == '\r')
+            chunk.resize(chunk.size() - 1);
         char *end;
         m_nextChunk = strtoull(chunk.c_str(), &end, 16);
         if (end == chunk.c_str()) {
-            throw std::runtime_error("Invalid chunk size: " + chunk);
+            throw InvalidChunkError(chunk, InvalidChunkError::HEADER);
         }
     }
     if (m_nextChunk == 0)
@@ -46,11 +63,7 @@ HTTP::ChunkedStream::read(Buffer &b, size_t len)
     size_t result = parent()->read(b, toRead);
     m_nextChunk -= result;
     if (m_nextChunk == 0) {
-        std::string chunk = parent()->getDelimited();
-        if (chunk != "\r" && !chunk.empty()) {
-            throw std::runtime_error("Invalid end-of-chunk line");
-        }
-        m_nextChunk = ~0;
+        m_nextChunk = ~0ull - 1;
     }
     return result;
 }
