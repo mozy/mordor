@@ -42,6 +42,8 @@ private:
 
 std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t bufferSize)
 {
+    if (bufferSize == ~0u)
+        bufferSize = 65536;
     std::pair<PipeStream::ptr, PipeStream::ptr> result;
     result.first.reset(new PipeStream(bufferSize));
     result.second.reset(new PipeStream(bufferSize));
