@@ -2,6 +2,7 @@
 
 #include <boost/bind.hpp>
 
+#include "mordor/common/http/client.h"
 #include "mordor/common/http/parser.h"
 #include "mordor/common/http/server.h"
 #include "mordor/common/scheduler.h"
@@ -311,4 +312,151 @@ TEST_WITH_SUITE(HTTPServer, keepAlive11)
     TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
     TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
     TEST_ASSERT(response.general.connection.find("close") == response.general.connection.end());
+}
+
+TEST_WITH_SUITE(HTTPClient, emptyRequest)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    TEST_ASSERT(!request->hasResponseBody());
+    TEST_ASSERT_ASSERTED(request->responseStream());
+}
+
+TEST_WITH_SUITE(HTTPClient, pipelinedSynchronousRequests)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n"
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+
+    HTTP::ClientRequest::ptr request1 = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+
+    HTTP::ClientRequest::ptr request2 = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n"
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+
+    TEST_ASSERT_EQUAL(request1->response().status.status, HTTP::OK);
+    // Can't test for if half of the stream has been consumed here, because it
+    // will be in a buffer somewhere
+    TEST_ASSERT_EQUAL(request2->response().status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), responseStream->size());
+}
+
+TEST_WITH_SUITE(HTTPClient, simpleResponseBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 5\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "hello")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(request->hasResponseBody());
+    TEST_ASSERT(request->responseStream()->supportsRead());
+    TEST_ASSERT(!request->responseStream()->supportsWrite());
+    TEST_ASSERT(!request->responseStream()->supportsSeek());
+    TEST_ASSERT(request->responseStream()->supportsSize());
+    TEST_ASSERT(!request->responseStream()->supportsTruncate());
+    TEST_ASSERT(!request->responseStream()->supportsFind());
+    TEST_ASSERT(!request->responseStream()->supportsUnread());
+    TEST_ASSERT_EQUAL(request->responseStream()->size(), 5);
+
+    // Verify response itself
+    MemoryStream responseBody;
+    transferStream(request->responseStream(), responseBody);
+    TEST_ASSERT(responseBody.buffer() == "hello");
+}
+
+TEST_WITH_SUITE(HTTPClient, chunkedResponseBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "5\r\n"
+        "hello"
+        "\r\n"
+        "0\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(request->hasResponseBody());
+    TEST_ASSERT(request->responseStream()->supportsRead());
+    TEST_ASSERT(!request->responseStream()->supportsWrite());
+    TEST_ASSERT(!request->responseStream()->supportsSeek());
+    TEST_ASSERT(!request->responseStream()->supportsSize());
+    TEST_ASSERT(!request->responseStream()->supportsTruncate());
+    TEST_ASSERT(!request->responseStream()->supportsFind());
+    TEST_ASSERT(!request->responseStream()->supportsUnread());
+
+    // Verify response itself
+    MemoryStream responseBody;
+    transferStream(request->responseStream(), responseBody);
+    TEST_ASSERT(responseBody.buffer() == "hello");
 }
