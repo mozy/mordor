@@ -87,7 +87,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)"
+				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -160,7 +160,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)"
+				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -235,7 +235,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)"
+				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -311,7 +311,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)"
+				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
@@ -329,6 +329,10 @@
 			</File>
 			<File
 				RelativePath=".\buffered_stream.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\chunked_stream.cpp"
 				>
 			</File>
 			<File
