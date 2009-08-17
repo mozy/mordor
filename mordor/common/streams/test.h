@@ -29,10 +29,9 @@ public:
 
     void onClose(boost::function<void (CloseType)> dg)
     { m_onClose = dg; }
-    // -1 means call me back on every read
-    void onRead(boost::function<void ()> dg, long long bytes = -1)
+    void onRead(boost::function<void ()> dg, long long bytes = 0)
     { m_onRead = dg; m_onReadBytes = bytes; }
-    void onWrite(boost::function<void ()> dg, long long bytes = -1)
+    void onWrite(boost::function<void ()> dg, long long bytes = 0)
     { m_onWrite = dg; m_onWriteBytes = bytes; }
     void onFlush(boost::function<void ()> dg)
     { m_onFlush = dg; }

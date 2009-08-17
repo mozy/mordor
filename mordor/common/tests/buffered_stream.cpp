@@ -223,3 +223,73 @@ TEST_WITH_SUITE(BufferedStream, findSanityChecks)
     TEST_ASSERT_EQUAL(bufferedStream->find('\n', 20, false), ~0u);
     TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", 20, false), ~0u);
 }
+
+static void throwRuntimeError()
+{
+    throw std::runtime_error("");
+}
+
+TEST_WITH_SUITE(BufferedStream, errorOnRead)
+{
+    MemoryStream::ptr baseStream(new MemoryStream(Buffer("01234567890123456789")));
+    TestStream::ptr testStream(new TestStream(baseStream));
+    BufferedStream::ptr bufferedStream(new BufferedStream(testStream));
+    testStream->onRead(&throwRuntimeError);
+
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 0);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+
+    Buffer output;
+    TEST_ASSERT_EXCEPTION(bufferedStream->read(output, 5), std::runtime_error);
+    TEST_ASSERT_EQUAL(output.readAvailable(), 0u);
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 0);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+
+    testStream->onRead(&throwRuntimeError, 2);
+    // Partial read still allowed on exception (it's assumed the next read
+    // will be either EOF or error)
+    TEST_ASSERT_EQUAL(bufferedStream->read(output, 5), 2u);
+    TEST_ASSERT(output == "01");
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 2);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 2);
+
+    output.clear();
+    // Make sure that's correct
+    TEST_ASSERT_EXCEPTION(bufferedStream->read(output, 5), std::runtime_error);
+    TEST_ASSERT_EQUAL(output.readAvailable(), 0u);
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 2);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 2);
+}
+
+TEST_WITH_SUITE(BufferedStream, errorOnWrite)
+{
+    MemoryStream::ptr baseStream(new MemoryStream());
+    TestStream::ptr testStream(new TestStream(baseStream));
+    BufferedStream::ptr bufferedStream(new BufferedStream(testStream));
+    bufferedStream->bufferSize(5);
+
+    TEST_ASSERT_EQUAL(baseStream->size(), 0);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 0);
+
+    testStream->onWrite(&throwRuntimeError);
+    TEST_ASSERT_EXCEPTION(bufferedStream->write("hello", 5), std::runtime_error);
+    TEST_ASSERT_EQUAL(baseStream->size(), 0);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 0);
+
+    testStream->onWrite(&throwRuntimeError, 3);
+    // Exception swallowed; only 3 written to underlying stream (flush will
+    // either clear buffer, or expose error); partial write guarantee still
+    // enforced
+    TEST_ASSERT_EQUAL(bufferedStream->write("hello", 5), 5u);
+    TEST_ASSERT_EQUAL(baseStream->size(), 3);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 5);
+
+    TEST_ASSERT_EXCEPTION(bufferedStream->flush(), std::runtime_error);
+    TEST_ASSERT_EQUAL(baseStream->size(), 3);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 5);
+
+    testStream->onWrite(NULL);
+    bufferedStream->flush();
+    TEST_ASSERT_EQUAL(baseStream->size(), 5);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 5);
+}

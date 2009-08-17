@@ -148,11 +148,7 @@ BufferedStream::size()
 {
     long long size = parent()->size();
     if (supportsSeek()) {
-        try {
-            return std::max(size, seek(0, CURRENT));
-        } catch(...) {
-            return size + m_writeBuffer.readAvailable();
-        }
+        return std::max(size, seek(0, CURRENT));
     } else {
         // not a seekable stream; we can only write to the end
         size += m_writeBuffer.readAvailable();
