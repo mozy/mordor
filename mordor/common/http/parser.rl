@@ -323,7 +323,7 @@ unquote(char *p, char *pe)
     
     type = token >mark %save_type;
     subtype = token >mark %save_subtype;
-    media_type = type'/' subtype (';' LWS* parameter)*;
+    media_type = type '/' subtype (';' LWS* parameter)*;
     Content_Type = 'Content-Type:'i @set_content_type LWS* media_type LWS*;
     
     entity_header = Content_Encoding | Content_Length | Content_Range | Content_Type; # | extension_header;
@@ -620,7 +620,7 @@ HTTP::ResponseParser::exec()
 
     extension_header = (token - (entity_header_names)) >mark %save_field_name ':' field_value;
 
-    trailer = (entity_header | extension_header CRLF)*;
+    trailer = ((entity_header | extension_header) CRLF)*;
 
     main := trailer CRLF @done;
 

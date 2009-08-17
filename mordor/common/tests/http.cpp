@@ -112,6 +112,19 @@ TEST_WITH_SUITE(HTTP, requestWithComplexHeader)
         != request.general.connection.end());
 }
 
+TEST_WITH_SUITE(HTTP, trailer)
+{
+    HTTP::EntityHeaders trailer;
+    HTTP::TrailerParser parser(trailer);
+
+    parser.run("Content-Type: text/plain\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(trailer.contentType.type, "text");
+    TEST_ASSERT_EQUAL(trailer.contentType.subtype, "plain");
+}
+
 TEST_WITH_SUITE(HTTP, rangeHeader)
 {
     HTTP::Request request;
@@ -148,6 +161,23 @@ TEST_WITH_SUITE(HTTP, rangeHeader)
     ++it;
     TEST_ASSERT_EQUAL(it->first, 500u);
     TEST_ASSERT_EQUAL(it->second, 600u);
+}
+
+TEST_WITH_SUITE(HTTP, contentTypeHeader)
+{
+    HTTP::Response response;
+    HTTP::ResponseParser parser(response);
+
+    parser.run("HTTP/1.1 200 OK\r\n"
+               "Content-Type: text/plain\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    TEST_ASSERT_EQUAL(response.entity.contentType.type, "text");
+    TEST_ASSERT_EQUAL(response.entity.contentType.subtype, "plain");
 }
 
 TEST_WITH_SUITE(HTTP, versionComparison)
@@ -459,6 +489,50 @@ TEST_WITH_SUITE(HTTPClient, chunkedResponseBody)
     MemoryStream responseBody;
     transferStream(request->responseStream(), responseBody);
     TEST_ASSERT(responseBody.buffer() == "hello");
+}
+
+TEST_WITH_SUITE(HTTPClient, trailerResponse)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "0\r\n"
+        "Content-Type: text/plain\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(request->hasResponseBody());
+    TEST_ASSERT(request->responseStream()->supportsRead());
+    TEST_ASSERT(!request->responseStream()->supportsWrite());
+    TEST_ASSERT(!request->responseStream()->supportsSeek());
+    TEST_ASSERT(!request->responseStream()->supportsSize());
+    TEST_ASSERT(!request->responseStream()->supportsTruncate());
+    TEST_ASSERT(!request->responseStream()->supportsFind());
+    TEST_ASSERT(!request->responseStream()->supportsUnread());
+
+    // Verify response itself
+    MemoryStream responseBody;
+    transferStream(request->responseStream(), responseBody);
+    TEST_ASSERT(responseBody.buffer() == "");
+
+    // Trailer!
+    TEST_ASSERT_EQUAL(request->responseTrailer().contentType.type, "text");
+    TEST_ASSERT_EQUAL(request->responseTrailer().contentType.subtype, "plain");
 }
 
 TEST_WITH_SUITE(HTTPClient, simpleRequestBody)
