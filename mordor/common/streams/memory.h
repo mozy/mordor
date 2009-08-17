@@ -37,7 +37,7 @@ private:
     Buffer m_original;
     size_t m_offset;
 
-    template <class T> size_t writeInternal(T b, size_t len);
+    template <class T> size_t writeInternal(const T &b, size_t len);
 };
 
 #endif

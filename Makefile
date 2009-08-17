@@ -351,6 +351,7 @@ mordor/common/libmordor.a:							\
 	mordor/common/streams/ssl.o						\
 	mordor/common/streams/std.o						\
 	mordor/common/streams/stream.o						\
+	mordor/common/streams/test.o						\
 	mordor/common/streams/transfer.o					\
 	mordor/common/streams/zlib.o						\
 	mordor/common/string.o							\

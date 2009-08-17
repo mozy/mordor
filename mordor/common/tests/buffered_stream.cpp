@@ -2,6 +2,7 @@
 
 #include "mordor/common/streams/memory.h"
 #include "mordor/common/streams/buffered.h"
+#include "mordor/common/streams/test.h"
 #include "mordor/test/test.h"
 
 TEST_WITH_SUITE(BufferedStream, read)
@@ -64,6 +65,35 @@ TEST_WITH_SUITE(BufferedStream, read)
     TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 20);
 }
 
+TEST_WITH_SUITE(BufferedStream, partialReadGuarantee)
+{
+    MemoryStream::ptr baseStream(new MemoryStream(Buffer("01234567890123456789")));
+    TestStream::ptr testStream(new TestStream(baseStream));
+    BufferedStream::ptr bufferedStream(new BufferedStream(testStream));
+    testStream->maxReadSize(2);
+
+    Buffer output;
+
+    TEST_ASSERT_EQUAL(bufferedStream->read(output, 5), 5u);
+    TEST_ASSERT(output == "01234");
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 6);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 5);
+
+    bufferedStream->allowPartialReads(true);
+    output.clear();
+    // Use up the rest of what's buffered
+    TEST_ASSERT_EQUAL(bufferedStream->read(output, 5), 1u);
+    TEST_ASSERT(output == "5");
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 6);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 6);
+
+    output.clear();
+    TEST_ASSERT_EQUAL(bufferedStream->read(output, 5), 2u);
+    TEST_ASSERT(output == "67");
+    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 8);
+    TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 8);
+}
+
 TEST_WITH_SUITE(BufferedStream, write)
 {
     MemoryStream::ptr baseStream(new MemoryStream());
@@ -89,6 +119,36 @@ TEST_WITH_SUITE(BufferedStream, write)
     TEST_ASSERT_EQUAL(baseStream->size(), 8);
     TEST_ASSERT_EQUAL(bufferedStream->size(), 8);
     TEST_ASSERT(baseStream->buffer() == "abcdefgh");
+}
+
+TEST_WITH_SUITE(BufferedStream, partialWriteGuarantee)
+{
+    MemoryStream::ptr baseStream(new MemoryStream());
+    TestStream::ptr testStream(new TestStream(baseStream));
+    BufferedStream::ptr bufferedStream(new BufferedStream(testStream));
+    bufferedStream->bufferSize(5);
+    testStream->maxWriteSize(2);
+
+    TEST_ASSERT_EQUAL(baseStream->size(), 0);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 0);
+
+    TEST_ASSERT_EQUAL(bufferedStream->write("hello", 5), 5u);
+    TEST_ASSERT_EQUAL(baseStream->size(), 2);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 5);
+
+    TEST_ASSERT_EQUAL(bufferedStream->write("abcdefghijklmnopqrstuvwxyz", 26), 26u);
+    TEST_ASSERT_EQUAL(baseStream->size(), 28);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 31);
+
+    bufferedStream->bufferSize(20);
+    TEST_ASSERT_EQUAL(bufferedStream->write("abcdefghijklmnopqrstuvwxyz", 26), 26u);
+    TEST_ASSERT_EQUAL(baseStream->size(), 38);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 57);
+
+    bufferedStream->flush();
+    TEST_ASSERT_EQUAL(baseStream->size(), 57);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 57);
+    TEST_ASSERT(baseStream->buffer() == "helloabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
 }
 
 TEST_WITH_SUITE(BufferedStream, unread)

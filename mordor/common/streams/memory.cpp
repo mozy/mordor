@@ -42,7 +42,7 @@ MemoryStream::write(const void *b, size_t len)
 
 template <class T>
 size_t
-MemoryStream::writeInternal(T b, size_t len)
+MemoryStream::writeInternal(const T &b, size_t len)
 {
     size_t size = m_original.readAvailable();
     if (m_offset == size) {

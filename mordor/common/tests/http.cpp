@@ -8,6 +8,7 @@
 #include "mordor/common/scheduler.h"
 #include "mordor/common/streams/duplex.h"
 #include "mordor/common/streams/memory.h"
+#include "mordor/common/streams/test.h"
 #include "mordor/common/streams/transfer.h"
 #include "mordor/test/test.h"
 
@@ -647,6 +648,38 @@ TEST_WITH_SUITE(HTTPClient, chunkedRequestBody)
         "\r\n"
         "0\r\n"
         // No trailers
+        "\r\n");
+
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(!request->hasResponseBody());
+}
+
+TEST_WITH_SUITE(HTTPClient, simpleRequestPartialWrites)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    TestStream::ptr testStream(new TestStream(duplexStream));
+    testStream->maxReadSize(10);
+    testStream->maxWriteSize(10);
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(testStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::GET;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+
+    // Force a flush (of the headers)
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
         "\r\n");
 
     TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
