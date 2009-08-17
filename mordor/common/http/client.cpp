@@ -663,7 +663,7 @@ HTTP::ClientRequest::requestDone()
     m_requestStream.reset();
     if (!m_request.general.transferEncoding.empty()) {
         std::ostringstream os;
-        os << m_requestTrailer;
+        os << m_requestTrailer << "\r\n";
         std::string str = os.str();
         LOG_TRACE(g_log) << str;
         m_conn->m_stream->write(str.c_str(), str.size());        

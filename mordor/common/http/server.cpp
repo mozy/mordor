@@ -611,11 +611,11 @@ HTTP::ServerRequest::responseMultipartDone()
 void
 HTTP::ServerRequest::responseDone()
 {
-    // TODO: ASSERT( they wrote enough
+    // TODO: ASSERT they wrote enough
     m_responseStream.reset();
     if (!m_response.general.transferEncoding.empty()) {
         std::ostringstream os;
-        os << m_responseTrailer;
+        os << m_responseTrailer << "\r\n";
         std::string str = os.str();
         LOG_TRACE(g_log) << str;
         m_conn->m_stream->write(str.c_str(), str.size());         

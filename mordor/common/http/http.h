@@ -155,6 +155,11 @@ namespace HTTP
 
     struct ValueWithParameters
     {
+        ValueWithParameters()
+        {}
+        ValueWithParameters(const std::string &val) : value(val)
+        {}
+
         std::string value;
         StringMap parameters;
     };

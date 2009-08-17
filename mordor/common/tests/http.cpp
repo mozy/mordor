@@ -460,3 +460,122 @@ TEST_WITH_SUITE(HTTPClient, chunkedResponseBody)
     transferStream(request->responseStream(), responseBody);
     TEST_ASSERT(responseBody.buffer() == "hello");
 }
+
+TEST_WITH_SUITE(HTTPClient, simpleRequestBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+    requestHeaders.entity.contentLength = 5;
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    // Nothing has been flushed yet
+    TEST_ASSERT_EQUAL(requestStream->size(), 0);
+    Stream::ptr requestBody = request->requestStream();
+    // Verify stream characteristics
+    TEST_ASSERT(!requestBody->supportsRead());
+    TEST_ASSERT(requestBody->supportsWrite());
+    TEST_ASSERT(!requestBody->supportsSeek());
+    TEST_ASSERT(requestBody->supportsSize());
+    TEST_ASSERT(!requestBody->supportsTruncate());
+    TEST_ASSERT(!requestBody->supportsFind());
+    TEST_ASSERT(!requestBody->supportsUnread());
+    TEST_ASSERT_EQUAL(requestBody->size(), 5);
+
+    // Force a flush (of the headers)
+    requestBody->flush();
+    TEST_ASSERT(requestStream->buffer() ==
+        "PUT / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "Content-Length: 5\r\n"
+        "\r\n");
+
+    // Write the body
+    TEST_ASSERT_EQUAL(requestBody->write("hello"), 5u);
+    requestBody->close();
+    TEST_ASSERT_EQUAL(requestBody->size(), 5);
+
+    TEST_ASSERT(requestStream->buffer() ==
+        "PUT / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "Content-Length: 5\r\n"
+        "\r\n"
+        "hello");
+
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(!request->hasResponseBody());
+}
+
+TEST_WITH_SUITE(HTTPClient, chunkedRequestBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+    requestHeaders.general.transferEncoding.push_back(HTTP::ValueWithParameters("chunked"));
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    // Nothing has been flushed yet
+    TEST_ASSERT_EQUAL(requestStream->size(), 0);
+    Stream::ptr requestBody = request->requestStream();
+    // Verify stream characteristics
+    TEST_ASSERT(!requestBody->supportsRead());
+    TEST_ASSERT(requestBody->supportsWrite());
+    TEST_ASSERT(!requestBody->supportsSeek());
+    TEST_ASSERT(!requestBody->supportsSize());
+    TEST_ASSERT(!requestBody->supportsTruncate());
+    TEST_ASSERT(!requestBody->supportsFind());
+    TEST_ASSERT(!requestBody->supportsUnread());
+
+    // Force a flush (of the headers)
+    requestBody->flush();
+    TEST_ASSERT(requestStream->buffer() ==
+        "PUT / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "\r\n");
+
+    // Write the body
+    TEST_ASSERT_EQUAL(requestBody->write("hello"), 5u);
+    TEST_ASSERT_EQUAL(requestBody->write("world"), 5u);
+    requestBody->close();
+
+    TEST_ASSERT(requestStream->buffer() ==
+        "PUT / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "\r\n"
+        "5\r\n"
+        "hello"
+        "\r\n"
+        "5\r\n"
+        "world"
+        "\r\n"
+        "0\r\n"
+        // No trailers
+        "\r\n");
+
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(!request->hasResponseBody());
+}

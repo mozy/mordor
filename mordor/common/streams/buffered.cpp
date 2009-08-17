@@ -29,7 +29,7 @@ BufferedStream::close(CloseType type)
 size_t
 BufferedStream::read(Buffer &b, size_t len)
 {
-    ASSERT(!m_writeBuffer.readAvailable());
+    ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
     size_t remaining = len;
 
     size_t buffered = std::min(m_readBuffer.readAvailable(), remaining);
@@ -71,7 +71,7 @@ BufferedStream::read(Buffer &b, size_t len)
 size_t
 BufferedStream::write(const Buffer &b, size_t len)
 {
-    ASSERT(!m_readBuffer.readAvailable());
+    ASSERT(!m_readBuffer.readAvailable() || !supportsSeek());
     m_writeBuffer.copyIn(b, len);
     size_t result = flushWrite(len);
     // Partial writes not allowed
@@ -82,7 +82,7 @@ BufferedStream::write(const Buffer &b, size_t len)
 size_t
 BufferedStream::write(const void *b, size_t len)
 {
-    ASSERT(!m_readBuffer.readAvailable());
+    ASSERT(!m_readBuffer.readAvailable() || !supportsSeek());
     m_writeBuffer.reserve(std::max(m_bufferSize, len));
     m_writeBuffer.copyIn(b, len);
     size_t result = flushWrite(len);
@@ -163,6 +163,7 @@ BufferedStream::size()
 void
 BufferedStream::truncate(long long size)
 {
+    ASSERT(!m_readBuffer.readAvailable() || !supportsSeek());
     flush();
     // TODO: truncate m_readBuffer at the end
     parent()->truncate(size);
@@ -182,6 +183,7 @@ BufferedStream::flush()
 size_t
 BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 {
+    ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
     if (sanitySize == (size_t)~0)
         sanitySize = 2 * m_bufferSize;
     ++sanitySize;
@@ -212,6 +214,7 @@ BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 size_t
 BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFound)
 {
+    ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
     if (sanitySize == (size_t)~0)
         sanitySize = 2 * m_bufferSize;
     sanitySize += str.size();
@@ -242,6 +245,7 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
 void
 BufferedStream::unread(const Buffer &b, size_t len)
 {
+    ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
     Buffer tempBuffer;
     tempBuffer.copyIn(b, len);
     tempBuffer.copyIn(m_readBuffer);
