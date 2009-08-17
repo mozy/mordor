@@ -280,16 +280,16 @@ TEST_WITH_SUITE(BufferedStream, errorOnWrite)
     // Exception swallowed; only 3 written to underlying stream (flush will
     // either clear buffer, or expose error); partial write guarantee still
     // enforced
-    TEST_ASSERT_EQUAL(bufferedStream->write("hello", 5), 5u);
+    TEST_ASSERT_EQUAL(bufferedStream->write("helloworld", 10), 10u);
     TEST_ASSERT_EQUAL(baseStream->size(), 3);
-    TEST_ASSERT_EQUAL(bufferedStream->size(), 5);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 10);
 
     TEST_ASSERT_EXCEPTION(bufferedStream->flush(), std::runtime_error);
     TEST_ASSERT_EQUAL(baseStream->size(), 3);
-    TEST_ASSERT_EQUAL(bufferedStream->size(), 5);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 10);
 
     testStream->onWrite(NULL);
     bufferedStream->flush();
-    TEST_ASSERT_EQUAL(baseStream->size(), 5);
-    TEST_ASSERT_EQUAL(bufferedStream->size(), 5);
+    TEST_ASSERT_EQUAL(baseStream->size(), 10);
+    TEST_ASSERT_EQUAL(bufferedStream->size(), 10);
 }
