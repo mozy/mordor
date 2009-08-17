@@ -686,3 +686,84 @@ TEST_WITH_SUITE(HTTPClient, simpleRequestPartialWrites)
     // Verify response characteristics
     TEST_ASSERT(!request->hasResponseBody());
 }
+
+static void pipelinedRequests(HTTP::ClientConnection::ptr conn,
+    int &sequence)
+{
+    TEST_ASSERT_EQUAL(++sequence, 2);
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+
+    HTTP::ClientRequest::ptr request2 = conn->request(requestHeaders);
+    TEST_ASSERT_EQUAL(++sequence, 4);
+
+    TEST_ASSERT_EQUAL(request2->response().status.status, HTTP::NOT_FOUND);
+    TEST_ASSERT_EQUAL(++sequence, 6);
+}
+
+TEST_WITH_SUITE(HTTPClient, pipelinedRequests)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool;
+    int sequence = 1;
+
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n"
+        "HTTP/1.1 404 Not Found\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+    requestHeaders.entity.contentLength = 7;
+
+    HTTP::ClientRequest::ptr request1 = conn->request(requestHeaders);
+    
+    // Start the second request, which will yield to us when it can't use the conn
+    Fiber::ptr request2Fiber(new Fiber(boost::bind(&pipelinedRequests,
+        conn, boost::ref(sequence))));
+    pool.schedule(request2Fiber);
+    pool.dispatch();
+    TEST_ASSERT_EQUAL(++sequence, 3);
+
+    TEST_ASSERT_EQUAL(request1->requestStream()->write("hello\r\n"), 7u);
+    request1->requestStream()->close();
+
+    // Nothing has been sent to the server yet (it's buffered up), because
+    // there is a pipelined request waiting, and we only flush after
+    // the last request
+    TEST_ASSERT_EQUAL(requestStream->size(), 0);
+
+    pool.dispatch();
+    TEST_ASSERT_EQUAL(++sequence, 5);
+    
+    // Both requests have been sent now (flush()es after last request)
+    TEST_ASSERT(requestStream->buffer() ==
+        "PUT / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "Content-Length: 7\r\n"
+        "\r\n"
+        "hello\r\n"
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    
+    // Nothing has been read yet
+    TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+
+    TEST_ASSERT_EQUAL(request1->response().status.status, HTTP::OK);
+    pool.dispatch();
+    TEST_ASSERT_EQUAL(++sequence, 7);
+
+    // Both responses have been read now
+    TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), responseStream->size());
+}
