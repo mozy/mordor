@@ -20,7 +20,8 @@ public:
     void close(CloseType type = BOTH)
     {
         try {
-            parent()->close(type);
+            if (ownsParent())
+                parent()->close(type);
         } catch (...) {
             if (notifyOnException)
                 notifyOnException();

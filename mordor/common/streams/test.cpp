@@ -11,7 +11,8 @@ TestStream::close(CloseType type)
 {
     if (m_onClose)
         m_onClose(type);
-    parent()->close(type);
+    if (ownsParent())
+        parent()->close(type);
 }
 
 size_t

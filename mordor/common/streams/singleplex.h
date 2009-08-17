@@ -29,10 +29,12 @@ public:
 
     void close(CloseType type = BOTH)
     {
-        if (m_type == READ && type & Stream::READ) {
-            parent()->close(Stream::READ);
-        } else if (m_type == WRITE && type & Stream::WRITE) {
-            parent()->close(Stream::WRITE);
+        if (ownsParent()) {
+            if (m_type == READ && type & Stream::READ) {
+                parent()->close(Stream::READ);
+            } else if (m_type == WRITE && type & Stream::WRITE) {
+                parent()->close(Stream::WRITE);
+            }
         }
     }
 

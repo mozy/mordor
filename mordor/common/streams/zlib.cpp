@@ -96,7 +96,8 @@ ZlibStream::close(CloseType type)
     if ((type == READ && supportsWrite()) ||
         (type == WRITE && supportsRead()) ||
         m_closed) {
-        parent()->close(type);
+        if (ownsParent())
+            parent()->close(type);
         return;
     }
 
@@ -107,7 +108,8 @@ ZlibStream::close(CloseType type)
         deflateEnd(&m_strm);
     }
     m_closed = true;
-    parent()->close(type);
+    if (ownsParent())
+        parent()->close(type);
 }
 
 size_t

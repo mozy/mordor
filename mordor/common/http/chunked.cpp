@@ -32,7 +32,8 @@ HTTP::ChunkedStream::close(Stream::CloseType type)
     if (supportsWrite() && (type & Stream::WRITE)) {
         parent()->write("0\r\n", 3);
     }
-    parent()->close(type);
+    if (ownsParent())
+        parent()->close(type);
 }
 
 size_t
