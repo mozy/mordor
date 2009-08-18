@@ -87,9 +87,11 @@ HandleStream::read(Buffer &b, size_t len)
     if (m_ioManager) {
         if (!ret &&
             (GetLastError() == ERROR_HANDLE_EOF || GetLastError() == ERROR_BROKEN_PIPE)) {
+            m_ioManager->unregisterEvent(&m_readEvent);
             return 0;
         }
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
+            m_ioManager->unregisterEvent(&m_readEvent);
             throwExceptionFromLastError();
         }
         Scheduler::getThis()->yieldTo();
@@ -137,6 +139,7 @@ HandleStream::write(const Buffer &b, size_t len)
     BOOL ret = WriteFile(m_hFile, buf.start(), (DWORD)len, &written, overlapped);
     if (m_ioManager) {
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
+            m_ioManager->unregisterEvent(&m_writeEvent);
             throwExceptionFromLastError();
         }
         Scheduler::getThis()->yieldTo();

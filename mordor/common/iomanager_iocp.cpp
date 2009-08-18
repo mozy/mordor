@@ -30,6 +30,21 @@ IOManagerIOCP::registerFile(HANDLE handle)
     }
 }
 
+
+
+void
+IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
+{
+    ASSERT(e);
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
+            m_pendingEvents.find(&e->overlapped);
+        ASSERT(it != m_pendingEvents.end());
+        m_pendingEvents.erase(it);
+    }
+}
+
 void
 IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
 {

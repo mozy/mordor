@@ -36,6 +36,8 @@ public:
     ~IOManagerIOCP() { stop(); }
 
     void registerFile(HANDLE handle);
+    // Only use if the async call failed, not for cancelling it
+    void unregisterEvent(AsyncEventIOCP *e);
     void registerEvent(AsyncEventIOCP *e);
     void cancelEvent(HANDLE hFile, AsyncEventIOCP *e);
 
