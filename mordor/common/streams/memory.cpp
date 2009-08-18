@@ -56,9 +56,8 @@ MemoryStream::writeInternal(const T &b, size_t len)
     } else {
         // write at offset
         Buffer original(m_original);
-        // Re-copy in to orig all data before the write
-        m_original.clear();
-        m_original.copyIn(original, m_offset);
+        // Truncate orig to all data before the write
+        m_original.truncate(m_offset);
         original.consume(m_offset);
         // copy in the write, advancing the stream pointer
         m_original.copyIn(b, len);
@@ -66,7 +65,7 @@ MemoryStream::writeInternal(const T &b, size_t len)
         if (m_offset < size) {
             original.consume(len);
             // Copy in any remaining data beyond the write
-            m_original.copyIn(original, original.readAvailable());
+            m_original.copyIn(original);
             // Reset our read buffer to the current stream pos
             m_read.clear();
             m_read.copyIn(original);
@@ -136,12 +135,11 @@ MemoryStream::truncate(long long size)
 
     if (currentSize == (size_t)size) {
     } else if (currentSize > (size_t)size) {
-        Buffer original(m_original);
-        m_original.clear();
-        m_original.copyIn(original, (size_t)size);
-        m_read.clear();
-        m_read.copyIn(m_original, (size_t)size);
-        m_read.consume(std::min(m_offset, (size_t)size));
+        m_original.truncate((size_t)size);
+        if (m_offset > (size_t)size)
+            m_read.clear();
+        else
+            m_read.truncate((size_t)size - m_offset);
     } else {
         size_t needed = (size_t)size - currentSize;
         m_original.reserve(needed);
@@ -168,7 +166,7 @@ MemoryStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
     if (result != -1)
         return result;
     if (throwIfNotFound)
-        throw std::runtime_error("Unexpected EOF");
+        throw UnexpectedEofError();
     return ~0;
 }
 
@@ -179,6 +177,6 @@ MemoryStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFou
     if (result != -1)
         return result;
     if (throwIfNotFound)
-        throw std::runtime_error("Unexpected EOF");
+        throw UnexpectedEofError();
     return ~0;
 }
