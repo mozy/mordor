@@ -23,6 +23,8 @@ BufferedStream::close(CloseType type)
 {
     if ((type & WRITE) && m_writeBuffer.readAvailable())
         flush();
+    if (type & READ)
+        m_readBuffer.clear();
     if (ownsParent())
         parent()->close(type);
 }
