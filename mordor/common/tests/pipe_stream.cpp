@@ -70,8 +70,8 @@ TEST_WITH_SUITE(PipeStream, readerClosed)
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
 
     pipe.second->close();
-    TEST_ASSERT_EXCEPTION(pipe.first->write("a"), ConnectionAbortedException);
-    TEST_ASSERT_EXCEPTION(pipe.first->flush(), ConnectionAbortedException);
+    TEST_ASSERT_EXCEPTION(pipe.first->write("a"), BrokenPipeException);
+    TEST_ASSERT_EXCEPTION(pipe.first->flush(), BrokenPipeException);
 }
 
 TEST_WITH_SUITE(PipeStream, readerGone)
@@ -79,8 +79,8 @@ TEST_WITH_SUITE(PipeStream, readerGone)
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
 
     pipe.second.reset();
-    TEST_ASSERT_EXCEPTION(pipe.first->write("a"), ConnectionResetException);
-    TEST_ASSERT_EXCEPTION(pipe.first->flush(), ConnectionResetException);
+    TEST_ASSERT_EXCEPTION(pipe.first->write("a"), BrokenPipeException);
+    TEST_ASSERT_EXCEPTION(pipe.first->flush(), BrokenPipeException);
 }
 
 TEST_WITH_SUITE(PipeStream, writerGone)
@@ -89,7 +89,7 @@ TEST_WITH_SUITE(PipeStream, writerGone)
 
     pipe.first.reset();
     Buffer read;
-    TEST_ASSERT_EXCEPTION(pipe.second->read(read, 10), ConnectionResetException);
+    TEST_ASSERT_EXCEPTION(pipe.second->read(read, 10), BrokenPipeException);
 }
 
 static void blockingRead(Stream::ptr stream, int &sequence)
@@ -194,7 +194,7 @@ TEST_WITH_SUITE(PipeStream, closeOnBlockingWriter)
 
     TEST_ASSERT_EQUAL(pipe.second->write("hello"), 5u);
     TEST_ASSERT_EQUAL(++sequence, 2);
-    TEST_ASSERT_EXCEPTION(pipe.second->write("world"), ConnectionAbortedException);
+    TEST_ASSERT_EXCEPTION(pipe.second->write("world"), BrokenPipeException);
     TEST_ASSERT_EQUAL(++sequence, 5);
 }
 
@@ -222,7 +222,7 @@ TEST_WITH_SUITE(PipeStream, destructOnBlockingReader)
     pool.schedule(f);
 
     Buffer output;
-    TEST_ASSERT_EXCEPTION(pipe.second->read(output, 10), ConnectionResetException);
+    TEST_ASSERT_EXCEPTION(pipe.second->read(output, 10), BrokenPipeException);
     TEST_ASSERT_EQUAL(++sequence, 4);
 }
 
@@ -251,7 +251,7 @@ TEST_WITH_SUITE(PipeStream, destructOnBlockingWriter)
 
     TEST_ASSERT_EQUAL(pipe.second->write("hello"), 5u);
     TEST_ASSERT_EQUAL(++sequence, 2);
-    TEST_ASSERT_EXCEPTION(pipe.second->write("world"), ConnectionResetException);
+    TEST_ASSERT_EXCEPTION(pipe.second->write("world"), BrokenPipeException);
     TEST_ASSERT_EQUAL(++sequence, 5);
 }
 

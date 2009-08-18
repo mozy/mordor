@@ -104,7 +104,7 @@ PipeStream::read(Buffer &b, size_t len)
         boost::mutex::scoped_lock lock(*m_mutex);
         ASSERT(!(m_closed & READ));
         if (m_otherStream.expired() && !(m_otherClosed & WRITE)) {
-            throw ConnectionResetException();
+            throw BrokenPipeException();
         }
         size_t avail = m_readBuffer.readAvailable();
         if (avail > 0) {
@@ -143,11 +143,11 @@ PipeStream::write(const Buffer &b, size_t len)
             boost::mutex::scoped_lock lock(*m_mutex);
             ASSERT(!(m_closed & WRITE));
             if (m_otherStream.expired()) {
-                throw ConnectionResetException();
+                throw BrokenPipeException();
             }
             PipeStream::ptr otherStream(m_otherStream);
             if (otherStream->m_closed & READ) {
-                throw ConnectionAbortedException();            
+                throw BrokenPipeException();            
             }
 
             if (otherStream->m_readBuffer.readAvailable() + len <= m_bufferSize) {
@@ -174,11 +174,11 @@ PipeStream::flush()
         {
             boost::mutex::scoped_lock lock(*m_mutex);
             if (m_otherStream.expired()) {
-                throw ConnectionResetException();
+                throw BrokenPipeException();
             }
             PipeStream::ptr otherStream(m_otherStream);
             if (otherStream->m_closed & READ) {
-                throw ConnectionAbortedException();            
+                throw BrokenPipeException();            
             }
 
             if (otherStream->m_readBuffer.readAvailable() == 0) {
