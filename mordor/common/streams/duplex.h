@@ -29,8 +29,8 @@ public:
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
-    bool supportsFind() { return m_readParent->supportsFind(); }
-    bool supportsUnread() { return m_readParent->supportsUnread(); }
+    bool supportsFind() { return m_readParent.get() && m_readParent->supportsFind(); }
+    bool supportsUnread() { return m_readParent.get() && m_readParent->supportsUnread(); }
 
     void close(CloseType type = BOTH)
     {
@@ -40,18 +40,42 @@ public:
             if (type & WRITE)
                 m_writeParent->close(WRITE);
         }
+        if (type & READ)
+            m_readParent.reset();
+        if (type & WRITE)
+            m_writeParent.reset();
     }
-    size_t read(Buffer &b, size_t len) { return m_readParent->read(b, len); }
-    size_t write(const Buffer &b, size_t len) { return m_writeParent->write(b, len); }
-    void flush() { m_writeParent->flush(); }
-    size_t find(char delim) { return m_readParent->find(delim); }
+    size_t read(Buffer &b, size_t len)
+    {
+        if (!m_readParent.get()) throw BrokenPipeException();
+        return m_readParent->read(b, len);
+    }
+    size_t write(const Buffer &b, size_t len)
+    {
+        if (!m_writeParent.get()) throw BrokenPipeException();
+        return m_writeParent->write(b, len);
+    }
+    void flush()
+    {
+        if (!m_writeParent.get()) throw BrokenPipeException();
+        m_writeParent->flush();
+    }
+    size_t find(char delim)
+    {
+        if (!m_readParent.get()) throw BrokenPipeException();
+        return m_readParent->find(delim);
+    }
     size_t find(const std::string &str, size_t sanitySize = ~0, bool throwOnNotFound = true)
-    { return m_readParent->find(str, sanitySize, throwOnNotFound); }
-    void unread(const Buffer &b, size_t len) { return m_readParent->unread(b, len); }
+    {
+        if (!m_readParent.get()) throw BrokenPipeException();
+        return m_readParent->find(str, sanitySize, throwOnNotFound);
+    }
+    void unread(const Buffer &b, size_t len) {
+        if (!m_readParent.get()) throw BrokenPipeException();
+        return m_readParent->unread(b, len);
+    }
 
 protected:
-    void readParent(Stream::ptr parent) { m_readParent = parent; }
-    void writeParent(Stream::ptr parent) { m_writeParent = parent; }
     void ownsParents(bool own) { m_own = own; }
 
 private:
