@@ -35,9 +35,9 @@ public:
     void close(CloseType type = BOTH)
     {
         if (m_own) {
-            if (type & READ)
+            if ((type & READ) && m_readParent)
                 m_readParent->close(READ);
-            if (type & WRITE)
+            if ((type & WRITE) && m_writeParent)
                 m_writeParent->close(WRITE);
         }
         if (type & READ)
