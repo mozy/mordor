@@ -59,6 +59,7 @@ namespace HTTP
         Response m_response;
         EntityHeaders m_requestTrailer, m_responseTrailer;
         bool m_requestDone, m_requestInFlight, m_responseHeadersDone, m_responseDone, m_responseInFlight, m_cancelled, m_aborted;
+        bool m_badTrailer, m_incompleteTrailer;
         Stream::ptr m_requestStream, m_responseStream;
         Multipart::ptr m_requestMultipart, m_responseMultipart;
     };
@@ -85,7 +86,7 @@ namespace HTTP
         std::list<ClientRequest::ptr>::iterator m_currentRequest;
         std::set<ClientRequest::ptr> m_waitingResponses;
         bool m_allowNewRequests;
-        std::runtime_error m_requestException, m_responseException;
+        bool m_priorRequestFailed, m_priorResponseFailed, m_priorResponseClosed;
 
         void invariant() const;
     };

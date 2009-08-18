@@ -19,8 +19,9 @@ HTTP::ClientConnection::ClientConnection(Stream::ptr stream)
 : Connection(stream),
   m_currentRequest(m_pendingRequests.end()),
   m_allowNewRequests(true),
-  m_requestException(""),
-  m_responseException("")
+  m_priorRequestFailed(false),
+  m_priorResponseFailed(false),
+  m_priorResponseClosed(false)
 {}
 
 HTTP::ClientRequest::ptr
@@ -115,7 +116,7 @@ HTTP::ClientConnection::scheduleNextResponse(ClientRequest::ptr request)
 void
 HTTP::ClientConnection::scheduleAllWaitingRequests()
 {
-    ASSERT(*m_requestException.what() || *m_responseException.what());
+    ASSERT(m_priorRequestFailed || m_priorResponseFailed || m_priorResponseClosed);
     // ASSERT(m_mutex.locked());
     
     for (std::list<ClientRequest::ptr>::iterator it(m_currentRequest);
@@ -138,20 +139,19 @@ HTTP::ClientConnection::scheduleAllWaitingRequests()
 void
 HTTP::ClientConnection::scheduleAllWaitingResponses()
 {
-    ASSERT(*m_responseException.what());
+    ASSERT(m_priorResponseFailed || m_priorResponseClosed);
     // ASSERT(m_mutex.locked());
     for (std::list<ClientRequest::ptr>::iterator it(m_pendingRequests.begin());
-        it != m_currentRequest;
-        ++it) {
+        it != m_currentRequest;) {
         std::set<ClientRequest::ptr>::iterator waiting = m_waitingResponses.find(*it);
         if (waiting != m_waitingResponses.end()) {
             (*it)->m_scheduler->schedule((*it)->m_fiber);            
             it = m_pendingRequests.erase(it);
-            --it;
             m_waitingResponses.erase(waiting);
         } else if ((*it)->m_cancelled) {
             it = m_pendingRequests.erase(it);
-            --it;
+        } else {
+            ++it;
         }
     }
 }
@@ -207,7 +207,9 @@ HTTP::ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &re
   m_responseDone(false),
   m_responseInFlight(false),
   m_cancelled(false),
-  m_aborted(false)
+  m_aborted(false),
+  m_badTrailer(false),
+  m_incompleteTrailer(false)
 {
     m_scheduler = Scheduler::getThis();
     m_fiber = Fiber::getThis();
@@ -241,7 +243,7 @@ HTTP::ClientRequest::requestMultipart()
     ASSERT(!m_requestStream);
     HTTP::StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
     if (it == m_request.entity.contentType.parameters.end()) {
-        throw std::runtime_error("No boundary with multipart");
+        throw MissingMultipartBoundaryError();
     }
     m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
@@ -300,6 +302,12 @@ HTTP::ClientRequest::responseStream()
 const HTTP::EntityHeaders &
 HTTP::ClientRequest::responseTrailer() const
 {
+    if (m_badTrailer)
+        throw BadMessageHeaderException();
+    if (m_incompleteTrailer)
+        throw IncompleteMessageHeaderException();
+    ASSERT(m_responseDone);
+    ASSERT(!m_response.general.transferEncoding.empty());
     return m_responseTrailer;
 }
 
@@ -312,7 +320,7 @@ HTTP::ClientRequest::responseMultipart()
     ASSERT(m_response.entity.contentType.type == "multipart");
     HTTP::StringMap::const_iterator it = m_response.entity.contentType.parameters.find("boundary");
     if (it == m_response.entity.contentType.parameters.end()) {
-        throw std::runtime_error("No boundary with multipart");
+        throw MissingMultipartBoundaryError();
     }
     m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
@@ -349,8 +357,7 @@ HTTP::ClientRequest::cancel(bool abort)
     m_aborted = true;
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
     m_conn->invariant();
-    (m_requestDone ? m_conn->m_responseException : m_conn->m_requestException) =
-        std::runtime_error("No more requests are possible because a prior request failed");
+    (m_requestDone ? m_conn->m_priorResponseFailed : m_conn->m_priorRequestFailed) = true;
     m_conn->scheduleAllWaitingRequests();
     m_conn->m_stream->close(Stream::READ);
     if (m_requestDone) {
@@ -458,15 +465,12 @@ HTTP::ClientRequest::doRequest()
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (!m_conn->m_allowNewRequests) {
-            throw std::runtime_error("No more requests are possible because the connection was voluntarily closed");
-        }
-        if (*m_conn->m_responseException.what()) {
-            throw m_conn->m_requestException;
-        }
-        if (*m_conn->m_requestException.what()) {
-            throw m_conn->m_requestException;
-        }
+        if (!m_conn->m_allowNewRequests)
+            throw ConnectionVoluntarilyClosedException();
+        if (m_conn->m_priorResponseClosed)
+            throw ConnectionVoluntarilyClosedException();
+        if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseFailed)
+            throw PriorRequestFailedException();
         firstRequest = m_conn->m_currentRequest == m_conn->m_pendingRequests.end();
         m_conn->m_pendingRequests.push_back(shared_from_this());
         if (firstRequest) {
@@ -485,12 +489,10 @@ HTTP::ClientRequest::doRequest()
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (*m_conn->m_responseException.what()) {
-            throw m_conn->m_requestException;
-        }
-        if (*m_conn->m_requestException.what()) {
-            throw m_conn->m_requestException;
-        }
+        if (m_conn->m_priorResponseClosed)
+            throw ConnectionVoluntarilyClosedException();
+        if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseFailed)
+            throw PriorRequestFailedException();
         m_requestInFlight = true;
     }
 
@@ -508,7 +510,7 @@ HTTP::ClientRequest::doRequest()
     } catch(...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        m_conn->m_requestException = std::runtime_error("No more requests are possible because a prior request failed");
+        m_conn->m_priorRequestFailed = true;
         m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
         m_conn->scheduleAllWaitingRequests();        
         throw;
@@ -526,13 +528,16 @@ HTTP::ClientRequest::ensureResponse()
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (*m_conn->m_responseException.what()) {
+        if (m_conn->m_priorResponseFailed || m_conn->m_priorResponseClosed) {
             std::list<ClientRequest::ptr>::iterator it;
             it = std::find(m_conn->m_pendingRequests.begin(), m_conn->m_pendingRequests.end(),
                 shared_from_this());
             ASSERT(it != m_conn->m_pendingRequests.end());             
             m_conn->m_pendingRequests.erase(it);
-            throw m_conn->m_responseException;
+            if (m_conn->m_priorResponseClosed)
+                throw ConnectionVoluntarilyClosedException();
+            else
+                throw PriorRequestFailedException();
         }
         ASSERT(!m_conn->m_pendingRequests.empty());
         ClientRequest::ptr request = m_conn->m_pendingRequests.front();
@@ -551,21 +556,20 @@ HTTP::ClientRequest::ensureResponse()
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (*m_conn->m_responseException.what()) {
-            throw m_conn->m_responseException;
-        }
+        if (m_conn->m_priorResponseClosed)
+            throw ConnectionVoluntarilyClosedException();
+        if (m_conn->m_priorResponseFailed)
+            throw PriorRequestFailedException();
     }
 
     try {
         // Read and parse headers
         ResponseParser parser(m_response);
         parser.run(m_conn->m_stream);
-        if (parser.error()) {
-            throw std::runtime_error("Error parsing response");
-        }
-        if (!parser.complete()) {
+        if (parser.error())
+            throw BadMessageHeaderException();
+        if (!parser.complete())
             throw IncompleteMessageHeaderException();
-        }
         LOG_TRACE(g_log) << m_response;
 
         bool close = false;
@@ -579,7 +583,7 @@ HTTP::ClientRequest::ensureResponse()
                 close = true;
             }
         } else {
-            throw std::runtime_error("Unrecognized HTTP server version.");
+            throw BadMessageHeaderException();
         }
         ParameterizedList &transferEncoding = m_response.general.transferEncoding;
         // Remove identity from the Transfer-Encodings
@@ -593,22 +597,22 @@ HTTP::ClientRequest::ensureResponse()
         }
         if (!transferEncoding.empty()) {
             if (stricmp(transferEncoding.back().value.c_str(), "chunked") != 0) {
-                throw std::runtime_error("The last transfer-coding is not chunked.");
+                throw InvalidTransferEncodingException("The last transfer-coding is not chunked.");
             }
             for (ParameterizedList::const_iterator it(transferEncoding.begin());
                 it + 1 != transferEncoding.end();
                 ++it) {
                 if (stricmp(it->value.c_str(), "chunked") == 0) {
-                    throw std::runtime_error("chunked transfer-coding applied multiple times");
+                    throw InvalidTransferEncodingException("chunked transfer-coding applied multiple times");
                 } else if (stricmp(it->value.c_str(), "deflate") == 0 ||
                     stricmp(it->value.c_str(), "gzip") == 0 ||
                     stricmp(it->value.c_str(), "x-gzip") == 0) {
                     // Supported transfer-codings
                 } else if (stricmp(it->value.c_str(), "compress") == 0 ||
                     stricmp(it->value.c_str(), "x-compress") == 0) {
-                    throw std::runtime_error("compress transfer-coding is unsupported");
+                    throw InvalidTransferEncodingException("compress transfer-coding is unsupported");
                 } else {
-                    throw std::runtime_error("Unrecognized transfer-coding: " + it->value);
+                    throw InvalidTransferEncodingException("Unrecognized transfer-coding: " + it->value);
                 }
             }
         }
@@ -625,7 +629,7 @@ HTTP::ClientRequest::ensureResponse()
         if (close) {
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
-            m_conn->m_responseException = std::runtime_error("No more requests are possible because the connection was voluntarily closed");
+            m_conn->m_priorResponseClosed = true;
             m_conn->scheduleAllWaitingRequests();
             m_conn->scheduleAllWaitingResponses();
         }
@@ -642,7 +646,7 @@ HTTP::ClientRequest::ensureResponse()
     } catch (...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        m_conn->m_responseException = std::runtime_error("No more requests are possible because a prior request failed");
+        m_conn->m_priorResponseFailed = true;
         ASSERT(m_conn->m_pendingRequests.front() == shared_from_this());
         m_conn->m_pendingRequests.pop_front();
         m_conn->scheduleAllWaitingRequests();
@@ -679,15 +683,15 @@ HTTP::ClientRequest::responseDone()
         // Read and parse the trailer
         TrailerParser parser(m_responseTrailer);
         parser.run(m_conn->m_stream);
-        // TODO: these exceptions should be thrown when you try to access
-        // responseTrailer(), not in here, because this is a callback
         if (parser.error()) {
             cancel(true);
-            throw std::runtime_error("Error parsing trailer");
+            m_badTrailer = true;
+            return;
         }
         if (!parser.complete()) {
             cancel(true);
-            throw IncompleteMessageHeaderException();
+            m_incompleteTrailer = true;
+            return;
         }
         LOG_TRACE(g_log) << m_responseTrailer;
     }

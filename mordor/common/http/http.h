@@ -19,20 +19,54 @@
 #define strnicmp strncasecmp
 #endif
 
+#ifdef DELETE
+#undef DELETE
+#endif
+
 class HTTPException : public std::runtime_error
 {
 public:
-    HTTPException() : std::runtime_error("") {}
+    HTTPException()
+        : std::runtime_error("")
+    {}
+    HTTPException(const std::string &message)
+        : std::runtime_error(message)
+    {}
 };
 
 namespace HTTP
 {
     class IncompleteMessageHeaderException : public HTTPException
-    { };
+    {};
 
-#ifdef DELETE
-#undef DELETE
-#endif
+    // Unparseable
+    class BadMessageHeaderException : public HTTPException
+    {};
+
+    class PriorRequestFailedException : public HTTPException
+    {};
+
+    class ConnectionVoluntarilyClosedException : public PriorRequestFailedException
+    {};
+
+    // Logically doesn't make sense
+    class InvalidMessageHeaderException : public HTTPException
+    {
+    public:
+        InvalidMessageHeaderException() {}
+        InvalidMessageHeaderException(const std::string &message)
+            : HTTPException(message)
+        {}
+    };
+
+    class InvalidTransferEncodingException : public InvalidMessageHeaderException
+    {
+    public:
+        InvalidTransferEncodingException(const std::string &message)
+            : InvalidMessageHeaderException(message)
+        {}
+    };
+
     enum Method
     {
         GET,

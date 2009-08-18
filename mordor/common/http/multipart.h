@@ -14,6 +14,9 @@
 
 class BodyPart;
 
+class MissingMultipartBoundaryError : public HTTPException
+{};
+
 class Multipart : public boost::enable_shared_from_this<Multipart>, boost::noncopyable
 {
     friend class BodyPart;

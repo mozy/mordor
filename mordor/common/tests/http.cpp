@@ -367,7 +367,13 @@ TEST_WITH_SUITE(HTTPClient, emptyRequest)
         "\r\n");
     TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
     TEST_ASSERT(!request->hasResponseBody());
+#ifdef DEBUG
     TEST_ASSERT_ASSERTED(request->responseStream());
+#endif
+
+    // No more requests possible, because we used Connection: close
+    TEST_ASSERT_EXCEPTION(conn->request(requestHeaders),
+        HTTP::ConnectionVoluntarilyClosedException);
 }
 
 TEST_WITH_SUITE(HTTPClient, pipelinedSynchronousRequests)
@@ -394,15 +400,22 @@ TEST_WITH_SUITE(HTTPClient, pipelinedSynchronousRequests)
         "\r\n");
     TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
 
+    requestHeaders.general.connection.insert("close");
     HTTP::ClientRequest::ptr request2 = conn->request(requestHeaders);
     TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
         "\r\n"
         "GET / HTTP/1.1\r\n"
+        "Connection: close\r\n"
         "Host: garbage\r\n"
         "\r\n");
     TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+
+    // No more requests possible, even pipelined ones, because we used
+    // Connection: close
+    TEST_ASSERT_EXCEPTION(conn->request(requestHeaders),
+        HTTP::ConnectionVoluntarilyClosedException);
 
     TEST_ASSERT_EQUAL(request1->response().status.status, HTTP::OK);
     // Can't test for if half of the stream has been consumed here, because it
@@ -766,4 +779,163 @@ TEST_WITH_SUITE(HTTPClient, pipelinedRequests)
 
     // Both responses have been read now
     TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), responseStream->size());
+}
+
+TEST_WITH_SUITE(HTTPClient, missingTrailerResponse)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "0\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(request->hasResponseBody());
+    TEST_ASSERT(request->responseStream()->supportsRead());
+    TEST_ASSERT(!request->responseStream()->supportsWrite());
+    TEST_ASSERT(!request->responseStream()->supportsSeek());
+    TEST_ASSERT(!request->responseStream()->supportsSize());
+    TEST_ASSERT(!request->responseStream()->supportsTruncate());
+    TEST_ASSERT(!request->responseStream()->supportsFind());
+    TEST_ASSERT(!request->responseStream()->supportsUnread());
+
+    // Trailer hasn't been read yet
+#ifdef DEBUG
+    TEST_ASSERT_ASSERTED(request->responseTrailer());
+#endif
+
+    // Verify response itself
+    MemoryStream responseBody;
+    transferStream(request->responseStream(), responseBody);
+    TEST_ASSERT(responseBody.buffer() == "");
+
+    // Missing trailer
+    TEST_ASSERT_EXCEPTION(request->responseTrailer(), HTTP::IncompleteMessageHeaderException);
+}
+
+TEST_WITH_SUITE(HTTPClient, badTrailerResponse)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "0\r\n"
+        "Content-Type: garbage\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(request->hasResponseBody());
+    TEST_ASSERT(request->responseStream()->supportsRead());
+    TEST_ASSERT(!request->responseStream()->supportsWrite());
+    TEST_ASSERT(!request->responseStream()->supportsSeek());
+    TEST_ASSERT(!request->responseStream()->supportsSize());
+    TEST_ASSERT(!request->responseStream()->supportsTruncate());
+    TEST_ASSERT(!request->responseStream()->supportsFind());
+    TEST_ASSERT(!request->responseStream()->supportsUnread());
+
+    // Trailer hasn't been read yet
+#ifdef DEBUG
+    TEST_ASSERT_ASSERTED(request->responseTrailer());
+#endif
+
+    // Verify response itself
+    MemoryStream responseBody;
+    transferStream(request->responseStream(), responseBody);
+    TEST_ASSERT(responseBody.buffer() == "");
+
+    // Missing trailer
+    TEST_ASSERT_EXCEPTION(request->responseTrailer(), HTTP::BadMessageHeaderException);
+}
+
+TEST_WITH_SUITE(HTTPClient, cancelRequestSingle)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+    requestHeaders.entity.contentLength = 5;
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    // Nothing has been flushed yet
+    TEST_ASSERT_EQUAL(requestStream->size(), 0);
+    request->cancel();
+    TEST_ASSERT_EQUAL(requestStream->size(), 0);
+
+    TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), HTTP::PriorRequestFailedException);
+}
+
+TEST_WITH_SUITE(HTTPClient, cancelResponseSingle)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 5\r\n"
+        "\r\n"
+        "hello")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+
+    HTTP::ClientRequest::ptr request1 = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(request1->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(request1->hasResponseBody());
+
+    HTTP::ClientRequest::ptr request2 = conn->request(requestHeaders);
+
+    request1->cancel(true);
+
+    TEST_ASSERT_EXCEPTION(request2->ensureResponse(), HTTP::PriorRequestFailedException);
+
+    // Verify response can't be read (exception; when using a real socket it might let us
+    // read to EOF)
+    MemoryStream responseBody;
+    TEST_ASSERT_EXCEPTION(transferStream(request1->responseStream(), responseBody),
+        BrokenPipeException);
+
+    TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), HTTP::PriorRequestFailedException);
 }
