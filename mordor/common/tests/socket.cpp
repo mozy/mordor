@@ -18,12 +18,14 @@ TEST_WITH_SUITE(Socket, acceptTimeout)
     std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
     TEST_ASSERT(!addresses.empty());
     // TODO: random port
-    Socket::ptr s = addresses.front()->createSocket(ioManager);
-    s->receiveTimeout(1000000);
-    s->bind(addresses.front());
-    s->listen();
+    Socket::ptr listen = addresses.front()->createSocket(ioManager);
+    listen->receiveTimeout(1000000);
+    unsigned int opt = 1;
+    listen->setOption(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    listen->bind(addresses.front());
+    listen->listen();
     unsigned long long start = TimerManager::now();
-    TEST_ASSERT_EXCEPTION(s->accept(), OperationAbortedException);
+    TEST_ASSERT_EXCEPTION(listen->accept(), OperationAbortedException);
     TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
 }
 
@@ -35,6 +37,8 @@ TEST_WITH_SUITE(Socket, receiveTimeout)
     TEST_ASSERT(!addresses.empty());
     // TODO: random port
     Socket::ptr listen = addresses.front()->createSocket(ioManager);
+    unsigned int opt = 1;
+    listen->setOption(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     listen->bind(addresses.front());
     listen->listen();
     Socket::ptr connect = addresses.front()->createSocket(ioManager);
@@ -44,4 +48,114 @@ TEST_WITH_SUITE(Socket, receiveTimeout)
     unsigned long long start = TimerManager::now();
     TEST_ASSERT_EXCEPTION(connect->receive(&buf, 1), OperationAbortedException);
     TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
+}
+
+class DummyException
+{};
+
+template <class Exception>
+static void testShutdownException(bool send, bool shutdown, bool otherEnd)
+{
+    Fiber::ptr mainfiber(new Fiber());
+    IOManager ioManager;
+    std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
+    TEST_ASSERT(!addresses.empty());
+    // TODO: random port
+    Socket::ptr listen = addresses.front()->createSocket(ioManager);
+    unsigned int opt = 1;
+    listen->setOption(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    listen->bind(addresses.front());
+    listen->listen();
+    Socket::ptr connect = addresses.front()->createSocket(ioManager);
+    connect->connect(addresses.front());
+    Socket::ptr accept = listen->accept();
+
+    Socket::ptr socketToClose = otherEnd ? accept : connect;
+    if (shutdown)
+        socketToClose->shutdown(SHUT_RDWR);
+    else
+        socketToClose->close();
+
+    if (send) {
+        if (otherEnd) {
+            try {
+                connect->sendTimeout(100);
+                while (true) {
+                    TEST_ASSERT_EQUAL(connect->send("abc", 3), 3u);
+                }
+            } catch (Exception) {
+            }
+        } else {
+            TEST_ASSERT_EXCEPTION(connect->send("abc", 3), Exception);
+        }
+    } else {
+        unsigned char readBuf[3];
+        if (otherEnd) {
+            TEST_ASSERT_EQUAL(connect->receive(readBuf, 3), 0u);
+        } else {
+#ifndef WINDOWS
+            // Silly non-Windows letting you receive after you told it no more
+            if (shutdown) {
+                TEST_ASSERT_EQUAL(connect->receive(readBuf, 3), 0u);
+            } else
+#endif
+            {
+                TEST_ASSERT_EXCEPTION(connect->receive(readBuf, 3), Exception);
+            }
+        }
+    }
+}
+
+TEST_WITH_SUITE(Socket, sendAfterClose)
+{
+    testShutdownException<BadHandleException>(true, false, false);
+}
+
+TEST_WITH_SUITE(Socket, receiveAfterClose)
+{
+    testShutdownException<BadHandleException>(false, false, false);
+}
+
+TEST_WITH_SUITE(Socket, sendAfterShutdown)
+{
+    testShutdownException<BrokenPipeException>(true, true, false);
+}
+
+TEST_WITH_SUITE(Socket, receiveAfterShutdown)
+{
+    testShutdownException<BrokenPipeException>(false, true, false);
+}
+
+TEST_WITH_SUITE(Socket, sendAfterCloseOtherEnd)
+{
+#ifdef WINDOWS
+    testShutdownException<ConnectionAbortedException>(true, false, true);
+#else
+    testShutdownException<BrokenPipeException>(true, false, true);
+#endif
+}
+
+TEST_WITH_SUITE(Socket, receiveAfterCloseOtherEnd)
+{
+    // Exception is not used; this is special cased in testShutdownException
+    testShutdownException<DummyException>(false, false, true);
+}
+
+TEST_WITH_SUITE(Socket, sendAfterShutdownOtherEnd)
+{
+#ifdef WINDOWS
+    testShutdownException<ConnectionAbortedException>(true, false, true);
+#elif defined(BSD)
+    // BSD lets you write to the socket, but it blocks, so we have to check
+    // for it blocking
+    testShutdownException<OperationAbortedException>(true, true, true);
+#else
+    testShutdownException<BrokenPipeException>(true, false, true);
+#endif
+}
+
+TEST_WITH_SUITE(Socket, receiveAfterShutdownOtherEnd)
+{
+    // Exception is not used; this is special cased in testShutdownException
+    testShutdownException<DummyException>(false, true, true);
 }

@@ -88,6 +88,13 @@ Socket::Socket(int family, int type, int protocol)
     if (m_sock == -1) {
         throwExceptionFromLastError();
     }
+#ifdef OSX
+    unsigned int opt = 1;
+    if (setsockopt(m_sock, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt)) == -1) {
+        ::closesocket(m_sock);
+        throwExceptionFromLastError();
+    }
+#endif
 }
 
 Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
@@ -111,6 +118,14 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
     }
 #else
     if (fcntl(m_sock, F_SETFL, O_NONBLOCK) == -1) {
+        ::closesocket(m_sock);
+        throwExceptionFromLastError();
+    }
+#endif
+#ifdef OSX
+    unsigned int opt = 1;
+    if (setsockopt(m_sock, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt)) == -1) {
+        ::closesocket(m_sock);
         throwExceptionFromLastError();
     }
 #endif
@@ -330,6 +345,10 @@ Socket::close()
 size_t
 Socket::send(const void *buf, size_t len, int flags)
 {
+#if !defined(WINDOWS) && !defined(OSX)
+    flags |= MSG_NOSIGNAL;
+#endif
+
 #ifdef WINDOWS
     if (m_ioManager) {
         if (len > 0xffffffff)
@@ -389,6 +408,10 @@ Socket::send(const void *buf, size_t len, int flags)
 size_t
 Socket::send(const iovec *bufs, size_t len, int flags)
 {
+#if !defined(WINDOWS) && !defined(OSX)
+    flags |= MSG_NOSIGNAL;
+#endif
+
 #ifdef WINDOWS
     if (m_ioManager) {
         ptr self = shared_from_this();

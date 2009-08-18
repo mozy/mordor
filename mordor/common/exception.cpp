@@ -43,10 +43,15 @@ void throwExceptionFromLastError()
 void throwExceptionFromLastError(unsigned int lastError)
 {
     switch (lastError) {
+        case ERROR_INVALID_HANDLE:
+        case WSAENOTSOCK:
+            throw BadHandleException();
         case ERROR_FILE_NOT_FOUND:
             throw FileNotFoundException();
         case ERROR_OPERATION_ABORTED:
             throw OperationAbortedException();
+        case WSAESHUTDOWN:
+            throw BrokenPipeException();
         default:
             throwSocketException(lastError);
             throw Win32Error(lastError);
@@ -74,10 +79,14 @@ void throwExceptionFromLastError()
 void throwExceptionFromLastError(int error)
 {
     switch (error) {
+        case EBADF:
+            throw BadHandleException();
         case ENOENT:
             throw FileNotFoundException();
         case ECANCELED:
             throw OperationAbortedException();
+        case EPIPE:
+            throw BrokenPipeException();
         default:
             throwSocketException(error);
             throw ErrnoError(error);

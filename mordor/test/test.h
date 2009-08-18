@@ -151,7 +151,8 @@ NO_SERIALIZE_BARE(std::vector<T>)
 #define TEST_ASSERT_EXCEPTION(code, exception)                                  \
     try {                                                                       \
         code;                                                                   \
-        assertion(__FILE__, __LINE__, "Expected " #exception " from " #code);   \
+        assertion(__FILE__, __LINE__, "Expected " +                             \
+            std::string(typeid(exception).name()) + " from " #code);            \
     } catch (exception) {                                                       \
     }
 
