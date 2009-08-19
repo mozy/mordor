@@ -1,15 +1,13 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "buffer.h"
 
 #include <string.h>
 #include <algorithm>
 
 #include "mordor/common/assert.h"
-
-#ifdef min
-#undef min
-#endif
 
 Buffer::SegmentData::SegmentData()
 {

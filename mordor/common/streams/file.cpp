@@ -1,5 +1,7 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "file.h"
 
 #include "mordor/common/exception.h"

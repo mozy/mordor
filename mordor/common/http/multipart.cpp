@@ -1,5 +1,7 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "multipart.h"
 
 #include <boost/bind.hpp>
@@ -117,10 +119,6 @@ Multipart::partDone()
 {
     m_currentPart.reset();
 }
-
-#ifdef min
-#undef min
-#endif
 
 class BodyPartStream : public MutatingFilterStream
 {

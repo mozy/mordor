@@ -1,12 +1,10 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "limited.h"
 
 #include <stdexcept>
-
-#ifdef min
-#undef min
-#endif
 
 LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
 : MutatingFilterStream(parent, own),

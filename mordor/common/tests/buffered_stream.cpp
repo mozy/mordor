@@ -1,5 +1,7 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "mordor/common/streams/memory.h"
 #include "mordor/common/streams/buffered.h"
 #include "mordor/common/streams/test.h"
@@ -218,10 +220,10 @@ TEST_WITH_SUITE(BufferedStream, findSanityChecks)
     TEST_ASSERT_EXCEPTION(bufferedStream->find('\n', 20), UnexpectedEofError);
     TEST_ASSERT_EXCEPTION(bufferedStream->find("\r\n", 20), UnexpectedEofError);
 
-    TEST_ASSERT_EQUAL(bufferedStream->find('\n', ~0, false), ~0u);
-    TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", ~0, false), ~0u);
-    TEST_ASSERT_EQUAL(bufferedStream->find('\n', 20, false), ~0u);
-    TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", 20, false), ~0u);
+    TEST_ASSERT_EQUAL(bufferedStream->find('\n', ~0, false), (size_t)~0);
+    TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", ~0, false), (size_t)~0);
+    TEST_ASSERT_EQUAL(bufferedStream->find('\n', 20, false), (size_t)~0);
+    TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", 20, false), (size_t)~0);
 }
 
 static void throwRuntimeError()

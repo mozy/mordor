@@ -1,15 +1,10 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "buffered.h"
 
 #include "mordor/common/exception.h"
-
-#ifdef min
-#undef min
-#endif
-#ifdef max
-#undef max
-#endif
 
 BufferedStream::BufferedStream(Stream::ptr parent, bool own)
 : FilterStream(parent, own)

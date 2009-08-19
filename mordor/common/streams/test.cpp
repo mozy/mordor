@@ -1,10 +1,8 @@
 // Copyright (c) 2009 - Decho Corp.
 
-#include "test.h"
+#include "mordor/common/pch.h"
 
-#ifdef min
-#undef min
-#endif
+#include "test.h"
 
 void
 TestStream::close(CloseType type)

@@ -49,4 +49,8 @@
 #define DEBUG
 #endif
 
+#ifdef MSVC
+#define USE_PCH
+#endif
+
 #endif

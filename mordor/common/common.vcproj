@@ -56,10 +56,11 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../.."
-				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="mordor/common/pch.h"
 				WarningLevel="3"
 				WarnAsError="true"
 				DebugInformationFormat="4"
@@ -126,10 +127,11 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../.."
-				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="mordor/common/pch.h"
 				WarningLevel="3"
 				WarnAsError="true"
 				DebugInformationFormat="3"
@@ -197,9 +199,10 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../.."
-				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="mordor/common/pch.h"
 				WarningLevel="3"
 				WarnAsError="true"
 				DebugInformationFormat="3"
@@ -268,9 +271,10 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../.."
-				PreprocessorDefinitions="_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="mordor/common/pch.h"
 				WarningLevel="3"
 				WarnAsError="true"
 				DebugInformationFormat="3"
@@ -486,6 +490,42 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\pch.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\streams\pipe.cpp"
 				>
 			</File>
@@ -503,10 +543,6 @@
 			</File>
 			<File
 				RelativePath=".\http\server.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\socket.cpp"
 				>
 			</File>
 			<File
@@ -544,6 +580,10 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\streams\ssl.cpp"
@@ -712,11 +752,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\parser.h"
+				>
+			</File>
+			<File
 				RelativePath=".\xml\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
+				RelativePath=".\pch.h"
 				>
 			</File>
 			<File

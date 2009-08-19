@@ -1,15 +1,13 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "pipe.h"
 
 #include <boost/thread/mutex.hpp>
 
 #include "mordor/common/exception.h"
 #include "mordor/common/fiber.h"
-
-#ifdef min
-#undef min
-#endif
 
 class PipeStream : public Stream
 {

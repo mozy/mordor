@@ -20,10 +20,6 @@
 class Logger;
 class LogSink;
 
-#ifdef ERROR
-#undef ERROR
-#endif
-
 class Log
 {
 private:

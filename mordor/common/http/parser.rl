@@ -1,17 +1,12 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "mordor/common/http/parser.h"
 
 #include <string>
 
 #include "mordor/common/version.h"
-
-#ifdef ABSOLUTE
-#undef ABSOLUTE
-#endif
-#ifdef RELATIVE
-#undef RELATIVE
-#endif
 
 #ifdef WINDOWS
 #define strtoull _strtoui64

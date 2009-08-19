@@ -1,5 +1,7 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "mordor/common/streams/memory.h"
 #include "mordor/common/version.h"
 #include "mordor/test/test.h"

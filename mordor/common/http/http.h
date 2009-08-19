@@ -19,10 +19,6 @@
 #define strnicmp strncasecmp
 #endif
 
-#ifdef DELETE
-#undef DELETE
-#endif
-
 class HTTPException : public std::runtime_error
 {
 public:
@@ -133,13 +129,6 @@ namespace HTTP
     const char *reason(Status s);
 
     std::string quote(const std::string &str);
-
-#ifdef major
-#undef major
-#endif
-#ifdef minor
-#undef minor
-#endif
 
     struct Version
     {

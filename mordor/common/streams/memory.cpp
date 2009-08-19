@@ -1,12 +1,10 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "memory.h"
 
 #include <stdexcept>
-
-#ifdef min
-#undef min
-#endif
 
 MemoryStream::MemoryStream()
 : m_offset(0)

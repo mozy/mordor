@@ -56,13 +56,6 @@ struct URI
     };
     Authority authority;
 
-#ifdef ABSOLUTE
-#undef ABSOLUTE
-#endif
-#ifdef RELATIVE
-#undef RELATIVE
-#endif
-
     struct Path
     {
         enum Type {

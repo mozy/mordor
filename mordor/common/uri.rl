@@ -3,19 +3,14 @@
    ragel uri.rl -G2 -o uri.cpp
 */
 
+#include "mordor/common/pch.h"
+
 #include "mordor/common/uri.h"
 
 #include <sstream>
 
 #include "mordor/common/ragel.h"
 #include "mordor/common/version.h"
-
-#ifdef ABSOLUTE
-#undef ABSOLUTE
-#endif
-#ifdef RELATIVE
-#undef RELATIVE
-#endif
 
 static const std::string unreserved("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~");
 static const std::string sub_delims("!$&'()*+,;=");

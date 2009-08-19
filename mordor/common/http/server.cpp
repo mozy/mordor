@@ -1,5 +1,7 @@
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/pch.h"
+
 #include "server.h"
 
 #include <boost/bind.hpp>
@@ -652,10 +654,6 @@ HTTP::respondError(ServerRequest::ptr request, Status status, const std::string 
         request->finish();
     }
 }
-
-#ifdef min
-#undef min
-#endif
 
 void
 HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
