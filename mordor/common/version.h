@@ -53,4 +53,8 @@
 #define USE_PCH
 #endif
 
+#ifdef GCC
+#define USE_PCH
+#endif
+
 #endif

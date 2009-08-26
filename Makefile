@@ -123,7 +123,7 @@ BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 # remove the no-unused-variable.  this was added when moving to gcc4 since
 # it started complaining about our logger variables.  Same with
 # no-strict-aliasing
-CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD -DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET)
+CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET)
 CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
 
 RLCODEGEN	:= $(shell which rlcodegen rlgen-cd 2>/dev/null)
@@ -189,6 +189,12 @@ endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(AS) $(ASFLAGS) $(MACH_TARGET) -o $@ $<
 
+%.gch: %
+ifeq ($(Q),@)
+	@echo c++ $<
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
 #
 # Include the dependency information generated during the previous compile
@@ -236,11 +242,17 @@ lcov:
 
 TESTDATA_COMMON := $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/mordor/common/tests/data/*))
 
+COMMONTESTSOBJECTS := $(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/common/tests/*.cpp))
+
+
+$(COMMONTESTSOBJECTS): mordor/common/pch.h.gch
+
 mordor/common/tests/run_tests:							\
-	$(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/common/tests/*.cpp))\
+	$(COMMONTESTSOBJECTS)							\
 	mordor/test/libmordortest.a						\
         mordor/common/libmordor.a						\
-	$(TESTDATA_COMMON)
+	$(TESTDATA_COMMON)							\
+	mordor/common/pch.h.gch
 ifeq ($(Q),@)
 	@echo ld $@
 endif
@@ -248,16 +260,30 @@ endif
 	$(Q)cp -Ru $(SRCDIR)/mordor/common/tests/data/* mordor/common/tests/data/ 2>/dev/null || true
 	$(COMPLINK)
 
+KALYPSOTESTSOBJECTS := $(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/kalypso/tests/*.cpp))
+
+$(KALYPSOTESTSOBJECTS): mordor/common/pch.h.gch
+
 mordor/kalypso/tests/run_tests:							\
-	$(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/kalypso/tests/*.cpp))\
+	$(KALYPSOTESTSOBJECTS)							\
         mordor/kalypso/libkalypso.a						\
 	mordor/test/libmordortest.a						\
-        mordor/common/libmordor.a
+        mordor/common/libmordor.a						\
+	mordor/common/pch.h.gch
 ifeq ($(Q),@)
 	@echo ld $@
 endif
 	$(COMPLINK)
 
+
+EXAMPLEOBJECTS :=								\
+	mordor/common/examples/cat.o						\
+	mordor/common/examples/echoserver.o					\
+	mordor/common/examples/simpleclient.o					\
+	mordor/common/examples/wget.o						\
+	mordor/triton/client/list_main.o
+
+$(EXAMPLEOBJECTS): mordor/common/pch.h.gch
 
 mordor/common/examples/cat: mordor/common/examples/cat.o			\
 	mordor/common/libmordor.a
@@ -318,7 +344,7 @@ endif
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 
-mordor/common/libmordor.a:							\
+LIBMORDOROBJECTS := 								\
 	mordor/common/exception.o						\
 	mordor/common/fiber.o							\
 	mordor/common/fiber_$(ARCH)$(UNDERSCORE).o				\
@@ -358,43 +384,64 @@ mordor/common/libmordor.a:							\
 	mordor/common/timer.o							\
 	mordor/common/uri.o							\
 	mordor/common/xml/xml_parser.o
+
+$(LIBMORDOROBJECTS): mordor/common/pch.h.gch
+
+mordor/common/libmordor.a: $(LIBMORDOROBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
-mordor/triton/client/libtritonclient.a:						\
+LIBTRITONCLIENTOBJECTS :=							\
 	mordor/triton/client/client.o						\
 	mordor/triton/client/get.o						\
 	mordor/triton/client/list.o						\
 	mordor/triton/client/put.o
+
+
+$(LIBTRITONCLIENTOBJECTS): mordor/common/pch.h.gch
+
+mordor/triton/client/libtritonclient.a:	$(LIBTRITONCLIENTOBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
-mordor/kalypso/libkalypso.a:							\
+LIBKALYPSOOBJECTS := 								\
 	mordor/kalypso/vfs/helpers.o						\
 	mordor/kalypso/vfs/manager.o						\
 	mordor/kalypso/vfs/vfs.o
+
+$(LIBKALYPSOOBJECTS): mordor/common/pch.h.gch
+
+mordor/kalypso/libkalypso.a: $(LIBKALYPSOOBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
-mordor/test/libmordortest.a:							\
-	mordor/test/test.o							\
+LIBMORDORTESTOBJECTS :=								\
+ 	mordor/test/test.o							\
 	mordor/test/stdoutlistener.o
+
+$(LIBMORDORTESTOBJECTS): mordor/common/pch.h.gch
+
+mordor/test/libmordortest.a: $(LIBMORDORTESTOBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)$(AR) ruc $@ $(filter %.o,$?)
 
-mordor/kalypso/vfs/triton/libtritonvfs.a:					\
+LIBTRITONVFSOBJECTS :=								\
 	mordor/kalypso/vfs/triton/container.o					\
 	mordor/kalypso/vfs/triton/transfer.o					\
 	mordor/kalypso/vfs/triton/vfs.o						\
 	mordor/kalypso/vfs/triton/user.o
+
+$(LIBTRITONVFSOBJECTS): mordor/common/pch.h.gch
+
+mordor/kalypso/vfs/triton/libtritonvfs.a: $(LIBTRITONVFSOBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif

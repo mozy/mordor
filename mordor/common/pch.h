@@ -29,6 +29,9 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+
+#undef major
+#undef minor
 #endif
 
 #ifdef BSD
@@ -48,8 +51,6 @@
 
 #undef min
 #undef max
-#undef major
-#undef minor
 #undef DELETE
 #undef ABSOLUTE
 #undef RELATIVE
