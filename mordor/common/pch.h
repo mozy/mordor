@@ -16,6 +16,7 @@
 #include <fcntl.h>
 
 #ifdef POSIX
+#include <sys/types.h>
 #include <netdb.h>
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
@@ -27,7 +28,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/types.h>
 #include <sys/uio.h>
 
 #undef major
