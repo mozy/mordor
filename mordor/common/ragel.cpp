@@ -16,7 +16,7 @@ RagelParser::run(const void *buf, size_t len)
 
     exec();
 
-    ASSERT(!(complete() && error()));
+    ASSERT(!(final() && error()));
     return len - (pe - p);
 }
 
@@ -42,11 +42,14 @@ RagelParser::run(const Buffer& b)
     for (size_t i = 0; i < bufs.size(); ++i) {
         size_t consumed = run(bufs[i].iov_base, bufs[i].iov_len, false);
         total += consumed;
+        if (consumed < bufs[i].iov_len) {
+            ASSERT(final() || error());
+            return total;
+        }
         if (error() || complete())
-            break;
+            return total;
     }
-    if (!error() && !complete())
-        run(NULL, 0, true);
+    run(NULL, 0, true);
     return total;
 }
 
@@ -56,7 +59,8 @@ RagelParser::run(Stream &stream)
     unsigned long long total = 0;
     init();
     Buffer b;
-    while (!complete() && !error()) {
+    bool inferredComplete = false;
+    while (!error() && !complete() && !inferredComplete) {
         // TODO: limit total amount read
         size_t read = stream.read(b, 65536);
         if (read == 0) {
@@ -68,6 +72,11 @@ RagelParser::run(Stream &stream)
                 size_t consumed = run(bufs[i].iov_base, bufs[i].iov_len, false);
                 total += consumed;
                 b.consume(consumed);
+                if (consumed < bufs[i].iov_len) {
+                    ASSERT(final() || error());
+                    inferredComplete = true;
+                    break;
+                }
                 if (error() || complete())
                     break;
             }
@@ -89,7 +98,6 @@ RagelParser::init()
 size_t
 RagelParser::run(const void *buf, size_t len, bool isEof)
 {
-    ASSERT(!complete());
     ASSERT(!error());
 
     size_t markSpot = ~0;

@@ -33,7 +33,7 @@ namespace HTTP
         RequestParser(Request& request);
 
         void init();
-        bool complete() const;
+        bool final() const;
         bool error() const;
     protected:
         void exec();
@@ -52,7 +52,7 @@ namespace HTTP
         ResponseParser(Response& response);
 
         void init();
-        bool complete() const;
+        bool final() const;
         bool error() const;
     protected:
         void exec();
@@ -71,7 +71,7 @@ namespace HTTP
         TrailerParser(EntityHeaders& entity);
 
         void init();
-        bool complete() const;
+        bool final() const;
         bool error() const;
     protected:
         void exec();

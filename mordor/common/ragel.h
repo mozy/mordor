@@ -24,7 +24,8 @@ public:
     virtual void init();
     size_t run(const void *buf, size_t len, bool isEof);
 
-    virtual bool complete() const = 0;
+    virtual bool complete() const { return final(); }
+    virtual bool final() const = 0;
     virtual bool error() const = 0;
 
 protected:

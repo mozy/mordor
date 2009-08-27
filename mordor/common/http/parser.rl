@@ -496,7 +496,7 @@ HTTP::RequestParser::init()
 }
 
 bool
-HTTP::RequestParser::complete() const
+HTTP::RequestParser::final() const
 {
     return cs >= http_request_parser_first_final;
 }
@@ -585,7 +585,7 @@ HTTP::ResponseParser::init()
 }
 
 bool
-HTTP::ResponseParser::complete() const
+HTTP::ResponseParser::final() const
 {
     return cs >= http_response_parser_first_final;
 }
@@ -634,7 +634,7 @@ HTTP::TrailerParser::init()
 }
 
 bool
-HTTP::TrailerParser::complete() const
+HTTP::TrailerParser::final() const
 {
     return cs >= http_trailer_parser_first_final;
 }

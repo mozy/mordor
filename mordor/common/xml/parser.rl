@@ -143,7 +143,7 @@ XMLParser::exec()
 }
 
 bool
-XMLParser::complete() const
+XMLParser::final() const
 {
     return cs >= xml_parser_first_final;
 }

@@ -22,7 +22,8 @@ public:
     {}
 
     void init();
-    bool complete() const;
+    bool complete() const { return false; }
+    bool final() const;
     bool error() const;
 
 protected:

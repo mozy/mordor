@@ -251,6 +251,11 @@ protected:
 public:
     bool complete() const
     {
+        return false;
+    }
+
+	bool final() const
+	{    
         return cs >= uri_parser_proper_first_final;
     }
 
@@ -300,6 +305,11 @@ protected:
 public:
     bool complete() const
     {
+        return false;
+    }
+
+    bool final() const
+    {
         return cs >= uri_path_parser_first_final;
     }
 
@@ -329,14 +339,30 @@ URI::URI(const char *uri)
     *this = uri;
 }
 
+URI::URI(const Buffer &uri)
+{
+    reset();
+    *this = uri;
+}
+
 URI&
 URI::operator=(const std::string& uri)
 {
     URIParser parser(*this);
     parser.run(uri);
-    if (parser.error() || !parser.complete())
+    if (parser.error() || !parser.final())
         throw std::invalid_argument("uri");
     return *this;    
+}
+
+URI&
+URI::operator=(const Buffer &uri)
+{
+    URIParser parser(*this);
+    parser.run(uri);
+    if (parser.error() || !parser.final())
+        throw std::invalid_argument("uri");
+    return *this;  
 }
 
 void
@@ -424,7 +450,7 @@ URI::Path::operator=(const std::string& path)
 {
     URIPathParser parser(*this);
     parser.run(path);
-    if (parser.error() || !parser.complete())
+    if (parser.error() || !parser.final())
         throw std::invalid_argument("uri");
     return *this;
 }

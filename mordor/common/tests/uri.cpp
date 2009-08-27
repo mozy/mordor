@@ -182,3 +182,11 @@ TEST_WITH_SUITE(URI, transform)
     
     TEST_ASSERT_EQUAL(URI::transform(base, URI("http:g")), URI("http:g"));
 }
+
+TEST_WITH_SUITE(URI, serializeCompleteOnBlockBoundary)
+{
+    Buffer b("http://abc/");
+    b.copyIn("more");
+    URI uri(b);
+    TEST_ASSERT_EQUAL(URI(b), "http://abc/more");
+}
