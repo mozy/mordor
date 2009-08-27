@@ -16,10 +16,16 @@ BufferedStream::BufferedStream(Stream::ptr parent, bool own)
 void
 BufferedStream::close(CloseType type)
 {
-    if ((type & WRITE) && m_writeBuffer.readAvailable())
-        flush();
     if (type & READ)
         m_readBuffer.clear();
+    try {
+        if ((type & WRITE) && m_writeBuffer.readAvailable())
+            flush();
+    } catch (...) {
+        if (ownsParent())
+            parent()->close(type);
+        throw;
+    }
     if (ownsParent())
         parent()->close(type);
 }
