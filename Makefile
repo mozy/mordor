@@ -137,7 +137,7 @@ ifeq ($(RAGEL_MAJOR), 6)
     endif
 endif
 
-LIBS := -lboost_thread -lssl -lcrypto -lz
+LIBS := -lboost_thread -lboost_regex -lssl -lcrypto -lz
 
 # compile and link a binary.  this *must* be defined using = and not :=
 # because it uses target variables

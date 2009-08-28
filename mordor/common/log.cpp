@@ -6,8 +6,78 @@
 
 #include <iostream>
 
+#include <boost/bind.hpp>
+#include <boost/regex.hpp>
+
 #include "assert.h"
+#include "config.h"
 #include "fiber.h"
+
+static void enableLoggers();
+
+static ConfigVar<std::string>::ptr g_logFatal =
+    Config::lookup("log.fatalmask", std::string(".*"), "Regex of loggers to enable fatal for.");
+static ConfigVar<std::string>::ptr g_logError =
+    Config::lookup("log.errormask", std::string(".*"), "Regex of loggers to enable error for.");
+static ConfigVar<std::string>::ptr g_logWarn =
+    Config::lookup("log.warnmask", std::string(".*"), "Regex of loggers to enable warning for.");
+static ConfigVar<std::string>::ptr g_logInfo =
+    Config::lookup("log.infomask", std::string(""), "Regex of loggers to enable info for.");
+static ConfigVar<std::string>::ptr g_logTrace =
+    Config::lookup("log.tracemask", std::string(""), "Regex of loggers to enable trace for.");
+static ConfigVar<std::string>::ptr g_logVerbose =
+    Config::lookup("log.verbosemask", std::string(""), "Regex of loggers to enable verbose for.");
+
+struct LogInitializer
+{
+    LogInitializer()
+    {
+        g_logFatal->monitor(&enableLoggers);
+        g_logError->monitor(&enableLoggers);
+        g_logWarn->monitor(&enableLoggers);
+        g_logInfo->monitor(&enableLoggers);
+        g_logTrace->monitor(&enableLoggers);
+        g_logVerbose->monitor(&enableLoggers);
+    }
+};
+static LogInitializer g_init;
+
+static void enableLogger(Logger::ptr logger, const boost::regex &fatalRegex,
+    const boost::regex &errorRegex, const boost::regex &warnRegex,
+    const boost::regex &infoRegex, const boost::regex &traceRegex,
+    const boost::regex &verboseRegex)
+{
+    Log::Level level = Log::NONE;
+    if (boost::regex_match(logger->name(), fatalRegex))
+        level = Log::FATAL;
+    if (boost::regex_match(logger->name(), errorRegex))
+        level = Log::ERROR;
+    if (boost::regex_match(logger->name(), warnRegex))
+        level = Log::WARNING;
+    if (boost::regex_match(logger->name(), infoRegex))
+        level = Log::INFO;
+    if (boost::regex_match(logger->name(), traceRegex))
+        level = Log::TRACE;
+    if (boost::regex_match(logger->name(), verboseRegex))
+        level = Log::VERBOSE;
+
+    if (logger->level() != level)
+        logger->level(level, false);
+}
+
+static void enableLoggers()
+{
+    boost::regex fatalRegex("^" + g_logFatal->val() + "$");
+    boost::regex errorRegex("^" + g_logError->val() + "$");
+    boost::regex warnRegex("^" + g_logWarn->val() + "$");
+    boost::regex infoRegex("^" + g_logInfo->val() + "$");
+    boost::regex traceRegex("^" + g_logTrace->val() + "$");
+    boost::regex verboseRegex("^" + g_logVerbose->val() + "$");
+    Log::visit(boost::bind(&enableLogger, _1, boost::cref(fatalRegex),
+        boost::cref(errorRegex), boost::cref(warnRegex),
+        boost::cref(infoRegex), boost::cref(traceRegex),
+        boost::cref(verboseRegex)));
+}
 
 void
 StdoutLogSink::log(const std::string &logger, tid_t thread,
@@ -74,6 +144,24 @@ Logger::ptr Log::lookup(const std::string &name)
 }
 
 void
+Log::visit(boost::function<void (boost::shared_ptr<Logger>)> dg)
+{
+    std::list<Logger::ptr> toVisit;
+    toVisit.push_back(m_rootRef);
+    while (!toVisit.empty())
+    {
+        Logger::ptr cur = toVisit.front();
+        toVisit.pop_front();
+        dg(cur);
+        for (std::set<Logger::ptr, LoggerLess>::iterator it = cur->m_children.begin();
+            it != cur->m_children.end();
+            ++it) {
+            toVisit.push_back(*it);
+        }
+    }
+}
+
+void
 Log::addSink(LogSink::ptr sink)
 {
     if (!m_rootRef)
@@ -98,7 +186,8 @@ LoggerLess::operator ()(const Logger::ptr &lhs,
 
 
 Logger::Logger()
-: m_inheritSinks(false)
+: m_name("."),
+  m_inheritSinks(false)
 {}
 
 Logger::Logger(const std::string &name, Logger::ptr parent)
@@ -156,6 +245,7 @@ LogEvent::~LogEvent()
 }
 
 static const char *levelStrs[] = {
+    "NONE",
     "FATAL",
     "ERROR",
     "WARN",

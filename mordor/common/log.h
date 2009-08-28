@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
@@ -20,6 +21,8 @@
 class Logger;
 class LogSink;
 
+class LoggerIterator;
+
 class Log
 {
 private:
@@ -27,6 +30,7 @@ private:
 
 public:
     enum Level {
+        NONE,
         FATAL,
         ERROR,
         WARNING,
@@ -36,6 +40,8 @@ public:
     };
 
     static boost::shared_ptr<Logger> lookup(const std::string &name);
+
+    static void visit(boost::function<void (boost::shared_ptr<Logger>)> dg);
 
     static void addSink(boost::shared_ptr<LogSink> sink);
     static void clearSinks();
