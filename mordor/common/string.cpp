@@ -5,6 +5,7 @@
 #include "mordor/common/string.h"
 
 #include "assert.h"
+#include "exception.h"
 
 std::string
 base64decode(std::string src)
@@ -130,3 +131,39 @@ hexstringFromData(const void *data, size_t len)
     return result;
 }
 
+void
+replace(std::string &str, char find, char replaceWith)
+{
+    size_t index = str.find(find);
+    while (index != std::string::npos) {
+        str[index] = replaceWith;
+        index = str.find(find, index + 1);
+    }
+}
+
+#ifdef WINDOWS
+std::string toUtf8(const wchar_t *str, int len)
+{
+    std::string result;
+    if (len == 0)
+        return result;
+    if (len == -1)
+        len = wcslen(str);
+    int ret = WideCharToMultiByte(CP_UTF8, 0, str, len, NULL, 0, NULL, NULL);
+    if (ret == 0)
+        throwExceptionFromLastError();
+    result.resize(ret);
+    ret = WideCharToMultiByte(CP_UTF8, 0, str, len, &result[0], ret, NULL, NULL);
+    if (ret == 0)
+        throwExceptionFromLastError();
+    ASSERT(ret == result.size());
+
+    return result;
+}
+
+std::string toUtf8(const std::wstring &str)
+{
+    ASSERT(str.size() < 0x80000000u);
+    return toUtf8(str.c_str(), (int)str.size());
+}
+#endif

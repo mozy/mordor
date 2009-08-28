@@ -338,6 +338,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\config.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\connection.cpp"
 				>
 			</File>
@@ -546,6 +550,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -580,10 +588,6 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\socket.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\streams\ssl.cpp"
@@ -657,6 +661,10 @@
 			</File>
 			<File
 				RelativePath=".\http\client.h"
+				>
+			</File>
+			<File
+				RelativePath=".\config.h"
 				>
 			</File>
 			<File
@@ -752,11 +760,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
+				RelativePath=".\xml\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.h"
+				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
@@ -788,11 +796,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
@@ -837,6 +845,42 @@
 			</File>
 		</Filter>
 		<File
+			RelativePath=".\xml\parser.rl"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|x64"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
 			RelativePath=".\http\parser.rl"
 			>
 			<FileConfiguration
@@ -871,42 +915,6 @@
 					Name="Ragel"
 					OutputFileName="http\$(InputName).cpp"
 					CodeStyle="6"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath=".\xml\parser.rl"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug|x64"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|x64"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
 				/>
 			</FileConfiguration>
 		</File>

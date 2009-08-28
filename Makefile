@@ -355,6 +355,7 @@ endif
 
 
 LIBMORDOROBJECTS := 								\
+	mordor/common/config.o							\
 	mordor/common/exception.o						\
 	mordor/common/fiber.o							\
 	mordor/common/fiber_$(ARCH)$(UNDERSCORE).o				\

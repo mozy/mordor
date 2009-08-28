@@ -11,4 +11,11 @@ std::string base64encode(const void* src, size_t len);
 void hexstringFromData(const void *data, size_t len, void *output);
 std::string hexstringFromData(const void *data, size_t len);
 
+void replace(std::string &str, char find, char replaceWith);
+
+#ifdef WINDOWS
+std::string toUtf8(const wchar_t *str, int len = -1);
+std::string toUtf8(const std::wstring &str);
+#endif
+
 #endif
