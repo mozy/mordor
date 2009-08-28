@@ -8,10 +8,6 @@
 
 #include "mordor/common/version.h"
 
-#ifdef WINDOWS
-#define strtoull _strtoui64
-#endif
-
 // From uri.rl
 std::string unescape(const std::string& str);
 

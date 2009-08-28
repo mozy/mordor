@@ -5,6 +5,15 @@
 #define _WIN32_WINNT 0x0600
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_WARNINGS
+#define _CRT_NONSTDC_NO_WARNINGS
+
+#define strtoull _strtoui64
+
+#else
+
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
+
 #endif
 
 #define BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG

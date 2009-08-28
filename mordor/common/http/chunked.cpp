@@ -9,10 +9,6 @@
 
 #include "mordor/common/version.h"
 
-#ifdef WINDOWS
-#define strtoull _strtoui64
-#endif
-
 HTTP::InvalidChunkError::InvalidChunkError(const std::string &line,
                                            Type type)
 : m_line(line),

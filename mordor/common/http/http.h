@@ -11,14 +11,6 @@
 #include "mordor/common/uri.h"
 #include "mordor/common/version.h"
 
-#ifdef WINDOWS
-#define stricmp _stricmp
-#define strnicmp _strnicmp
-#else
-#define stricmp strcasecmp
-#define strnicmp strncasecmp
-#endif
-
 class HTTPException : public std::runtime_error
 {
 public:
