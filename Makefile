@@ -201,7 +201,7 @@ endif
 # phase (note that since the .d is generated during the compile, editing
 # the .cpp will cause it to be regenerated for the next build.)
 #
-DEPS := $(shell find $(SRCDIR) -name "*.d")
+DEPS := $(shell find $(CURDIR) -name "*.d")
 -include $(DEPS)
 
 # clean current build

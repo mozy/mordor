@@ -10,3 +10,4 @@ x64
 *.gcda
 *.gch
 lcov*
+obj*
