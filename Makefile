@@ -241,10 +241,13 @@ lcov:
 	$(Q)lcov -r lcov.info './*' -o lcov.info >/dev/null 2>&1
 	$(Q)mkdir -p lcov && cd lcov && genhtml ../lcov.info >/dev/null && tar -czf lcov.tgz *
 
-TESTDATA_COMMON := $(patsubst $(SRCDIR)/%,%,$(wildcard $(SRCDIR)/mordor/common/tests/data/*))
+TESTDATA_COMMON := $(patsubst $(SRCDIR)/%,$(CURDIR)/%,$(wildcard $(SRCDIR)/mordor/common/tests/data/*))
 
 COMMONTESTSOBJECTS := $(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/common/tests/*.cpp))
 
+$(TESTDATA_COMMON): $(CURDIR)/%: $(SRCDIR)/%
+	$(Q)mkdir -p $(@D)
+	$(Q)cp -f $< $@
 
 $(COMMONTESTSOBJECTS): mordor/common/pch.h.gch
 
@@ -257,8 +260,6 @@ mordor/common/tests/run_tests:							\
 ifeq ($(Q),@)
 	@echo ld $@
 endif
-	$(Q)mkdir -p mordor/common/tests/data
-	$(Q)cp -Ru $(SRCDIR)/mordor/common/tests/data/* mordor/common/tests/data/ 2>/dev/null || true
 	$(COMPLINK)
 
 KALYPSOTESTSOBJECTS := $(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/kalypso/tests/*.cpp))
