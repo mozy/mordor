@@ -30,6 +30,7 @@ public:
           m_dynamic(dynamic),
           m_automatic(automatic)
     {}
+    virtual ~ConfigVarBase() {}
 
     std::string name() const { return m_name; }
     std::string description() const { return m_description; }
