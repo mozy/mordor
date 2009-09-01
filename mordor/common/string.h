@@ -14,7 +14,7 @@ std::string hexstringFromData(const void *data, size_t len);
 void replace(std::string &str, char find, char replaceWith);
 
 #ifdef WINDOWS
-std::string toUtf8(const wchar_t *str, int len = -1);
+std::string toUtf8(const wchar_t *str, size_t len = ~0);
 std::string toUtf8(const std::wstring &str);
 #endif
 

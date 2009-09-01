@@ -142,18 +142,19 @@ replace(std::string &str, char find, char replaceWith)
 }
 
 #ifdef WINDOWS
-std::string toUtf8(const wchar_t *str, int len)
+std::string toUtf8(const wchar_t *str, size_t len)
 {
+    if (len == (size_t)~0)
+        len = wcslen(str);
+    ASSERT(len < 0x80000000u);
     std::string result;
     if (len == 0)
         return result;
-    if (len == -1)
-        len = wcslen(str);
-    int ret = WideCharToMultiByte(CP_UTF8, 0, str, len, NULL, 0, NULL, NULL);
+    int ret = WideCharToMultiByte(CP_UTF8, 0, str, (int)len, NULL, 0, NULL, NULL);
     if (ret == 0)
         throwExceptionFromLastError();
     result.resize(ret);
-    ret = WideCharToMultiByte(CP_UTF8, 0, str, len, &result[0], ret, NULL, NULL);
+    ret = WideCharToMultiByte(CP_UTF8, 0, str, (int)len, &result[0], ret, NULL, NULL);
     if (ret == 0)
         throwExceptionFromLastError();
     ASSERT(ret == result.size());
