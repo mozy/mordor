@@ -134,6 +134,18 @@ TEST_WITH_SUITE(Buffer, copyInMerge)
     TEST_ASSERT(b1 == "hello");
 }
 
+TEST_WITH_SUITE(Buffer, noSplitOnTruncate)
+{
+    Buffer b1;
+    b1.reserve(10);
+    b1.copyIn("hello");
+    b1.truncate(5);
+    TEST_ASSERT_GREATER_THAN_OR_EQUAL(b1.writeAvailable(), 5u);
+    b1.copyIn("world");
+    TEST_ASSERT_EQUAL(b1.segments(), 1u);
+    TEST_ASSERT(b1 == "helloworld");
+}
+
 TEST_WITH_SUITE(Buffer, copyConstructor)
 {
     Buffer buf1;

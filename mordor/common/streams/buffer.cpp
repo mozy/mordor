@@ -302,6 +302,8 @@ void
 Buffer::truncate(size_t len)
 {
     ASSERT(len <= readAvailable());
+    if (len == m_readAvailable)
+        return;
     // Split any mixed read/write bufs
     if (m_writeIt != m_segments.end() && m_writeIt->readAvailable() != 0) {
         m_segments.insert(m_writeIt, Segment(m_writeIt->readBuf()));
