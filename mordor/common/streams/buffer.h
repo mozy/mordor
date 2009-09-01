@@ -14,6 +14,7 @@ struct Buffer
 public:
     struct SegmentData
     {
+        friend struct Buffer;
     public:
         SegmentData();
         SegmentData(size_t length);
@@ -39,6 +40,8 @@ public:
 private:
     struct Segment
     {
+        friend struct Buffer;
+    public:
         Segment(size_t len);
         Segment(SegmentData);
 

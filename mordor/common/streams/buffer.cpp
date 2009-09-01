@@ -485,7 +485,8 @@ Buffer::copyIn(const Buffer &buf, size_t len)
             std::list<Segment>::iterator previousIt = m_writeIt;
             --previousIt;
             if ((unsigned char *)previousIt->readBuf().start() +
-                previousIt->readBuf().length() == it->readBuf().start()) {
+                previousIt->readBuf().length() == it->readBuf().start() &&
+                previousIt->m_data.m_array.get() == it->m_data.m_array.get()) {
                 ASSERT(previousIt->writeAvailable() == 0);
                 previousIt->extend(toConsume);
                 m_readAvailable += toConsume;
@@ -793,11 +794,13 @@ Buffer::invariant() const
             if (segment.writeAvailable() == 0 &&
                 next.readAvailable() != 0) {
                 ASSERT((const unsigned char*)segment.readBuf().start() +
-                    segment.readAvailable() != next.readBuf().start());
+                    segment.readAvailable() != next.readBuf().start() ||
+                    segment.m_data.m_array.get() != next.m_data.m_array.get());
             } else if (segment.writeAvailable() != 0 &&
                 next.readAvailable() == 0) {
-                ASSERT((const unsigned char*)segment.writeBuf().start () +
-                    segment.writeAvailable() != next.writeBuf().start());
+                ASSERT((const unsigned char*)segment.writeBuf().start() +
+                    segment.writeAvailable() != next.writeBuf().start() ||
+                    segment.m_data.m_array.get() != next.m_data.m_array.get());
             }
         }
     }
