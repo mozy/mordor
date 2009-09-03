@@ -333,6 +333,15 @@ ifeq ($(Q),@)
 endif
 	$(COMPLINK)
 
+mordor/triton/client/put: mordor/triton/client/put_main.o			\
+	mordor/triton/client/libtritonclient.a 					\
+	mordor/common/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(COMPLINK)
+
+
 mordor/common/http/http_parser.o: mordor/common/http/parser.cpp
 ifeq ($(Q),@)
 	@echo c++ $<

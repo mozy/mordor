@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "modror/common/config.h"
+#include "mordor/common/config.h"
 #include "mordor/common/version.h"
 #include "mordor/test/test.h"
 #include "mordor/test/stdoutlistener.h"
