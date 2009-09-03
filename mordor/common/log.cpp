@@ -12,8 +12,11 @@
 #include "assert.h"
 #include "config.h"
 #include "fiber.h"
+#include "mordor/common/streams/file.h"
 
 static void enableLoggers();
+static void enableStdoutLogging();
+static void enableFileLogging();
 
 static ConfigVar<std::string>::ptr g_logFatal =
     Config::lookup("log.fatalmask", std::string(".*"), "Regex of loggers to enable fatal for.");
@@ -28,6 +31,11 @@ static ConfigVar<std::string>::ptr g_logTrace =
 static ConfigVar<std::string>::ptr g_logVerbose =
     Config::lookup("log.verbosemask", std::string(""), "Regex of loggers to enable verbose for.");
 
+static ConfigVar<bool>::ptr g_logStdout =
+    Config::lookup("log.stdout", false, "Log to stdout");
+static ConfigVar<std::string>::ptr g_logFile =
+    Config::lookup("log.file", std::string(""), "Log to file");
+
 struct LogInitializer
 {
     LogInitializer()
@@ -38,6 +46,9 @@ struct LogInitializer
         g_logInfo->monitor(&enableLoggers);
         g_logTrace->monitor(&enableLoggers);
         g_logVerbose->monitor(&enableLoggers);
+
+        g_logFile->monitor(&enableFileLogging);
+        g_logStdout->monitor(&enableStdoutLogging);
     }
 };
 static LogInitializer g_init;
@@ -79,6 +90,38 @@ static void enableLoggers()
         boost::cref(verboseRegex)));
 }
 
+static void enableStdoutLogging()
+{
+    static LogSink::ptr stdoutSink;
+    bool log = g_logStdout->val();
+    if (stdoutSink.get() && !log) {
+        Log::removeSink(stdoutSink);
+        stdoutSink.reset();
+    } else if (!stdoutSink.get() && log) {
+        stdoutSink.reset(new StdoutLogSink());
+        Log::addSink(stdoutSink);
+    }
+}
+
+static void enableFileLogging()
+{
+    static LogSink::ptr fileSink;
+    std::string file = g_logFile->val();
+    if (fileSink.get() && file.empty()) {
+        Log::removeSink(fileSink);
+        fileSink.reset();
+    } else if (!file.empty()) {
+        if (fileSink.get()) {
+            if (static_cast<FileLogSink*>(fileSink.get())->file() == file)
+                return;
+            Log::removeSink(fileSink);
+            fileSink.reset();
+        }
+        fileSink.reset(new FileLogSink(file));
+        Log::addSink(fileSink);
+    }
+}
+
 void
 StdoutLogSink::log(const std::string &logger, tid_t thread,
     void *fiber, Log::Level level,
@@ -91,6 +134,30 @@ StdoutLogSink::log(const std::string &logger, tid_t thread,
         std::cout << level << " " << thread << " " << fiber << " "
             << logger << " " << str << std::endl;
     }
+}
+
+FileLogSink::FileLogSink(const std::string &file)
+{
+    m_stream.reset(new FileStream(file, FileStream::APPEND));
+    m_file = file;
+}
+
+void
+FileLogSink::log(const std::string &logger, tid_t thread,
+    void *fiber, Log::Level level,
+    const std::string &str, const char *file, int line)
+{
+    std::ostringstream os;
+    if (file) {
+        os << level << " " << thread << " " << fiber << " "
+            << logger << " " << file << ":" << line << " " << str << std::endl;
+    } else {
+        os << level << " " << thread << " " << fiber << " "
+            << logger << " " << str << std::endl;
+    }
+    std::string logline = os.str();
+    m_stream->write(logline.c_str(), logline.size());
+    m_stream->flush();
 }
 
 static void deleteNothing(Logger *l)
@@ -170,6 +237,14 @@ Log::addSink(LogSink::ptr sink)
 }
 
 void
+Log::removeSink(LogSink::ptr sink)
+{
+    if (!m_rootRef)
+        m_rootRef.reset(m_root = new Logger());
+    m_root->removeSink(sink);
+}
+
+void
 Log::clearSinks()
 {
     if (!m_rootRef)
@@ -208,6 +283,15 @@ Logger::level(Log::Level level, bool propagate)
             (*it)->level(level);
         }
     }
+}
+
+void
+Logger::removeSink(LogSink::ptr sink)
+{
+    std::list<LogSink::ptr>::iterator it =
+        std::find(m_sinks.begin(), m_sinks.end(), sink);
+    if (it != m_sinks.end())
+        m_sinks.erase(it);
 }
 
 void

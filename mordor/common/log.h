@@ -12,6 +12,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 
+#include "mordor/common/streams/stream.h"
 #include "version.h"
 
 #ifdef WINDOWS
@@ -45,6 +46,7 @@ public:
 
     static void addSink(boost::shared_ptr<LogSink> sink);
     static void clearSinks();
+    static void removeSink(boost::shared_ptr<LogSink> sink);
 
 private:
     static Logger *m_root;
@@ -76,6 +78,22 @@ public:
     void log(const std::string &logger, tid_t thread, void *fiber,
         Log::Level level, const std::string &str,
         const char *file, int line);
+};
+
+class FileLogSink : public LogSink
+{
+public:
+    FileLogSink(const std::string &file);
+
+    void log(const std::string &logger, tid_t thread, void *fiber,
+        Log::Level level, const std::string &str,
+        const char *file, int line);
+
+    std::string file() const { return m_file; }
+
+private:
+    std::string m_file;
+    Stream::ptr m_stream;
 };
 
 struct LogEvent
@@ -132,6 +150,7 @@ public:
     bool inheritSinks() const { return m_inheritSinks; }
     void inheritSinks(bool inherit) { m_inheritSinks = inherit; }
     void addSink(LogSink::ptr sink) { m_sinks.push_back(sink); }
+    void removeSink(LogSink::ptr sink);
     void clearSinks() { m_sinks.clear(); }
 
     LogEvent log(Log::Level level, const char *file = NULL, int line = -1)
