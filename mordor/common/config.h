@@ -113,20 +113,22 @@ public:
         const std::string &description = "", bool dynamic = true,
         bool automatic = false)
     {
-        static std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator> vars;
-        m_vars = &vars;
         ASSERT(name.find_first_not_of("abcdefghijklmnopqrstuvwxyz.") == std::string::npos);
 
         typename ConfigVar<T>::ptr v(new ConfigVar<T>(name, defaultValue, description, dynamic, automatic));
-        ASSERT(vars.find(v) == vars.end());
-        vars.insert(v);
+        ASSERT(vars().find(v) == vars().end());
+        vars().insert(v);
         return v;
     }
 
     static void loadFromEnvironment();
 
 private:
-    static std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator> *m_vars;
+    static std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator> &vars()
+    {
+        static std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator> vars;
+        return vars;
+    }
 };
 
 

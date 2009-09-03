@@ -12,8 +12,6 @@
 extern char **environ;
 #endif
 
-std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator> *Config::m_vars;
-
 static void delete_nothing(ConfigVarBase *) {}
 
 void
@@ -48,8 +46,8 @@ Config::loadFromEnvironment()
             continue;
         ConfigVarBase var(key);
         ConfigVarBase::ptr ptr(&var, &delete_nothing);
-        std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator>::iterator it = m_vars->find(ptr);
-        if (it != m_vars->end()) {
+        std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator>::iterator it = vars().find(ptr);
+        if (it != vars().end()) {
             (*it)->fromString(value);
         }
     }
