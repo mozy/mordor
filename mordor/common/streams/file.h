@@ -22,14 +22,16 @@ public:
     enum Flags {
         READ      = 0x01,
         WRITE     = 0x02,
-        READWRITE = 0x03
+        READWRITE = 0x03,
+        APPEND    = 0x06,
     };
     typedef DWORD CreateFlags;
 #else
     enum Flags {
         READ = O_RDONLY,
         WRITE = O_WRONLY,
-        READWRITE = O_RDWR
+        READWRITE = O_RDWR,
+        APPEND = O_APPEND
     };
 
     enum CreateFlags {
@@ -48,9 +50,10 @@ public:
 
     bool supportsRead() { return m_supportsRead && NativeStream::supportsRead(); }
     bool supportsWrite() { return m_supportsWrite && NativeStream::supportsWrite(); }
+    bool supportsSeek() { return m_supportsSeek && NativeStream::supportsSeek(); }
 
 private:
-    bool m_supportsRead, m_supportsWrite;
+    bool m_supportsRead, m_supportsWrite, m_supportsSeek;
 };
 
 #endif

@@ -15,6 +15,8 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
         access |= GENERIC_READ;
     if (flags & WRITE)
         access |= GENERIC_WRITE;
+    if (flags == APPEND)
+        access = FILE_APPEND_DATA | SYNCHRONIZE;
     // TODO: UTF-8
     handle = CreateFileA(filename.c_str(),
         access,
@@ -50,7 +52,8 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
     }
     init(handle);
     m_supportsRead = flags == READ || flags == READWRITE;
-    m_supportsWrite = flags == WRITE || flags == READWRITE;
+    m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;
+    m_supportsSeek = flags != APPEND;
 }
 
 #ifdef WINDOWS
@@ -62,6 +65,8 @@ FileStream::FileStream(std::wstring filename, Flags flags, CreateFlags createFla
         access |= GENERIC_READ;
     if (flags & WRITE)
         access |= GENERIC_WRITE;
+    if (flags == APPEND)
+        access = FILE_APPEND_DATA | SYNCHRONIZE;
     handle = CreateFileW(filename.c_str(),
         access,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -74,6 +79,7 @@ FileStream::FileStream(std::wstring filename, Flags flags, CreateFlags createFla
     }
     init(handle);
     m_supportsRead = flags == READ || flags == READWRITE;
-    m_supportsWrite = flags == WRITE || flags == READWRITE;
+    m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;
+    m_supportsSeek = flags != APPEND;
 }
 #endif
