@@ -66,6 +66,7 @@ Fiber::Fiber()
     m_stack = NULL;
     m_stacksize = 0;
     m_sp = NULL;
+    m_autoThrow = true;
     m_exception = NULL;
     setThis(this);
 #ifdef NATIVE_WINDOWS_FIBERS
@@ -83,6 +84,7 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
     m_state = INIT;
     m_stack = NULL;
     m_stacksize = stacksize;
+    m_autoThrow = true;
     m_exception = NULL;
     allocStack(&m_stack, &m_sp, &m_stacksize);
 #ifdef UCONTEXT_FIBERS
@@ -159,10 +161,10 @@ Fiber::call()
     call(false);
 }
 
-void
+Fiber::ptr
 Fiber::yieldTo(bool yieldToCallerOnTerminate)
 {
-    yieldTo(yieldToCallerOnTerminate, HOLD);
+    return yieldTo(yieldToCallerOnTerminate, HOLD);
 }
 
 void
@@ -215,7 +217,7 @@ Fiber::call(bool destructor)
     }
 }
 
-void
+Fiber::ptr
 Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
 {
     ASSERT(m_state == HOLD || m_state == INIT);
@@ -246,8 +248,11 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
         Fiber::ptr yielder = curp->m_yielder;
         yielder->m_state = curp->m_yielderNextState;
         curp->m_yielder.reset();
-        yielder->throwExceptions();
+        if (yielder->m_autoThrow)
+            yielder->throwExceptions();
+        return yielder;
     }
+    return Fiber::ptr();
 }
 
 void

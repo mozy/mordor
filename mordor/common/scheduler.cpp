@@ -266,7 +266,7 @@ Scheduler::run()
             }
         }
         // We're looping because we're not allowed to go back to idle until
-        // the correct thread services a a thread-targetted fiber request;
+        // the correct thread services a thread-targetted fiber request;
         // but we need to break out of the above loop to release the lock
         if (loop) {
             continue;
@@ -330,7 +330,15 @@ void
 parallel_do_impl(boost::function<void ()> dg, size_t &completed,
     size_t total, Scheduler *scheduler, Fiber::ptr caller)
 {
-    dg();
+    Fiber::getThis()->autoThrowExceptions(false);
+    try {
+        dg();
+    } catch(...) {
+        if (atomicIncrement(completed) == total) {
+            scheduler->schedule(caller);
+        }
+        throw;
+    }
     if (atomicIncrement(completed) == total) {
         scheduler->schedule(caller);
     }
@@ -351,11 +359,21 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
         return;
     }
 
+    std::vector<Fiber::ptr> fibers;
+    fibers.reserve(dgs.size());
     for(it = dgs.begin(); it != dgs.end(); ++it) {
         Fiber::ptr f(new Fiber(boost::bind(&parallel_do_impl, *it,
             boost::ref(completed), dgs.size(), scheduler, caller),
             16384));
+        fibers.push_back(f);
         scheduler->schedule(f);
     }
     scheduler->yieldTo();
+    // Pass the first exception along
+    // TODO: group exceptions?
+    for(std::vector<Fiber::ptr>::iterator it2 = fibers.begin();
+        it2 != fibers.end();
+        ++it2) {
+        (*it2)->throwExceptions();
+    }
 }

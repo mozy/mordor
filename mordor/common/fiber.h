@@ -66,18 +66,22 @@ public:
     static ptr getThis();
 
     void call();
-    void yieldTo(bool yieldToCallerOnTerminate = true);
+    // Returns whoever yielded back to us
+    Fiber::ptr yieldTo(bool yieldToCallerOnTerminate = true);
     static void yield();
 
     State state();
 
+    bool autoThrowExceptions() const { return m_autoThrow; }
+    void autoThrowExceptions(bool autoThrow) { m_autoThrow = autoThrow; }
+    void throwExceptions();
+
 private:
     void call(bool destructor);
-    void yieldTo(bool yieldToCallerOnTerminate, State targetState);
+    Fiber::ptr yieldTo(bool yieldToCallerOnTerminate, State targetState);
     static void setThis(Fiber *f);
     static void entryPoint();
     static void exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState);
-    void throwExceptions();
 
 private:
     boost::function<void ()> m_dg;
@@ -89,6 +93,7 @@ private:
     State m_state, m_yielderNextState;
     ptr m_outer, m_yielder;
     weak_ptr m_terminateOuter;
+    bool m_autoThrow;
     std::exception *m_exception;
 
     static boost::thread_specific_ptr<Fiber> t_fiber;

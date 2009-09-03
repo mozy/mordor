@@ -157,3 +157,39 @@ TEST_WITH_SUITE(Scheduler, switcherExceptions)
     TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);
     TEST_ASSERT_NOT_EQUAL(Scheduler::getThis(), &poolB);
 }
+
+static void increment(int &total)
+{
+    ++total;
+}
+
+TEST_WITH_SUITE(Scheduler, parallelDo)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool;
+
+    int total = 0;
+    std::vector<boost::function<void ()> > dgs;
+    dgs.push_back(boost::bind(&increment, boost::ref(total)));
+    dgs.push_back(boost::bind(&increment, boost::ref(total)));
+
+    parallel_do(dgs);
+    TEST_ASSERT_EQUAL(total, 2);
+}
+
+static void exception()
+{
+    throw std::runtime_error("what's up?!");
+}
+
+TEST_WITH_SUITE(Scheduler, parallelDoException)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool;
+
+    std::vector<boost::function<void ()> > dgs;
+    dgs.push_back(&exception);
+    dgs.push_back(&exception);
+
+    TEST_ASSERT_EXCEPTION(parallel_do(dgs), std::runtime_error);    
+}
