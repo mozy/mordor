@@ -73,7 +73,8 @@ boost::ref(readResult));
         dgs[1] = boost::bind(&writeOne, boost::ref(dst), boost::ref(*writeBuffer), 
 totalWritten);
         parallel_do(dgs);
-        if (readResult == 0 && toTransfer != ~0ull) {
+        *totalRead += readResult;
+        if (readResult == 0 && toTransfer != ~0ull && *totalRead < toTransfer) {
             throw UnexpectedEofError();
         }
         if (readResult == 0)
