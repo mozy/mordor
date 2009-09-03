@@ -14,9 +14,9 @@ public:
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
-    bool supportsSeek() { return true; }
-    bool supportsSize() { return true; }
-    bool supportsTruncate() { return true; }
+
+    size_t read(Buffer &b, size_t len) { return 0; }
+    size_t write(const Buffer &b, size_t len) { return len; }
 
 private:
     static NullStream s_nullStream;
