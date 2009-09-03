@@ -4,12 +4,14 @@
 
 #include <iostream>
 
+#include "mordor/common/config.h"
 #include "mordor/common/fiber.h"
 #include "mordor/common/iomanager.h"
 #include "mordor/common/socket.h"
 
 int main(int argc, const char *argv[])
 {
+    Config::loadFromEnvironment();
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     std::vector<Address::ptr> addresses =

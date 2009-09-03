@@ -6,6 +6,7 @@
 
 #include <boost/shared_ptr.hpp>
 
+#include "mordor/common/config.h"
 #include "mordor/common/fiber.h"
 #include "mordor/common/scheduler.h"
 #include "mordor/common/streams/file.h"
@@ -14,6 +15,7 @@
 
 int main(int argc, const char *argv[])
 {
+    Config::loadFromEnvironment();
     StdoutStream stdoutStream;
     Fiber::ptr mainfiber(new Fiber());
     WorkerPool pool(2);

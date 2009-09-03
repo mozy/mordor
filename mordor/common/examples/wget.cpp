@@ -7,6 +7,7 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "mordor/common/config.h"
 #include "mordor/common/exception.h"
 #include "mordor/common/http/basic.h"
 #include "mordor/common/http/client.h"
@@ -53,6 +54,7 @@ HTTP::ClientConnection::ptr establishConn(IOManager &ioManager, Address::ptr add
 
 int main(int argc, const char *argv[])
 {
+    Config::loadFromEnvironment();
     StdoutStream stdoutStream;
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;

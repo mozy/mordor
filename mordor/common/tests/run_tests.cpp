@@ -4,6 +4,7 @@
 
 #include <iostream>
 
+#include "modror/common/config.h"
 #include "mordor/common/version.h"
 #include "mordor/test/test.h"
 #include "mordor/test/stdoutlistener.h"
@@ -15,6 +16,7 @@
 
 int main(int argc, const char **argv)
 {
+    Config::loadFromEnvironment();
     std::string newDirectory = argv[0];
 #ifdef WINDOWS
     newDirectory = newDirectory.substr(0, newDirectory.rfind('\\'));

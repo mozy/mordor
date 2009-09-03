@@ -4,9 +4,9 @@
 
 #include <boost/bind.hpp>
 
+#include "mordor/common/config.h"
 #include "mordor/common/http/server.h"
 #include "mordor/common/iomanager.h"
-#include "mordor/common/log.h"
 #include "mordor/common/socket.h"
 #include "mordor/common/streams/socket.h"
 #include "mordor/common/streams/transfer.h"
@@ -119,7 +119,7 @@ void startHttpServer(IOManager &ioManager)
 
 int main(int argc, const char *argv[])
 {
-    Log::addSink(LogSink::ptr(new StdoutLogSink()));
+    Config::loadFromEnvironment();
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     startSocketServer(ioManager);
