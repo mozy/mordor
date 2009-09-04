@@ -544,7 +544,8 @@ HTTP::RequestParser::exec()
     }
     
     Accept_Ranges = 'Accept-Ranges:'i @set_accept_ranges list;
-    Location = 'Location:'i LWS* absolute_URI LWS*;
+    # This *should* be absolute_URI, but we're generous
+    Location = 'Location:'i LWS* URI_reference LWS*;
     Proxy_Authenticate = 'Proxy-Authenticate:'i @set_proxy_authenticate challengeList;
     WWW_Authenticate = 'WWW-Authenticate:'i @set_www_authenticate challengeList;
     

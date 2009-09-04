@@ -353,8 +353,13 @@ HTTP::ClientRequest::cancel(bool abort)
     }
     if (!abort && m_requestDone) {
         ASSERT(m_responseInFlight);
-        finish();
-        return;
+        // If the response headers aren't done, but the
+        // response *is* in flight, we got bad headers, and
+        // have to abort
+        if (m_responseHeadersDone) {
+            finish();
+            return;
+        }
     }
     m_aborted = true;
     boost::mutex::scoped_lock lock(m_conn->m_mutex);

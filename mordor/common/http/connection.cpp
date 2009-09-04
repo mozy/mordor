@@ -45,6 +45,8 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
         }
         if (entity.contentLength != ~0ull && entity.contentLength != 0)
             return true;
+        if (entity.contentLength == 0)
+            return false;
         for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
             it != general.transferEncoding.end();
             ++it) {
