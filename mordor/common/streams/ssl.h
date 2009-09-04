@@ -4,7 +4,20 @@
 
 #include "filter.h"
 
+#include <vector>
+
 #include <openssl/ssl.h>
+
+class OpenSSLException : public std::runtime_error
+{
+public:
+    OpenSSLException()
+        : std::runtime_error(constructMessage())
+    {}
+
+private:
+    static std::string constructMessage();
+};
 
 class SSLStream : public MutatingFilterStream
 {

@@ -117,6 +117,7 @@
 #include <openssl/aes.h>
 #include <openssl/bio.h>
 #include <openssl/blowfish.h>
+#include <openssl/err.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 #include <openssl/ssl.h>
