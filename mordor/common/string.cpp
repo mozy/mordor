@@ -168,3 +168,11 @@ std::string toUtf8(const std::wstring &str)
     return toUtf8(str.c_str(), (int)str.size());
 }
 #endif
+
+std::ostream &operator <<(std::ostream &os, const charslice &slice)
+{
+    for (size_t i = 0; i < slice.m_len; ++i) {
+        os.put(slice.m_slice[i]);
+    }
+    return os;
+}

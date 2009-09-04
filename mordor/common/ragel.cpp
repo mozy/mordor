@@ -5,6 +5,10 @@
 #include "ragel.h"
 
 #include "assert.h"
+#include "log.h"
+#include "mordor/common/string.h"
+
+static Logger::ptr g_log = Log::lookup("mordor:common:ragel");
 
 size_t
 RagelParser::run(const void *buf, size_t len)
@@ -124,6 +128,7 @@ RagelParser::run(const void *buf, size_t len, bool isEof)
         eof = NULL;
     }
 
+    LOG_VERBOSE(g_log) << charslice(p, pe - p);
     exec();
 
     if (!mark) {
