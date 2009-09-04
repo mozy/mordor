@@ -392,7 +392,6 @@ LIBMORDOROBJECTS := 								\
 	mordor/common/streams/limited.o						\
 	mordor/common/streams/memory.o						\
 	mordor/common/streams/null.o						\
-	mordor/common/streams/openssl.o						\
 	mordor/common/streams/pipe.o						\
 	mordor/common/streams/socket_stream.o					\
 	mordor/common/streams/ssl.o						\
