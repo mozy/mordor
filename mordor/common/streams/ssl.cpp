@@ -71,11 +71,12 @@ SSLStream::close(CloseType type)
                         throw std::runtime_error("SSL Protocol Error");
                     default:
                         NOTREACHED();
-                }
-                
-            }            
+                }                
+            }
+            flushBuffer();
         }
     }
+    parent()->close(type);
 }
 
 size_t
