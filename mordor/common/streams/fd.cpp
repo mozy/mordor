@@ -19,7 +19,7 @@ FDStream::FDStream()
 void
 FDStream::init(int fd, bool own)
 {
-    assert(fd >= 0);
+    ASSERT(fd >= 0);
     m_fd = fd;
     m_own = own;
 }
@@ -34,13 +34,13 @@ FDStream::init(IOManager *ioManager, int fd, bool own)
 FDStream::FDStream(int fd, bool own)
 : m_ioManager(NULL), m_fd(fd), m_own(own)
 {
-    assert(m_fd >= 0);
+    ASSERT(m_fd >= 0);
 }
 
 FDStream::FDStream(IOManager &ioManager, int fd, bool own)
 : m_ioManager(&ioManager), m_fd(fd), m_own(own)
 {
-    assert(m_fd >= 0);
+    ASSERT(m_fd >= 0);
     try {
         if (fcntl(m_fd, F_SETFL, O_NONBLOCK)) {
             throwExceptionFromLastError();
@@ -74,7 +74,7 @@ FDStream::close(CloseType type)
 size_t
 FDStream::read(Buffer &b, size_t len)
 {
-    assert(m_fd >= 0);
+    ASSERT(m_fd >= 0);
     if (len > 0xfffffffe)
         len = 0xfffffffe;
     std::vector<iovec> bufs = b.writeBufs(len);
@@ -94,7 +94,7 @@ FDStream::read(Buffer &b, size_t len)
 size_t
 FDStream::write(const Buffer &b, size_t len)
 {
-    assert(m_fd >= 0);
+    ASSERT(m_fd >= 0);
     if (len > 0xfffffffe)
         len = 0xfffffffe;
     const std::vector<iovec> bufs = b.readBufs(len);
@@ -116,7 +116,7 @@ FDStream::write(const Buffer &b, size_t len)
 long long
 FDStream::seek(long long offset, Anchor anchor)
 {
-    assert(m_fd >= 0);
+    ASSERT(m_fd >= 0);
     long long pos = lseek(m_fd, offset, (int)anchor);
     if (pos < 0) {
         throwExceptionFromLastError();
@@ -127,7 +127,7 @@ FDStream::seek(long long offset, Anchor anchor)
 long long
 FDStream::size()
 {
-    assert(m_fd >= 0);
+    ASSERT(m_fd >= 0);
     struct stat statbuf;
     if (fstat(m_fd, &statbuf)) {
         throwExceptionFromLastError();
@@ -138,7 +138,7 @@ FDStream::size()
 void
 FDStream::truncate(long long size)
 {
-    assert(m_fd >= 0);
+    ASSERT(m_fd >= 0);
     if (ftruncate(m_fd, size)) {
         throwExceptionFromLastError();
     }
@@ -147,7 +147,7 @@ FDStream::truncate(long long size)
 void
 FDStream::flush()
 {
-    assert(m_fd >= 0);
+    ASSERT(m_fd >= 0);
     if (fsync(m_fd)) {
         throwExceptionFromLastError();
     }
