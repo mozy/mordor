@@ -131,7 +131,7 @@ SSLStream::read(Buffer &b, size_t len)
     while (true) {
         int result = SSL_read(m_ssl.get(), bufs[0].iov_base, toRead);
         int error = SSL_get_error(m_ssl.get(), result);
-        LOG_VERBOSE(g_log) << (void *)this << "SSL_read(" << m_ssl.get()
+        LOG_VERBOSE(g_log) << (void *)this << " SSL_read(" << m_ssl.get()
             << ", " << toRead << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -169,7 +169,7 @@ SSLStream::write(const Buffer &b, size_t len)
     while (true) {
         int result = SSL_write(m_ssl.get(), bufs[0].iov_base, toWrite);
         int error = SSL_get_error(m_ssl.get(), result);
-        LOG_VERBOSE(g_log) << (void *)this << "SSL_write(" << m_ssl.get()
+        LOG_VERBOSE(g_log) << (void *)this << " SSL_write(" << m_ssl.get()
             << ", " << toWrite << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -206,7 +206,7 @@ SSLStream::flush()
         while (true) {
             int result = SSL_shutdown(m_ssl.get());
             int error = SSL_get_error(m_ssl.get(), result);
-            LOG_VERBOSE(g_log) << (void *)this << "SSL_shutdown("
+            LOG_VERBOSE(g_log) << (void *)this << " SSL_shutdown("
                 << m_ssl.get() << "): " << result << " (" << error << ")";
             switch (error) {
                 case SSL_ERROR_NONE:
