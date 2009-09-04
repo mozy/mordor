@@ -422,6 +422,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         int ret = WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
             &m_sendEvent.overlapped, NULL);
         if (ret && GetLastError() != WSA_IO_PENDING) {
+            m_ioManager->unregisterEvent(&m_sendEvent);
             throwExceptionFromLastError();
         }
         Timer::ptr timeout;
