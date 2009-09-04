@@ -185,7 +185,7 @@ Logger::ptr Log::lookup(const std::string &name)
             return *it;
         // Child of existing logger
         if (name.length() > (*it)->m_name.length() &&
-            name[(*it)->m_name.length()] == '.' &&
+            name[(*it)->m_name.length()] == ':' &&
             strncmp((*it)->m_name.c_str(), name.c_str(), (*it)->m_name.length()) == 0) {
             log = *it;
             continue;
@@ -194,7 +194,7 @@ Logger::ptr Log::lookup(const std::string &name)
         // Existing logger should be child of this logger
         if (it != log->m_children.end() &&
             (*it)->m_name.length() > name.length() &&
-            (*it)->m_name[name.length()] == '.' &&
+            (*it)->m_name[name.length()] == ':' &&
             strncmp((*it)->m_name.c_str(), name.c_str(), name.length()) == 0) {
             Logger::ptr child = *it;
             Logger::ptr parent(new Logger(name, log));
@@ -261,7 +261,7 @@ LoggerLess::operator ()(const Logger::ptr &lhs,
 
 
 Logger::Logger()
-: m_name("."),
+: m_name(":"),
   m_inheritSinks(false)
 {}
 

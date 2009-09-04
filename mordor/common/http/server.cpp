@@ -12,7 +12,7 @@
 #include "mordor/common/streams/transfer.h"
 #include "parser.h"
 
-static Logger::ptr g_log = Log::lookup("mordor.common.http.server");
+static Logger::ptr g_log = Log::lookup("mordor:common:http:server");
 
 HTTP::ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg)
 : Connection(stream),

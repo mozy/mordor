@@ -15,7 +15,7 @@
 #include "mordor/common/streams/transfer.h"
 #include "parser.h"
 
-static Logger::ptr g_log = Log::lookup("mordor.common.http.client");
+static Logger::ptr g_log = Log::lookup("mordor:common:http:client");
 
 HTTP::ClientConnection::ClientConnection(Stream::ptr stream)
 : Connection(stream),
