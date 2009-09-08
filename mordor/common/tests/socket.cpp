@@ -135,7 +135,11 @@ TEST_WITH_SUITE(Socket, sendAfterCloseOtherEnd)
 #ifdef WINDOWS
     testShutdownException<ConnectionAbortedException>(true, false, true);
 #else
-    testShutdownException<BrokenPipeException>(true, false, true);
+    try {
+        testShutdownException<BrokenPipeException>(true, false, true);
+        // Could also be ConnectionReset on BSDs
+    } catch (ConnectionResetException)
+    {}
 #endif
 }
 
