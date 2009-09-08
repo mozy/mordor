@@ -72,7 +72,7 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own)
     m_ssl.reset(SSL_new(m_ctx.get()), &SSL_free);
     if (!m_ssl)
         throwOpenSSLException();
-    m_readBio = BIO_new_mem_buf("", 0);
+    m_readBio = BIO_new_mem_buf((void *)"", 0);
     m_writeBio = BIO_new(BIO_s_mem());
     if (!m_readBio || !m_writeBio) {
         if (m_readBio) BIO_free(m_readBio);
