@@ -4,18 +4,27 @@
 
 #include "buffered.h"
 
+#include "mordor/common/config.h"
 #include "mordor/common/exception.h"
+#include "mordor/common/log.h"
+
+static ConfigVar<size_t>::ptr g_defaultBufferSize =
+    Config::lookup<size_t>("stream.buffered.defaultbuffersize", 65536,
+    "Default buffer size for new BufferedStreams");
+
+static Logger::ptr g_log = Log::lookup("mordor:common:streams:buffered");
 
 BufferedStream::BufferedStream(Stream::ptr parent, bool own)
 : FilterStream(parent, own)
 {
-    m_bufferSize = 65536;
+    m_bufferSize = g_defaultBufferSize->val();
     m_allowPartialReads = false;
 }
 
 void
 BufferedStream::close(CloseType type)
 {
+    LOG_TRACE(g_log) << this << " close(" << type << ")";
     if (type & READ)
         m_readBuffer.clear();
     try {
@@ -41,6 +50,9 @@ BufferedStream::read(Buffer &b, size_t len)
     m_readBuffer.consume(buffered);
     remaining -= buffered;
 
+    LOG_VERBOSE(g_log) << this << " read(" << len << "): " << buffered
+        << " read from buffer";
+
     if (remaining == 0) {
         return len;
     }
@@ -52,11 +64,17 @@ BufferedStream::read(Buffer &b, size_t len)
             // the buffer size
             size_t todo = ((remaining - 1) / m_bufferSize + 1) * m_bufferSize;
             try {
+                LOG_VERBOSE(g_log) << this << " parent()->read(" << todo
+                    << ")";
                 result = parent()->read(m_readBuffer, todo);
+                LOG_VERBOSE(g_log) << this << " parent()->read(" << todo
+                    << "): " << result;
             } catch (...) {
                 if (remaining == len) {
+                    LOG_TRACE(g_log) << this << " forwarding exception";
                     throw;
                 } else {
+                    LOG_TRACE(g_log) << this << " swallowing exception";
                     // Swallow the exception
                     return len - remaining;
                 }
@@ -102,11 +120,16 @@ BufferedStream::flushWrite(size_t len)
     {
         size_t result;
         try {
+            LOG_VERBOSE(g_log) << this << " parent()->write("
+                << m_writeBuffer.readAvailable() << ")";
             result = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
+            LOG_VERBOSE(g_log) << this << " parent()->write("
+                << m_writeBuffer.readAvailable() << "): " << result;
         } catch (...) {
             // If this entire write is still in our buffer,
             // back it out and report the error
             if (m_writeBuffer.readAvailable() >= len) {
+                LOG_TRACE(g_log) << this << " forwarding exception";
                 Buffer tempBuffer;
                 tempBuffer.copyIn(m_writeBuffer, m_writeBuffer.readAvailable() - len);
                 m_writeBuffer.clear();
@@ -118,6 +141,7 @@ BufferedStream::flushWrite(size_t len)
                 // write, and we can't report an error because
                 // the caller will think he needs to repeat
                 // the entire write
+                LOG_TRACE(g_log) << this << " swallowing exception";
                 return len;
             }
         }
@@ -133,6 +157,9 @@ BufferedStream::seek(long long offset, Anchor anchor)
     // read and writes;
     ASSERT(!(m_readBuffer.readAvailable() && m_writeBuffer.readAvailable()));
     if (offset == 0 && anchor == CURRENT) {
+        LOG_TRACE(g_log) << this << " parent()->seek(0, CURRENT) - "
+            << m_readBuffer.readAvailable() << " + "
+            << m_writeBuffer.readAvailable();
         return parent()->seek(offset, anchor)
             - m_readBuffer.readAvailable()
             + m_writeBuffer.readAvailable();
@@ -173,7 +200,11 @@ void
 BufferedStream::flush()
 {
     while (m_writeBuffer.readAvailable()) {
+        LOG_VERBOSE(g_log) << this << " parent()->write("
+            << m_writeBuffer.readAvailable() << ")";
         size_t result = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
+        LOG_VERBOSE(g_log) << this << " parent()->write("
+            << m_writeBuffer.readAvailable() << "): " << result;
         ASSERT(result > 0);
         m_writeBuffer.consume(result);
     }
@@ -201,7 +232,11 @@ BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
             return ~0;
         }
 
+        LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
+            << ")";
         size_t result = parent()->read(m_readBuffer, m_bufferSize);
+        LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
+            << "): " << result;
         if (result == 0) {
             // EOF
             if (throwIfNotFound)
@@ -232,7 +267,11 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
             return ~0;
         }
 
+        LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
+            << ")";
         size_t result = parent()->read(m_readBuffer, m_bufferSize);
+        LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
+            << "): " << result;
         if (result == 0) {
             // EOF
             if (throwIfNotFound)
