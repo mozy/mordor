@@ -8,6 +8,7 @@
 
 #include "assert.h"
 #include "exception.h"
+#include "log.h"
 #include "version.h"
 
 #ifdef WINDOWS
@@ -64,6 +65,8 @@ static SocketInitializer g_init;
 #define closesocket close
 #endif
 
+static Logger::ptr g_log = Log::lookup("mordor:common:socket");
+
 Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int initialize)
 : m_sock(-1),
   m_family(family),
@@ -73,6 +76,9 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
 #ifdef WINDOWS
     if (m_ioManager) {
         m_sock = socket(family, type, protocol);
+        LOG_LEVEL(g_log, m_sock == -1 ? Log::ERROR : Log::VERBOSE) << this
+            << " socket(" << family << ", " << type << ", " << protocol
+            << "): " << m_sock << " (" << lastError() << ")";
         if (m_sock == -1) {
             throwExceptionFromLastError();
         }
@@ -87,6 +93,8 @@ Socket::Socket(int family, int type, int protocol)
   m_ioManager(NULL)
 {
     m_sock = socket(family, type, protocol);
+    LOG_VERBOSE(g_log) << this << " socket(" << family << ", " << type << ", "
+        << protocol << "): " << m_sock << " (" << lastError() << ")";
     if (m_sock == -1) {
         throwExceptionFromLastError();
     }
@@ -108,6 +116,8 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
   m_sendTimeout(~0ull)
 {
     m_sock = socket(family, type, protocol);
+    LOG_VERBOSE(g_log) << this << " socket(" << family << ", " << type << ", "
+        << protocol << "): " << m_sock << " (" << lastError() << ")";
     if (m_sock == -1) {
         throwExceptionFromLastError();
     }
@@ -143,8 +153,11 @@ Socket::bind(const Address &addr)
 {
     ASSERT(addr.family() == m_family);
     if (::bind(m_sock, addr.name(), addr.nameLen())) {
+        LOG_ERROR(g_log) << this << " bind(" << m_sock << ", " << addr
+            << "): (" << lastError() << ")";
         throwExceptionFromLastError();
     }
+    LOG_VERBOSE(g_log) << this << " bind(" << m_sock << ", " << addr << ")";
 }
 
 void
@@ -153,8 +166,11 @@ Socket::connect(const Address &to)
     ASSERT(to.family() == m_family);
     if (!m_ioManager) {
         if (::connect(m_sock, to.name(), to.nameLen())) {
+            LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                << "): (" << lastError() << ")";
             throwExceptionFromLastError();
         }
+        LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to << ")";
     } else {
 #ifdef WINDOWS
         // need to be bound, even to ADDR_ANY, before calling ConnectEx
@@ -166,6 +182,8 @@ Socket::connect(const Address &to)
                     addr.sin_port = 0;
                     addr.sin_addr.s_addr = ADDR_ANY;
                     if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
+                        LOG_ERROR(g_log) << this << " bind(" << m_sock
+                            << ", 0.0.0.0:0): (" << lastError() << ")";
                         throwExceptionFromLastError();
                     }
                     break;
@@ -179,6 +197,8 @@ Socket::connect(const Address &to)
                     in6_addr anyaddr = IN6ADDR_ANY_INIT;
                     addr.sin6_addr = anyaddr;
                     if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in6))) {
+                        LOG_ERROR(g_log) << this << " bind(" << m_sock
+                            << ", [::]:0): (" << lastError() << ")";
                         throwExceptionFromLastError();
                     }
                     break;
@@ -192,6 +212,8 @@ Socket::connect(const Address &to)
         if (!ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped)) {
             DWORD dwLastError = GetLastError();
             if (dwLastError != WSA_IO_PENDING) {
+                LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                    << "): (" << lastError() << ")";
                 m_ioManager->unregisterEvent(&m_sendEvent);
                 throwExceptionFromLastError(dwLastError);
             }
@@ -204,11 +226,17 @@ Socket::connect(const Address &to)
         if (timeout)
             timeout->cancel();
         if (!m_sendEvent.ret) {
+            LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                << "): (" << m_sendEvent.lastError << ")";
             throwExceptionFromLastError(m_sendEvent.lastError);
         }
+        LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
+            << ")";
         setOption(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
 #else
         if (!::connect(m_sock, to.name(), to.nameLen())) {
+            LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
+                << ")";
             // Worked first time
             return;
         }
@@ -223,15 +251,24 @@ Socket::connect(const Address &to)
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled)
+            if (cancelled) {
+                LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                    << "): (cancelled)";
                 throw OperationAbortedException();
+            }
             int err;
             size_t size = sizeof(int);
             getOption(SOL_SOCKET, SO_ERROR, &err, &size);
             if (err != 0) {
+                LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                    << "): (" << lastError() << ")";
                 throwExceptionFromLastError(err);
             }
+            LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
+                << ")";
         } else {
+            LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                << "): (" << lastError() << ")";
             throwExceptionFromLastError();
         }
 #endif
@@ -242,6 +279,8 @@ void
 Socket::listen(int backlog)
 {
     if (::listen(m_sock, backlog)) {
+        LOG_ERROR(g_log) << this << " listen(" << m_sock << "): ("
+            << lastError() << ")";
         throwExceptionFromLastError();
     }
 }
@@ -270,6 +309,9 @@ Socket::accept(Socket &target)
     ASSERT(target.m_protocol == m_protocol);
     if (!m_ioManager) {
         socket_t newsock = ::accept(m_sock, NULL, NULL);
+        LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::TRACE)
+            << this << " accept(" << m_sock << "): " << newsock << " ("
+            << lastError() << ")";
         if (newsock == -1) {
             throwExceptionFromLastError();
         }
@@ -284,6 +326,8 @@ Socket::accept(Socket &target)
             &m_receiveEvent.overlapped);
         DWORD dwLastError = GetLastError();
         if (!ret && dwLastError != WSA_IO_PENDING) {
+            LOG_ERROR(g_log) << this << " accept(" << m_sock << "):  ("
+                << lastError() << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
             throwExceptionFromLastError(dwLastError);
         }
@@ -295,8 +339,12 @@ Socket::accept(Socket &target)
         if (timeout)
             timeout->cancel();
         if (!m_receiveEvent.ret && m_receiveEvent.lastError != ERROR_MORE_DATA) {
+            LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
+                << m_receiveEvent.lastError << ")";
             throwExceptionFromLastError(m_receiveEvent.lastError);
         }
+        LOG_TRACE(g_log) << this << " accept(" << m_sock << "): "
+            << target.m_sock;
         target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
         target.m_ioManager->registerFile((HANDLE)target.m_sock);
 #else
@@ -311,10 +359,16 @@ Socket::accept(Socket &target)
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled)
+            if (cancelled) {
+                LOG_ERROR(g_log) << this << " accept(" << m_sock
+                    << "): (cancelled)";
                 throw OperationAbortedException();
+            }
             newsock = ::accept(m_sock, NULL, NULL);
         }
+        LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::TRACE)
+            << this << " accept(" << m_sock << "): " << newsock
+            << " (" << lastError() << ")";
         if (newsock == -1) {
             throwExceptionFromLastError();
         }
@@ -331,8 +385,12 @@ void
 Socket::shutdown(int how)
 {
     if(::shutdown(m_sock, how)) {
+        LOG_ERROR(g_log) << this << " shutdown(" << m_sock << ", "
+            << how << "): (" << lastError() << ")";
         throwExceptionFromLastError();
     }
+    LOG_TRACE(g_log) << this << " shutdown(" << m_sock << ", "
+        << how << ")";
 }
 
 void
@@ -340,8 +398,11 @@ Socket::close()
 {
     if (m_sock != -1) {
         if (::closesocket(m_sock)) {
+            LOG_ERROR(g_log) << this << " close(" << m_sock << "): ("
+                << lastError() << ")";
             throwExceptionFromLastError();
         }
+        LOG_VERBOSE(g_log) << this << " close(" << m_sock << ")";
         m_sock = -1;
     }
 }
@@ -364,9 +425,12 @@ Socket::send(const void *buf, size_t len, int flags)
         m_ioManager->registerEvent(&m_sendEvent);
         int ret = WSASend(m_sock, &wsabuf, 1, NULL, flags,
             &m_sendEvent.overlapped, NULL);
-        if (ret && GetLastError() != WSA_IO_PENDING) {
+        DWORD dwLastError = GetLastError();
+        if (ret && dwLastError != WSA_IO_PENDING) {
+            LOG_ERROR(g_log) << this << " send(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError(dwLastError);
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -376,8 +440,12 @@ Socket::send(const void *buf, size_t len, int flags)
         if (timeout)
             timeout->cancel();
         if (!m_sendEvent.ret) {
+            LOG_ERROR(g_log) << this << " send(" << m_sock << ", "
+                << len << "): (" << m_sendEvent.lastError << ")";
             throwExceptionFromLastError(m_sendEvent.lastError);
         }
+        LOG_VERBOSE(g_log) << this << " send(" << m_sock << ", "
+            << len << "): " << m_sendEvent.numberOfBytes;
         return m_sendEvent.numberOfBytes;
     } else
 #endif
@@ -397,11 +465,17 @@ Socket::send(const void *buf, size_t len, int flags)
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled)
+            if (cancelled) {
+                LOG_ERROR(g_log) << this << " send(" << m_sock << ", "
+                    << len << "): (cancelled)";
                 throw OperationAbortedException();
+            }
             rc = ::send(m_sock, buf, len, flags);
         }
 #endif
+        LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+            << " send(" << m_sock << ", " << len << "): " << rc << " ("
+            << lastError() << ")";
         if (rc == -1) {
             throwExceptionFromLastError();
         }
@@ -425,6 +499,8 @@ Socket::send(const iovec *bufs, size_t len, int flags)
             &m_sendEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
         if (ret && dwLastError != WSA_IO_PENDING) {
+            LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
             throwExceptionFromLastError(dwLastError);
         }
@@ -436,16 +512,24 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         if (timeout)
             timeout->cancel();
         if (!m_sendEvent.ret) {
+            LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
+                << len << "): (" << m_sendEvent.lastError << ")";
             throwExceptionFromLastError(m_sendEvent.lastError);
         }
+        LOG_VERBOSE(g_log) << this << " sendv(" << m_sock << ", "
+            << len << "): " << m_sendEvent.numberOfBytes;
         return m_sendEvent.numberOfBytes;
     } else {
         DWORD sent;
         ASSERT(len <= 0xffffffff);
         if (WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, flags,
             NULL, NULL)) {
+            LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             throwExceptionFromLastError();
         }
+        LOG_VERBOSE(g_log) << this << " sendv(" << m_sock << ", "
+            << len << "): " << sent;
         return sent;
     }
 #else
@@ -465,10 +549,16 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled)
+        if (cancelled) {
+            LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
+                    << len << "): (cancelled)";
             throw OperationAbortedException();
+        }
         rc = ::sendmsg(m_sock, &msg, flags);
     }
+    LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+            << " sendv(" << m_sock << ", " << len << "): " << rc << " ("
+            << lastError() << ")";
     if (rc == -1) {
         throwExceptionFromLastError();
     }
@@ -494,6 +584,8 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
             &m_sendEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
         if (ret && dwLastError != WSA_IO_PENDING) {
+            LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", "
+                << len << ", " << to << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
             throwExceptionFromLastError(dwLastError);
         }
@@ -505,8 +597,12 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
         if (timeout)
             timeout->cancel();
         if (!m_sendEvent.ret) {
+            LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
+                << len << ", " << to << "): (" << m_sendEvent.lastError << ")";
             throwExceptionFromLastError(m_sendEvent.lastError);
         }
+        LOG_VERBOSE(g_log) << this << " sendv(" << m_sock << ", "
+            << len << ", " << to << "): " << m_sendEvent.numberOfBytes;
         return m_sendEvent.numberOfBytes;
     } else
 #endif
@@ -524,11 +620,17 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled)
+            if (cancelled) {
+                LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", "
+                    << len << ", " << to << "): (cancelled)";
                 throw OperationAbortedException();
+            }
             rc = ::sendto(m_sock, buf, len, flags, to.name(), to.nameLen());
         }
 #endif
+        LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+            << " sendto(" << m_sock << ", " << len << ", " << to << "): "
+            << rc << " (" << lastError() << ")";
         if (rc == -1) {
             throwExceptionFromLastError();
         }
@@ -550,6 +652,8 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
             &m_sendEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
         if (ret && dwLastError != WSA_IO_PENDING) {
+            LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", "
+                << len << ", " << to << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
             throwExceptionFromLastError(dwLastError);
         }
@@ -561,6 +665,8 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         if (timeout)
             timeout->cancel();
         if (!m_sendEvent.ret) {
+            LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", "
+                << len << ", " << to << "): (" << m_sendEvent.lastError << ")";
             throwExceptionFromLastError(m_sendEvent.lastError);
         }
         return m_sendEvent.numberOfBytes;
@@ -570,8 +676,12 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         if (WSASendTo(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, flags,
             to.name(), to.nameLen(),
             NULL, NULL)) {
+            LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", "
+                << len << ", " << to << "): (" << lastError() << ")";
             throwExceptionFromLastError();
         }
+        LOG_VERBOSE(g_log) << this << " sendtov(" << m_sock << ", "
+            << len << ", " << to << "): " << sent;
         return sent;
     }
 #else
@@ -593,10 +703,16 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled)
+        if (cancelled) {
+            LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", "
+                    << len << ", " << to << "): (cancelled)";
             throw OperationAbortedException();
+        }
         rc = ::sendmsg(m_sock, &msg, flags);
     }
+    LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+            << " sendtov(" << m_sock << ", " << len << ", " << to << "): "
+            << rc << " (" << lastError() << ")";
     if (rc == -1) {
         throwExceptionFromLastError();
     }
@@ -620,6 +736,8 @@ Socket::receive(void *buf, size_t len, int flags)
             &m_receiveEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
         if (ret && dwLastError != WSA_IO_PENDING) {
+            LOG_ERROR(g_log) << this << " recv(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
             throwExceptionFromLastError(dwLastError);
         }
@@ -631,8 +749,12 @@ Socket::receive(void *buf, size_t len, int flags)
         if (timeout)
             timeout->cancel();
         if (!m_receiveEvent.ret) {
+            LOG_ERROR(g_log) << this << " recv(" << m_sock << ", "
+                << len << "): (" << m_receiveEvent.lastError << ")";
             throwExceptionFromLastError(m_receiveEvent.lastError);
         }
+        LOG_VERBOSE(g_log) << this << " recv(" << m_sock << ", "
+            << len << "): " << m_receiveEvent.numberOfBytes;
         return m_receiveEvent.numberOfBytes;
     } else
 #endif
@@ -650,11 +772,17 @@ Socket::receive(void *buf, size_t len, int flags)
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled)
+            if (cancelled) {
+                LOG_ERROR(g_log) << this << " recv(" << m_sock << ", "
+                    << len << "): (cancelled)";
                 throw OperationAbortedException();
+            }
             rc = ::recv(m_sock, buf, len, flags);
         }
 #endif
+        LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+            << " recv(" << m_sock << ", " << len << "): " << rc << " ("
+            << lastError() << ")";
         if (rc == -1) {
             throwExceptionFromLastError();
         }
@@ -674,6 +802,8 @@ Socket::receive(iovec *bufs, size_t len, int flags)
             &m_receiveEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
         if (ret && dwLastError != WSA_IO_PENDING) {
+            LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
             throwExceptionFromLastError(dwLastError);
         }
@@ -685,16 +815,24 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         if (timeout)
             timeout->cancel();
         if (!m_receiveEvent.ret) {
+            LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
+                << len << "): (" << m_receiveEvent.lastError << ")";
             throwExceptionFromLastError(m_receiveEvent.lastError);
         }
+        LOG_VERBOSE(g_log) << this << " recvv(" << m_sock << ", "
+            << len << "): " << m_receiveEvent.numberOfBytes;
         return m_receiveEvent.numberOfBytes;
     } else {
         DWORD received;
         ASSERT(len <= 0xffffffff);
         if (WSARecv(m_sock, (LPWSABUF)bufs, (DWORD)len, &received, (LPDWORD)&flags,
             NULL, NULL)) {
+            LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             throwExceptionFromLastError();
         }
+        LOG_VERBOSE(g_log) << this << " recvv(" << m_sock << ", "
+            << len << "): " << received;
         return received;
     }
 #else
@@ -714,10 +852,16 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled)
+        if (cancelled) {
+            LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
+                    << len << "): (cancelled)";
             throw OperationAbortedException();
+        }
         rc = ::recvmsg(m_sock, &msg, flags);
     }
+    LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+            << " recvv(" << m_sock << ", " << len << "): " << rc << " ("
+            << lastError() << ")";
     if (rc == -1) {
         throwExceptionFromLastError();
     }
@@ -726,24 +870,26 @@ Socket::receive(iovec *bufs, size_t len, int flags)
 }
 
 size_t
-Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
+Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
 {
-    ASSERT(from->family() == family());
+    ASSERT(from.family() == family());
 #ifdef WINDOWS
     if (len > 0xffffffff)
         len = 0xffffffff;
     WSABUF wsabuf;
     wsabuf.buf = (char*)buf;
     wsabuf.len = (unsigned int)len;
-    int namelen = from->nameLen();
+    int namelen = from.nameLen();
     if (m_ioManager) {
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);        
         int ret = WSARecvFrom(m_sock, &wsabuf, 1, NULL, (LPDWORD)flags,
-            from->name(), &namelen,
             from.name(), &namelen,
+            &m_receiveEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
         if (ret && dwLastError != WSA_IO_PENDING) {
+            LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
             throwExceptionFromLastError(dwLastError);
         }
@@ -755,16 +901,24 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
         if (timeout)
             timeout->cancel();
         if (!m_receiveEvent.ret) {
+            LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
+                << len << "): (" << m_receiveEvent.lastError << ")";
             throwExceptionFromLastError(m_receiveEvent.lastError);
         }
+        LOG_VERBOSE(g_log) << this << " recvfrom(" << m_sock << ", "
+            << len << "): " << m_receiveEvent.numberOfBytes << ", " << from;
         return m_receiveEvent.numberOfBytes;
     } else {
         DWORD sent;
         if (WSARecvFrom(m_sock, &wsabuf, 1, &sent, (LPDWORD)flags,
-            from->name(), &namelen,
+            from.name(), &namelen,
             NULL, NULL)) {
+            LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             throwExceptionFromLastError();
         }
+        LOG_VERBOSE(g_log) << this << " recvfrom(" << m_sock << ", "
+            << len << "): " << sent << ", " << from;
         return sent;
     }
 #else
@@ -776,8 +930,8 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
     iov.iov_len = len;
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
-    msg.msg_name = from->name();
-    msg.msg_namelen = from->nameLen();
+    msg.msg_name = from.name();
+    msg.msg_namelen = from.nameLen();
     int rc = ::recvmsg(m_sock, &msg, *flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(m_sock, IOManager::READ);
@@ -789,10 +943,16 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled)
+        if (cancelled) {
+            LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
+                << len << "): (cancelled)";
             throw OperationAbortedException();
+        }
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
+    LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+        << " recvfrom(" << m_sock << ", " << len << "): "
+        << rc << ", " << from << " (" << lastError() << ")";
     if (rc == -1) {
         throwExceptionFromLastError();
     }
@@ -802,20 +962,22 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
 }
 
 size_t
-Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
+Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
 {
-    ASSERT(from->family() == family());
+    ASSERT(from.family() == family());
 #ifdef WINDOWS
-    int namelen = from->nameLen();
+    int namelen = from.nameLen();
     if (m_ioManager) {
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
         ASSERT(len <= 0xffffffff);
         int ret = WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)flags,
-            from->name(), &namelen,
+            from.name(), &namelen,
             &m_receiveEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
         if (ret && dwLastError != WSA_IO_PENDING) {
+            LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
             throwExceptionFromLastError(dwLastError);
         }
@@ -827,17 +989,25 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
         if (timeout)
             timeout->cancel();
         if (!m_sendEvent.ret) {
+            LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
+                << len << "): (" << m_receiveEvent.lastError << ")";
             throwExceptionFromLastError(m_receiveEvent.lastError);
         }
+        LOG_VERBOSE(g_log) << this << " recvfrom(" << m_sock << ", "
+            << len << "): " << m_receiveEvent.numberOfBytes << ", " << from;
         return m_receiveEvent.numberOfBytes;
     } else {
         DWORD sent;
         ASSERT(len <= 0xffffffff);
         if (WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, (LPDWORD)flags,
-            from->name(), &namelen,
+            from.name(), &namelen,
             NULL, NULL)) {
+            LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", "
+                << len << "): (" << lastError() << ")";
             throwExceptionFromLastError();
         }
+        LOG_VERBOSE(g_log) << this << " recvfromv(" << m_sock << ", "
+            << len << "): " << sent << ", " << from;
         return sent;
     }
 #else
@@ -846,8 +1016,8 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = bufs;
     msg.msg_iovlen = len;
-    msg.msg_name = from->name();
-    msg.msg_namelen = from->nameLen();
+    msg.msg_name = from.name();
+    msg.msg_namelen = from.nameLen();
     int rc = ::recvmsg(m_sock, &msg, *flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(m_sock, IOManager::READ);
@@ -859,10 +1029,16 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled)
+        if (cancelled) {
+            LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", "
+                << len << "): (cancelled)";
             throw OperationAbortedException();
+        }
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
+    LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+        << " recvfromv(" << m_sock << ", " << len << "): "
+        << rc << ", " << from << " (" << lastError() << ")";
     if (rc == -1) {
         throwExceptionFromLastError();
     }

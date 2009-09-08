@@ -80,8 +80,8 @@ public:
 
     size_t receive(void *buf, size_t len, int flags = 0);
     size_t receive(iovec *bufs, size_t len, int flags = 0);
-    size_t receiveFrom(void *buf, size_t len, int *flags, Address *from);
-    size_t receiveFrom(iovec *bufs, size_t len, int *flags, Address *from);
+    size_t receiveFrom(void *buf, size_t len, int *flags, Address &from);
+    size_t receiveFrom(iovec *bufs, size_t len, int *flags, Address &from);
 
     boost::shared_ptr<Address> emptyAddress();
     boost::shared_ptr<Address> remoteAddress();

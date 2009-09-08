@@ -37,9 +37,9 @@ Win32Error::Win32Error(unsigned int lastError)
     }
 }
 
-void throwExceptionFromLastError()
+error_t lastError()
 {
-    throwExceptionFromLastError(GetLastError());
+    return GetLastError();
 }
 
 void throwExceptionFromLastError(unsigned int lastError)
@@ -73,9 +73,9 @@ ErrnoError::ErrnoError(int error)
     }
 }
 
-void throwExceptionFromLastError()
+error_t lastError()
 {
-    throwExceptionFromLastError(errno);
+    return errno;
 }
 
 void throwExceptionFromLastError(int error)
@@ -95,3 +95,8 @@ void throwExceptionFromLastError(int error)
     }
 }
 #endif
+
+void throwExceptionFromLastError()
+{
+    throwExceptionFromLastError(lastError());
+}

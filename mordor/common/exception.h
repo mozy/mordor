@@ -121,6 +121,7 @@ CREATE_SOCKET_EXCEPTION(ConnectionReset, ECONNRESET);
 
 #undef CREATE_SOCKET_EXCEPTION
 
+error_t lastError();
 void throwExceptionFromLastError();
 void throwExceptionFromLastError(error_t lastError);
 

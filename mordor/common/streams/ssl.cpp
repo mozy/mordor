@@ -97,8 +97,8 @@ SSLStream::close(CloseType type)
             ERR_clear_error();
             int result = SSL_shutdown(m_ssl.get());
             int error = SSL_get_error(m_ssl.get(), result);
-            LOG_VERBOSE(g_log) << (void *)this << " SSL_shutdown("
-                << m_ssl.get() << "): " << result << " (" << error << ")";
+            LOG_VERBOSE(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+                << "): " << result << " (" << error << ")";
             switch (error) {
                 case SSL_ERROR_NONE:
                 case SSL_ERROR_ZERO_RETURN:
@@ -131,8 +131,8 @@ SSLStream::read(Buffer &b, size_t len)
     while (true) {
         int result = SSL_read(m_ssl.get(), bufs[0].iov_base, toRead);
         int error = SSL_get_error(m_ssl.get(), result);
-        LOG_VERBOSE(g_log) << (void *)this << " SSL_read(" << m_ssl.get()
-            << ", " << toRead << "): " << result << " (" << error << ")";
+        LOG_VERBOSE(g_log) << this << " SSL_read(" << m_ssl.get() << ", "
+            << toRead << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
                 b.produce(result);
@@ -169,8 +169,8 @@ SSLStream::write(const Buffer &b, size_t len)
     while (true) {
         int result = SSL_write(m_ssl.get(), bufs[0].iov_base, toWrite);
         int error = SSL_get_error(m_ssl.get(), result);
-        LOG_VERBOSE(g_log) << (void *)this << " SSL_write(" << m_ssl.get()
-            << ", " << toWrite << "): " << result << " (" << error << ")";
+        LOG_VERBOSE(g_log) << this << " SSL_write(" << m_ssl.get() << ", "
+            << toWrite << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
                 // Don't flushBuffer() here, because we would lose our return
@@ -206,8 +206,8 @@ SSLStream::flush()
         while (true) {
             int result = SSL_shutdown(m_ssl.get());
             int error = SSL_get_error(m_ssl.get(), result);
-            LOG_VERBOSE(g_log) << (void *)this << " SSL_shutdown("
-                << m_ssl.get() << "): " << result << " (" << error << ")";
+            LOG_VERBOSE(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+                << "): " << result << " (" << error << ")";
             switch (error) {
                 case SSL_ERROR_NONE:
                 case SSL_ERROR_ZERO_RETURN:
@@ -237,11 +237,10 @@ SSLStream::flushBuffer()
     char *writeBuf;
     size_t toWrite = BIO_get_mem_data(m_writeBio, &writeBuf);
     while (toWrite) {
-        LOG_VERBOSE(g_log) << (void *)this << " parent()->write(" << toWrite
-            << ")";
+        LOG_VERBOSE(g_log) << this << " parent()->write(" << toWrite << ")";
         size_t written = parent()->write(writeBuf, toWrite);
-        LOG_VERBOSE(g_log) << (void *)this << " parent()->write(" << toWrite
-            << "): " << written;
+        LOG_VERBOSE(g_log) << this << " parent()->write(" << toWrite << "): "
+            << written;
         writeBuf += written;
         toWrite -= written;
     }
@@ -258,10 +257,9 @@ SSLStream::wantRead()
     m_readBuffer.consume(bm->max);
     if (m_readBuffer.readAvailable() == 0) {
         // Maximum SSL record size
-        LOG_VERBOSE(g_log) << (void *)this << " parent()->read(16389)";
+        LOG_VERBOSE(g_log) << this << " parent()->read(16389)";
         size_t result = parent()->read(m_readBuffer, 16384 + 5);
-        LOG_VERBOSE(g_log) << (void *)this << " parent()->read(16389): "
-            << result;
+        LOG_VERBOSE(g_log) << this << " parent()->read(16389): " << result;
         if (result == 0) {
             BIO_set_mem_eof_return(m_readBio, 0);
             return;
@@ -272,5 +270,5 @@ SSLStream::wantRead()
     bm->data = (char *)bufs[0].iov_base;
     bm->length = bm->max =
         (long)std::min<size_t>(0x7fffffff, bufs[0].iov_len);
-    LOG_VERBOSE(g_log) << (void *)this << " wantRead(): " << bm->length;
+    LOG_VERBOSE(g_log) << this << " wantRead(): " << bm->length;
 }

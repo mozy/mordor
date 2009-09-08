@@ -187,6 +187,7 @@ private:
 #define LOG_WARNING(log) (log)->warning(__FILE__, __LINE__).os()
 #define LOG_ERROR(log) (log)->error(__FILE__, __LINE__).os()
 #define LOG_FATAL(log) (log)->fatal(__FILE__, __LINE__).os()
+#define LOG_LEVEL(lg, level) (lg)->log(level, __FILE__, __LINE__).os()
 
 std::ostream &operator <<(std::ostream &os, Log::Level level);
 
