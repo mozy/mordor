@@ -37,6 +37,8 @@ Config::loadFromEnvironment()
         const char *equals = strchr(env, '=');
         if (!equals)
             continue;
+        if (equals == env)
+            continue;
         std::string key(env, equals - env - 1);
         std::string value(equals + 1);
 #endif
