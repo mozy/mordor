@@ -235,7 +235,7 @@ void
 SSLStream::flushBuffer()
 {
     char *writeBuf;
-    long toWrite = BIO_get_mem_data(m_writeBio, &writeBuf);
+    size_t toWrite = BIO_get_mem_data(m_writeBio, &writeBuf);
     while (toWrite) {
         LOG_VERBOSE(g_log) << (void *)this << " parent()->write(" << toWrite
             << ")";
@@ -271,6 +271,6 @@ SSLStream::wantRead()
     std::vector<iovec> bufs = m_readBuffer.readBufs();
     bm->data = (char *)bufs[0].iov_base;
     bm->length = bm->max =
-        std::min<size_t>(0x7fffffff, bufs[0].iov_len);
+        (long)std::min<size_t>(0x7fffffff, bufs[0].iov_len);
     LOG_VERBOSE(g_log) << (void *)this << " wantRead(): " << bm->length;
 }
