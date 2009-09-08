@@ -163,3 +163,25 @@ TEST_WITH_SUITE(Socket, receiveAfterShutdownOtherEnd)
     // Exception is not used; this is special cased in testShutdownException
     testShutdownException<DummyException>(false, true, true);
 }
+
+static void testAddress(const char *addr, const char *expected = NULL)
+{
+    if (!expected)
+        expected = addr;
+    std::ostringstream os;
+    std::vector<Address::ptr> address = Address::lookup(addr);
+    os << *address.front();
+    TEST_ASSERT_EQUAL(os.str(), expected);
+}
+
+TEST_WITH_SUITE(Address, formatAddresses)
+{
+    testAddress("127.0.0.1", "127.0.0.1:0");
+    testAddress("127.0.0.1:80");
+    testAddress("::", "[::]:0");
+    testAddress("[::]:80", "[::]:80");
+    testAddress("::1", "[::1]:0");
+    testAddress("[2001:470:1f05:273:20c:29ff:feb3:5ddf]:0");
+    testAddress("[2001:470::273:20c:0:0:5ddf]:0");
+    testAddress("[2001:470:0:0:273:20c::5ddf]:0", "[2001:470::273:20c:0:5ddf]:0");
+}

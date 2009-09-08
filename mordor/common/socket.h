@@ -128,6 +128,7 @@ public:
     virtual const sockaddr *name() const = 0;
     virtual sockaddr *name() = 0;
     virtual socklen_t nameLen() const = 0;
+    virtual std::ostream & insert(std::ostream &os) const;
 
 private:
     int m_type, m_protocol;
@@ -155,6 +156,8 @@ public:
     const sockaddr *name() const { return (sockaddr*)&sin; }
     sockaddr *name() { return (sockaddr*)&sin; }
     socklen_t nameLen() const { return sizeof(sockaddr_in); }
+
+    std::ostream & insert(std::ostream &os) const;
 private:
     sockaddr_in sin;
 };
@@ -172,6 +175,8 @@ public:
     const sockaddr *name() const { return (sockaddr*)&sin; }
     sockaddr *name() { return (sockaddr*)&sin; }
     socklen_t nameLen() const { return sizeof(sockaddr_in6); }
+
+    std::ostream & insert(std::ostream &os) const;
 private:
     sockaddr_in6 sin;
 };
@@ -187,5 +192,7 @@ public:
 private:
     sockaddr sa;
 };
+
+std::ostream &operator <<(std::ostream &os, const Address &addr);
 
 #endif

@@ -962,7 +962,7 @@ Address::Address(int type, int protocol)
   m_protocol(protocol)
 {}
 
-std::vector<boost::shared_ptr<Address> >
+std::vector<Address::ptr>
 Address::lookup(const std::string &host, int family, int type, int protocol)
 {
     addrinfo hints;
@@ -974,14 +974,35 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     hints.ai_canonname = NULL;
     hints.ai_addr = NULL;
     hints.ai_next = NULL;
-    std::string node = host;
-    const char *server = (const char*)memchr(node.c_str(), ':', node.size());
-    if (server) {
-        node = node.substr(0, server - node.c_str());
-        ++server;
+    std::string node;
+    const char *service = NULL;
+    // Check for [ipv6addr] (with optional :service)
+    if (!host.empty() && host[0] == '[') {
+        const char *endipv6 = (const char *)memchr(host.c_str() + 1, ']', host.size() - 1);
+        if (endipv6) {
+            if (*(endipv6 + 1) == ':') {
+                service = endipv6 + 2;
+            }
+            node = host.substr(1, endipv6 - host.c_str() - 1);
+        }
     }
+    // Check for node:service
+    if (node.empty()) {
+        service = (const char*)memchr(host.c_str(), ':', host.size());
+        if (service) {
+            // More than 1 : means it's not node:service
+            if (!memchr(service + 1, ':', host.c_str() + host.size() - service - 1)) {
+                node = host.substr(0, service - host.c_str());
+                ++service;
+            } else {
+                service = NULL;
+            }
+        }
+    }
+    if (node.empty())
+        node = host;
     addrinfo *results, *next;
-    if (getaddrinfo(node.c_str(), server, &hints, &results)) {
+    if (getaddrinfo(node.c_str(), service, &hints, &results)) {
         throwExceptionFromLastError();
     }
     std::vector<Address::ptr> result;
@@ -1024,6 +1045,12 @@ Address::createSocket(IOManager &ioManager)
     return Socket::ptr(new Socket(ioManager, family(), type(), protocol()));
 }
 
+std::ostream &
+Address::insert(std::ostream &os) const
+{
+    return os << "(Unknown addr " << m_type << ")";
+}
+
 IPAddress::IPAddress(int type, int protocol)
 : Address(type, protocol)
 {}
@@ -1036,6 +1063,16 @@ IPv4Address::IPv4Address(int type, int protocol)
     sin.sin_addr.s_addr = INADDR_ANY;
 }
 
+std::ostream &
+IPv4Address::insert(std::ostream &os) const
+{
+    return os << (int)(sin.sin_addr.s_addr & 0xff) << '.'
+        << (int)((sin.sin_addr.s_addr >> 8) & 0xff) << '.'
+        << (int)((sin.sin_addr.s_addr >> 16) & 0xff) << '.'
+        << (int)((sin.sin_addr.s_addr >> 24) & 0xff) << ':'
+        << (int)htons(sin.sin_port);
+}
+
 IPv6Address::IPv6Address(int type, int protocol)
 : IPAddress(type, protocol)
 {
@@ -1045,8 +1082,39 @@ IPv6Address::IPv6Address(int type, int protocol)
     sin.sin6_addr = anyaddr;
 }
 
+std::ostream &
+IPv6Address::insert(std::ostream &os) const
+{
+    std::ios_base::fmtflags flags = os.setf(std::ios_base::hex, std::ios_base::basefield);
+    os << '[';
+    unsigned short *addr = (unsigned short *)sin.sin6_addr.s6_addr;
+    bool usedZeros = false;
+    for (size_t i = 0; i < 8; ++i) {
+        if (addr[i] == 0 && !usedZeros)
+            continue;
+        if (i != 0 && addr[i - 1] == 0 && !usedZeros) {
+            os << ':';
+            usedZeros = true;
+        }
+        if (i != 0)
+            os << ':';
+        os << (int)htons(addr[i]);
+    }
+    if (!usedZeros && addr[7] == 0)
+        os << "::";
+    
+    os << "]:" << std::dec << (int)htons(sin.sin6_port);
+    os.setf(flags, std::ios_base::basefield);
+    return os;
+}
+
 UnknownAddress::UnknownAddress(int family, int type, int protocol)
 : Address(type, protocol)
 {
     sa.sa_family = family;
+}
+
+std::ostream &operator <<(std::ostream &os, const Address &addr)
+{
+    return addr.insert(os);
 }
