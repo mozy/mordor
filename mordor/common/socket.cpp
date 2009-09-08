@@ -190,9 +190,10 @@ Socket::connect(const Address &to)
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         if (!ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped)) {
-            if (GetLastError() != WSA_IO_PENDING) {
+            DWORD dwLastError = GetLastError();
+            if (dwLastError != WSA_IO_PENDING) {
                 m_ioManager->unregisterEvent(&m_sendEvent);
-                throwExceptionFromLastError();
+                throwExceptionFromLastError(dwLastError);
             }
         }
         Timer::ptr timeout;
@@ -281,9 +282,10 @@ Socket::accept(Socket &target)
         DWORD bytes;
         BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE), &bytes,
             &m_receiveEvent.overlapped);
-        if (!ret && GetLastError() != WSA_IO_PENDING) {
+        DWORD dwLastError = GetLastError();
+        if (!ret && dwLastError != WSA_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_receiveEvent);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError(dwLastError);
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -421,9 +423,10 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         ASSERT(len <= 0xffffffff);
         int ret = WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
             &m_sendEvent.overlapped, NULL);
-        if (ret && GetLastError() != WSA_IO_PENDING) {
+        DWORD dwLastError = GetLastError();
+        if (ret && dwLastError != WSA_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError(dwLastError);
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -489,9 +492,10 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
         int ret = WSASendTo(m_sock, &wsabuf, 1, NULL, flags,
             to.name(), to.nameLen(),
             &m_sendEvent.overlapped, NULL);
-        if (ret && GetLastError() != WSA_IO_PENDING) {
+        DWORD dwLastError = GetLastError();
+        if (ret && dwLastError != WSA_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError(dwLastError);
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -544,9 +548,10 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         int ret = WSASendTo(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
             to.name(), to.nameLen(),
             &m_sendEvent.overlapped, NULL);
-        if (ret && GetLastError() != WSA_IO_PENDING) {
+        DWORD dwLastError = GetLastError();
+        if (ret && dwLastError != WSA_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError(dwLastError);
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -613,9 +618,10 @@ Socket::receive(void *buf, size_t len, int flags)
         m_ioManager->registerEvent(&m_receiveEvent);
         int ret = WSARecv(m_sock, &wsabuf, 1, NULL, (LPDWORD)&flags,
             &m_receiveEvent.overlapped, NULL);
-        if (ret && GetLastError() != WSA_IO_PENDING) {
+        DWORD dwLastError = GetLastError();
+        if (ret && dwLastError != WSA_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_receiveEvent);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError(dwLastError);
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -666,9 +672,10 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         ASSERT(len <= 0xffffffff);
         int ret = WSARecv(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)&flags,
             &m_receiveEvent.overlapped, NULL);
-        if (ret && GetLastError() != WSA_IO_PENDING) {
+        DWORD dwLastError = GetLastError();
+        if (ret && dwLastError != WSA_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_receiveEvent);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError(dwLastError);
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -734,10 +741,11 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
         m_ioManager->registerEvent(&m_sendEvent);        
         int ret = WSARecvFrom(m_sock, &wsabuf, 1, NULL, (LPDWORD)flags,
             from->name(), &namelen,
-            &m_sendEvent.overlapped, NULL);
-        if (ret && GetLastError() != WSA_IO_PENDING) {
-            m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError();
+            from.name(), &namelen,
+        DWORD dwLastError = GetLastError();
+        if (ret && dwLastError != WSA_IO_PENDING) {
+            m_ioManager->unregisterEvent(&m_receiveEvent);
+            throwExceptionFromLastError(dwLastError);
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -746,10 +754,10 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address *from)
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (!m_sendEvent.ret) {
-            throwExceptionFromLastError(m_sendEvent.lastError);
+        if (!m_receiveEvent.ret) {
+            throwExceptionFromLastError(m_receiveEvent.lastError);
         }
-        return m_sendEvent.numberOfBytes;
+        return m_receiveEvent.numberOfBytes;
     } else {
         DWORD sent;
         if (WSARecvFrom(m_sock, &wsabuf, 1, &sent, (LPDWORD)flags,
@@ -801,14 +809,15 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
     int namelen = from->nameLen();
     if (m_ioManager) {
         ptr self = shared_from_this();
-        m_ioManager->registerEvent(&m_sendEvent);
+        m_ioManager->registerEvent(&m_receiveEvent);
         ASSERT(len <= 0xffffffff);
         int ret = WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)flags,
             from->name(), &namelen,
-            &m_sendEvent.overlapped, NULL);
-        if (ret && GetLastError() != WSA_IO_PENDING) {
-            m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError();
+            &m_receiveEvent.overlapped, NULL);
+        DWORD dwLastError = GetLastError();
+        if (ret && dwLastError != WSA_IO_PENDING) {
+            m_ioManager->unregisterEvent(&m_receiveEvent);
+            throwExceptionFromLastError(dwLastError);
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -818,9 +827,9 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address *from)
         if (timeout)
             timeout->cancel();
         if (!m_sendEvent.ret) {
-            throwExceptionFromLastError(m_sendEvent.lastError);
+            throwExceptionFromLastError(m_receiveEvent.lastError);
         }
-        return m_sendEvent.numberOfBytes;
+        return m_receiveEvent.numberOfBytes;
     } else {
         DWORD sent;
         ASSERT(len <= 0xffffffff);
