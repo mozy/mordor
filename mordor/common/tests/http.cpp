@@ -262,7 +262,6 @@ TEST_WITH_SUITE(HTTP, quoting)
     // Backslashes and quotes are escaped
     testQuotingRoundTrip("\"", "\"\\\"\"");
     testQuotingRoundTrip("\\", "\"\\\\\"");
-    testQuotingRoundTrip("\"", "\"\\\"\"");
     testQuotingRoundTrip("co\\dy", "\"co\\\\dy\"");
     testQuotingRoundTrip("multiple\\ escape\" sequences\\  ",
         "\"multiple\\\\ escape\\\" sequences\\\\  \"");
