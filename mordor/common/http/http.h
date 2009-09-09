@@ -212,6 +212,9 @@ namespace HTTP
     struct AcceptValueWithParameters
     {
         AcceptValueWithParameters() : qvalue(~0u) {}
+        AcceptValueWithParameters(const char *v, unsigned int q = ~0u)
+            : value(v), qvalue(q)
+        {}
         AcceptValueWithParameters(const std::string &v, unsigned int q = ~0u)
             : value(v), qvalue(q)
         {}
