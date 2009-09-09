@@ -12,12 +12,12 @@
 #include "mordor/common/assert.h"
 
 std::string
-HTTP::quote(const std::string &str)
+HTTP::quote(const std::string &str, bool alwaysQuote)
 {
     if (str.empty())
         return "\"\"";
 
-    if (str.find_first_not_of("!#$%&'*+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~") == std::string::npos) {
+    if (!alwaysQuote && str.find_first_not_of("!#$%&'*+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~") == std::string::npos) {
         return str;
     }
 
@@ -374,6 +374,29 @@ std::ostream& operator<<(std::ostream& os, HTTP::Version v)
     return os << "HTTP/" << (int)v.major << "." << (int)v.minor;
 }
 
+std::ostream& operator<<(std::ostream& os, const HTTP::ETag &e)
+{
+    if (e.unspecified)
+        return os << "*";
+    if (e.weak)
+        os << "W/";
+    return os << HTTP::quote(e.value, true);
+}
+
+std::ostream& operator<<(std::ostream& os, const HTTP::ETagSet &v)
+{
+    ASSERT(!v.empty());
+    for (HTTP::ETagSet::const_iterator it = v.begin();
+        it != v.end();
+        ++it) {
+        if (it != v.begin())
+            os << ", ";
+        ASSERT(!it->unspecified || v.size() == 1);
+        os << *it;
+    }
+    return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v)
 {
     ASSERT(!v.value.empty());
@@ -511,6 +534,12 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
         os << "Expect: " << r.expect << "\r\n";
     if (!r.host.empty())
         os << "Host: " << r.host << "\r\n";
+    if (!r.ifMatch.empty())
+        os << "If-Match: " << r.ifMatch << "\r\n";
+    if (!r.ifNoneMatch.empty())
+        os << "If-None-Match: " << r.ifNoneMatch << "\r\n";
+    if (!r.ifRange.unspecified)
+        os << "If-Range: " << r.ifRange << "\r\n";
     if (!r.proxyAuthorization.value.empty()) {
         ASSERT(!r.proxyAuthorization.parameters.empty());
         os << "Proxy-Authorization: " << r.proxyAuthorization.value << " " << serializeStringMapAsAuthParam(r.proxyAuthorization.parameters) << "\r\n";
@@ -528,6 +557,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
 {
     if (!r.acceptRanges.empty())
         os << "Accept-Ranges: " << r.acceptRanges << "\r\n";
+    if (!r.eTag.unspecified)
+        os << "ETag: " << r.eTag << "\r\n";
     if (r.location.isDefined())
         os << "Location: " << r.location << "\r\n";
     if (!r.proxyAuthenticate.empty())

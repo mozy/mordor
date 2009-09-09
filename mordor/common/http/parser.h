@@ -22,9 +22,12 @@ namespace HTTP
         StringMap *m_parameters;
         ValueWithParameters *m_auth;
         unsigned long long *m_ulong;
+        ETag *m_eTag;
+        ETagSet *m_eTagSet;
 
         // Temp storage
         std::string m_temp1, m_temp2;
+        ETag m_tempETag;
     };
 
     class RequestParser : public HTTPParser

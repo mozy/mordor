@@ -120,7 +120,7 @@ namespace HTTP
     };
     const char *reason(Status s);
 
-    std::string quote(const std::string &str);
+    std::string quote(const std::string &str, bool alwaysQuote = false);
     std::string unquote(const char *str, size_t size);
     std::string unquote(const std::string &str);
 
@@ -159,6 +159,34 @@ namespace HTTP
             if (major > rhs.major) return true; return minor >= rhs.minor;
         }
     };
+
+    struct ETag
+    {
+        ETag()
+            : weak(false), unspecified(true)
+        {}
+        ETag(const std::string &v, bool w)
+            : weak(w), unspecified(false), value(v)
+        {}
+
+        bool weak, unspecified;
+        std::string value;
+
+        bool operator< (const ETag &rhs) const
+        {
+            if (unspecified && !rhs.unspecified)
+                return true;
+            if (!unspecified && rhs.unspecified)
+                return false;
+            if (weak && !rhs.weak)
+                return false;
+            if (!weak && rhs.weak)
+                return true;
+            return value < rhs.value;
+        }
+    };
+
+    typedef std::set<ETag> ETagSet;
 
     struct caseinsensitiveless
     {
@@ -261,6 +289,10 @@ namespace HTTP
         ValueWithParameters authorization;
         ParameterizedKeyValueList expect;
         std::string host;
+        ETagSet ifMatch;
+        ETagSet ifNoneMatch;
+        ETag ifRange;
+        // TODO: ifRange can also be a timestamp
         ValueWithParameters proxyAuthorization;
         RangeSet range;
         URI referer;
@@ -270,6 +302,7 @@ namespace HTTP
     struct ResponseHeaders
     {
         StringSet acceptRanges;
+        ETag eTag;
         URI location;
         ParameterizedList proxyAuthenticate;
         ParameterizedList wwwAuthenticate;
@@ -314,6 +347,8 @@ namespace HTTP
 std::ostream& operator<<(std::ostream& os, HTTP::Method m);
 std::ostream& operator<<(std::ostream& os, HTTP::Status s);
 std::ostream& operator<<(std::ostream& os, HTTP::Version v);
+std::ostream& operator<<(std::ostream& os, const HTTP::ETag &e);
+std::ostream& operator<<(std::ostream& os, const HTTP::ETagSet &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l);
 std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v);

@@ -115,6 +115,97 @@ TEST_WITH_SUITE(HTTP, requestWithComplexHeader)
         != request.general.connection.end());
 }
 
+TEST_WITH_SUITE(HTTP, ifMatchHeader)
+{
+    HTTP::Request request;
+    HTTP::RequestParser parser(request);
+    HTTP::ETagSet::iterator it;
+    std::ostringstream os;
+
+    parser.run("GET / HTTP/1.0\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
+    TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
+    TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
+    TEST_ASSERT(request.request.ifMatch.empty());
+    os << request;
+    TEST_ASSERT_EQUAL(os.str(),
+        "GET / HTTP/1.0\r\n"
+        "\r\n");
+
+    request = HTTP::Request();
+    parser.run("GET / HTTP/1.0\r\n"
+               "If-Match: *\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
+    TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
+    TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
+    TEST_ASSERT_EQUAL(request.request.ifMatch.size(), 1);
+    it = request.request.ifMatch.begin();
+    TEST_ASSERT(it->unspecified);
+    TEST_ASSERT(!it->weak);
+    TEST_ASSERT_EQUAL(it->value, "");
+    os.str("");
+    os << request;
+    TEST_ASSERT_EQUAL(os.str(),
+        "GET / HTTP/1.0\r\n"
+        "If-Match: *\r\n"
+        "\r\n");
+
+    request = HTTP::Request();
+    parser.run("GET / HTTP/1.0\r\n"
+               "If-Match: \"\", W/\"other\", \"something\"\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
+    TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
+    TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
+    TEST_ASSERT_EQUAL(request.request.ifMatch.size(), 3);
+    it = request.request.ifMatch.begin();
+    TEST_ASSERT(!it->unspecified);
+    TEST_ASSERT(!it->weak);
+    TEST_ASSERT_EQUAL(it->value, "");
+    ++it;
+    TEST_ASSERT(!it->unspecified);
+    TEST_ASSERT(!it->weak);
+    TEST_ASSERT_EQUAL(it->value, "something");
+    ++it;
+    TEST_ASSERT(!it->unspecified);
+    TEST_ASSERT(it->weak);
+    TEST_ASSERT_EQUAL(it->value, "other");
+    os.str("");
+    os << request;
+    TEST_ASSERT_EQUAL(os.str(),
+        "GET / HTTP/1.0\r\n"
+        "If-Match: \"\", \"something\", W/\"other\"\r\n"
+        "\r\n");
+
+    // * is only allowed once
+    request = HTTP::Request();
+    parser.run("GET / HTTP/1.0\r\n"
+               "If-Match: \"first\", \"second\", *\r\n"
+               "\r\n");
+    TEST_ASSERT(parser.error());
+    TEST_ASSERT(!parser.complete());
+    TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
+    TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
+    TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
+    TEST_ASSERT_EQUAL(request.request.ifMatch.size(), 2);
+    it = request.request.ifMatch.begin();
+    TEST_ASSERT(!it->unspecified);
+    TEST_ASSERT(!it->weak);
+    TEST_ASSERT_EQUAL(it->value, "first");
+    ++it;
+    TEST_ASSERT(!it->unspecified);
+    TEST_ASSERT(!it->weak);
+    TEST_ASSERT_EQUAL(it->value, "second");
+}
+
 TEST_WITH_SUITE(HTTP, trailer)
 {
     HTTP::EntityHeaders trailer;
@@ -181,6 +272,93 @@ TEST_WITH_SUITE(HTTP, contentTypeHeader)
     TEST_ASSERT_EQUAL(response.status.reason, "OK");
     TEST_ASSERT_EQUAL(response.entity.contentType.type, "text");
     TEST_ASSERT_EQUAL(response.entity.contentType.subtype, "plain");
+}
+
+TEST_WITH_SUITE(HTTP, eTagHeader)
+{
+    HTTP::Response response;
+    HTTP::ResponseParser parser(response);
+    std::ostringstream os;
+
+    parser.run("HTTP/1.1 200 OK\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    TEST_ASSERT(response.response.eTag.unspecified);
+    TEST_ASSERT(!response.response.eTag.weak);
+    TEST_ASSERT_EQUAL(response.response.eTag.value, "");
+    os << response;
+    TEST_ASSERT_EQUAL(os.str(),
+        "HTTP/1.1 200 OK\r\n"
+        "\r\n");
+
+    response = HTTP::Response();
+    parser.run("HTTP/1.1 200 OK\r\n"
+               "ETag: \"\"\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    TEST_ASSERT(!response.response.eTag.unspecified);
+    TEST_ASSERT(!response.response.eTag.weak);
+    TEST_ASSERT_EQUAL(response.response.eTag.value, "");
+    os.str("");
+    os << response;
+    TEST_ASSERT_EQUAL(os.str(),
+        "HTTP/1.1 200 OK\r\n"
+        "ETag: \"\"\r\n"
+        "\r\n");
+
+    response = HTTP::Response();
+    parser.run("HTTP/1.1 200 OK\r\n"
+               "ETag: W/\"\"\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    TEST_ASSERT(!response.response.eTag.unspecified);
+    TEST_ASSERT(response.response.eTag.weak);
+    TEST_ASSERT_EQUAL(response.response.eTag.value, "");
+
+    response = HTTP::Response();
+    parser.run("HTTP/1.1 200 OK\r\n"
+               "ETag: \"sometag\"\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    TEST_ASSERT(!response.response.eTag.unspecified);
+    TEST_ASSERT(!response.response.eTag.weak);
+    TEST_ASSERT_EQUAL(response.response.eTag.value, "sometag");
+
+    response = HTTP::Response();
+    parser.run("HTTP/1.1 200 OK\r\n"
+               "ETag: *\r\n"
+               "\r\n");
+    TEST_ASSERT(parser.error());
+    TEST_ASSERT(!parser.complete());
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(response.status.reason, "OK");
+
+    response = HTTP::Response();
+    parser.run("HTTP/1.1 200 OK\r\n"
+               "ETag: token\r\n"
+               "\r\n");
+    TEST_ASSERT(parser.error());
+    TEST_ASSERT(!parser.complete());
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 1));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(response.status.reason, "OK");
 }
 
 TEST_WITH_SUITE(HTTP, locationHeader)
@@ -272,6 +450,9 @@ TEST_WITH_SUITE(HTTP, quoting)
     testQuotingRoundTrip("\x7f", "\"\\\x7f\"");
     // > 127 is quoted, but not escaped
     testQuotingRoundTrip("\x80", "\"\x80\"");
+
+    // ETag even quotes tokens
+    TEST_ASSERT_EQUAL(HTTP::quote("token", true), "\"token\"");
 }
 
 static void

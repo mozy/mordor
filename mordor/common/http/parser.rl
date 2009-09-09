@@ -155,9 +155,38 @@ HTTP::unquote(const std::string &str)
     primary_tag = ALPHA{1,8};
     language_tag = primary_tag ("-" subtag);
 
-    weak = "W/";
-    opaque_tag = quoted_string;
-    entity_tag = (weak)? opaque_tag;  
+    action start_etag {
+        ASSERT(m_eTag);
+        m_eTag->weak = false;
+    }
+    action save_weak {
+        ASSERT(m_eTag);
+        m_eTag->unspecified = false;
+        m_eTag->weak = true;
+    }
+    action save_etag {
+        ASSERT(m_eTag);
+        m_eTag->unspecified = false;
+        m_eTag->value = unquote(mark, fpc - mark);
+    }
+    action set_etag_list {
+        m_eTag = &m_tempETag;
+    }
+    action save_unspecified {
+        ASSERT(m_eTagSet);
+        m_eTagSet->insert(ETag());
+    }
+    action save_etag_element {
+        ASSERT(m_eTagSet);
+        ASSERT(m_eTag == & m_tempETag);
+        m_eTagSet->insert(m_tempETag);
+    }
+    
+    weak = "W/" %save_weak;
+    opaque_tag = quoted_string >mark %save_etag;
+    entity_tag = ((weak)? opaque_tag) >start_etag;
+
+    etag_list = ("*" % save_unspecified | (LWS* entity_tag %save_etag_element ( LWS* ',' LWS* entity_tag %save_etag_element)* LWS*)) > set_etag_list;
 
     bytes_unit = "bytes";
     other_range_unit = token;
@@ -347,15 +376,6 @@ HTTP::unquote(const std::string &str)
         m_auth = &m_request->request.authorization;
     }
 
-    action set_host {
-        m_string = &m_request->request.host;
-    }
-    
-    action set_proxy_authorization {
-        m_parameterizedList = NULL;
-        m_auth = &m_request->request.proxyAuthorization;
-    }
-
     action save_expectation {
         KeyValueWithParameters kvp;
         kvp.key = std::string(mark, fpc - mark);
@@ -375,20 +395,39 @@ HTTP::unquote(const std::string &str)
         m_request->request.expect.back().parameters[m_temp1] = unquote(mark, fpc - mark);
         mark = NULL;
     }
+    
+    action set_host {
+        m_string = &m_request->request.host;
+    }
+    
+    action set_if_match {
+        m_eTagSet = &m_request->request.ifMatch;
+    }
+    
+    action set_if_none_match {
+        m_eTagSet = &m_request->request.ifMatch;
+    }
+    
+    action set_if_range {
+        m_eTag = &m_request->request.ifRange;
+    }
+    
+    action set_proxy_authorization {
+        m_parameterizedList = NULL;
+        m_auth = &m_request->request.proxyAuthorization;
+    }
 
     action save_first_byte_pos {
         m_request->request.range.push_back(RangeSet::value_type(
             strtoull(mark, NULL, 10), ~0ull));
         mark = NULL;
     }
-
     action save_last_byte_pos {
         if (mark != NULL) {
             m_request->request.range.back().second = strtoull(mark, NULL, 10);
         }
         mark = NULL;
     }
-
     action save_suffix_byte_pos {
         m_request->request.range.push_back(RangeSet::value_type(
             ~0ull, strtoull(mark, NULL, 10)));
@@ -438,13 +477,18 @@ HTTP::unquote(const std::string &str)
 
 
     Authorization = 'Authorization:'i @set_authorization LWS* credentials;
-
-    Host = 'Host:'i @set_host LWS* (host (':' port)?) >mark %save_string LWS*;
     
     expect_params = ';' token >mark %save_expectation_param ( '=' (token | quoted_string) >mark %save_expectation_param_value )?;
     expectation = token >mark %save_expectation ( '=' (token | quoted_string) >mark %save_expectation_value expect_params* )?;
     Expect = 'Expect:'i LWS* expectation ( LWS* ',' LWS* expectation )* LWS*;
-    
+
+    Host = 'Host:'i @set_host LWS* (host (':' port)?) >mark %save_string LWS*;
+
+    If_Match = 'If-Match:'i @set_if_match LWS* etag_list;
+    If_None_Match = 'If-None-Match:'i @set_if_none_match LWS* etag_list;
+    # TODO: | HTTP_Date
+    If_Range = 'If-Range:'i @set_if_range LWS* entity_tag;
+
     Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization credentials;
     
     byte_range_spec = DIGIT+ >mark %save_first_byte_pos '-' (DIGIT+ >mark %save_last_byte_pos)?;
@@ -461,8 +505,8 @@ HTTP::unquote(const std::string &str)
     acceptList = LWS* acceptListElement ( LWS* ',' LWS* acceptListElement)* LWS*;
     TE = 'TE:'i @set_te acceptList;
     
-    request_header = Authorization | Host | Expect | Proxy_Authorization | Range | Referer | TE;
-    request_header_names = 'Authorization'i | 'Host'i | 'Expect'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i;
+    request_header = Authorization | Expect | Host | If_Match | If_None_Match | If_Range | Proxy_Authorization | Range | Referer | TE;
+    request_header_names = 'Authorization'i | 'Expect'i | 'Host'i | 'If-Match'i | 'If-None-Match'i | 'If-Range'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i;
     
     extension_header = (token - (general_header_names | request_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;
@@ -488,6 +532,8 @@ HTTP::HTTPParser::init()
     m_parameters = NULL;
     m_auth = NULL;
     m_ulong = NULL;
+    m_eTag = NULL;
+    m_eTagSet = NULL;
     RagelParser::init();
 }
 
@@ -551,6 +597,10 @@ HTTP::RequestParser::exec()
         m_set = &m_response->response.acceptRanges;
         m_list = NULL;
     }
+    action set_etag
+    {
+        m_eTag = &m_response->response.eTag;
+    }
     action set_proxy_authenticate {
         m_parameterizedList = &m_response->response.proxyAuthenticate;
     }
@@ -559,13 +609,14 @@ HTTP::RequestParser::exec()
     }
     
     Accept_Ranges = 'Accept-Ranges:'i @set_accept_ranges list;
+    ETag = 'ETag:'i @set_etag LWS* entity_tag;
     # This *should* be absolute_URI, but we're generous
     Location = 'Location:'i LWS* URI_reference LWS*;
     Proxy_Authenticate = 'Proxy-Authenticate:'i @set_proxy_authenticate challengeList;
     WWW_Authenticate = 'WWW-Authenticate:'i @set_www_authenticate challengeList;
     
-    response_header = Accept_Ranges | Location | Proxy_Authenticate | WWW_Authenticate;
-    response_header_names = 'Accept-Ranges'i | 'Location'i | 'Proxy-Authenticate'i | 'WWW-Authenticate'i;
+    response_header = Accept_Ranges | ETag | Location | Proxy_Authenticate | WWW_Authenticate;
+    response_header_names = 'Accept-Ranges'i | 'ETag'i | 'Location'i | 'Proxy-Authenticate'i | 'WWW-Authenticate'i;
     
     extension_header = (token - (general_header_names | response_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;
