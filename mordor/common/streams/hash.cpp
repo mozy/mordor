@@ -30,13 +30,13 @@ SHA0Stream::SHA0Stream(Stream::ptr parent, bool own)
     SHA_Init(&m_ctx);
 }
 
-std::vector<unsigned char>
+std::string
 SHA0Stream::hash() const
 {
     SHA_CTX copy(m_ctx);
-    std::vector<unsigned char> result;
+    std::string result;
     result.resize(SHA_DIGEST_LENGTH);
-    SHA_Final(&result[0], &copy);
+    SHA_Final((unsigned char *)&result[0], &copy);
     return result;
 }
 
@@ -52,13 +52,13 @@ SHA1Stream::SHA1Stream(Stream::ptr parent, bool own)
     SHA1_Init(&m_ctx);
 }
 
-std::vector<unsigned char>
+std::string
 SHA1Stream::hash() const
 {
     SHA_CTX copy(m_ctx);
-    std::vector<unsigned char> result;
+    std::string result;
     result.resize(SHA_DIGEST_LENGTH);
-    SHA1_Final(&result[0], &copy);
+    SHA1_Final((unsigned char *)&result[0], &copy);
     return result;
 }
 
@@ -74,13 +74,13 @@ MD5Stream::MD5Stream(Stream::ptr parent, bool own)
     MD5_Init(&m_ctx);
 }
 
-std::vector<unsigned char>
+std::string
 MD5Stream::hash() const
 {
     MD5_CTX copy(m_ctx);
-    std::vector<unsigned char> result;
+    std::string result;
     result.resize(MD5_DIGEST_LENGTH);
-    MD5_Final(&result[0], &copy);
+    MD5_Final((unsigned char *)&result[0], &copy);
     return result;
 }
 

@@ -25,7 +25,8 @@ public:
     size_t write(const Buffer &b, size_t len);
     long long seek(long long offset, Anchor anchor) { NOTREACHED(); }
 
-    virtual std::vector<unsigned char> hash() const = 0;
+    // Returns the hash in *binary*
+    virtual std::string hash() const = 0;
 
 protected:
     virtual void updateHash(const Buffer &b, size_t len) = 0;
@@ -36,7 +37,7 @@ class SHA0Stream : public HashStream
 public:
     SHA0Stream(Stream::ptr parent, bool own = true);
 
-    std::vector<unsigned char> hash() const;
+    std::string hash() const;
 
 protected:
     void updateHash(const Buffer &b, size_t len);
@@ -50,7 +51,7 @@ class SHA1Stream : public HashStream
 public:
     SHA1Stream(Stream::ptr parent, bool own = true);
 
-    std::vector<unsigned char> hash() const;
+    std::string hash() const;
 
 protected:
     void updateHash(const Buffer &b, size_t len);
@@ -64,7 +65,7 @@ class MD5Stream : public HashStream
 public:
     MD5Stream(Stream::ptr parent, bool own = true);
 
-    std::vector<unsigned char> hash() const;
+    std::string hash() const;
 
 protected:
     void updateHash(const Buffer &b, size_t len);
