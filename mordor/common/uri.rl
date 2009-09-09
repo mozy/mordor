@@ -209,6 +209,8 @@ std::string unescape(const std::string& str)
     relative_ref = relative_part ( "?" query )? ( "#" fragment )?;
     
     absolute_URI = scheme ":" hier_part ( "?" query )? ;
+    # Obsolete, but referenced from HTTP, so we translate
+    relative_URI = relative_part ( "?" query )?;
 
     URI = scheme ":" hier_part ( "?" query )? ( "#" fragment )?;
     URI_reference = URI | relative_ref;

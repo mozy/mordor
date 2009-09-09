@@ -260,6 +260,7 @@ namespace HTTP
         std::string host;
         ValueWithParameters proxyAuthorization;
         RangeSet range;
+        URI referer;
         AcceptList te;
     };
 

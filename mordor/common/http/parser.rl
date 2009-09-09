@@ -338,6 +338,10 @@ HTTP::unquote(const std::string &str)
         mark = NULL;
     }
     
+    action set_request_uri {
+        m_uri = &m_request->requestLine.uri;
+    }
+    
     action set_authorization {
         m_parameterizedList = NULL;
         m_auth = &m_request->request.authorization;
@@ -389,6 +393,10 @@ HTTP::unquote(const std::string &str)
         m_request->request.range.push_back(RangeSet::value_type(
             ~0ull, strtoull(mark, NULL, 10)));
         mark = NULL;
+    }
+    
+    action set_referer {
+        m_uri = &m_request->request.referer;
     }
 
     action save_accept_list_element {
@@ -444,6 +452,8 @@ HTTP::unquote(const std::string &str)
     byte_range_set = LWS* (byte_range_spec | suffix_byte_range_spec) ( LWS* ',' LWS* (byte_range_spec | suffix_byte_range_spec))* LWS*;
     ranges_specifier = bytes_unit '=' byte_range_set;
     Range = 'Range:'i LWS* ranges_specifier;
+    
+    Referer = 'Referer:'i @set_referer LWS* (absolute_URI | relative_URI);
 
     accept_extension = ';' token >mark %save_accept_attribute ('=' (token | quoted_string) >mark %save_accept_value)?;
     accept_params = ';q='i qvalue >mark %save_qvalue (accept_extension)*;
@@ -451,17 +461,17 @@ HTTP::unquote(const std::string &str)
     acceptList = LWS* acceptListElement ( LWS* ',' LWS* acceptListElement)* LWS*;
     TE = 'TE:'i @set_te acceptList;
     
-    request_header = Authorization | Host | Expect | Proxy_Authorization | Range | TE;
-    request_header_names = 'Authorization'i | 'Host'i | 'Expect'i | 'Proxy-Authorization'i | 'Range'i | 'TE'i;
+    request_header = Authorization | Host | Expect | Proxy_Authorization | Range | Referer | TE;
+    request_header_names = 'Authorization'i | 'Host'i | 'Expect'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i;
     
     extension_header = (token - (general_header_names | request_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;
 
     Method = token >mark %parse_Method;
-    # we explicitly add query to hier_part, because the URI spec changed from RFC 2396 to RFC 3986
+    # we explicitly add query to path_absolute, because the URI spec changed from RFC 2396 to RFC 3986
     # with the query not being part of hier_part
-    Request_URI = ( "*" | absolute_URI | (hier_part ( "?" query )?) | authority);
-    Request_Line = Method SP Request_URI SP HTTP_Version CRLF;
+    Request_URI = ( "*" | absolute_URI | (path_absolute ( "?" query )?) | authority);
+    Request_Line = Method SP Request_URI >set_request_uri SP HTTP_Version CRLF;
     Request = Request_Line ((general_header | request_header | entity_header | extension_header) CRLF)* CRLF @done;
 
     main := Request;
@@ -484,7 +494,6 @@ HTTP::HTTPParser::init()
 HTTP::RequestParser::RequestParser(Request& request)
 : m_request(&request),
   m_ver(&request.requestLine.ver),
-  m_uri(&request.requestLine.uri),
   m_path(&request.requestLine.uri.path),
   m_general(&request.general),
   m_entity(&request.entity)
