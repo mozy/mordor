@@ -241,21 +241,38 @@ TEST_WITH_SUITE(HTTP, versionComparison)
     TEST_ASSERT(ver10 >= ver10);
 }
 
+static void testQuotingRoundTrip(const std::string &unquoted, const std::string &quoted)
+{
+    TEST_ASSERT_EQUAL(HTTP::quote(unquoted), quoted);
+    TEST_ASSERT_EQUAL(HTTP::unquote(quoted), unquoted);
+}
+
 TEST_WITH_SUITE(HTTP, quoting)
 {
-    TEST_ASSERT_EQUAL(HTTP::quote(""), "\"\"");
-    TEST_ASSERT_EQUAL(HTTP::quote("token"), "token");
-    TEST_ASSERT_EQUAL(HTTP::quote("multiple words"), "\"multiple words\"");
-    TEST_ASSERT_EQUAL(HTTP::quote("\tlotsa  whitespace\t"),
+    // Empty string needs to be quoted (otherwise ambiguous)
+    testQuotingRoundTrip("", "\"\"");
+    // Tokens do not need to be quoted
+    testQuotingRoundTrip("token", "token");
+    testQuotingRoundTrip("tom", "tom");
+    testQuotingRoundTrip("token.non-separator+chars", "token.non-separator+chars");
+    // Whitespace is quoted, but not escaped
+    testQuotingRoundTrip("multiple words", "\"multiple words\"");
+    testQuotingRoundTrip("\tlotsa  whitespace\t",
         "\"\tlotsa  whitespace\t\"");
-    TEST_ASSERT_EQUAL(HTTP::quote("\""), "\"\\\"\"");
-    TEST_ASSERT_EQUAL(HTTP::quote("\\"), "\"\\\\\"");
-    TEST_ASSERT_EQUAL(HTTP::quote("weird < chars >"), "\"weird < chars >\"");
-    TEST_ASSERT_EQUAL(HTTP::quote("multiple\\ escape\" sequences\\  "),
+    // Backslashes and quotes are escaped
+    testQuotingRoundTrip("\"", "\"\\\"\"");
+    testQuotingRoundTrip("\\", "\"\\\\\"");
+    testQuotingRoundTrip("\"", "\"\\\"\"");
+    testQuotingRoundTrip("co\\dy", "\"co\\\\dy\"");
+    testQuotingRoundTrip("multiple\\ escape\" sequences\\  ",
         "\"multiple\\\\ escape\\\" sequences\\\\  \"");
-    TEST_ASSERT_EQUAL(HTTP::quote("tom"), "tom");
-    TEST_ASSERT_EQUAL(HTTP::quote("\""), "\"\\\"\"");
-    TEST_ASSERT_EQUAL(HTTP::quote("co\\dy"), "\"co\\\\dy\"");
+    // Seperators are escaped
+    testQuotingRoundTrip("weird < chars >", "\"weird < chars >\"");
+    // CTL gets escaped
+    testQuotingRoundTrip(std::string("\0", 1), std::string("\"\\\0\"", 4));
+    testQuotingRoundTrip("\x7f", "\"\\\x7f\"");
+    // > 127 is quoted, but not escaped
+    testQuotingRoundTrip("\x80", "\"\x80\"");
 }
 
 static void

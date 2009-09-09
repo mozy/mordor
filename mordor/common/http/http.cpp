@@ -25,14 +25,23 @@ HTTP::quote(const std::string &str)
     result.reserve(str.length() + 2);
     result.append(1, '"');
 
+    // qdtext = OCTET - CTL - '"' - '\\' | LWS
+    // CR, LF, and HT are part of LWS, and are allowed
+    // DEL is a CTL, and is not allowed
+    // \ is the escape character, and must be escaped itself
+    // " indicates end-of-string, and must be escaped
+    static const std::string escaped(
+        "\0\x01\x02\x03\x04\x05\x06\x07\x08\x0b\x0c\x0e\x0f"
+        "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+        "\x7f\\\"", 32);
     size_t lastEscape = 0;
-    size_t nextEscape = std::min(str.find('\\'), str.find('"'));
+    size_t nextEscape = str.find_first_of(escaped);
     while (nextEscape != std::string::npos) {
         result.append(str.substr(lastEscape, nextEscape - lastEscape));
         result.append(1, '\\');
         result.append(1, str[nextEscape]);
         lastEscape = nextEscape + 1;
-        nextEscape = std::min(str.find('\\', lastEscape), str.find('"', lastEscape));
+        nextEscape = str.find_first_of(escaped, lastEscape);
     }
     result.append(str.substr(lastEscape));
     result.append(1, '"');

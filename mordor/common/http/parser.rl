@@ -62,19 +62,17 @@ unfold(char *p, char *pe)
     return std::string(start, pw - start);
 }
 
-static
 std::string
-unquote(char *p, char *pe)
+HTTP::unquote(const char *str, size_t size)
 {
-    if (pe == p || *p != '"')
-        return std::string(p, pe - p);
-    char *start = p;
+    if (size == 0 || str[0] != '"')
+        return std::string(str, size);
+    ASSERT(str[size - 1] == '"');
+    std::string result(str + 1, size - 2);
+    char *p = const_cast<char *>(result.c_str());
+    char *pe = p + result.size();
     char *pw = p;
 
-    ASSERT(*p == '"');
-    ASSERT(*(pe - 1) == '"');
-    ++p; ++pw; ++start;
-    --pe;
     bool escaping = false;
     while (p < pe) {
         if (escaping) {
@@ -85,12 +83,20 @@ unquote(char *p, char *pe)
             continue;
         }
         // Only copy if necessary
-        if (pw != p) {
+        if (pw != p)
             *pw = *p;
-        }
         ++p; ++pw;
     }
-    return std::string(start, pw - start);
+    result.resize(pw - result.c_str());
+    return result;
+}
+
+std::string
+HTTP::unquote(const std::string &str)
+{
+    if (str.empty() || str[0] != '"')
+        return str;
+    return unquote(str.c_str(), str.size());
 }
 
 %%{
@@ -213,7 +219,7 @@ unquote(char *p, char *pe)
     }
     
     action save_parameter_value {
-        (*m_parameters)[m_temp1] = unquote((char*)mark, (char*)fpc);
+        (*m_parameters)[m_temp1] = unquote(mark, fpc - mark);
         mark = NULL;
     }
 
@@ -353,7 +359,7 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
     action save_expectation_value {
-        m_request->request.expect.back().value = unquote((char*)mark, (char*)fpc);
+        m_request->request.expect.back().value = unquote(mark, fpc - mark);
         mark = NULL;
     }
     action save_expectation_param {
@@ -362,7 +368,7 @@ unquote(char *p, char *pe)
         mark = NULL;
     }
     action save_expectation_param_value {
-        m_request->request.expect.back().parameters[m_temp1] = unquote((char*)mark, (char*)fpc);
+        m_request->request.expect.back().parameters[m_temp1] = unquote(mark, fpc - mark);
         mark = NULL;
     }
 
@@ -414,7 +420,7 @@ unquote(char *p, char *pe)
     }
     
     action save_accept_value {
-        m_acceptList->back().acceptParams[m_temp1] = unquote((char*)mark, (char*)fpc);
+        m_acceptList->back().acceptParams[m_temp1] = unquote(mark, fpc - mark);
         mark = NULL;
     }
     

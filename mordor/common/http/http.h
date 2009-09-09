@@ -121,6 +121,8 @@ namespace HTTP
     const char *reason(Status s);
 
     std::string quote(const std::string &str);
+    std::string unquote(const char *str, size_t size);
+    std::string unquote(const std::string &str);
 
     struct Version
     {
