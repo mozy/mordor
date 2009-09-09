@@ -508,7 +508,11 @@ HTTP::ClientRequest::doRequest()
         std::ostringstream os;
         os << m_request;
         std::string str = os.str();
-        LOG_TRACE(g_log) << str;
+        if (g_log->enabled(Log::VERBOSE)) {
+            LOG_VERBOSE(g_log) << this << " " << str;
+        } else {
+            LOG_TRACE(g_log) << this << " " << m_request.requestLine;
+        }
         m_conn->m_stream->write(str.c_str(), str.size());
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID)) {
@@ -577,7 +581,11 @@ HTTP::ClientRequest::ensureResponse()
             throw BadMessageHeaderException();
         if (!parser.complete())
             throw IncompleteMessageHeaderException();
-        LOG_TRACE(g_log) << m_response;
+        if (g_log->enabled(Log::VERBOSE)) {
+            LOG_VERBOSE(g_log) << this << " " << m_response;
+        } else {
+            LOG_TRACE(g_log) << this << " " << m_response.status;
+        }
 
         bool close = false;
         StringSet &connection = m_response.general.connection;
@@ -676,7 +684,7 @@ HTTP::ClientRequest::requestDone()
         std::ostringstream os;
         os << m_requestTrailer << "\r\n";
         std::string str = os.str();
-        LOG_TRACE(g_log) << str;
+        LOG_VERBOSE(g_log) << this << " " << str;
         m_conn->m_stream->write(str.c_str(), str.size());        
     }
     m_conn->scheduleNextRequest(shared_from_this());
@@ -700,7 +708,7 @@ HTTP::ClientRequest::responseDone()
             m_incompleteTrailer = true;
             return;
         }
-        LOG_TRACE(g_log) << m_responseTrailer;
+        LOG_VERBOSE(g_log) << this << " " << m_responseTrailer;
     }
     m_conn->scheduleNextResponse(shared_from_this());
 }
