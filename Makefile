@@ -218,7 +218,8 @@ all:	mordor/common/examples/cat						\
 	mordor/kalypso/vfs/triton/libtritonvfs.a				\
 	mordor/kalypso/tests/run_tests						\
         mordor/triton/client/get						\
-	mordor/triton/client/list
+	mordor/triton/client/list						\
+	mordor/triton/client/manifest
 
 .PHONY: check
 check: all
@@ -284,7 +285,8 @@ EXAMPLEOBJECTS :=								\
 	mordor/common/examples/simpleclient.o					\
 	mordor/common/examples/wget.o						\
 	mordor/triton/client/get_main.o						\
-	mordor/triton/client/list_main.o
+	mordor/triton/client/list_main.o					\
+	mordor/triton/client/manifest_main.o
 
 $(EXAMPLEOBJECTS): mordor/common/pch.h.gch
 
@@ -326,6 +328,14 @@ endif
 	$(COMPLINK)
 
 mordor/triton/client/list: mordor/triton/client/list_main.o			\
+	mordor/triton/client/libtritonclient.a 					\
+	mordor/common/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(COMPLINK)
+
+mordor/triton/client/manifest: mordor/triton/client/manifest_main.o		\
 	mordor/triton/client/libtritonclient.a 					\
 	mordor/common/libmordor.a
 ifeq ($(Q),@)
