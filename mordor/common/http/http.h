@@ -120,6 +120,21 @@ namespace HTTP
     };
     const char *reason(Status s);
 
+    class Redirect : public HTTPException
+    {
+    public:
+        Redirect(Status status, const URI &uri)
+            : m_status(status), m_uri(uri)
+        {}
+
+        Status status() const { return m_status; }
+        const URI &uri() const { return m_uri; }
+
+    private:
+        Status m_status;
+        URI m_uri;
+    };
+
     std::string quote(const std::string &str, bool alwaysQuote = false);
     std::string unquote(const char *str, size_t size);
     std::string unquote(const std::string &str);
