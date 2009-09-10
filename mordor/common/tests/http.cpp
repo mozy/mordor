@@ -144,7 +144,7 @@ TEST_WITH_SUITE(HTTP, ifMatchHeader)
     TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
     TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
     TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
-    TEST_ASSERT_EQUAL(request.request.ifMatch.size(), 1);
+    TEST_ASSERT_EQUAL(request.request.ifMatch.size(), 1u);
     it = request.request.ifMatch.begin();
     TEST_ASSERT(it->unspecified);
     TEST_ASSERT(!it->weak);
@@ -165,7 +165,7 @@ TEST_WITH_SUITE(HTTP, ifMatchHeader)
     TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
     TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
     TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
-    TEST_ASSERT_EQUAL(request.request.ifMatch.size(), 3);
+    TEST_ASSERT_EQUAL(request.request.ifMatch.size(), 3u);
     it = request.request.ifMatch.begin();
     TEST_ASSERT(!it->unspecified);
     TEST_ASSERT(!it->weak);
@@ -195,7 +195,7 @@ TEST_WITH_SUITE(HTTP, ifMatchHeader)
     TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
     TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
     TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
-    TEST_ASSERT_EQUAL(request.request.ifMatch.size(), 2);
+    TEST_ASSERT_EQUAL(request.request.ifMatch.size(), 2u);
     it = request.request.ifMatch.begin();
     TEST_ASSERT(!it->unspecified);
     TEST_ASSERT(!it->weak);

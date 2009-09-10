@@ -219,7 +219,8 @@ all:	mordor/common/examples/cat						\
 	mordor/kalypso/tests/run_tests						\
         mordor/triton/client/get						\
 	mordor/triton/client/list						\
-	mordor/triton/client/manifest
+	mordor/triton/client/manifest						\
+	mordor/triton/client/put
 
 .PHONY: check
 check: all
@@ -286,7 +287,8 @@ EXAMPLEOBJECTS :=								\
 	mordor/common/examples/wget.o						\
 	mordor/triton/client/get_main.o						\
 	mordor/triton/client/list_main.o					\
-	mordor/triton/client/manifest_main.o
+	mordor/triton/client/manifest_main.o					\
+	mordor/triton/client/put_main.o
 
 $(EXAMPLEOBJECTS): mordor/common/pch.h.gch
 
@@ -427,6 +429,7 @@ LIBTRITONCLIENTOBJECTS :=							\
 	mordor/triton/client/client.o						\
 	mordor/triton/client/get.o						\
 	mordor/triton/client/list.o						\
+	mordor/triton/client/manifest.o						\
 	mordor/triton/client/put.o
 
 
