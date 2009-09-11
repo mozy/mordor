@@ -11,6 +11,12 @@
 
 #include "mordor/common/assert.h"
 
+static boost::posix_time::time_facet rfc1123Facet_out("%a, %d %b %Y %H:%M:%S GMT",
+        boost::posix_time::time_facet::period_formatter_type(),
+        boost::posix_time::time_facet::special_values_formatter_type(),
+        boost::posix_time::time_facet::date_gen_formatter_type(),
+        1 /* starting refcount, so this never gets deleted */);
+
 std::string
 HTTP::quote(const std::string &str, bool alwaysQuote, bool comment)
 {
@@ -587,8 +593,11 @@ std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine &s)
 
 std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)
 {
+    os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
     if (!g.connection.empty())
         os << "Connection: " << g.connection << "\r\n";
+    if (!g.date.is_not_a_date_time())
+        os << "Date: " << g.date << "\r\n";
     if (!g.trailer.empty())
         os << "Trailer: " << g.trailer << "\r\n";
     if (!g.transferEncoding.empty())
@@ -600,6 +609,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)
 
 std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
 {
+    os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
     if (!r.authorization.value.empty()) {
         ASSERT(!r.authorization.parameters.empty());
         os << "Authorization: " << r.authorization.value << " " << serializeStringMapAsAuthParam(r.authorization.parameters) << "\r\n";
@@ -610,10 +620,18 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
         os << "Host: " << r.host << "\r\n";
     if (!r.ifMatch.empty())
         os << "If-Match: " << r.ifMatch << "\r\n";
+    if (!r.ifModifiedSince.is_not_a_date_time())
+        os << "If-Modified-Since: " << r.ifModifiedSince << "\r\n";
     if (!r.ifNoneMatch.empty())
         os << "If-None-Match: " << r.ifNoneMatch << "\r\n";
-    if (!r.ifRange.unspecified)
-        os << "If-Range: " << r.ifRange << "\r\n";
+    const HTTP::ETag *ifRangeEtag = boost::get<HTTP::ETag>(&r.ifRange);
+    if (ifRangeEtag && !ifRangeEtag->unspecified)
+        os << "If-Range: " << *ifRangeEtag << "\r\n";
+    const boost::posix_time::ptime *ifRangeHttpDate = boost::get<boost::posix_time::ptime>(&r.ifRange);
+    if (ifRangeHttpDate && !ifRangeHttpDate->is_not_a_date_time())
+        os << "If-Range: " << *ifRangeHttpDate << "\r\n";
+    if (!r.ifUnmodifiedSince.is_not_a_date_time())
+        os << "If-Unmodified-Since: " << r.ifUnmodifiedSince << "\r\n";
     if (!r.proxyAuthorization.value.empty()) {
         ASSERT(!r.proxyAuthorization.parameters.empty());
         os << "Proxy-Authorization: " << r.proxyAuthorization.value << " " << serializeStringMapAsAuthParam(r.proxyAuthorization.parameters) << "\r\n";
@@ -631,6 +649,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
 
 std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
 {
+    os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
     if (!r.acceptRanges.empty())
         os << "Accept-Ranges: " << r.acceptRanges << "\r\n";
     if (!r.eTag.unspecified)
@@ -639,6 +658,12 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
         os << "Location: " << r.location << "\r\n";
     if (!r.proxyAuthenticate.empty())
         os << "Proxy-Authenticate: " << r.proxyAuthenticate << "\r\n";
+    const boost::posix_time::ptime *retryAfterHttpDate = boost::get<boost::posix_time::ptime>(&r.retryAfter);
+    if (retryAfterHttpDate && !retryAfterHttpDate->is_not_a_date_time())
+        os << "Retry-After: " << *retryAfterHttpDate << "\r\n";
+    const unsigned long long *retryAfterDeltaSeconds = boost::get<unsigned long long>(&r.retryAfter);
+    if (retryAfterDeltaSeconds && *retryAfterDeltaSeconds != ~0ull)
+        os << "Retry-After: " << *retryAfterDeltaSeconds << "\r\n";
     if (!r.server.empty())
         os << "Server: " << r.server << "\r\n";
     if (!r.wwwAuthenticate.empty())
@@ -648,6 +673,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
 
 std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e)
 {
+    os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
     if (!e.contentEncoding.empty())
         os << "Content-Encoding: " << e.contentEncoding << "\r\n";
     if (e.contentLength != ~0ull)
@@ -656,6 +682,10 @@ std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e)
         os << "Content-Range: " << e.contentRange << "\r\n";
     if (!e.contentType.type.empty() && !e.contentType.subtype.empty())
         os << "Content-Type: " << e.contentType << "\r\n";
+    if (!e.expires.is_not_a_date_time())
+        os << "Expires: " << e.expires << "\r\n";
+    if (!e.lastModified.is_not_a_date_time())
+        os << "Last-Modified: " << e.lastModified << "\r\n";
     for (HTTP::StringMap::const_iterator it(e.extension.begin());
         it != e.extension.end();
         ++it) {

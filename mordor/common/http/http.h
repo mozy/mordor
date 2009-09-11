@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <boost/variant.hpp>
+#include <boost/date_time.hpp>
 
 #include "mordor/common/uri.h"
 #include "mordor/common/version.h"
@@ -306,6 +307,7 @@ namespace HTTP
     struct GeneralHeaders
     {
         StringSet connection;
+        boost::posix_time::ptime date;
         ParameterizedList transferEncoding;
         StringSet trailer;
         ProductList upgrade;
@@ -317,8 +319,10 @@ namespace HTTP
         ParameterizedKeyValueList expect;
         std::string host;
         ETagSet ifMatch;
+        boost::posix_time::ptime ifModifiedSince;
         ETagSet ifNoneMatch;
-        ETag ifRange;
+        boost::variant<ETag, boost::posix_time::ptime> ifRange;
+        boost::posix_time::ptime ifUnmodifiedSince;
         // TODO: ifRange can also be a timestamp
         ValueWithParameters proxyAuthorization;
         RangeSet range;
@@ -333,6 +337,7 @@ namespace HTTP
         ETag eTag;
         URI location;
         ParameterizedList proxyAuthenticate;
+        boost::variant<boost::posix_time::ptime, unsigned long long> retryAfter;
         ProductAndCommentList server;
         ParameterizedList wwwAuthenticate;
     };
@@ -345,6 +350,8 @@ namespace HTTP
         unsigned long long contentLength;
         ContentRange contentRange;
         MediaType contentType;
+        boost::posix_time::ptime expires;
+        boost::posix_time::ptime lastModified;
         StringMap extension;
     };
 

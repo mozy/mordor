@@ -4,6 +4,8 @@
 
 #include "mordor/common/http/parser.h"
 
+#include <locale>
+#include <sstream>
 #include <string>
 
 #include "mordor/common/version.h"
@@ -31,6 +33,35 @@ parseMethod(const char *str, const char *end)
         }
     }
     throw std::invalid_argument("Unrecognized method");
+}
+
+static boost::posix_time::time_input_facet rfc1123Facet_in("%a, %d %b %Y %H:%M:%S GMT",
+        1 /* starting refcount, so this never gets deleted */);
+static boost::posix_time::time_input_facet rfc850Facet_in("%A, %d-%b-%y %H:%M:%S GMT",
+        1 /* starting refcount, so this never gets deleted */);
+static boost::posix_time::time_input_facet ansiFacet_in("%a %b %e %H:%M:%S %Y",
+        1 /* starting refcount, so this never gets deleted */);
+
+static
+boost::posix_time::ptime
+parseHttpDate(const char *str, size_t size)
+{
+    boost::posix_time::ptime result;
+    std::string val(str, size);
+    
+    #define ATTEMPT_WITH_FACET(facet)                              \
+    {                                                              \
+        std::istringstream is(val);                                \
+        is.imbue(std::locale(is.getloc(), facet));                 \
+        is >> result;                                              \
+        if (!result.is_not_a_date_time())                          \
+            return result;                                         \
+    }
+
+    ATTEMPT_WITH_FACET(&rfc1123Facet_in);
+    ATTEMPT_WITH_FACET(&rfc850Facet_in);
+    ATTEMPT_WITH_FACET(&ansiFacet_in);
+    NOTREACHED();
 }
 
 static
@@ -147,6 +178,24 @@ HTTP::unquote(const std::string &str)
 
     HTTP_Version = ("HTTP/" DIGIT+ "." DIGIT+) >mark %parse_HTTP_Version;
 
+    action save_date {
+        ASSERT(m_date);
+        *m_date = parseHttpDate(mark, fpc - mark);
+        mark = NULL;                
+    }
+
+    wkday = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+    weekday = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+    month = "Jan" | "Feb" | "Mar" | "Apr" | "May" | "Jun" | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec";
+    date1 = DIGIT{2} SP month SP DIGIT{4};
+    date2 = DIGIT{2} "-" month "-" DIGIT{2};
+    date3 = month SP ( DIGIT{2} | (SP DIGIT));
+    time = DIGIT{2} ":" DIGIT{2} ":" DIGIT{2};
+    rfc1123_date = wkday "," SP date1 SP time SP "GMT";
+    rfc850_date = weekday "," SP date2 SP time SP "GMT";
+    asctime_date = wkday SP date3 SP time SP DIGIT{4};
+    HTTP_date = (rfc1123_date | rfc850_date | asctime_date) >mark %save_date;
+    
     delta_seconds = DIGIT+;
 
     action save_product_name {
@@ -210,7 +259,7 @@ HTTP::unquote(const std::string &str)
     opaque_tag = quoted_string >mark %save_etag;
     entity_tag = ((weak)? opaque_tag) >start_etag;
 
-    etag_list = ("*" % save_unspecified | (LWS* entity_tag %save_etag_element ( LWS* ',' LWS* entity_tag %save_etag_element)* LWS*)) > set_etag_list;
+    etag_list = LWS* ("*" % save_unspecified | (LWS* entity_tag %save_etag_element ( LWS* ',' LWS* entity_tag %save_etag_element)* LWS*) LWS* ) > set_etag_list;
 
     bytes_unit = "bytes";
     other_range_unit = token;
@@ -305,6 +354,10 @@ HTTP::unquote(const std::string &str)
         m_list = NULL;
     }
     
+    action set_date {
+        m_date = &m_general->date;
+    }
+    
     action set_trailer {
         m_set = &m_general->trailer;
         m_list = NULL;
@@ -320,12 +373,13 @@ HTTP::unquote(const std::string &str)
     }
 
     Connection = 'Connection:'i @set_connection list;
+    Date = 'Date:'i @set_date LWS* HTTP_date LWS*;
     Trailer = 'Trailer:'i @set_trailer list;
     Transfer_Encoding = 'Transfer-Encoding:'i @set_transfer_encoding parameterizedList;
     Upgrade = 'Upgrade:'i LWS* product %save_upgrade_product ( LWS* ',' LWS* product %save_upgrade_product)* LWS*;
     
-    general_header = Connection | Trailer | Transfer_Encoding | Upgrade;
-    general_header_names = 'Connection'i | 'Trailer'i | 'Transfer-Encoding'i | 'Upgrade'i;
+    general_header = Connection | Date | Trailer | Transfer_Encoding | Upgrade;
+    general_header_names = 'Connection'i | 'Date'i | 'Trailer'i | 'Transfer-Encoding'i | 'Upgrade'i;
     
     action set_content_encoding {
         m_list = &m_entity->contentEncoding;
@@ -370,6 +424,15 @@ HTTP::unquote(const std::string &str)
         mark = NULL;
     }
     
+    action set_expires
+    {
+        m_date = &m_entity->expires;
+    }
+    action set_last_modified
+    {
+        m_date = &m_entity->lastModified;
+    }
+
     Content_Encoding = 'Content-Encoding:'i @set_content_encoding list;
     Content_Length = 'Content-Length:'i @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
     
@@ -382,8 +445,11 @@ HTTP::unquote(const std::string &str)
     media_type = type '/' subtype (';' LWS* parameter)*;
     Content_Type = 'Content-Type:'i @set_content_type LWS* media_type LWS*;
     
-    entity_header = Content_Encoding | Content_Length | Content_Range | Content_Type; # | extension_header;
-    entity_header_names = 'Content-Encoding'i | 'Content-Length'i | 'Content-Range'i | 'Content-Type'i;
+    Expires = 'Expires:'i @set_expires LWS* HTTP_date LWS*;
+    Last_Modified = 'Last-Modified:'i @set_last_modified LWS* HTTP_date LWS*;
+    
+    entity_header = Content_Encoding | Content_Length | Content_Range | Content_Type | Expires | Last_Modified; # | extension_header;
+    entity_header_names = 'Content-Encoding'i | 'Content-Length'i | 'Content-Range'i | 'Content-Type'i | 'Expires'i | 'Last-Modified'i;
 
 }%%
 
@@ -434,12 +500,26 @@ HTTP::unquote(const std::string &str)
         m_eTagSet = &m_request->request.ifMatch;
     }
     
+    action set_if_modified_since {
+        m_date = &m_request->request.ifModifiedSince;
+    }
+    
     action set_if_none_match {
         m_eTagSet = &m_request->request.ifMatch;
     }
     
-    action set_if_range {
-        m_eTag = &m_request->request.ifRange;
+    action set_if_range_entity_tag {
+        m_request->request.ifRange = ETag();
+        m_eTag = boost::get<ETag>(&m_request->request.ifRange);
+    }
+    
+    action set_if_range_http_date {
+        m_request->request.ifRange = boost::posix_time::ptime();
+        m_date = boost::get<boost::posix_time::ptime>(&m_request->request.ifRange);
+    }
+    
+    action set_if_unmodified_since {
+        m_date = &m_request->request.ifModifiedSince;
     }
     
     action set_proxy_authorization {
@@ -517,10 +597,11 @@ HTTP::unquote(const std::string &str)
 
     Host = 'Host:'i @set_host LWS* (host (':' port)?) >mark %save_string LWS*;
 
-    If_Match = 'If-Match:'i @set_if_match LWS* etag_list;
-    If_None_Match = 'If-None-Match:'i @set_if_none_match LWS* etag_list;
-    # TODO: | HTTP_Date
-    If_Range = 'If-Range:'i @set_if_range LWS* entity_tag;
+    If_Match = 'If-Match:'i @set_if_match etag_list;
+    If_Modified_Since = 'If-Modified-Since:'i @set_if_modified_since LWS* HTTP_date LWS*;
+    If_None_Match = 'If-None-Match:'i @set_if_none_match etag_list;
+    If_Range = 'If-Range:'i LWS* (entity_tag >set_if_range_entity_tag | HTTP_date >set_if_range_http_date)  LWS*;
+    If_Unmodified_Since = 'If-Unmodified-Since:'i @set_if_unmodified_since LWS* HTTP_date LWS*;
 
     Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization credentials;
     
@@ -540,8 +621,8 @@ HTTP::unquote(const std::string &str)
     
     User_Agent = 'User-Agent:'i @set_user_agent product_and_comment_list;
     
-    request_header = Authorization | Expect | Host | If_Match | If_None_Match | If_Range | Proxy_Authorization | Range | Referer | TE | User_Agent;
-    request_header_names = 'Authorization'i | 'Expect'i | 'Host'i | 'If-Match'i | 'If-None-Match'i | 'If-Range'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i | 'User-Agent'i;
+    request_header = Authorization | Expect | Host | If_Match | If_Modified_Since | If_None_Match | If_Range | If_Unmodified_Since | Proxy_Authorization | Range | Referer | TE | User_Agent;
+    request_header_names = 'Authorization'i | 'Expect'i | 'Host'i | 'If-Match'i | 'If-Modified-Since'i | 'If-None-Match'i | 'If-Range'i | 'If-Unmodified-Since'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i | 'User-Agent'i;
     
     extension_header = (token - (general_header_names | request_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;
@@ -640,6 +721,14 @@ HTTP::RequestParser::exec()
     action set_proxy_authenticate {
         m_parameterizedList = &m_response->response.proxyAuthenticate;
     }
+    action set_retry_after_http_date {
+        m_response->response.retryAfter = boost::posix_time::ptime();
+        m_date = boost::get<boost::posix_time::ptime>(&m_response->response.retryAfter);
+    }
+    action set_retry_after_delta_seconds {
+        m_response->response.retryAfter = ~0ull;
+        m_ulong = boost::get<unsigned long long>(&m_response->response.retryAfter);
+    }
     action set_server {
         m_productAndCommentList = &m_response->response.server;
     }
@@ -652,11 +741,12 @@ HTTP::RequestParser::exec()
     # This *should* be absolute_URI, but we're generous
     Location = 'Location:'i LWS* URI_reference LWS*;
     Proxy_Authenticate = 'Proxy-Authenticate:'i @set_proxy_authenticate challengeList;
+    Retry_After = 'Retry-After:'i LWS* (HTTP_date %set_retry_after_http_date | delta_seconds >mark %set_retry_after_delta_seconds %save_ulong) LWS*;
     Server = 'Server:'i @set_server product_and_comment_list;
     WWW_Authenticate = 'WWW-Authenticate:'i @set_www_authenticate challengeList;
     
-    response_header = Accept_Ranges | ETag | Location | Proxy_Authenticate | Server | WWW_Authenticate;
-    response_header_names = 'Accept-Ranges'i | 'ETag'i | 'Location'i | 'Proxy-Authenticate'i | 'Server'i | 'WWW-Authenticate'i;
+    response_header = Accept_Ranges | ETag | Location | Proxy_Authenticate | Retry_After | Server | WWW_Authenticate;
+    response_header_names = 'Accept-Ranges'i | 'ETag'i | 'Location'i | 'Proxy-Authenticate'i | 'Retry-After'i | 'Server'i | 'WWW-Authenticate'i;
     
     extension_header = (token - (general_header_names | response_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;

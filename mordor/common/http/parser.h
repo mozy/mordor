@@ -26,6 +26,7 @@ namespace HTTP
         Product m_product;
         ETagSet *m_eTagSet;
         ProductAndCommentList *m_productAndCommentList;
+        boost::posix_time::ptime *m_date;
 
         // Temp storage
         std::string m_temp1, m_temp2;
