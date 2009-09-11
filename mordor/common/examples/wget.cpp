@@ -18,28 +18,6 @@
 #include "mordor/common/streams/std.h"
 #include "mordor/common/streams/transfer.h"
 
-struct CredentialStore
-{
-    bool authorize(const URI &uri, const std::string &realm, bool proxy, std::string &u, std::string &p)
-    {
-        if (proxy && !hasProxy)
-            return false;
-        if (proxy) {
-            u = proxyUsername;
-            p = proxyPassword;
-        } else {
-            u = username;
-            p = password;
-        }
-        return true;
-    }
-    std::string username;
-    std::string password;
-    std::string proxyUsername;
-    std::string proxyPassword;
-    bool hasProxy;
-};
-
 HTTP::ClientConnection::ptr establishConn(IOManager &ioManager, Address::ptr address, bool ssl)
 {
     Socket::ptr s(address->createSocket(ioManager));
@@ -63,9 +41,7 @@ int main(int argc, const char *argv[])
         ASSERT(uri.authority.hostDefined());
         ASSERT(!uri.schemeDefined() || uri.scheme() == "http" || uri.scheme() == "https");
 
-        CredentialStore store;
-
-        std::string proxy;
+        std::string username, password, proxy, proxyUsername, proxyPassword;
 
         if (argc == 3 || argc == 5 || argc == 7) {
             proxy = argv[2];
@@ -73,15 +49,13 @@ int main(int argc, const char *argv[])
             ++argv;
         }
 
-        store.hasProxy = false;
         if (argc == 4 || argc == 6) {
-            store.username = argv[2];
-            store.password = argv[3];
+            username = argv[2];
+            password = argv[3];
         }
         if (argc == 6) {
-            store.proxyUsername = argv[4];
-            store.proxyPassword = argv[5];
-            store.hasProxy = true;
+            proxyUsername = argv[4];
+            proxyPassword = argv[5];
         }
 
         std::vector<Address::ptr> addresses =
@@ -106,27 +80,26 @@ int main(int argc, const char *argv[])
             requestHeaders.requestLine.uri = uri;
         requestHeaders.request.host = uri.authority.host();
         HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
-        HTTP::BasicClientAuthenticationScheme basic(boost::bind(&CredentialStore::authorize, &store, _1, _2, _3, _4, _5));
-        if (request->response().status.status == HTTP::PROXY_AUTHENTICATION_REQUIRED) {
-            if (basic.authorize(request, requestHeaders, true)) {
-                request->finish();
-                try {
-                    request = conn->request(requestHeaders);
-                    request->ensureResponse();
-                } catch (SocketException) {
-                    conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
-                    request = conn->request(requestHeaders);
-                } catch (HTTP::IncompleteMessageHeaderException) {
-                    conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
-                    request = conn->request(requestHeaders);
-                }
-            }
-        }
-        if (request->response().status.status == HTTP::UNAUTHORIZED) {
-            if (basic.authorize(request, requestHeaders, false)) {
-                request->finish();
+        if (request->response().status.status == HTTP::PROXY_AUTHENTICATION_REQUIRED &&
+            (!proxyUsername.empty() || !proxyPassword.empty())) {
+            request->finish();
+            HTTP::BasicAuth::authorize(requestHeaders, proxyUsername, proxyPassword, true);
+            try {
+                request = conn->request(requestHeaders);
+                request->ensureResponse();
+            } catch (SocketException) {
+                conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
+                request = conn->request(requestHeaders);
+            } catch (HTTP::IncompleteMessageHeaderException) {
+                conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
                 request = conn->request(requestHeaders);
             }
+        }
+        if (request->response().status.status == HTTP::UNAUTHORIZED &&
+            (!username.empty() || !password.empty())) {
+            request->finish();
+            HTTP::BasicAuth::authorize(requestHeaders, username, password);
+            request = conn->request(requestHeaders);
         }
         if (request->hasResponseBody()) {
             try {
