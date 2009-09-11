@@ -133,12 +133,14 @@ HTTP::unquote(const std::string &str)
     token = (CHAR -- (separators | CTL))+;
     quoted_pair = "\\" CHAR;
     ctext = TEXT -- ("(" | ")");
+    # TODO: truly nested comments
     base_comment = "(" ( ctext | quoted_pair )* ")";
     comment = "(" ( ctext | quoted_pair | base_comment )* ")";
     qdtext = TEXT -- "\"";
     quoted_string = "\"" ( qdtext | quoted_pair )* "\"";
 
     action parse_HTTP_Version {
+        ASSERT(m_ver);
         *m_ver = parseVersion(mark);
         mark = NULL;
     }
@@ -147,8 +149,29 @@ HTTP::unquote(const std::string &str)
 
     delta_seconds = DIGIT+;
 
+    action save_product_name {
+        m_product.product = std::string(mark, fpc - mark);
+        mark = NULL;
+    }
+    action save_product_version {
+        m_product.version = std::string(mark, fpc - mark);
+        mark = NULL;
+    }
+    action save_product {
+        ASSERT(m_productAndCommentList);
+        m_productAndCommentList->push_back(m_product);
+        m_product = Product();
+    }
+    action save_comment {
+		ASSERT(m_productAndCommentList);
+        m_productAndCommentList->push_back(HTTP::unquote(mark, fpc - mark));
+        mark = NULL;
+    }
+
     product_version = token;
-    product = token ("/" product_version)?;
+    product = token >mark %save_product_name ("/" product_version >mark %save_product_version)?;
+    product_or_comment = (product %save_product) | (comment >mark %save_comment);
+    product_and_comment_list = LWS* product_or_comment ( LWS+ product_or_comment)* LWS*;
 
     qvalue = ('0' ('.' DIGIT{0,3})?) | ('1' ('.' '0'{0,3})?);
 
@@ -290,13 +313,19 @@ HTTP::unquote(const std::string &str)
     action set_transfer_encoding {
         m_parameterizedList = &m_general->transferEncoding;
     }
+    
+    action save_upgrade_product {
+        m_general->upgrade.push_back(m_product);
+        m_product = Product();
+    }
 
     Connection = 'Connection:'i @set_connection list;
     Trailer = 'Trailer:'i @set_trailer list;
     Transfer_Encoding = 'Transfer-Encoding:'i @set_transfer_encoding parameterizedList;
+    Upgrade = 'Upgrade:'i LWS* product %save_upgrade_product ( LWS* ',' LWS* product %save_upgrade_product)* LWS*;
     
-    general_header = Connection | Trailer | Transfer_Encoding;
-    general_header_names = 'Connection'i | 'Trailer'i | 'Transfer-Encoding'i;
+    general_header = Connection | Trailer | Transfer_Encoding | Upgrade;
+    general_header_names = 'Connection'i | 'Trailer'i | 'Transfer-Encoding'i | 'Upgrade'i;
     
     action set_content_encoding {
         m_list = &m_entity->contentEncoding;
@@ -475,7 +504,10 @@ HTTP::unquote(const std::string &str)
     action set_te {
         m_acceptList = &m_request->request.te;
     }
-
+    
+    action set_user_agent {
+        m_productAndCommentList = &m_request->request.userAgent;
+    }
 
     Authorization = 'Authorization:'i @set_authorization LWS* credentials;
     
@@ -506,8 +538,10 @@ HTTP::unquote(const std::string &str)
     acceptList = LWS* acceptListElement ( LWS* ',' LWS* acceptListElement)* LWS*;
     TE = 'TE:'i @set_te acceptList;
     
-    request_header = Authorization | Expect | Host | If_Match | If_None_Match | If_Range | Proxy_Authorization | Range | Referer | TE;
-    request_header_names = 'Authorization'i | 'Expect'i | 'Host'i | 'If-Match'i | 'If-None-Match'i | 'If-Range'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i;
+    User_Agent = 'User-Agent:'i @set_user_agent product_and_comment_list;
+    
+    request_header = Authorization | Expect | Host | If_Match | If_None_Match | If_Range | Proxy_Authorization | Range | Referer | TE | User_Agent;
+    request_header_names = 'Authorization'i | 'Expect'i | 'Host'i | 'If-Match'i | 'If-None-Match'i | 'If-Range'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i | 'User-Agent'i;
     
     extension_header = (token - (general_header_names | request_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;
@@ -535,6 +569,7 @@ HTTP::HTTPParser::init()
     m_ulong = NULL;
     m_eTag = NULL;
     m_eTagSet = NULL;
+    m_productAndCommentList = NULL;
     RagelParser::init();
 }
 
@@ -605,6 +640,9 @@ HTTP::RequestParser::exec()
     action set_proxy_authenticate {
         m_parameterizedList = &m_response->response.proxyAuthenticate;
     }
+    action set_server {
+        m_productAndCommentList = &m_response->response.server;
+    }
     action set_www_authenticate {
         m_parameterizedList = &m_response->response.wwwAuthenticate;
     }
@@ -614,10 +652,11 @@ HTTP::RequestParser::exec()
     # This *should* be absolute_URI, but we're generous
     Location = 'Location:'i LWS* URI_reference LWS*;
     Proxy_Authenticate = 'Proxy-Authenticate:'i @set_proxy_authenticate challengeList;
+    Server = 'Server:'i @set_server product_and_comment_list;
     WWW_Authenticate = 'WWW-Authenticate:'i @set_www_authenticate challengeList;
     
-    response_header = Accept_Ranges | ETag | Location | Proxy_Authenticate | WWW_Authenticate;
-    response_header_names = 'Accept-Ranges'i | 'ETag'i | 'Location'i | 'Proxy-Authenticate'i | 'WWW-Authenticate'i;
+    response_header = Accept_Ranges | ETag | Location | Proxy_Authenticate | Server | WWW_Authenticate;
+    response_header_names = 'Accept-Ranges'i | 'ETag'i | 'Location'i | 'Proxy-Authenticate'i | 'Server'i | 'WWW-Authenticate'i;
     
     extension_header = (token - (general_header_names | response_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;

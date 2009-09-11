@@ -206,6 +206,127 @@ TEST_WITH_SUITE(HTTP, ifMatchHeader)
     TEST_ASSERT_EQUAL(it->value, "second");
 }
 
+TEST_WITH_SUITE(HTTP, upgradeHeader)
+{
+    HTTP::Request request;
+    HTTP::RequestParser parser(request);
+    HTTP::ProductList::iterator it;
+    std::ostringstream os;
+
+    parser.run("GET / HTTP/1.0\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
+    TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
+    TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
+    TEST_ASSERT(request.general.upgrade.empty());
+    os << request;
+    TEST_ASSERT_EQUAL(os.str(),
+        "GET / HTTP/1.0\r\n"
+        "\r\n");
+
+    request = HTTP::Request();
+    parser.run("GET / HTTP/1.0\r\n"
+               "Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
+    TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
+    TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
+    TEST_ASSERT_EQUAL(request.general.upgrade.size(), 4u);
+    it = request.general.upgrade.begin();
+    TEST_ASSERT_EQUAL(it->product, "HTTP");
+    TEST_ASSERT_EQUAL(it->version, "2.0");
+    ++it;
+    TEST_ASSERT_EQUAL(it->product, "SHTTP");
+    TEST_ASSERT_EQUAL(it->version, "1.3");
+    ++it;
+    TEST_ASSERT_EQUAL(it->product, "IRC");
+    TEST_ASSERT_EQUAL(it->version, "6.9");
+    ++it;
+    TEST_ASSERT_EQUAL(it->product, "RTA");
+    TEST_ASSERT_EQUAL(it->version, "x11");
+    ++it;
+    os.str("");
+    os << request;
+    TEST_ASSERT_EQUAL(os.str(),
+        "GET / HTTP/1.0\r\n"
+        "Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11\r\n"
+        "\r\n");
+
+    request = HTTP::Request();
+    parser.run("GET / HTTP/1.0\r\n"
+               "Upgrade: HTTP/2.0, SHTTP/1.<3, IRC/6.9, RTA/x11\r\n"
+               "\r\n");
+    TEST_ASSERT(parser.error());
+    TEST_ASSERT(!parser.complete());
+    TEST_ASSERT_EQUAL(request.requestLine.method, HTTP::GET);
+    TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
+    TEST_ASSERT_EQUAL(request.requestLine.ver, HTTP::Version(1, 0));
+    TEST_ASSERT_EQUAL(request.general.upgrade.size(), 1u);
+    it = request.general.upgrade.begin();
+    TEST_ASSERT_EQUAL(it->product, "HTTP");
+    TEST_ASSERT_EQUAL(it->version, "2.0");
+}
+
+TEST_WITH_SUITE(HTTP, serverHeader)
+{
+    HTTP::Response response;
+    HTTP::ResponseParser parser(response);
+    HTTP::ProductAndCommentList::iterator it;
+    std::ostringstream os;
+
+    parser.run("HTTP/1.0 200 OK\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 0));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    TEST_ASSERT(response.general.upgrade.empty());
+    os << response;
+    TEST_ASSERT_EQUAL(os.str(),
+        "HTTP/1.0 200 OK\r\n"
+        "\r\n");
+
+    response = HTTP::Response();
+    parser.run("HTTP/1.0 200 OK\r\n"
+               "Server: Apache/2.2.3 (Debian) mod_fastcgi/2.4.2 mod_python/3.2.10 Python/2.4.4 PHP/4.4.4-8+etch6\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(response.status.ver, HTTP::Version(1, 0));
+    TEST_ASSERT_EQUAL(response.status.status, HTTP::OK);
+    TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    TEST_ASSERT_EQUAL(response.response.server.size(), 6u);
+    it = response.response.server.begin();
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).product, "Apache");
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).version, "2.2.3");
+    ++it;
+    TEST_ASSERT_EQUAL(boost::get<std::string>(*it), "Debian");
+    ++it;
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).product, "mod_fastcgi");
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).version, "2.4.2");
+    ++it;
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).product, "mod_python");
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).version, "3.2.10");
+    ++it;
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).product, "Python");
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).version, "2.4.4");
+    ++it;
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).product, "PHP");
+    TEST_ASSERT_EQUAL(boost::get<HTTP::Product>(*it).version, "4.4.4-8+etch6");
+    ++it;
+    os.str("");
+    os << response;
+    TEST_ASSERT_EQUAL(os.str(),
+        "HTTP/1.0 200 OK\r\n"
+        "Server: Apache/2.2.3 (Debian) mod_fastcgi/2.4.2 mod_python/3.2.10 Python/2.4.4 PHP/4.4.4-8+etch6\r\n"
+        "\r\n");
+}
+
 TEST_WITH_SUITE(HTTP, trailer)
 {
     HTTP::EntityHeaders trailer;

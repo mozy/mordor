@@ -23,7 +23,9 @@ namespace HTTP
         ValueWithParameters *m_auth;
         unsigned long long *m_ulong;
         ETag *m_eTag;
+        Product m_product;
         ETagSet *m_eTagSet;
+        ProductAndCommentList *m_productAndCommentList;
 
         // Temp storage
         std::string m_temp1, m_temp2;

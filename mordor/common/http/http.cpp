@@ -428,6 +428,45 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ETagSet &v)
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const HTTP::Product &p)
+{
+    ASSERT(!p.product.empty());
+    os << p.product;
+    if (!p.version.empty())
+        os << "/" << p.version;
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const HTTP::ProductList &l)
+{
+    ASSERT(!l.empty());
+    for (HTTP::ProductList::const_iterator it = l.begin();
+        it != l.end();
+        ++it) {
+        if (it != l.begin())
+            os << ", ";
+        os << *it;
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const HTTP::ProductAndCommentList &l)
+{
+    ASSERT(!l.empty());
+    for (HTTP::ProductAndCommentList::const_iterator it = l.begin();
+        it != l.end();
+        ++it) {
+        if (it != l.begin())
+            os << " ";
+        const HTTP::Product *product = boost::get<HTTP::Product>(&*it);
+        if (product)
+            os << *product;
+        else
+            os << HTTP::quote(boost::get<std::string>(*it), true, true);        
+    }
+    return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v)
 {
     ASSERT(!v.value.empty());
@@ -458,6 +497,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v
 
 std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedKeyValueList &l)
 {
+    ASSERT(!l.empty());
     for (HTTP::ParameterizedKeyValueList::const_iterator it(l.begin());
         it != l.end();
         ++it) {
@@ -520,6 +560,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters
 
 std::ostream& operator<<(std::ostream& os, const HTTP::AcceptList &l)
 {
+    ASSERT(!l.empty());
     for (HTTP::AcceptList::const_iterator it(l.begin());
         it != l.end();
         ++it) {
@@ -552,6 +593,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)
         os << "Trailer: " << g.trailer << "\r\n";
     if (!g.transferEncoding.empty())
         os << "Transfer-Encoding: " << g.transferEncoding << "\r\n";
+    if (!g.upgrade.empty())
+        os << "Upgrade: " << g.upgrade << "\r\n";
     return os;
 }
 
@@ -581,6 +624,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
         os << "Referer: " << r.referer << "\r\n";
     if (!r.te.empty())
         os << "TE: " << r.te << "\r\n";
+    if (!r.userAgent.empty())
+        os << "User-Agent: " << r.userAgent << "\r\n";
     return os;
 }
 
@@ -594,6 +639,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
         os << "Location: " << r.location << "\r\n";
     if (!r.proxyAuthenticate.empty())
         os << "Proxy-Authenticate: " << r.proxyAuthenticate << "\r\n";
+    if (!r.server.empty())
+        os << "Server: " << r.server << "\r\n";
     if (!r.wwwAuthenticate.empty())
         os << "WWW-Authenticate: " << r.wwwAuthenticate << "\r\n";
     return os;

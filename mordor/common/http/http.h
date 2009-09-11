@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <boost/variant.hpp>
+
 #include "mordor/common/uri.h"
 #include "mordor/common/version.h"
 
@@ -203,6 +205,15 @@ namespace HTTP
 
     typedef std::set<ETag> ETagSet;
 
+    struct Product
+    {
+        std::string product;
+        std::string version;
+    };
+
+    typedef std::vector<Product> ProductList;
+    typedef std::vector<boost::variant<Product, std::string> > ProductAndCommentList;
+
     struct caseinsensitiveless
     {
         bool operator()(const std::string& lhs, const std::string& rhs) const
@@ -297,6 +308,7 @@ namespace HTTP
         StringSet connection;
         ParameterizedList transferEncoding;
         StringSet trailer;
+        ProductList upgrade;
     };
 
     struct RequestHeaders
@@ -312,6 +324,7 @@ namespace HTTP
         RangeSet range;
         URI referer;
         AcceptList te;
+        ProductAndCommentList userAgent;
     };
 
     struct ResponseHeaders
@@ -320,6 +333,7 @@ namespace HTTP
         ETag eTag;
         URI location;
         ParameterizedList proxyAuthenticate;
+        ProductAndCommentList server;
         ParameterizedList wwwAuthenticate;
     };
 
@@ -364,6 +378,9 @@ std::ostream& operator<<(std::ostream& os, HTTP::Status s);
 std::ostream& operator<<(std::ostream& os, HTTP::Version v);
 std::ostream& operator<<(std::ostream& os, const HTTP::ETag &e);
 std::ostream& operator<<(std::ostream& os, const HTTP::ETagSet &v);
+std::ostream& operator<<(std::ostream& os, const HTTP::Product &p);
+std::ostream& operator<<(std::ostream& os, const HTTP::ProductList &l);
+std::ostream& operator<<(std::ostream& os, const HTTP::ProductAndCommentList &l);
 std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l);
 std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v);
