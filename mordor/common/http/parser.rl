@@ -850,3 +850,50 @@ HTTP::TrailerParser::exec()
 #pragma warning(pop)
 #endif
 }
+
+
+%%{
+    machine http_list_parser;
+    include http_parser;
+
+    main := list;
+
+    write data;
+}%%
+
+HTTP::ListParser::ListParser(StringSet& stringSet)
+: m_set(&stringSet),
+  m_list(NULL)
+{}
+
+void
+HTTP::ListParser::init()
+{
+    RagelParser::init();
+    %% write init;
+}
+
+bool
+HTTP::ListParser::final() const
+{
+    return cs >= http_list_parser_first_final;
+}
+
+bool
+HTTP::ListParser::error() const
+{
+    return cs == http_list_parser_error;
+}
+
+void
+HTTP::ListParser::exec()
+{
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+    %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
+}

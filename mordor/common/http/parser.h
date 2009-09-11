@@ -84,6 +84,21 @@ namespace HTTP
     private:
         EntityHeaders *m_entity;
     };
+
+    class ListParser : public RagelParser
+    {
+    public:
+        ListParser(StringSet &stringSet);
+
+        void init();
+        bool final() const;
+        bool error() const;
+    protected:
+        void exec();
+    private:
+        StringSet *m_set;
+        std::vector<std::string> *m_list;
+    };
 };
 
 #endif

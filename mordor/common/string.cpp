@@ -2,13 +2,19 @@
 
 #include "mordor/common/pch.h"
 
+#include <openssl/md5.h>
+
 #include "mordor/common/string.h"
 
 #include "assert.h"
 #include "exception.h"
 
+#ifdef MSVC
+#pragma comment(lib, "libeay32")
+#endif
+
 std::string
-base64decode(std::string src)
+base64decode(const std::string &src)
 {
     std::string result;
     result.resize(src.size() * 3 / 4);
@@ -63,13 +69,13 @@ base64decode(std::string src)
 }
 
 std::string
-base64encode(const std::string& src)
+base64encode(const std::string& data)
 {
-    return base64encode(src.c_str(), src.size());
+    return base64encode(data.c_str(), data.size());
 }
 
 std::string
-base64encode(const void* src, size_t len)
+base64encode(const void* data, size_t len)
 {
     const char* base64 =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -77,7 +83,7 @@ base64encode(const void* src, size_t len)
     std::string ret;
     ret.reserve(len * 4 / 3 + 2);
 
-    const unsigned char* ptr = (unsigned char*)src;
+    const unsigned char* ptr = (const unsigned char*)data;
     const unsigned char* end = ptr + len;
 
     while(ptr < end) {
@@ -103,6 +109,30 @@ base64encode(const void* src, size_t len)
     }
 
     return ret;
+}
+
+std::string
+md5(const std::string &data)
+{
+    return hexstringFromData(md5sum(data).c_str(), MD5_DIGEST_LENGTH);
+}
+
+std::string
+md5sum(const void *data, size_t len)
+{
+    MD5_CTX ctx;
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, data, len);
+    std::string result;
+    result.resize(MD5_DIGEST_LENGTH);
+    MD5_Final((unsigned char*)&result[0], &ctx);
+    return result;
+}
+
+std::string
+md5sum(const std::string &data)
+{
+    return md5sum(data.c_str(), data.size());
 }
 
 void

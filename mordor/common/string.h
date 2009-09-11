@@ -5,9 +5,15 @@
 #include <ostream>
 #include <string>
 
-std::string base64decode(std::string src);
-std::string base64encode(const std::string& src);
-std::string base64encode(const void* src, size_t len);
+std::string base64decode(const std::string &src);
+std::string base64encode(const std::string &data);
+std::string base64encode(const void *data, size_t len);
+
+// Returns result in hex
+std::string md5(const std::string &data);
+// Returns result in blob
+std::string md5sum(const std::string &data);
+std::string md5sum(const void *data, size_t len);
 
 void hexstringFromData(const void *data, size_t len, void *output);
 std::string hexstringFromData(const void *data, size_t len);

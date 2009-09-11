@@ -385,6 +385,7 @@ LIBMORDOROBJECTS := 								\
 	mordor/common/http/chunked.o						\
 	mordor/common/http/client.o						\
 	mordor/common/http/connection.o						\
+	mordor/common/http/digest.o						\
 	mordor/common/http/http.o						\
 	mordor/common/http/multipart.o						\
 	mordor/common/http/http_parser.o					\
