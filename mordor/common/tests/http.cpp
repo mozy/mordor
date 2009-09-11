@@ -443,7 +443,7 @@ TEST_WITH_SUITE(HTTP, quoting)
     testQuotingRoundTrip("co\\dy", "\"co\\\\dy\"");
     testQuotingRoundTrip("multiple\\ escape\" sequences\\  ",
         "\"multiple\\\\ escape\\\" sequences\\\\  \"");
-    // Seperators are escaped
+    // Separators are quoted, but not escaped
     testQuotingRoundTrip("weird < chars >", "\"weird < chars >\"");
     // CTL gets escaped
     testQuotingRoundTrip(std::string("\0", 1), std::string("\"\\\0\"", 4));
@@ -453,6 +453,45 @@ TEST_WITH_SUITE(HTTP, quoting)
 
     // ETag even quotes tokens
     TEST_ASSERT_EQUAL(HTTP::quote("token", true), "\"token\"");
+}
+
+static void testCommentRoundTrip(const std::string &unquoted, const std::string &quoted)
+{
+    TEST_ASSERT_EQUAL(HTTP::quote(unquoted, true, true), quoted);
+    TEST_ASSERT_EQUAL(HTTP::unquote(quoted), unquoted);
+}
+
+TEST_WITH_SUITE(HTTP, comments)
+{
+    // Empty string needs to be quoted (otherwise ambiguous)
+    testCommentRoundTrip("", "()");
+    // Tokens are quoted
+    testCommentRoundTrip("token", "(token)");
+    testCommentRoundTrip("token.non-separator+chars", "(token.non-separator+chars)");
+    // Whitespace is quoted, but not escaped
+    testCommentRoundTrip("multiple words", "(multiple words)");
+    testCommentRoundTrip("\tlotsa  whitespace\t",
+        "(\tlotsa  whitespace\t)");
+    // Backslashes are escaped
+    testCommentRoundTrip("\\", "(\\\\)");
+    testCommentRoundTrip("co\\dy", "(co\\\\dy)");
+    // Quotes are not escaped
+    testCommentRoundTrip("\"", "(\")");
+    // Separators are quoted, but not escaped
+    testCommentRoundTrip("weird < chars >", "(weird < chars >)");
+    // CTL gets escaped
+    testCommentRoundTrip(std::string("\0", 1), std::string("(\\\0)", 4));
+    testCommentRoundTrip("\x7f", "(\\\x7f)");
+    // > 127 is quoted, but not escaped
+    testCommentRoundTrip("\x80", "(\x80)");
+    // Parens are not escaped, if they're matched
+    testCommentRoundTrip("()", "(())");
+    testCommentRoundTrip("(", "(\\()");
+    testCommentRoundTrip(")", "(\\))");
+    testCommentRoundTrip("(()", "((\\())");
+    testCommentRoundTrip("())", "(()\\))");
+    testCommentRoundTrip(")(", "(\\)\\()");
+    testCommentRoundTrip("(()))()", "((())\\)())");
 }
 
 static void

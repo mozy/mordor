@@ -135,7 +135,7 @@ namespace HTTP
         URI m_uri;
     };
 
-    std::string quote(const std::string &str, bool alwaysQuote = false);
+    std::string quote(const std::string &str, bool alwaysQuote = false, bool comment = false);
     std::string unquote(const char *str, size_t size);
     std::string unquote(const std::string &str);
 

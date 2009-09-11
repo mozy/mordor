@@ -65,9 +65,10 @@ unfold(char *p, char *pe)
 std::string
 HTTP::unquote(const char *str, size_t size)
 {
-    if (size == 0 || str[0] != '"')
+    if (size == 0 || (str[0] != '"' && str[0] != '('))
         return std::string(str, size);
-    ASSERT(str[size - 1] == '"');
+    ASSERT((str[size - 1] == '"' && str[0] == '"') ||
+           (str[size - 1] == ')' && str[0] == '('));
     std::string result(str + 1, size - 2);
     char *p = const_cast<char *>(result.c_str());
     char *pe = p + result.size();
@@ -94,7 +95,7 @@ HTTP::unquote(const char *str, size_t size)
 std::string
 HTTP::unquote(const std::string &str)
 {
-    if (str.empty() || str[0] != '"')
+    if (str.empty() || (str[0] != '"' && str[0] != '('))
         return str;
     return unquote(str.c_str(), str.size());
 }

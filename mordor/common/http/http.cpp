@@ -12,10 +12,12 @@
 #include "mordor/common/assert.h"
 
 std::string
-HTTP::quote(const std::string &str, bool alwaysQuote)
+HTTP::quote(const std::string &str, bool alwaysQuote, bool comment)
 {
+    if (comment)
+        alwaysQuote = true;
     if (str.empty())
-        return "\"\"";
+        return comment ? "()" : "\"\"";
 
     if (!alwaysQuote && str.find_first_not_of("!#$%&'*+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~") == std::string::npos) {
         return str;
@@ -23,28 +25,57 @@ HTTP::quote(const std::string &str, bool alwaysQuote)
 
     std::string result;
     result.reserve(str.length() + 2);
-    result.append(1, '"');
+    result.append(1, comment ? '(' : '"');
 
     // qdtext = OCTET - CTL - '"' - '\\' | LWS
     // CR, LF, and HT are part of LWS, and are allowed
     // DEL is a CTL, and is not allowed
     // \ is the escape character, and must be escaped itself
     // " indicates end-of-string, and must be escaped
-    static const std::string escaped(
+    static const char * escapedQuote =
         "\0\x01\x02\x03\x04\x05\x06\x07\x08\x0b\x0c\x0e\x0f"
         "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
-        "\x7f\\\"", 32);
+        "\x7f\\\"";
+    static const char * escapedComment =
+        "\0\x01\x02\x03\x04\x05\x06\x07\x08\x0b\x0c\x0e\x0f"
+        "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+        "\x7f\\()";
+    const char *escaped = comment ? escapedComment : escapedQuote;
+    size_t escapedCount = comment ? 33 : 32;
+    size_t leftParens = 0, rightParens = 0;
+    if (comment) {
+        rightParens = std::count(str.begin(), str.end(), ')');
+    }
+
     size_t lastEscape = 0;
-    size_t nextEscape = str.find_first_of(escaped);
+    size_t nextEscape = str.find_first_of(escaped, 0, escapedCount);
     while (nextEscape != std::string::npos) {
-        result.append(str.substr(lastEscape, nextEscape - lastEscape));
-        result.append(1, '\\');
-        result.append(1, str[nextEscape]);
+        if (str[nextEscape] == '(' && rightParens > 0) {
+            // Let this one through without quoting (there is at least one
+            // more matching right paren coming up)
+            ++leftParens;
+            --rightParens;
+            result.append(str.substr(lastEscape, nextEscape - lastEscape + 1));
+        } else if (str[nextEscape] == ')' && leftParens > 0) {
+            // Let this one through without quoting (it matches a previous
+            // left paren)
+            --leftParens;
+            result.append(str.substr(lastEscape, nextEscape - lastEscape + 1));
+        } else {
+            // Unmatching right parens
+            if (str[nextEscape] == ')') {
+                ASSERT(rightParens > 0);
+                --rightParens;
+            }
+            result.append(str.substr(lastEscape, nextEscape - lastEscape));
+            result.append(1, '\\');
+            result.append(1, str[nextEscape]);
+        }
         lastEscape = nextEscape + 1;
-        nextEscape = str.find_first_of(escaped, lastEscape);
+        nextEscape = str.find_first_of(escaped, lastEscape, escapedCount);
     }
     result.append(str.substr(lastEscape));
-    result.append(1, '"');
+    result.append(1, comment ? ')' : '"');
     return result;
 }
 
