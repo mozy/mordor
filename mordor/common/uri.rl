@@ -402,6 +402,15 @@ URI::Authority::normalize(const std::string& defaultHost, bool emptyHostValid,
 }
 
 std::string
+URI::Authority::toString() const
+{
+    std::ostringstream os;
+    os << *this;
+    return os.str();
+}
+
+
+std::string
 URI::Path::toString() const
 {
     std::ostringstream os;

@@ -48,6 +48,8 @@ struct URI
         void normalize(const std::string& defaultHost = "", bool emptyHostValid = false,
             int defaultPort = -1, bool emptyPortValid = false);
 
+        std::string toString() const;
+
         bool operator==(const Authority &rhs) const;
         bool operator!=(const Authority &rhs) const
         { return !(*this == rhs); }
