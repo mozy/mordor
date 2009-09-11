@@ -9,7 +9,7 @@
 
 #include "mordor/common/config.h"
 #include "mordor/common/exception.h"
-#include "mordor/common/http/basic.h"
+#include "mordor/common/http/auth.h"
 #include "mordor/common/http/client.h"
 #include "mordor/common/iomanager.h"
 #include "mordor/common/socket.h"
@@ -72,35 +72,18 @@ int main(int argc, const char *argv[])
             }
         }
         
-        HTTP::ClientConnection::ptr conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
+        HTTP::ClientAuthBroker authBroker(boost::bind(&establishConn,
+            boost::ref(ioManager), addresses[0],
+            proxy.empty() && uri.schemeDefined() && uri.scheme() == "https"),
+            username, password, proxyUsername, proxyPassword);
+
         HTTP::Request requestHeaders;
         if (proxy.empty())
             requestHeaders.requestLine.uri.path = uri.path;
         else
             requestHeaders.requestLine.uri = uri;
         requestHeaders.request.host = uri.authority.host();
-        HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
-        if (request->response().status.status == HTTP::PROXY_AUTHENTICATION_REQUIRED &&
-            (!proxyUsername.empty() || !proxyPassword.empty())) {
-            request->finish();
-            HTTP::BasicAuth::authorize(requestHeaders, proxyUsername, proxyPassword, true);
-            try {
-                request = conn->request(requestHeaders);
-                request->ensureResponse();
-            } catch (SocketException) {
-                conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
-                request = conn->request(requestHeaders);
-            } catch (HTTP::IncompleteMessageHeaderException) {
-                conn = establishConn(ioManager, addresses[0], proxy.empty() && uri.schemeDefined() && uri.scheme() == "https");
-                request = conn->request(requestHeaders);
-            }
-        }
-        if (request->response().status.status == HTTP::UNAUTHORIZED &&
-            (!username.empty() || !password.empty())) {
-            request->finish();
-            HTTP::BasicAuth::authorize(requestHeaders, username, password);
-            request = conn->request(requestHeaders);
-        }
+        HTTP::ClientRequest::ptr request = authBroker.request(requestHeaders);
         if (request->hasResponseBody()) {
             try {
                 if (request->response().entity.contentType.type != "multipart") {

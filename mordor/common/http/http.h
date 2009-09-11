@@ -375,6 +375,7 @@ namespace HTTP
         std::string toString() const;
     };
 
+    bool isAcceptable(const ParameterizedList &list, const std::string &value);
     bool isAcceptable(const AcceptList &list, const AcceptValueWithParameters &value, bool defaultMissing = false);
     bool isPreferred(const AcceptList &list, const AcceptValueWithParameters &lhs, const AcceptValueWithParameters &rhs);
     const AcceptValueWithParameters *preferred(const AcceptList &accept, const AcceptList &available);

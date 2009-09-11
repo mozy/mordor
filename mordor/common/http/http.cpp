@@ -312,6 +312,18 @@ HTTP::AcceptValueWithParameters::operator ==(const AcceptValueWithParameters &rh
 }
 
 bool
+HTTP::isAcceptable(const HTTP::ParameterizedList &list, const std::string &value)
+{
+    for (HTTP::ParameterizedList::const_iterator it = list.begin();
+        it != list.end();
+        ++it) {
+        if (stricmp(it->value.c_str(), value.c_str()) == 0)
+            return true;
+    }
+    return false;
+}
+
+bool
 HTTP::isAcceptable(const HTTP::AcceptList &list, const AcceptValueWithParameters &value,
                    bool defaultMissing)
 {

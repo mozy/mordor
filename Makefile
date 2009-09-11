@@ -381,6 +381,7 @@ LIBMORDOROBJECTS := 								\
 	mordor/common/exception.o						\
 	mordor/common/fiber.o							\
 	mordor/common/fiber_$(ARCH)$(UNDERSCORE).o				\
+	mordor/common/http/auth.o						\
 	mordor/common/http/basic.o						\
 	mordor/common/http/chunked.o						\
 	mordor/common/http/client.o						\

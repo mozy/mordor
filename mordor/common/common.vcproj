@@ -318,6 +318,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\http\auth.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\basic.cpp"
 				>
 			</File>
@@ -422,42 +426,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\http_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\http_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\http_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\http_parser.obj"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath=".\xml\parser.cpp"
 				>
 				<FileConfiguration
@@ -490,6 +458,42 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						ObjectFile="$(IntDir)\xml_parser.obj"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\http\parser.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_parser.obj"
 					/>
 				</FileConfiguration>
 			</File>
@@ -550,6 +554,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -584,10 +592,6 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\socket.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\streams\ssl.cpp"
@@ -637,6 +641,10 @@
 			</File>
 			<File
 				RelativePath=".\atomic.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http\auth.h"
 				>
 			</File>
 			<File
@@ -756,11 +764,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.h"
+				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
+				RelativePath=".\xml\parser.h"
 				>
 			</File>
 			<File

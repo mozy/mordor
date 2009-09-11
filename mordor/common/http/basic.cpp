@@ -12,9 +12,9 @@ HTTP::BasicAuth::authorize(Request &nextRequest,
                                                  const std::string &password,
                                                  bool proxy)
 {
-    ValueWithParameters &credentials = proxy ?
+    ValueWithParameters &authorization = proxy ?
         nextRequest.request.proxyAuthorization :
         nextRequest.request.authorization;
-    credentials.value = "Basic";
-    credentials.parameters[base64encode(username + ":" + password)] = "";
+    authorization.value = "Basic";
+    authorization.parameters[base64encode(username + ":" + password)] = "";
 }
