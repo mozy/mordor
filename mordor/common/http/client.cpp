@@ -563,10 +563,14 @@ HTTP::ClientRequest::ensureResponse()
     // If we weren't the first response in the queue, wait for someone
     // else to schedule us
     if (wait) {
+        ASSERT(Scheduler::getThis());
         Scheduler::getThis()->yieldTo();
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
+        // Probably means that the Scheduler exited in the above yieldTo,
+        // and returned to us, because there is no other work to be done
+        ASSERT(m_conn->m_pendingRequests.front() == shared_from_this());
         if (m_conn->m_priorResponseClosed)
             throw ConnectionVoluntarilyClosedException();
         if (m_conn->m_priorResponseFailed)

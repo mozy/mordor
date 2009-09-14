@@ -827,6 +827,59 @@ TEST_WITH_SUITE(HTTPClient, pipelinedSynchronousRequests)
     TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), responseStream->size());
 }
 
+#ifdef DEBUG
+TEST_WITH_SUITE(HTTPClient, pipelinedSynchronousRequestsAssertion)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 2\r\n"
+        "\r\n\r\n"
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+
+    HTTP::ClientRequest::ptr request1 = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+
+    requestHeaders.general.connection.insert("close");
+    HTTP::ClientRequest::ptr request2 = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n"
+        "GET / HTTP/1.1\r\n"
+        "Connection: close\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+
+    // No more requests possible, even pipelined ones, because we used
+    // Connection: close
+    TEST_ASSERT_EXCEPTION(conn->request(requestHeaders),
+        HTTP::ConnectionVoluntarilyClosedException);
+
+    TEST_ASSERT_EQUAL(request1->response().status.status, HTTP::OK);
+    // We're in a single fiber, and we haven't finished the previous response,
+    // so the scheduler will exit when this tries to block, returning
+    // immediately, and triggering an assertion that request2 isn't the current
+    // response
+    Fiber::ptr mainFiber(new Fiber());
+    IOManager ioManager;
+    TEST_ASSERT_ASSERTED(request2->response());
+}
+#endif
+
 TEST_WITH_SUITE(HTTPClient, simpleResponseBody)
 {
     MemoryStream::ptr requestStream(new MemoryStream());
