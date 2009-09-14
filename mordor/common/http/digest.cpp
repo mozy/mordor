@@ -53,6 +53,7 @@ HTTP::DigestAuth::authorize(const Response &challenge, Request &nextRequest,
             throw BadMessageHeaderException();
         if (qopValues.find("auth") == qopValues.end())
             throw InvalidDigestQopException(qop);
+        authQop = true;
     }
 
     // come up with a suitable client nonce
