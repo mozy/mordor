@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>
 
 #include "fiber.h"
@@ -31,7 +32,7 @@ private:
     std::list<boost::shared_ptr<boost::thread> > m_threads;
 };
 
-class Scheduler
+class Scheduler : public boost::noncopyable
 {
 public:
     Scheduler(int threads = 1, bool useCaller = true);
