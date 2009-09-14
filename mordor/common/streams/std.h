@@ -2,6 +2,7 @@
 #define __STD_H__
 // Copyright (c) 2009 - Decho Corp.
 
+#include "mordor/common/iomanager.h"
 #include "mordor/common/version.h"
 
 #ifdef WINDOWS
@@ -16,6 +17,7 @@ class StdinStream : public NativeStream
 {
 public:
     StdinStream();
+    StdinStream(IOManager &ioManager);
 
     bool supportsWrite() { return false; }
 };
@@ -24,6 +26,7 @@ class StdoutStream : public NativeStream
 {
 public:
     StdoutStream();
+    StdoutStream(IOManager &ioManager);
 
     bool supportsRead() { return false; }
 };
@@ -32,6 +35,7 @@ class StderrStream : public NativeStream
 {
 public:
     StderrStream();
+    StderrStream(IOManager &ioManager);
 
     bool supportsRead() { return false; }
 };

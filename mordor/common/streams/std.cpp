@@ -22,6 +22,22 @@ StdinStream::StdinStream()
 #endif
 }
 
+StdinStream::StdinStream(IOManager &ioManager)
+{
+#ifdef WINDOWS
+    HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
+    if (hStdIn == INVALID_HANDLE_VALUE) {
+        throwExceptionFromLastError();
+    }
+    if (hStdIn == NULL) {
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+    }
+    init(&ioManager, hStdIn, false);
+#else
+    init(&ioManager, STDIN_FILENO, false);
+#endif
+}
+
 StdoutStream::StdoutStream()
 {
 #ifdef WINDOWS
@@ -38,6 +54,22 @@ StdoutStream::StdoutStream()
 #endif
 }
 
+StdoutStream::StdoutStream(IOManager &ioManager)
+{
+#ifdef WINDOWS
+    HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hStdOut == INVALID_HANDLE_VALUE) {
+        throwExceptionFromLastError();
+    }
+    if (hStdOut == NULL) {
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+    }
+    init(&ioManager, hStdOut, false);
+#else
+    init(&ioManager, STDOUT_FILENO, false);
+#endif
+}
+
 StderrStream::StderrStream()
 {
 #ifdef WINDOWS
@@ -51,5 +83,21 @@ StderrStream::StderrStream()
     init(hStdErr, false);
 #else
     init(STDERR_FILENO, false);
+#endif
+}
+
+StderrStream::StderrStream(IOManager &ioManager)
+{
+#ifdef WINDOWS
+    HANDLE hStdErr = GetStdHandle(STD_ERROR_HANDLE);
+    if (hStdErr == INVALID_HANDLE_VALUE) {
+        throwExceptionFromLastError();
+    }
+    if (hStdErr == NULL) {
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+    }
+    init(&ioManager, hStdErr, false);
+#else
+    init(&ioManager, STDERR_FILENO, false);
 #endif
 }
