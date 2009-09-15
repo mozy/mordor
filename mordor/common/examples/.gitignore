@@ -1,5 +1,6 @@
 cat
 echoserver
 simpleclient
+tunnel
 wget
 

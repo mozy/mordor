@@ -33,13 +33,13 @@ Config::loadFromEnvironment()
 #else
     if (!environ)
         return;
-    for (const char *env = *environ; *env; ++env) {
+    for (const char *env = *environ; *env; env += strlen(env) + 1) {
         const char *equals = strchr(env, '=');
         if (!equals)
             continue;
         if (equals == env)
             continue;
-        std::string key(env, equals - env - 1);
+        std::string key(env, equals - env);
         std::string value(equals + 1);
 #endif
         std::transform(key.begin(), key.end(), key.begin(), tolower);
