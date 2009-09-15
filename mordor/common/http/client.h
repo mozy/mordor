@@ -41,6 +41,8 @@ namespace HTTP
         Multipart::ptr responseMultipart();
         const EntityHeaders &responseTrailer() const;
 
+        Stream::ptr stream();
+
         void cancel(bool abort = false);
         void finish();
         void ensureResponse();

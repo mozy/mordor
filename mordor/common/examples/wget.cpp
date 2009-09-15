@@ -83,6 +83,10 @@ int main(int argc, const char *argv[])
         else
             requestHeaders.requestLine.uri = uri;
         requestHeaders.request.host = uri.authority.host();
+        if (!proxy.empty()) {
+            requestHeaders.general.connection.insert("Proxy-Connection");
+            requestHeaders.entity.extension["Proxy-Connection"] = "Keep-Alive";
+        }
         HTTP::ClientRequest::ptr request = authBroker.request(requestHeaders);
         if (request->hasResponseBody()) {
             try {

@@ -313,6 +313,15 @@ HTTP::ClientRequest::responseTrailer() const
     return m_responseTrailer;
 }
 
+Stream::ptr
+HTTP::ClientRequest::stream()
+{
+    ASSERT(m_request.requestLine.method == CONNECT);
+    ensureResponse();
+    ASSERT(m_response.status.status == OK);
+    return m_conn->m_stream;
+}
+
 Multipart::ptr
 HTTP::ClientRequest::responseMultipart()
 {
@@ -645,6 +654,11 @@ HTTP::ClientRequest::ensureResponse()
             close = true;
         }
 
+        bool connect = m_request.requestLine.method == CONNECT &&
+            m_response.status.status == OK;
+        if (connect)
+            close = true;
+
         if (close) {
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
@@ -655,7 +669,8 @@ HTTP::ClientRequest::ensureResponse()
         m_responseHeadersDone = true;
 
         if (!Connection::hasMessageBody(m_response.general, m_response.entity,
-            m_request.requestLine.method, m_response.status.status)) {
+            m_request.requestLine.method, m_response.status.status) &&
+            !connect) {
             if (close) {
                 m_conn->m_stream->close();
             } else {

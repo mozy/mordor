@@ -33,14 +33,15 @@ HTTP::ClientAuthBroker::request(Request &requestHeaders,
                 const ParameterizedList &authenticate = proxy ?
                     responseHeaders.response.proxyAuthenticate :
                     responseHeaders.response.wwwAuthenticate;
-                if (isAcceptable(authenticate, "Digest") &&
-                    (!m_username.empty() || !m_password.empty())) {
+                bool hasCreds = proxy ?
+                    (!m_proxyUsername.empty() || !m_proxyPassword.empty()) :
+                    (!m_username.empty() || !m_password.empty());
+                if (isAcceptable(authenticate, "Digest") && hasCreds) {
                     HTTP::DigestAuth::authorize(responseHeaders, requestHeaders,
                         proxy ? m_proxyUsername : m_username,
                         proxy ? m_proxyPassword : m_password);
                     request->finish();
-                } else if (isAcceptable(authenticate, "Basic") &&
-                    (!m_username.empty() || !m_password.empty())) {
+                } else if (isAcceptable(authenticate, "Basic") && hasCreds) {
                     HTTP::BasicAuth::authorize(requestHeaders,
                         proxy ? m_proxyUsername : m_username,
                         proxy ? m_proxyPassword : m_password, proxy);

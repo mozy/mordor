@@ -840,6 +840,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\tunnel.h"
+				>
+			</File>
+			<File
 				RelativePath=".\uri.h"
 				>
 			</File>

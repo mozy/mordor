@@ -37,9 +37,8 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
             case GET:
             case HEAD:
             case TRACE:
-                return false;
             case CONNECT:
-                return true;
+                return false;
             default:
                 break;
         }
@@ -69,6 +68,8 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
             (int)status == 204 ||
             (int)status == 304 ||
             method == HEAD)
+            return false;
+        if ((int)status == 200 && method == CONNECT)
             return false;
         for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
             it != general.transferEncoding.end();

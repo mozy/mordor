@@ -213,6 +213,7 @@ clean:
 all:	mordor/common/examples/cat						\
 	mordor/common/examples/echoserver					\
 	mordor/common/examples/simpleclient					\
+	mordor/common/examples/tunnel						\
 	mordor/common/examples/wget						\
 	mordor/common/tests/run_tests						\
 	mordor/kalypso/vfs/triton/libtritonvfs.a				\
@@ -284,6 +285,7 @@ EXAMPLEOBJECTS :=								\
 	mordor/common/examples/cat.o						\
 	mordor/common/examples/echoserver.o					\
 	mordor/common/examples/simpleclient.o					\
+	mordor/common/examples/tunnel.o						\
 	mordor/common/examples/wget.o						\
 	mordor/triton/client/get_main.o						\
 	mordor/triton/client/list_main.o					\
@@ -308,6 +310,13 @@ endif
 	$(COMPLINK)
 
 mordor/common/examples/simpleclient: mordor/common/examples/simpleclient.o	\
+	mordor/common/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@ 
+endif
+	$(COMPLINK)
+
+mordor/common/examples/tunnel: mordor/common/examples/tunnel.o			\
 	mordor/common/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@ 

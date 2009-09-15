@@ -3,12 +3,13 @@
 // Copyright (c) 2009 - Decho Corp.
 
 #include <boost/function.hpp>
+#include <boost/noncopyable.hpp>
 
 #include "client.h"
 
 namespace HTTP
 {
-    class ClientAuthBroker
+    class ClientAuthBroker : public boost::noncopyable
     {
     public:
         ClientAuthBroker(boost::function<ClientConnection::ptr ()> dg,
