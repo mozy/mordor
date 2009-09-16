@@ -4,6 +4,7 @@
 #ifdef WINDOWS
 #define _WIN32_WINNT 0x0600
 #define WIN32_LEAN_AND_MEAN
+#define SECURITY_WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #define _CRT_NONSTDC_NO_WARNINGS
 
@@ -54,6 +55,7 @@
 #include <direct.h>
 #include <lm.h>
 #include <lmcons.h>
+#include <security.h>
 #include <winerror.h>
 #include <winsock2.h>
 #include <mswsock.h>

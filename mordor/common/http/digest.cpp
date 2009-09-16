@@ -16,17 +16,17 @@ HTTP::DigestAuth::authorize(const Response &challenge, Request &nextRequest,
     ASSERT(challenge.status.status == UNAUTHORIZED ||
         challenge.status.status == PROXY_AUTHENTICATION_REQUIRED);
     bool proxy = challenge.status.status == PROXY_AUTHENTICATION_REQUIRED;
-    const ParameterizedList &authenticate = proxy ?
+    const ChallengeList &authenticate = proxy ?
         challenge.response.proxyAuthenticate :
         challenge.response.wwwAuthenticate;
-    ValueWithParameters &authorization = proxy ?
+    AuthParams &authorization = proxy ?
         nextRequest.request.proxyAuthorization :
         nextRequest.request.authorization;
     const StringMap *params = NULL;
-    for (ParameterizedList::const_iterator it = authenticate.begin();
+    for (ChallengeList::const_iterator it = authenticate.begin();
         it != authenticate.end();
         ++it) {
-        if (stricmp(it->value.c_str(), "Digest") == 0) {
+        if (stricmp(it->scheme.c_str(), "Digest") == 0) {
             params = &it->parameters;
             break;
         }
@@ -76,7 +76,8 @@ HTTP::DigestAuth::authorize(const Response &challenge, Request &nextRequest,
     os << nextRequest.requestLine.method << ':' << nextRequest.requestLine.uri;
     std::string A2 = os.str();
 
-    authorization.value = "Digest";
+    authorization.scheme = "Digest";
+    authorization.base64.clear();
     authorization.parameters["username"] = username;
     authorization.parameters["realm"] = realm;
     authorization.parameters["nonce"] = nonce;

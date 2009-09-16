@@ -111,8 +111,15 @@ static std::ostream& operator<<(std::ostream& os, const std::vector<std::string>
 
 struct serializeStringMapWithRequiredValue
 {
-    serializeStringMapWithRequiredValue(const HTTP::StringMap &m, char d = ';') : map(m) {}
+    serializeStringMapWithRequiredValue(const HTTP::StringMap &m,
+        const char *delim = ";", bool leadingDelimiter = true)
+        : map(m),
+          delimiter(delim),
+          lead(leadingDelimiter)
+    {}
     const HTTP::StringMap& map;
+    const char *delimiter;
+    bool lead;
 };
 
 struct serializeStringMapWithOptionalValue
@@ -121,18 +128,14 @@ struct serializeStringMapWithOptionalValue
     const HTTP::StringMap& map;
 };
 
-struct serializeStringMapAsAuthParam
-{
-    serializeStringMapAsAuthParam(const HTTP::StringMap &m) : map(m) {}
-    const HTTP::StringMap& map;
-};
-
 static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithRequiredValue &map)
 {
     for (HTTP::StringMap::const_iterator it(map.map.begin());
         it != map.map.end();
         ++it) {
-        os << ';' << it->first << "=" << HTTP::quote(it->second);
+        if (map.lead || it != map.map.begin())
+            os << map.delimiter;
+        os << it->first << "=" << HTTP::quote(it->second);
     }
     return os;
 }
@@ -145,39 +148,6 @@ static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithOp
         os << ";" << it->first;
         if (!it->second.empty())
             os << "=" << HTTP::quote(it->second);
-    }
-    return os;
-}
-
-static std::ostream& operator<<(std::ostream& os, const serializeStringMapAsAuthParam &map)
-{
-    for (HTTP::StringMap::const_iterator it(map.map.begin());
-        it != map.map.end();
-        ++it) {
-        if (it != map.map.begin())
-            os << ", ";
-        os << it->first;
-        if (!it->second.empty())
-            os << "=" << HTTP::quote(it->second);
-    }
-    return os;
-}
-
-struct serializeParameterizedListAsChallenge
-{
-    serializeParameterizedListAsChallenge(const HTTP::ParameterizedList &l) : list(l) {}
-    const HTTP::ParameterizedList &list;
-};
-
-std::ostream& operator<<(std::ostream& os, const serializeParameterizedListAsChallenge &l)
-{
-    for (HTTP::ParameterizedList::const_iterator it(l.list.begin());
-        it != l.list.end();
-        ++it) {
-        ASSERT(!it->parameters.empty());
-        if (it != l.list.begin())
-            os << ", ";
-        os << it->value << " " << serializeStringMapAsAuthParam(it->parameters);
     }
     return os;
 }
@@ -312,12 +282,12 @@ HTTP::AcceptValueWithParameters::operator ==(const AcceptValueWithParameters &rh
 }
 
 bool
-HTTP::isAcceptable(const HTTP::ParameterizedList &list, const std::string &value)
+HTTP::isAcceptable(const HTTP::ChallengeList &list, const std::string &scheme)
 {
-    for (HTTP::ParameterizedList::const_iterator it = list.begin();
+    for (HTTP::ChallengeList::const_iterator it = list.begin();
         it != list.end();
         ++it) {
-        if (stricmp(it->value.c_str(), value.c_str()) == 0)
+        if (stricmp(it->scheme.c_str(), scheme.c_str()) == 0)
             return true;
     }
     return false;
@@ -503,6 +473,29 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l)
     return os;
 }
 
+std::ostream &operator<<(std::ostream &os, const HTTP::AuthParams &a)
+{
+    ASSERT(a.base64.empty() || a.parameters.empty());
+    os << a.scheme;
+    if (!a.base64.empty())
+        os << ' ' << a.base64;
+    if (!a.parameters.empty())
+        os << serializeStringMapWithRequiredValue(a.parameters, ", ", false);
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const HTTP::ChallengeList &l)
+{
+    for (HTTP::ChallengeList::const_iterator it(l.begin());
+        it != l.end();
+        ++it) {
+        if (it != l.begin())
+            os << ", ";
+        os << *it;
+    }
+    return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v)
 {
     ASSERT(!v.key.empty());
@@ -622,10 +615,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)
 std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
 {
     os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
-    if (!r.authorization.value.empty()) {
-        ASSERT(!r.authorization.parameters.empty());
-        os << "Authorization: " << r.authorization.value << " " << serializeStringMapAsAuthParam(r.authorization.parameters) << "\r\n";
-    }
+    if (!r.authorization.scheme.empty())
+        os << "Authorization: " << r.authorization << "\r\n";
     if (!r.expect.empty())
         os << "Expect: " << r.expect << "\r\n";
     if (!r.host.empty())
@@ -644,10 +635,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
         os << "If-Range: " << *ifRangeHttpDate << "\r\n";
     if (!r.ifUnmodifiedSince.is_not_a_date_time())
         os << "If-Unmodified-Since: " << r.ifUnmodifiedSince << "\r\n";
-    if (!r.proxyAuthorization.value.empty()) {
-        ASSERT(!r.proxyAuthorization.parameters.empty());
-        os << "Proxy-Authorization: " << r.proxyAuthorization.value << " " << serializeStringMapAsAuthParam(r.proxyAuthorization.parameters) << "\r\n";
-    }
+    if (!r.proxyAuthorization.scheme.empty())
+        os << "Proxy-Authorization: " << r.proxyAuthorization << "\r\n";
     if (!r.range.empty())
         os << "Range: " << r.range << "\r\n";
     if (r.referer.isDefined())

@@ -238,6 +238,15 @@ namespace HTTP
 
     typedef std::vector<ValueWithParameters> ParameterizedList;
 
+    struct AuthParams
+    {
+        std::string scheme;
+        std::string base64;
+        StringMap parameters;
+    };
+
+    typedef std::vector<AuthParams> ChallengeList;
+
     struct KeyValueWithParameters
     {
         std::string key;
@@ -315,7 +324,7 @@ namespace HTTP
 
     struct RequestHeaders
     {
-        ValueWithParameters authorization;
+        AuthParams authorization;
         ParameterizedKeyValueList expect;
         std::string host;
         ETagSet ifMatch;
@@ -323,8 +332,7 @@ namespace HTTP
         ETagSet ifNoneMatch;
         boost::variant<ETag, boost::posix_time::ptime> ifRange;
         boost::posix_time::ptime ifUnmodifiedSince;
-        // TODO: ifRange can also be a timestamp
-        ValueWithParameters proxyAuthorization;
+        AuthParams proxyAuthorization;
         RangeSet range;
         URI referer;
         AcceptList te;
@@ -336,10 +344,10 @@ namespace HTTP
         StringSet acceptRanges;
         ETag eTag;
         URI location;
-        ParameterizedList proxyAuthenticate;
+        ChallengeList proxyAuthenticate;
         boost::variant<boost::posix_time::ptime, unsigned long long> retryAfter;
         ProductAndCommentList server;
-        ParameterizedList wwwAuthenticate;
+        ChallengeList wwwAuthenticate;
     };
 
     struct EntityHeaders
@@ -375,7 +383,7 @@ namespace HTTP
         std::string toString() const;
     };
 
-    bool isAcceptable(const ParameterizedList &list, const std::string &value);
+    bool isAcceptable(const ChallengeList &list, const std::string &scheme);
     bool isAcceptable(const AcceptList &list, const AcceptValueWithParameters &value, bool defaultMissing = false);
     bool isPreferred(const AcceptList &list, const AcceptValueWithParameters &lhs, const AcceptValueWithParameters &rhs);
     const AcceptValueWithParameters *preferred(const AcceptList &accept, const AcceptList &available);
@@ -391,6 +399,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ProductList &l);
 std::ostream& operator<<(std::ostream& os, const HTTP::ProductAndCommentList &l);
 std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l);
+std::ostream& operator<<(std::ostream& os, const HTTP::AuthParams &v);
+std::ostream& operator<<(std::ostream& os, const HTTP::ChallengeList &l);
 std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedKeyValueList &v);
 std::ostream& operator<<(std::ostream& os, const HTTP::MediaType &m);

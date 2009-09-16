@@ -20,7 +20,8 @@ namespace HTTP
         ParameterizedList *m_parameterizedList;
         AcceptList *m_acceptList;
         StringMap *m_parameters;
-        ValueWithParameters *m_auth;
+        AuthParams *m_auth;
+        ChallengeList *m_challengeList;
         unsigned long long *m_ulong;
         ETag *m_eTag;
         Product m_product;

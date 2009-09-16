@@ -29,6 +29,8 @@ std::vector<std::string> split(const std::string &str, const char *delims, size_
 #ifdef WINDOWS
 std::string toUtf8(const wchar_t *str, size_t len = ~0);
 std::string toUtf8(const std::wstring &str);
+std::wstring toUtf16(const char *str, size_t len = ~0);
+std::wstring toUtf16(const std::string &str);
 #endif
 
 struct charslice

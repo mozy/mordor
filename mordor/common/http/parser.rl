@@ -169,6 +169,9 @@ HTTP::unquote(const std::string &str)
     comment = "(" ( ctext | quoted_pair | base_comment )* ")";
     qdtext = TEXT -- "\"";
     quoted_string = "\"" ( qdtext | quoted_pair )* "\"";
+    
+    base64char = ALPHA | DIGIT | '+' | '/';
+    base64 = (base64char{4})+ ( (base64char{3} '=') | (base64char{2} '==') )?;
 
     action parse_HTTP_Version {
         ASSERT(m_ver);
@@ -317,7 +320,7 @@ HTTP::unquote(const std::string &str)
     
     action save_parameter_attribute {
         m_temp1 = std::string(mark, fpc - mark);
-        mark = NULL;
+        // Don't NULL out here; could be base64 later
     }
     
     action save_parameter_value {
@@ -332,21 +335,27 @@ HTTP::unquote(const std::string &str)
     parameterizedList = LWS* parameterizedListElement ( LWS* ',' LWS* parameterizedListElement)* LWS*;
     
     action save_auth_scheme {
-        if (m_parameterizedList && ((!m_parameterizedList->empty() && m_auth == &m_parameterizedList->back())
-            || m_parameterizedList->empty())) {
-            ValueWithParameters vp;
-            m_parameterizedList->push_back(vp);
-            m_auth = &m_parameterizedList->back();
+        if (m_challengeList && ((!m_challengeList->empty() && m_auth == &m_challengeList->back())
+            || m_challengeList->empty())) {
+            AuthParams ap;
+            m_challengeList->push_back(ap);
+            m_auth = &m_challengeList->back();
         }
-        m_auth->value = std::string(mark, fpc - mark);
+        m_auth->scheme = std::string(mark, fpc - mark);
         m_parameters = &m_auth->parameters;
         mark = NULL;
     }
+    
+    action save_base64_param {
+        m_auth->base64 = std::string(mark, fpc - mark);
+        mark = NULL;
+    }
 
-    auth_param = attribute ('=' value)?;
+    auth_param = attribute '=' value;
     auth_scheme = token;
-    challenge = auth_scheme >mark %save_auth_scheme SP LWS* auth_param ( LWS* ',' LWS* auth_param )* LWS*;
-    credentials = auth_scheme >mark %save_auth_scheme (LWS+ auth_param)? (LWS* ',' LWS* auth_param )* LWS*;
+    base64_auth_param = base64 %save_base64_param;
+    challenge = auth_scheme >mark %save_auth_scheme (SP ((auth_param ( LWS* ',' LWS* auth_param )*) | base64_auth_param))? LWS*;
+    credentials = auth_scheme >mark %save_auth_scheme (LWS+ ((auth_param (LWS* ',' LWS* auth_param )*) | base64_auth_param))? LWS*;
     challengeList = LWS* challenge ( LWS* ',' LWS* challenge)* LWS*;
     
     action set_connection {
@@ -468,7 +477,7 @@ HTTP::unquote(const std::string &str)
     }
     
     action set_authorization {
-        m_parameterizedList = NULL;
+        m_challengeList = NULL;
         m_auth = &m_request->request.authorization;
     }
 
@@ -523,7 +532,7 @@ HTTP::unquote(const std::string &str)
     }
     
     action set_proxy_authorization {
-        m_parameterizedList = NULL;
+        m_challengeList = NULL;
         m_auth = &m_request->request.proxyAuthorization;
     }
 
@@ -647,6 +656,7 @@ HTTP::HTTPParser::init()
     m_parameterizedList = NULL;
     m_parameters = NULL;
     m_auth = NULL;
+    m_challengeList = NULL;
     m_ulong = NULL;
     m_eTag = NULL;
     m_eTagSet = NULL;
@@ -719,7 +729,7 @@ HTTP::RequestParser::exec()
         m_eTag = &m_response->response.eTag;
     }
     action set_proxy_authenticate {
-        m_parameterizedList = &m_response->response.proxyAuthenticate;
+        m_challengeList = &m_response->response.proxyAuthenticate;
     }
     action set_retry_after_http_date {
         m_response->response.retryAfter = boost::posix_time::ptime();
@@ -733,7 +743,7 @@ HTTP::RequestParser::exec()
         m_productAndCommentList = &m_response->response.server;
     }
     action set_www_authenticate {
-        m_parameterizedList = &m_response->response.wwwAuthenticate;
+        m_challengeList = &m_response->response.wwwAuthenticate;
     }
     
     Accept_Ranges = 'Accept-Ranges:'i @set_accept_ranges list;
