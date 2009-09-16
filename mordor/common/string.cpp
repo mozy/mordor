@@ -118,6 +118,12 @@ md5(const std::string &data)
 }
 
 std::string
+sha1(const std::string &data)
+{
+	return hexstringFromData(sha1sum(data).c_str(), SHA_DIGEST_LENGTH);
+}
+
+std::string
 md5sum(const void *data, size_t len)
 {
     MD5_CTX ctx;
@@ -133,6 +139,24 @@ std::string
 md5sum(const std::string &data)
 {
     return md5sum(data.c_str(), data.size());
+}
+
+std::string
+sha1sum(const void *data, size_t len)
+{
+    SHA_CTX ctx;
+    SHA1_Init(&ctx);
+    SHA1_Update(&ctx, data, len);
+    std::string result;
+    result.resize(SHA_DIGEST_LENGTH);
+    SHA1_Final((unsigned char*)&result[0], &ctx);
+    return result;
+}
+
+std::string
+sha1sum(const std::string &data)
+{
+    return sha1sum(data.c_str(), data.size());
 }
 
 void
@@ -169,6 +193,44 @@ replace(std::string &str, char find, char replaceWith)
         str[index] = replaceWith;
         index = str.find(find, index + 1);
     }
+}
+
+std::vector<std::string>
+split(const std::string &str, char delim, size_t max)
+{
+    ASSERT(max > 1);
+	std::vector<std::string> result;
+
+	size_t last = 0;
+	size_t pos = str.find(delim);
+	while (pos != std::string::npos) {
+		result.push_back(str.substr(last, pos - last));
+		last = pos + 1;
+        if (--max == 1)
+            break;
+		pos = str.find(delim, last);
+	}
+    result.push_back(str.substr(last));
+	return result;
+}
+
+std::vector<std::string>
+split(const std::string &str, const char *delims, size_t max)
+{
+    ASSERT(max > 1);
+	std::vector<std::string> result;
+
+	size_t last = 0;
+	size_t pos = str.find_first_of(delims);
+	while (pos != std::string::npos) {
+		result.push_back(str.substr(last, pos - last));
+		last = pos + 1;
+        if (--max == 1)
+            break;
+		pos = str.find_first_of(delims, last);
+	}
+    result.push_back(str.substr(last));
+	return result;
 }
 
 #ifdef WINDOWS

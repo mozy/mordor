@@ -11,14 +11,20 @@ std::string base64encode(const void *data, size_t len);
 
 // Returns result in hex
 std::string md5(const std::string &data);
+std::string sha1(const std::string &data);
 // Returns result in blob
 std::string md5sum(const std::string &data);
 std::string md5sum(const void *data, size_t len);
+std::string sha1sum(const std::string &data);
+std::string sha1sum(const void *data, size_t len);
 
 void hexstringFromData(const void *data, size_t len, void *output);
 std::string hexstringFromData(const void *data, size_t len);
 
 void replace(std::string &str, char find, char replaceWith);
+
+std::vector<std::string> split(const std::string &str, char delim, size_t max = ~0);
+std::vector<std::string> split(const std::string &str, const char *delims, size_t max = ~0);
 
 #ifdef WINDOWS
 std::string toUtf8(const wchar_t *str, size_t len = ~0);

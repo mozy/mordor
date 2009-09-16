@@ -8,6 +8,7 @@
 #define _CRT_NONSTDC_NO_WARNINGS
 
 #define strtoull _strtoui64
+#define strnicmp _strnicmp
 
 #else
 
