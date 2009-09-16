@@ -92,7 +92,9 @@ public:
     int protocol() { return m_protocol; }
 
 private:
-#ifndef WINDOWS
+#ifdef WINDOWS
+    void cancelIo(HANDLE hEvent, bool &cancelled, bool &unregistered);
+#else
     void cancelIo(IOManager::Event event, bool &cancelled);
 #endif
 

@@ -173,66 +173,118 @@ Socket::connect(const Address &to)
         LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to << ")";
     } else {
 #ifdef WINDOWS
-        // need to be bound, even to ADDR_ANY, before calling ConnectEx
-        switch (m_family) {
-            case AF_INET:
-                {
-                    sockaddr_in addr;
-                    addr.sin_family = AF_INET;
-                    addr.sin_port = 0;
-                    addr.sin_addr.s_addr = ADDR_ANY;
-                    if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
-                        LOG_ERROR(g_log) << this << " bind(" << m_sock
-                            << ", 0.0.0.0:0): (" << lastError() << ")";
-                        throwExceptionFromLastError();
+        if (ConnectEx) {
+            // need to be bound, even to ADDR_ANY, before calling ConnectEx
+            switch (m_family) {
+                case AF_INET:
+                    {
+                        sockaddr_in addr;
+                        addr.sin_family = AF_INET;
+                        addr.sin_port = 0;
+                        addr.sin_addr.s_addr = ADDR_ANY;
+                        if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
+                            LOG_ERROR(g_log) << this << " bind(" << m_sock
+                                << ", 0.0.0.0:0): (" << lastError() << ")";
+                            throwExceptionFromLastError();
+                        }
+                        break;
                     }
-                    break;
-                }
-            case AF_INET6:
-                {
-                    sockaddr_in6 addr;
-                    memset(&addr, 0, sizeof(sockaddr_in6));
-                    addr.sin6_family = AF_INET6;
-                    addr.sin6_port = 0;
-                    in6_addr anyaddr = IN6ADDR_ANY_INIT;
-                    addr.sin6_addr = anyaddr;
-                    if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in6))) {
-                        LOG_ERROR(g_log) << this << " bind(" << m_sock
-                            << ", [::]:0): (" << lastError() << ")";
-                        throwExceptionFromLastError();
+                case AF_INET6:
+                    {
+                        sockaddr_in6 addr;
+                        memset(&addr, 0, sizeof(sockaddr_in6));
+                        addr.sin6_family = AF_INET6;
+                        addr.sin6_port = 0;
+                        in6_addr anyaddr = IN6ADDR_ANY_INIT;
+                        addr.sin6_addr = anyaddr;
+                        if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in6))) {
+                            LOG_ERROR(g_log) << this << " bind(" << m_sock
+                                << ", [::]:0): (" << lastError() << ")";
+                            throwExceptionFromLastError();
+                        }
+                        break;
                     }
-                    break;
-                }
-            default:
-                ASSERT(false);
-        }
-
-        ptr self = shared_from_this();
-        m_ioManager->registerEvent(&m_sendEvent);
-        if (!ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped)) {
-            DWORD dwLastError = GetLastError();
-            if (dwLastError != WSA_IO_PENDING) {
-                LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
-                    << "): (" << lastError() << ")";
-                m_ioManager->unregisterEvent(&m_sendEvent);
-                throwExceptionFromLastError(dwLastError);
+                default:
+                    ASSERT(false);
             }
+
+            ptr self = shared_from_this();
+            m_ioManager->registerEvent(&m_sendEvent);
+            if (!ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped)) {
+                DWORD dwLastError = GetLastError();
+                if (dwLastError != WSA_IO_PENDING) {
+                    LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                        << "): (" << lastError() << ")";
+                    m_ioManager->unregisterEvent(&m_sendEvent);
+                    throwExceptionFromLastError(dwLastError);
+                }
+            }
+            Timer::ptr timeout;
+            if (m_sendTimeout != ~0ull)
+                timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
+                    &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
+            Scheduler::getThis()->yieldTo();
+            if (timeout)
+                timeout->cancel();
+            if (!m_sendEvent.ret) {
+                LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                    << "): (" << m_sendEvent.lastError << ")";
+                throwExceptionFromLastError(m_sendEvent.lastError);
+            }
+            LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
+                << ")";
+            setOption(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
+        } else {
+            HANDLE hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+            try {
+                if (WSAEventSelect(m_sock, hEvent, FD_CONNECT))
+                    throwExceptionFromLastError();
+                if (!::connect(m_sock, to.name(), to.nameLen())) {
+                    LOG_INFO(g_log) << this << " connect(" << m_sock << ", "
+                        << to << ")";
+                    // Worked first time
+                    CloseHandle(hEvent);
+                    return;
+                }
+                if (GetLastError() == WSAEWOULDBLOCK) {
+                    m_ioManager->registerEvent(hEvent);
+                    bool cancelled = false;
+                    bool unregistered = false;
+                    Timer::ptr timeout;
+                    if (m_sendTimeout != ~0ull)
+                        timeout = m_ioManager->registerTimer(m_sendTimeout,
+                            boost::bind(&Socket::cancelIo, this, hEvent,
+                            boost::ref(cancelled), boost::ref(unregistered)));
+                    Scheduler::getThis()->yieldTo();
+                    if (timeout)
+                        timeout->cancel();
+                    // The timeout expired, but the event fired before we could
+                    // cancel it, so we got scheduled twice
+                    if (cancelled && !unregistered)
+                        Scheduler::getThis()->yieldTo();
+                    if (unregistered) {
+                        LOG_ERROR(g_log) << this << " connect(" << m_sock
+                            << ", " << to << "): (cancelled)";
+                        throw OperationAbortedException();
+                    }
+                    ::connect(m_sock, to.name(), to.nameLen());
+                    LOG_LEVEL(g_log, GetLastError() ? Log::ERROR : Log::INFO)
+                        << this << " connect(" << m_sock << ", " << to
+                        << "): (" << lastError() << ")";
+                    if (GetLastError() != ERROR_SUCCESS)
+                        throwExceptionFromLastError();
+                } else {
+                    LOG_ERROR(g_log) << this << " connect(" << m_sock << ", "
+                        << to << "): (" << lastError() << ")";
+                    throwExceptionFromLastError();
+                }
+
+            } catch (...) {
+                CloseHandle(hEvent);
+                throw;
+            }
+            CloseHandle(hEvent);
         }
-        Timer::ptr timeout;
-        if (m_sendTimeout != ~0ull)
-            timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
-        Scheduler::getThis()->yieldTo();
-        if (timeout)
-            timeout->cancel();
-        if (!m_sendEvent.ret) {
-            LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
-                << "): (" << m_sendEvent.lastError << ")";
-            throwExceptionFromLastError(m_sendEvent.lastError);
-        }
-        LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
-            << ")";
-        setOption(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
 #else
         if (!::connect(m_sock, to.name(), to.nameLen())) {
             LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
@@ -261,7 +313,7 @@ Socket::connect(const Address &to)
             getOption(SOL_SOCKET, SO_ERROR, &err, &size);
             if (err != 0) {
                 LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
-                    << "): (" << lastError() << ")";
+                    << "): (" << err << ")";
                 throwExceptionFromLastError(err);
             }
             LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
@@ -1132,7 +1184,14 @@ Socket::type()
     return result;
 }
 
-#ifndef WINDOWS
+#ifdef WINDOWS
+void
+Socket::cancelIo(HANDLE hEvent, bool &cancelled, bool &unregistered)
+{
+    cancelled = true;
+    unregistered = m_ioManager->unregisterEvent(hEvent);
+}
+#else
 void
 Socket::cancelIo(IOManager::Event event, bool &cancelled)
 {
