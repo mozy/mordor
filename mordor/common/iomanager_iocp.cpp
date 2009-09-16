@@ -14,6 +14,123 @@ AsyncEventIOCP::AsyncEventIOCP()
     memset(this, 0, sizeof(AsyncEventIOCP));
 }
 
+IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
+: m_outer(outer),
+  m_inUseCount(0)
+{
+    m_handles[0] = CreateEventW(NULL, FALSE, FALSE, NULL);
+    if (!m_handles[0])
+        throwExceptionFromLastError();
+}
+
+IOManagerIOCP::WaitBlock::~WaitBlock()
+{
+    ASSERT(m_inUseCount <= 0);
+    CloseHandle(m_handles[0]);
+}
+
+bool
+IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent)
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    if (m_inUseCount == -1 || m_inUseCount == MAXIMUM_WAIT_OBJECTS)
+        return false;
+    ++m_inUseCount;
+    m_handles[m_inUseCount] = hEvent;
+    m_schedulers[m_inUseCount] = Scheduler::getThis();
+    m_fibers[m_inUseCount] = Fiber::getThis();
+    if (m_inUseCount == 1) {
+        boost::thread thread(boost::bind(&WaitBlock::run, this));
+    } else {
+        SetEvent(m_handles[0]);
+    }
+    return true;
+}
+
+bool
+IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
+    if (srcHandle != m_handles + m_inUseCount + 1) {
+        int index = (int)(srcHandle - m_handles);
+        memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
+        // Manually destruct old object, move others down, and default construct unused one
+        m_fibers[index].~shared_ptr<Fiber>();
+        memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
+        new(&m_fibers[m_inUseCount]) Fiber::ptr();
+
+        if (--m_inUseCount == 0)
+            --m_inUseCount;
+        SetEvent(m_handles[0]);
+        return true;
+    }
+    return false;
+}
+
+void
+IOManagerIOCP::WaitBlock::run()
+{
+    DWORD dwRet;
+    DWORD count;
+    HANDLE handles[MAXIMUM_WAIT_OBJECTS];
+
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        count = m_inUseCount + 1;
+        memcpy(handles, m_handles, (count) * sizeof(HANDLE));        
+    }
+
+    while (true) {
+        dwRet = WaitForMultipleObjects(count, handles, FALSE, INFINITE);
+        if (dwRet == WAIT_OBJECT_0) {
+            // Array just got reconfigured
+            boost::mutex::scoped_lock lock(m_mutex);
+            if (m_inUseCount == -1)
+                break;
+            count = m_inUseCount + 1;
+            memcpy(handles, m_handles, (count) * sizeof(HANDLE));
+        } else if (dwRet >= WAIT_OBJECT_0 + 1 && dwRet < WAIT_OBJECT_0 + MAXIMUM_WAIT_OBJECTS) {
+            boost::mutex::scoped_lock lock(m_mutex);
+
+            HANDLE handle = handles[dwRet - WAIT_OBJECT_0];
+            HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
+            if (srcHandle != m_handles + m_inUseCount + 1) {
+                int index = (int)(srcHandle - m_handles);
+                m_schedulers[index]->schedule(m_fibers[index]);
+                memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
+                // Manually destruct old object, move others down, and default construct unused one
+                m_fibers[index].~shared_ptr<Fiber>();
+                memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
+                new(&m_fibers[m_inUseCount]) Fiber::ptr();
+
+                if (--m_inUseCount == 0) {
+                    --m_inUseCount;
+                    break;
+                }
+                count = m_inUseCount + 1;
+                memcpy(handles, m_handles, (count) * sizeof(HANDLE));
+            }
+        } else if (dwRet == WAIT_FAILED) {
+            // What to do, what to do?  Probably a bad handle.
+            // This will bring down the whole process
+            throwExceptionFromLastError();
+        } else {
+            NOTREACHED();
+        }
+    }
+    {
+        ptr self = shared_from_this();
+        boost::mutex::scoped_lock lock(m_outer.m_mutex);
+        std::list<WaitBlock::ptr>::iterator it =
+            std::find(m_outer.m_waitBlocks.begin(), m_outer.m_waitBlocks.end(),
+                shared_from_this());
+        ASSERT(it != m_outer.m_waitBlocks.end());
+        m_outer.m_waitBlocks.erase(it);
+        m_outer.tickle();
+    }
+}
+
 IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
@@ -32,7 +149,21 @@ IOManagerIOCP::registerFile(HANDLE handle)
     }
 }
 
-
+void
+IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
+{
+    ASSERT(e);
+    ASSERT(Scheduler::getThis());
+    ASSERT(Fiber::getThis());
+    e->m_scheduler = Scheduler::getThis();
+    e->m_thread = boost::this_thread::get_id();
+    e->m_fiber = Fiber::getThis();
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
+        m_pendingEvents[&e->overlapped] = e;
+    }
+}
 
 void
 IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
@@ -48,19 +179,35 @@ IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
 }
 
 void
-IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
+IOManagerIOCP::registerEvent(HANDLE handle)
 {
-    ASSERT(e);
+    ASSERT(handle);
     ASSERT(Scheduler::getThis());
     ASSERT(Fiber::getThis());
-    e->m_scheduler = Scheduler::getThis();
-    e->m_thread = boost::this_thread::get_id();
-    e->m_fiber = Fiber::getThis();
-    {
-        boost::mutex::scoped_lock lock(m_mutex);
-        ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
-        m_pendingEvents[&e->overlapped] = e;
+
+    boost::mutex::scoped_lock lock(m_mutex);
+    for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();
+        it != m_waitBlocks.end();
+        ++it) {
+        if ((*it)->registerEvent(handle))
+            return;
     }
+    m_waitBlocks.push_back(WaitBlock::ptr(new WaitBlock(*this)));
+    bool result = m_waitBlocks.back()->registerEvent(handle);
+    ASSERT(result);
+}
+
+bool
+IOManagerIOCP::unregisterEvent(HANDLE handle)
+{
+    ASSERT(handle);
+    for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();
+        it != m_waitBlocks.end();
+        ++it) {
+        if ((*it)->unregisterEvent(handle))
+            return true;
+    }
+    return false;
 }
 
 static void CancelIoShim(HANDLE hFile)
@@ -101,7 +248,7 @@ IOManagerIOCP::idle()
         unsigned long long nextTimeout = nextTimer();
         if (nextTimeout == ~0ull && stopping()) {
             boost::mutex::scoped_lock lock(m_mutex);
-            if (m_pendingEvents.empty()) {
+            if (m_pendingEvents.empty() && m_waitBlocks.empty()) {
                 return;
             }
         }
