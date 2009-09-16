@@ -209,3 +209,27 @@ TEST_WITH_SUITE(URI, bigBase64URI)
         "4RAcxQcurGFehdeUg8nHldHqihIknc3OP/QRtBawAyEFY4p0RKlRxnA0MO4GZiJVXGaz9K"
         "hzQ8bhEBzFBy6sYV6FbRY5v48No3N72yRSA9JiYPhS/YTYcUFz");
 }
+
+TEST_WITH_SUITE(URI, queryString)
+{
+    URI uri("http://a/b?a&b");
+    TEST_ASSERT(uri.queryDefined());
+    TEST_ASSERT_EQUAL(uri.query(), "a&b");
+    uri = "http://a/b?a%20b";
+    TEST_ASSERT(uri.queryDefined());
+    TEST_ASSERT_EQUAL(uri.query(), "a b");
+    URI::QueryString &qs = uri.queryString();
+
+    TEST_ASSERT_EQUAL(qs.size(), 1u);
+    TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
+    TEST_ASSERT_EQUAL(qs.toString(), "a+b");
+
+    qs = "a&b;c";
+    TEST_ASSERT_EQUAL(qs.size(), 3u);
+    URI::QueryString::iterator it = qs.begin();
+    TEST_ASSERT_EQUAL(it->first, "a");
+    ++it;
+    TEST_ASSERT_EQUAL(it->first, "b");
+    ++it;
+    TEST_ASSERT_EQUAL(it->first, "c");
+}

@@ -10,6 +10,8 @@
 
 struct URI
 {
+    friend class URIParser;
+
     URI();
     URI(const std::string& uri);
     URI(const char *uri);
@@ -101,8 +103,24 @@ struct URI
     };
     Path path;
 
-    std::string query() const { ASSERT(m_queryDefined); return m_query; }
-    void query(const std::string& q) { m_queryDefined = true; m_query = q; }
+    class QueryString : public std::multimap<std::string, std::string>
+    {
+    public:
+        QueryString();
+        QueryString(const std::string &str)
+        {
+            *this = str;
+        }
+
+        QueryString &operator =(const std::string &str);
+
+        std::string toString() const;
+    };
+
+    std::string query() const;
+    QueryString queryString() const { ASSERT(m_queryDefined); return QueryString(m_query); }
+    void query(const std::string &q);
+    void query(const QueryString &q) { m_queryDefined = true; m_query = q.toString(); }
     bool queryDefined() const { return m_queryDefined; }
     void queryDefined(bool d) { if (!d) m_query.clear(); m_queryDefined = d; }
 

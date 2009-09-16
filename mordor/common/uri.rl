@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "mordor/common/ragel.h"
+#include "mordor/common/string.h"
 #include "mordor/common/version.h"
 
 static const std::string unreserved("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~");
@@ -21,8 +22,9 @@ static const std::string pchar("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
 static const std::string path("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" ":@" "/");
 static const std::string segment_nc("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" "@");
 static const std::string query("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" ":@" "/?");
+static const std::string queryString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$'()*+," ":@" "/?");
 
-static std::string escape(const std::string& str, const std::string& allowedChars)
+static std::string escape(const std::string& str, const std::string& allowedChars, bool spaceAsPlus = false)
 {
     const char *hexdigits = "0123456789ABCDEF";
     std::string result(str);
@@ -37,9 +39,13 @@ static std::string escape(const std::string& str, const std::string& allowedChar
                 result.resize(c - str.c_str());
                 differed = true;
             }
-            result.append(1, '%');
-            result.append(1, hexdigits[*c >> 4]);
-            result.append(1, hexdigits[*c & 0xf]);
+            if (*c == ' ' && spaceAsPlus) {
+                result.append(1, '+');
+            } else {
+				result.append(1, '%');
+				result.append(1, hexdigits[*c >> 4]);
+				result.append(1, hexdigits[*c & 0xf]);
+	        }
         } else {
             if (differed) {
                 result.append(1, *c);
@@ -49,7 +55,7 @@ static std::string escape(const std::string& str, const std::string& allowedChar
     }
 
     if (differed) {
-        ASSERT(result.length() > str.length());
+        ASSERT(result.length() >= str.length());
     } else {
         ASSERT(result == str);
     }
@@ -191,7 +197,8 @@ std::string unescape(const std::string& str)
 
     action save_query
     {
-        m_uri->query(unescape(std::string(mark, fpc - mark)));
+        m_uri->m_query = std::string(mark, fpc - mark);
+        m_uri->m_queryDefined = true;
         mark = NULL;
     }
     action save_fragment
@@ -578,6 +585,20 @@ URI::normalize()
 }
 
 std::string
+URI::query() const
+{
+    ASSERT(m_queryDefined);
+    return unescape(m_query);
+}
+
+void
+URI::query(const std::string &q)
+{
+    m_queryDefined = true;
+    m_query = escape(q, ::query);
+}
+
+std::string
 URI::toString() const
 {
     std::ostringstream os;
@@ -677,4 +698,35 @@ URI::operator==(const URI &rhs) const
            path == rhs.path &&
            m_query == rhs.m_query &&
            m_fragment == rhs.m_fragment;
+}
+
+URI::QueryString &
+URI::QueryString::operator =(const std::string &str)
+{
+    clear();
+    std::vector<std::string> pairs = split(str, "&;");
+    for (std::vector<std::string>::iterator it = pairs.begin();
+        it != pairs.end();
+        ++it) {
+        std::vector<std::string> keyValue = split(*it, '=', 2);
+        insert(value_type(unescape(keyValue[0]), keyValue.size() == 2 ? unescape(keyValue[1]) : ""));
+    }
+    return *this;
+}
+
+std::string
+URI::QueryString::toString() const
+{
+    std::ostringstream os;
+    for (const_iterator it = begin();
+        it != end();
+        ++it) {
+        if (it != begin()) {
+            os << '&';
+        }
+        os << escape(it->first, ::queryString, true);
+        if (!it->second.empty())
+            os << '=' << escape(it->second, ::queryString, true);
+    }
+    return os.str();
 }
