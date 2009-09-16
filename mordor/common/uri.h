@@ -8,9 +8,17 @@
 #include "assert.h"
 #include "mordor/common/streams/buffer.h"
 
+namespace HTTP
+{
+    class RequestParser;
+    class ResponseParser;
+}
+
 struct URI
 {
     friend class URIParser;
+    friend class HTTP::RequestParser;
+    friend class HTTP::ResponseParser;
 
     URI();
     URI(const std::string& uri);

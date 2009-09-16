@@ -232,4 +232,9 @@ TEST_WITH_SUITE(URI, queryString)
     TEST_ASSERT_EQUAL(it->first, "b");
     ++it;
     TEST_ASSERT_EQUAL(it->first, "c");
+
+    qs = "a+b";
+    TEST_ASSERT_EQUAL(qs.size(), 1u);
+    TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
+    TEST_ASSERT_EQUAL(qs.toString(), "a+b");
 }

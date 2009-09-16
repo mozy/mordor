@@ -11,7 +11,7 @@
 #include "mordor/common/version.h"
 
 // From uri.rl
-std::string unescape(const std::string& str);
+std::string unescape(const std::string& str, bool spaceAsPlus = false);
 
 static
 HTTP::Version

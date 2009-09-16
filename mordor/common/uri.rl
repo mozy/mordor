@@ -62,7 +62,7 @@ static std::string escape(const std::string& str, const std::string& allowedChar
     return result;
 }
 
-std::string unescape(const std::string& str)
+std::string unescape(const std::string& str, bool spaceAsPlus = false)
 {
     std::string result = str;
 
@@ -97,6 +97,12 @@ std::string unescape(const std::string& str)
                 decoded |= *c - '0';
             }
             result.append(1, decoded);                            
+        } else if (*c == '+' && spaceAsPlus) {
+            if (!differed) {
+                result.resize(c - str.c_str());
+                differed = true;
+            }
+            result.append(1, ' ');            
         } else if (differed) {
             result.append(1, *c);
         }
@@ -709,7 +715,7 @@ URI::QueryString::operator =(const std::string &str)
         it != pairs.end();
         ++it) {
         std::vector<std::string> keyValue = split(*it, '=', 2);
-        insert(value_type(unescape(keyValue[0]), keyValue.size() == 2 ? unescape(keyValue[1]) : ""));
+        insert(value_type(unescape(keyValue[0], true), keyValue.size() == 2 ? unescape(keyValue[1], true) : ""));
     }
     return *this;
 }
