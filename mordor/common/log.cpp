@@ -25,7 +25,7 @@ static ConfigVar<std::string>::ptr g_logError =
 static ConfigVar<std::string>::ptr g_logWarn =
     Config::lookup("log.warnmask", std::string(".*"), "Regex of loggers to enable warning for.");
 static ConfigVar<std::string>::ptr g_logInfo =
-    Config::lookup("log.infomask", std::string(""), "Regex of loggers to enable info for.");
+    Config::lookup("log.infomask", std::string(".*"), "Regex of loggers to enable info for.");
 static ConfigVar<std::string>::ptr g_logTrace =
     Config::lookup("log.tracemask", std::string(""), "Regex of loggers to enable trace for.");
 static ConfigVar<std::string>::ptr g_logVerbose =
