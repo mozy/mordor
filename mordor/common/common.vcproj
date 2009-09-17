@@ -562,6 +562,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\sleep.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\socket.cpp"
 				>
 			</File>
@@ -809,6 +813,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\singleplex.h"
+				>
+			</File>
+			<File
+				RelativePath=".\sleep.h"
 				>
 			</File>
 			<File

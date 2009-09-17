@@ -405,6 +405,7 @@ LIBMORDOROBJECTS := 								\
 	mordor/common/ragel.o							\
 	mordor/common/scheduler.o						\
 	mordor/common/semaphore.o						\
+	mordor/common/sleep.o							\
 	mordor/common/socket.o							\
 	mordor/common/streams/buffer.o						\
 	mordor/common/streams/buffered.o					\
