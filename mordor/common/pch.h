@@ -63,10 +63,15 @@
 
 #undef min
 #undef max
-#undef DELETE
 #undef ABSOLUTE
 #undef RELATIVE
 #undef ERROR
+
+// Take things out of the preprocessor, and put into the global namespace
+#undef DELETE
+enum {
+    DELETE = (0x00010000L)
+};
 
 #elif defined(LINUX)
 #include <byteswap.h>
