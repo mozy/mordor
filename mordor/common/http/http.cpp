@@ -603,6 +603,8 @@ std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)
         os << "Connection: " << g.connection << "\r\n";
     if (!g.date.is_not_a_date_time())
         os << "Date: " << g.date << "\r\n";
+    if (!g.proxyConnection.empty())
+        os << "Proxy-Connection: " << g.proxyConnection << "\r\n";
     if (!g.trailer.empty())
         os << "Trailer: " << g.trailer << "\r\n";
     if (!g.transferEncoding.empty())

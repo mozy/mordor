@@ -317,6 +317,7 @@ namespace HTTP
     {
         StringSet connection;
         boost::posix_time::ptime date;
+        StringSet proxyConnection; // NON-STANDARD!!!!
         ParameterizedList transferEncoding;
         StringSet trailer;
         ProductList upgrade;

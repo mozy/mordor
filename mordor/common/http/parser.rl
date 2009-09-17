@@ -367,6 +367,11 @@ HTTP::unquote(const std::string &str)
         m_date = &m_general->date;
     }
     
+    action set_proxy_connection {
+        m_set = &m_general->proxyConnection;
+        m_list = NULL;
+    }
+    
     action set_trailer {
         m_set = &m_general->trailer;
         m_list = NULL;
@@ -383,12 +388,14 @@ HTTP::unquote(const std::string &str)
 
     Connection = 'Connection:'i @set_connection list;
     Date = 'Date:'i @set_date LWS* HTTP_date LWS*;
+    # NON-STANDARD!!!
+    Proxy_Connection = 'Proxy-Connection:'i @set_proxy_connection list;
     Trailer = 'Trailer:'i @set_trailer list;
     Transfer_Encoding = 'Transfer-Encoding:'i @set_transfer_encoding parameterizedList;
     Upgrade = 'Upgrade:'i LWS* product %save_upgrade_product ( LWS* ',' LWS* product %save_upgrade_product)* LWS*;
     
-    general_header = Connection | Date | Trailer | Transfer_Encoding | Upgrade;
-    general_header_names = 'Connection'i | 'Date'i | 'Trailer'i | 'Transfer-Encoding'i | 'Upgrade'i;
+    general_header = Connection | Date | Proxy_Connection | Trailer | Transfer_Encoding | Upgrade;
+    general_header_names = 'Connection'i | 'Date'i | 'Proxy-Connection'i | 'Trailer'i | 'Transfer-Encoding'i | 'Upgrade'i;
     
     action set_content_encoding {
         m_list = &m_entity->contentEncoding;

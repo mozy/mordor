@@ -80,6 +80,7 @@ HTTP::ClientConnection::scheduleNextRequest(ClientRequest::ptr request)
 void
 HTTP::ClientConnection::scheduleNextResponse(ClientRequest::ptr request)
 {
+    bool close = false;
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
@@ -91,6 +92,8 @@ HTTP::ClientConnection::scheduleNextResponse(ClientRequest::ptr request)
         request->m_responseInFlight = false;
         m_pendingRequests.pop_front();
         request.reset();
+        if (m_priorResponseClosed || m_priorResponseFailed)
+            close = true;
         if (!m_pendingRequests.empty()) {
             request = m_pendingRequests.front();
             ASSERT(!request->m_responseDone);
@@ -109,9 +112,13 @@ HTTP::ClientConnection::scheduleNextResponse(ClientRequest::ptr request)
             }
         }
     }
-    if (request.get()) {
+    if (request) {
         ASSERT(request->m_cancelled);
         request->finish();
+    }
+    if (close) {
+        ASSERT(!request);
+        m_stream->close(Stream::BOTH);
     }
 }
 
@@ -603,16 +610,19 @@ HTTP::ClientRequest::ensureResponse()
         bool close = false;
         StringSet &connection = m_response.general.connection;
         if (m_response.status.ver == Version(1, 0)) {
-            if (connection.find("Keep-Alive") == connection.end()) {
+            if (connection.find("Keep-Alive") == connection.end())
                 close = true;
-            }
         } else if (m_response.status.ver == Version(1, 1)) {
-            if (connection.find("close") != connection.end()) {
+            if (connection.find("close") != connection.end())
                 close = true;
-            }
         } else {
             throw BadMessageHeaderException();
         }
+        // NON-STANDARD!!!
+        StringSet &proxyConnection = m_response.general.proxyConnection;
+        if (proxyConnection.find("close") != proxyConnection.end())
+            close = true;
+
         ParameterizedList &transferEncoding = m_response.general.transferEncoding;
         // Remove identity from the Transfer-Encodings
         for (ParameterizedList::iterator it(transferEncoding.begin());

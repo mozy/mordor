@@ -14,7 +14,7 @@ namespace HTTP
         requestHeaders.requestLine.uri = target;
         requestHeaders.request.host = proxy;
         requestHeaders.general.connection.insert("Proxy-Connection");
-        requestHeaders.entity.extension["Proxy-Connection"] = "Keep-Alive";
+        requestHeaders.general.proxyConnection.insert("Keep-Alive");
         ClientRequest::ptr request = conn.request(requestHeaders);
         if (request->response().status.status == HTTP::OK) {
             return request->stream();
