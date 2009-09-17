@@ -480,7 +480,7 @@ std::ostream &operator<<(std::ostream &os, const HTTP::AuthParams &a)
     if (!a.base64.empty())
         os << ' ' << a.base64;
     if (!a.parameters.empty())
-        os << serializeStringMapWithRequiredValue(a.parameters, ", ", false);
+        os << ' ' << serializeStringMapWithRequiredValue(a.parameters, ", ", false);
     return os;
 }
 
