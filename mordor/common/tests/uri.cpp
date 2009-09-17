@@ -218,7 +218,7 @@ TEST_WITH_SUITE(URI, queryString)
     uri = "http://a/b?a%20b";
     TEST_ASSERT(uri.queryDefined());
     TEST_ASSERT_EQUAL(uri.query(), "a b");
-    URI::QueryString &qs = uri.queryString();
+    URI::QueryString qs = uri.queryString();
 
     TEST_ASSERT_EQUAL(qs.size(), 1u);
     TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
