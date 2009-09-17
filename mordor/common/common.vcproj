@@ -434,42 +434,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\http_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\http_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\http_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\http_parser.obj"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath=".\xml\parser.cpp"
 				>
 				<FileConfiguration
@@ -502,6 +466,42 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						ObjectFile="$(IntDir)\xml_parser.obj"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\http\parser.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_parser.obj"
 					/>
 				</FileConfiguration>
 			</File>
@@ -623,6 +623,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\test.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\throttle.cpp"
 				>
 			</File>
 			<File
@@ -780,11 +784,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.h"
+				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
+				RelativePath=".\xml\parser.h"
 				>
 			</File>
 			<File
@@ -848,6 +852,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\throttle.h"
+				>
+			</File>
+			<File
 				RelativePath=".\timer.h"
 				>
 			</File>
@@ -872,6 +880,42 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\xml\parser.rl"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|x64"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+		</File>
 		<File
 			RelativePath=".\http\parser.rl"
 			>
@@ -907,42 +951,6 @@
 					Name="Ragel"
 					OutputFileName="http\$(InputName).cpp"
 					CodeStyle="6"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath=".\xml\parser.rl"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug|x64"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|x64"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
 				/>
 			</FileConfiguration>
 		</File>
