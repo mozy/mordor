@@ -17,12 +17,39 @@ EFSStream::EFSStream(void *context, bool read, bool ownContext)
           m_pos(0),
           m_seekTarget(0)
 {
-    if (m_read)
-        m_fiber = Fiber::ptr(new Fiber(boost::bind(&EFSStream::readFiber,
-            this)));
-    else
-        m_fiber = Fiber::ptr(new Fiber(boost::bind(&EFSStream::readFiber,
-            this)));
+    init();    
+}
+
+EFSStream::EFSStream(const char *filename, bool read)
+        : m_context(NULL),
+          m_read(read),
+          m_own(true),
+          m_readBuffer(NULL),
+          m_todo(0),
+          m_pos(0),
+          m_seekTarget(0)
+{
+    DWORD dwRet = OpenEncryptedFileRawW(toUtf16(filename).c_str(),
+        read ? 0 : CREATE_FOR_IMPORT, &m_context);
+    if (dwRet != ERROR_SUCCESS)
+        throwExceptionFromLastError(dwRet);
+    init();
+}
+
+EFSStream::EFSStream(const wchar_t *filename, bool read)
+        : m_context(NULL),
+          m_read(read),
+          m_own(true),
+          m_readBuffer(NULL),
+          m_todo(0),
+          m_pos(0),
+          m_seekTarget(0)
+{
+    DWORD dwRet = OpenEncryptedFileRawW(filename,
+        read ? 0 : CREATE_FOR_IMPORT, &m_context);
+    if (dwRet != ERROR_SUCCESS)
+        throwExceptionFromLastError(dwRet);
+    init();
 }
 
 EFSStream::EFSStream(const std::string &filename, bool read)
@@ -35,15 +62,10 @@ EFSStream::EFSStream(const std::string &filename, bool read)
           m_seekTarget(0)
 {
     DWORD dwRet = OpenEncryptedFileRawW(toUtf16(filename).c_str(),
-        read ? CREATE_FOR_IMPORT : 0, &m_context);
+        read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
         throwExceptionFromLastError(dwRet);
-    if (m_read)
-        m_fiber = Fiber::ptr(new Fiber(boost::bind(&EFSStream::readFiber,
-            this)));
-    else
-        m_fiber = Fiber::ptr(new Fiber(boost::bind(&EFSStream::readFiber,
-            this)));
+    init();
 }
 
 EFSStream::EFSStream(const std::wstring &filename, bool read)
@@ -56,14 +78,21 @@ EFSStream::EFSStream(const std::wstring &filename, bool read)
           m_seekTarget(0)
 {
     DWORD dwRet = OpenEncryptedFileRawW(filename.c_str(),
-        read ? CREATE_FOR_IMPORT : 0, &m_context);
+        read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
         throwExceptionFromLastError(dwRet);
+    init();
+}
+
+void
+EFSStream::init()
+{
+    ASSERT(m_context);
     if (m_read)
         m_fiber = Fiber::ptr(new Fiber(boost::bind(&EFSStream::readFiber,
             this)));
     else
-        m_fiber = Fiber::ptr(new Fiber(boost::bind(&EFSStream::readFiber,
+        m_fiber = Fiber::ptr(new Fiber(boost::bind(&EFSStream::writeFiber,
             this)));
 }
 

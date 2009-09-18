@@ -8,6 +8,8 @@ class EFSStream : public Stream
 {
 public:
     EFSStream(void *context, bool read = true, bool ownContext = true);
+    EFSStream(const char *filename, bool read = true);
+    EFSStream(const wchar_t *filename, bool read = true);
     EFSStream(const std::string &filename, bool read = true);
     EFSStream(const std::wstring &filename, bool read = true);
     ~EFSStream();
@@ -22,6 +24,7 @@ public:
     long long seek(long long offset, Anchor anchor);
 
 private:
+    void init();
     void readFiber();
     static DWORD WINAPI ExportCallback(PBYTE pbData, PVOID pvCallbackContext,
         ULONG ulLength);

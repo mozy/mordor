@@ -352,6 +352,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\efs_stream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\fibers.cpp"
 				>
 			</File>
