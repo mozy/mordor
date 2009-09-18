@@ -268,7 +268,7 @@ TEST_WITH_SUITE(Fibers, yieldTo)
 }
 
 static void
-fiberProc4(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence)
+fiberProc4(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence, bool exception)
 {
     Fiber::ptr self(weakself);
     TEST_ASSERT(Fiber::getThis() == self);
@@ -276,6 +276,8 @@ fiberProc4(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence)
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     TEST_ASSERT(self->state() == Fiber::EXEC);
     ++sequence;
+    if (exception)
+        throw std::runtime_error("error");
 }
 
 TEST_WITH_SUITE(Fibers, reset)
@@ -284,7 +286,7 @@ TEST_WITH_SUITE(Fibers, reset)
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr a(new Fiber(NULL, 65536 * 6));
     a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
-        boost::ref(sequence)));
+        boost::ref(sequence), false));
     TEST_ASSERT(Fiber::getThis() == mainFiber);
     TEST_ASSERT(a != mainFiber);
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
@@ -311,6 +313,23 @@ TEST_WITH_SUITE(Fibers, reset)
     TEST_ASSERT(Fiber::getThis() == mainFiber);
     TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     TEST_ASSERT(a->state() == Fiber::TERM);
+    a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
+        boost::ref(sequence), true));
+    TEST_ASSERT(a->state() == Fiber::INIT);
+    TEST_ASSERT_EXCEPTION(a->call(), std::runtime_error);
+    ++sequence;
+    TEST_ASSERT_EQUAL(sequence, 8);
+    TEST_ASSERT(Fiber::getThis() == mainFiber);
+    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    TEST_ASSERT(a->state() == Fiber::EXCEPT);
+    a->reset();
+    TEST_ASSERT(a->state() == Fiber::INIT);
+    TEST_ASSERT_EXCEPTION(a->call(), std::runtime_error);
+    ++sequence;
+    TEST_ASSERT_EQUAL(sequence, 10);
+    TEST_ASSERT(Fiber::getThis() == mainFiber);
+    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    TEST_ASSERT(a->state() == Fiber::EXCEPT);
 }
 
 static void throwBadAlloc()

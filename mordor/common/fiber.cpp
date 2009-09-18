@@ -241,6 +241,10 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
     // Relinguish our reference
     cur.reset();
     fiber_switchContext(&curp->m_sp, m_sp);
+#ifdef NATIVE_WINDOWS_FIBERS
+    if (targetState == TERM)
+        return Fiber::ptr();
+#endif
     ASSERT(targetState != TERM);
     setThis(curp);
     ASSERT(curp->m_yielder || targetState == EXCEPT);
@@ -270,19 +274,24 @@ Fiber::entryPoint()
     try {
         cur->m_dg();
     } catch (std::exception &ex) {
+        Fiber::weak_ptr dummy = cur;
         cur->m_exception = &ex;
         exitPoint(cur, curp, EXCEPT);
         if (curp->m_state == EXCEPT)
             throw;
+        cur = dummy.lock();
     } catch (...) {
         Fiber::weak_ptr dummy = cur;
         exitPoint(cur, curp, EXCEPT);
         if (curp->m_state == EXCEPT)
             throw;
+        cur = dummy.lock();
     }
 
     exitPoint(cur, curp, TERM);
-    ASSERT(false);
+#ifndef NATIVE_WINDOWS_FIBERS
+    NOTREACHED();
+#endif
 }
 
 void
@@ -305,8 +314,7 @@ Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
         terminateOuterp->yieldTo(false, targetState);
         return;
     }
-    if (!curp->m_outer)
-        return;
+    ASSERT(curp->m_outer);
     curp->m_outer->m_yielder = cur;
     curp->m_outer->m_yielderNextState = targetState;
     if (cur) {
@@ -368,7 +376,9 @@ push(void **sp, size_t v)
 static VOID CALLBACK native_fiber_entryPoint(PVOID lpParameter)
 {
     void (*entryPoint)() = (void (*)())lpParameter;
-    entryPoint();
+    while (true) {
+        entryPoint();
+    }
 }
 #endif
 
@@ -384,17 +394,15 @@ allocStack(void **stack, void **sp, size_t *stacksize)
     // Fibers are allocated in initStack
 #elif defined(WINDOWS)
     *stack = VirtualAlloc(NULL, *stacksize + g_pagesize, MEM_RESERVE, PAGE_NOACCESS);
-    if (!*stack) {
-        ASSERT(false);
-    }
+    if (!*stack)
+        throwExceptionFromLastError();
     VirtualAlloc(*stack, g_pagesize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
     VirtualAlloc((char*)*stack + g_pagesize, *stacksize, MEM_COMMIT, PAGE_READWRITE);
     *sp = (char*)*stack + *stacksize + g_pagesize;
 #elif defined(POSIX)
     *stack = mmap(NULL, *stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-    if (*stack == MAP_FAILED) {
-        ASSERT(false);
-    }
+    if (*stack == MAP_FAILED)
+        throwExceptionFromLastError();
     *sp = (char*)*stack + *stacksize;
 #endif
 }
@@ -429,8 +437,8 @@ fiber_switchContext(void **oldsp, void *newsp)
 static void
 fiber_switchContext(void **oldsp, void *newsp)
 {
-    int rc = swapcontext(*(ucontext_t**)oldsp, (ucontext_t*)newsp);
-    ASSERT(rc == 0);
+    if (swapcontext(*(ucontext_t**)oldsp, (ucontext_t*)newsp))
+        throwExceptionFromLastError();
 }
 #elif defined(_MSC_VER) && defined(ASM_X86_WINDOWS_FIBERS)
 static
@@ -477,15 +485,14 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
 {
 #ifdef NATIVE_WINDOWS_FIBERS
     if (*stack)
-        freeStack(*stack, stacksize);
+        return;
     *sp = *stack = CreateFiber(stacksize, &native_fiber_entryPoint, entryPoint);
-    if (!*stack) {
-        ASSERT(false);
-    }
+    if (!*stack)
+        throwExceptionFromLastError();
 #elif defined(UCONTEXT_FIBERS)
     ucontext_t *ctx = *(ucontext_t**)sp;
-    int rc = getcontext(ctx);
-    ASSERT(rc == 0);
+    if (getcontext(ctx))
+        throwExceptionFromLastError();
     ctx->uc_stack.ss_sp = *stack;
     ctx->uc_stack.ss_size = stacksize;
     makecontext(ctx, entryPoint, 0);
