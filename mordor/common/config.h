@@ -121,6 +121,8 @@ public:
         return v;
     }
 
+    static ConfigVarBase::ptr lookup(const std::string &name);
+
     static void loadFromEnvironment();
 
 private:

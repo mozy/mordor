@@ -55,6 +55,18 @@ Config::loadFromEnvironment()
     }
 }
 
+ConfigVarBase::ptr
+Config::lookup(const std::string &name)
+{
+    ConfigVarBase var(name);
+    ConfigVarBase::ptr ptr(&var, &delete_nothing);
+    std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator>::iterator it = vars().find(ptr);
+    if (it != vars().end()) {
+        return *it;
+    }
+    return ConfigVarBase::ptr();
+}
+
 bool
 ConfigVarBase::Comparator::operator()(const ConfigVarBase::ptr &lhs,
                                       const ConfigVarBase::ptr &rhs) const
