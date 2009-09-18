@@ -362,6 +362,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\efs.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\exception.cpp"
 				>
 			</File>
@@ -434,42 +438,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\xml_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\xml_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\xml_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\xml_parser.obj"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath=".\http\parser.cpp"
 				>
 				<FileConfiguration
@@ -502,6 +470,42 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						ObjectFile="$(IntDir)\http_parser.obj"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\xml\parser.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\xml_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\xml_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\xml_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\xml_parser.obj"
 					/>
 				</FileConfiguration>
 			</File>
@@ -566,10 +570,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -604,6 +604,10 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\streams\ssl.cpp"
@@ -709,6 +713,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\duplex.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\efs.h"
 				>
 			</File>
 			<File
@@ -824,11 +832,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File

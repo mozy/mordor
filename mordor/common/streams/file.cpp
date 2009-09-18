@@ -5,6 +5,7 @@
 #include "file.h"
 
 #include "mordor/common/exception.h"
+#include "mordor/common/string.h"
 
 FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlags)
 {
@@ -17,8 +18,7 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
         access |= GENERIC_WRITE;
     if (flags == APPEND)
         access = FILE_APPEND_DATA | SYNCHRONIZE;
-    // TODO: UTF-8
-    handle = CreateFileA(filename.c_str(),
+    handle = CreateFileW(toUtf16(filename).c_str(),
         access,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
