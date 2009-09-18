@@ -18,8 +18,6 @@
 
 #endif
 
-#define BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG
-
 #ifdef USE_PCH
 
 // OS Headers
