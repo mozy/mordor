@@ -224,7 +224,7 @@ EFSStream::ExportCallback(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLength)
             ASSERT(self->m_readBuffer);
             size_t toCopy = std::min<size_t>(self->m_todo, ulLength);
             self->m_readBuffer->copyIn(pbData, toCopy);
-            ulLength -= toCopy;
+            ulLength -= (ULONG)toCopy;
             pbData += toCopy;
             self->m_todo -= toCopy;
             Fiber::yield();
