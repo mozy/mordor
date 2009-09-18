@@ -13,7 +13,7 @@ static Logger::ptr g_log = Log::lookup("mordor:common:streams:throttle");
 size_t
 ThrottleStream::read(Buffer &b, size_t len)
 {
-    unsigned int throttle = m_throttle.val();
+    unsigned int throttle = m_dg();
     unsigned long long now = TimerManager::now();
     unsigned long long minTime
         = throttle ? 1000000ull * (m_read * 8) / throttle : 0;
@@ -41,7 +41,7 @@ ThrottleStream::read(Buffer &b, size_t len)
 size_t
 ThrottleStream::write(const Buffer &b, size_t len)
 {
-    unsigned int throttle = m_throttle.val();
+    unsigned int throttle = m_dg();
     unsigned long long now = TimerManager::now();
     unsigned long long minTime =
         throttle ? 1000000ull * (m_written * 8) / throttle : 0;
