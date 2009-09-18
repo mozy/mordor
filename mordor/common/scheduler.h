@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>
 
@@ -109,49 +111,97 @@ private:
     Scheduler *m_caller;
 };
 
-/*
 template<class T>
 static
 void
-parallel_foreach_impl(boost::function<int (T&)> dg, T& t, size_t &running,
-    Scheduler *scheduler, Fiber::ptr caller)
+parallel_foreach_impl(boost::function<bool (T&)> dg, T *&t,
+                      int &result,
+                      Scheduler *scheduler, Fiber::ptr caller)
 {
-    dg(t);
-    // This could be improeved; currently it wait for parallelism fibers
-    // to complete, then schedules parallelism more; it would be better if
-    // we could schedule another as soon as one completes, but it's difficult
-    // to *not* schedule antoher if we're already done
-    if (atomicDecrement(running) == 0) {
+    Fiber::getThis()->autoThrowExceptions(false);
+    try {
+        result = dg(*t) ? 1 : 0;
+        t = NULL;
         scheduler->schedule(caller);
+    } catch (...) {
+        result = 0;
+        t = NULL;
+        scheduler->schedule(caller);
+        throw;
     }
 }
 
-template<class C, class T>
+template<class Iterator, class T>
 void
-parallel_foreach(C &collection, boost::function<int (T&)> dg,
+parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
     int parallelism = -1)
 {
     if (parallelism == -1)
         parallelism = 4;
-    size_t running;
     Scheduler *scheduler = Scheduler::getThis();
     Fiber::ptr caller = Fiber::getThis();
-    C::const_iterator it;
+    Iterator it = begin;
 
-    for (it = collection.begin(); it != collection.end(); ++it) {
-        Fiber::ptr f(new Fiber(boost::bind(parallel_foreach_impl, dg,
-            boost::ref(*it), boost::ref(running), scheduler, caller),
-            8192));
-        bool yield = (atomicIncrement(running) >= parallelism);
-        scheduler->schedule(f);
-
-        if (yield) {
-            scheduler->yieldTo();
-        }
+    std::vector<Fiber::ptr> fibers;
+    std::vector<T *> current;
+    // Not bool, because that's specialized, and it doesn't return just a
+    // bool &, but instead some reference wrapper that the compiler hates
+    std::vector<int> result;
+    fibers.resize(parallelism);
+    current.resize(parallelism);
+    result.resize(parallelism);
+    for (int i = 0; i < parallelism; ++i) {
+        fibers[i] = Fiber::ptr(new Fiber(boost::bind(&parallel_foreach_impl<T>,
+            dg, boost::ref(current[i]), boost::ref(result[i]), scheduler,
+            caller)));
     }
-    if (running > 0) {
+
+    int curFiber = 0;
+    while (it != end && curFiber < parallelism) {
+        current[curFiber] = &*it;
+        scheduler->schedule(fibers[curFiber]);
+        ++curFiber;
+        ++it;
+    }
+    if (curFiber < parallelism) {
+        parallelism = curFiber;
+        fibers.resize(parallelism);
+        current.resize(parallelism);
+        result.resize(parallelism);
+    }
+
+    while (it != end) {
         scheduler->yieldTo();
-    }    
-}*/
+        // Figure out who just finished and scheduled us
+        for (int i = 0; i < parallelism; ++i) {
+            if (current[i] == NULL) {
+                curFiber = i;
+                break;
+            }
+        }
+        if (!result[curFiber]) {
+            --parallelism;
+            break;
+        }
+        current[curFiber] = &*it;
+        fibers[curFiber]->reset();
+        scheduler->schedule(fibers[curFiber]);
+        ++it;
+    }
+
+    // Wait for everyone to finish
+    while (parallelism > 0) {
+        scheduler->yieldTo();
+        --parallelism;
+    }
+
+    // Pass the first exception along
+    // TODO: group exceptions?
+    for(std::vector<Fiber::ptr>::iterator it2 = fibers.begin();
+        it2 != fibers.end();
+        ++it2) {
+        (*it2)->throwExceptions();
+    }
+}
 
 #endif

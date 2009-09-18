@@ -193,3 +193,80 @@ TEST_WITH_SUITE(Scheduler, parallelDoException)
 
     TEST_ASSERT_EXCEPTION(parallel_do(dgs), std::runtime_error);    
 }
+
+static bool checkEqual(int x, int &sequence)
+{
+    TEST_ASSERT_EQUAL(x, sequence);
+    ++sequence;
+    return true;
+}
+
+TEST_WITH_SUITE(Scheduler, parallelForEach)
+{
+    const int values[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool;
+
+    int sequence = 1;
+    parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
+        &checkEqual, _1, boost::ref(sequence)), 4);
+    TEST_ASSERT_EQUAL(sequence, 11);
+}
+
+TEST_WITH_SUITE(Scheduler, parallelForEachLessThanParallelism)
+{
+    const int values[] = { 1, 2 };
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool;
+
+    int sequence = 1;
+    parallel_foreach<const int *, const int>(&values[0], &values[2], boost::bind(
+        &checkEqual, _1, boost::ref(sequence)), 4);
+    TEST_ASSERT_EQUAL(sequence, 3);
+}
+
+static bool checkEqualStop5(int x, int &sequence)
+{
+    TEST_ASSERT_EQUAL(x, sequence);
+    ++sequence;
+    return sequence <= 5;
+}
+
+TEST_WITH_SUITE(Scheduler, parallelForEachStopShort)
+{
+    const int values[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool;
+
+    int sequence = 1;
+    parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
+        &checkEqualStop5, _1, boost::ref(sequence)), 4);
+    // 5 was told to stop, 6, 7, and 8 were already scheduled
+    TEST_ASSERT_EQUAL(sequence, 9);
+}
+
+static bool checkEqualExceptionOn5(int x, int &sequence)
+{
+    TEST_ASSERT_EQUAL(x, sequence);
+    ++sequence;
+    if (sequence == 6)
+        throw std::runtime_error("exception");
+    return true;
+}
+
+TEST_WITH_SUITE(Scheduler, parallelForEachException)
+{
+    const int values[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool;
+
+    int sequence = 1;
+    try {
+        parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
+            &checkEqualExceptionOn5, _1, boost::ref(sequence)), 4);
+        TEST_ASSERT(false);
+    } catch (std::runtime_error)
+    {}
+    // 5 was told to stop (exception), 6, 7, and 8 were already scheduled
+    TEST_ASSERT_EQUAL(sequence, 9);
+}
