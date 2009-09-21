@@ -29,6 +29,9 @@ public:
     size_t write(const Buffer &b, size_t len);
     void flush();
 
+    void accept();
+    void connect();
+
 private:
     void flushBuffer();
     void wantRead();

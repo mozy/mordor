@@ -178,7 +178,6 @@ SSLStream::write(const Buffer &b, size_t len)
                 return result;
             case SSL_ERROR_ZERO_RETURN:
                 // Received close_notify message
-                // TODO: implicitly call SSL_shutdown here too?
                 ASSERT(result != 0);
                 return result;
             case SSL_ERROR_WANT_READ:
@@ -229,6 +228,70 @@ SSLStream::flush()
         }
     }
     flushBuffer();
+}
+
+void
+SSLStream::accept()
+{
+    flushBuffer();
+    while (true) {
+        int result = SSL_accept(m_ssl.get());
+        int error = SSL_get_error(m_ssl.get(), result);
+        LOG_VERBOSE(g_log) << this << " SSL_accept(" << m_ssl.get() << "): "
+            << result << " (" << error << ")";
+        switch (error) {
+            case SSL_ERROR_NONE:
+                return;
+            case SSL_ERROR_ZERO_RETURN:
+                // Received close_notify message
+                return;
+            case SSL_ERROR_WANT_READ:
+                wantRead();
+                continue;
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_WANT_CONNECT:
+            case SSL_ERROR_WANT_ACCEPT:
+            case SSL_ERROR_WANT_X509_LOOKUP:
+            case SSL_ERROR_SYSCALL:
+                NOTREACHED();
+            case SSL_ERROR_SSL:
+                throwOpenSSLException();
+            default:
+                NOTREACHED();
+        }
+    }
+}
+
+void
+SSLStream::connect()
+{
+    flushBuffer();
+    while (true) {
+        int result = SSL_connect(m_ssl.get());
+        int error = SSL_get_error(m_ssl.get(), result);
+        LOG_VERBOSE(g_log) << this << " SSL_connect(" << m_ssl.get() << "): "
+            << result << " (" << error << ")";
+        switch (error) {
+            case SSL_ERROR_NONE:
+                return;
+            case SSL_ERROR_ZERO_RETURN:
+                // Received close_notify message
+                return;
+            case SSL_ERROR_WANT_READ:
+                wantRead();
+                continue;
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_WANT_CONNECT:
+            case SSL_ERROR_WANT_ACCEPT:
+            case SSL_ERROR_WANT_X509_LOOKUP:
+            case SSL_ERROR_SYSCALL:
+                NOTREACHED();
+            case SSL_ERROR_SSL:
+                throwOpenSSLException();
+            default:
+                NOTREACHED();
+        }
+    }
 }
 
 void
