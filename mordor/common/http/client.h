@@ -76,6 +76,8 @@ namespace HTTP
         ClientConnection(Stream::ptr stream);
 
         ClientRequest::ptr request(const Request &requestHeaders);
+
+        bool newRequestsAllowed();
     private:
         void scheduleNextRequest(ClientRequest::ptr currentRequest);
         void scheduleNextResponse(ClientRequest::ptr currentRequest);
