@@ -60,6 +60,7 @@ struct URI
 
         std::string toString() const;
 
+        int cmp(const Authority &rhs) const;
         bool operator==(const Authority &rhs) const;
         bool operator!=(const Authority &rhs) const
         { return !(*this == rhs); }
@@ -105,6 +106,7 @@ struct URI
 
         std::string toString() const;
 
+        int cmp(const Path &rhs) const;
         bool operator==(const Path &rhs) const;
         bool operator!=(const Path &rhs) const
         { return !(*this == rhs); }
@@ -146,6 +148,8 @@ struct URI
 
     static URI transform(const URI& base, const URI& relative);
 
+    int cmp(const URI &rhs) const;
+    bool operator<(const URI &rhs) const;
     bool operator==(const URI &rhs) const;
     bool operator!=(const URI &rhs) const
     { return !(*this == rhs); }

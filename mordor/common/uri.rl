@@ -431,15 +431,35 @@ URI::Path::toString() const
     return os.str();
 }
 
+static int boolcmp(bool lhs, bool rhs)
+{
+    if (!lhs && rhs)
+        return -1;
+    if (lhs && !rhs)
+        return 1;
+    return 0;
+}
+
+int
+URI::Authority::cmp(const Authority &rhs) const
+{
+    int x = boolcmp(m_hostDefined, rhs.m_hostDefined);
+    if (x != 0) return x;
+    x = strcmp(m_host.c_str(), rhs.m_host.c_str());
+    if (x != 0) return x;
+    x = boolcmp(m_portDefined, rhs.m_portDefined);
+    if (x != 0) return x;
+    x = m_port - rhs.m_port;
+    if (x != 0) return x;
+    x = boolcmp(m_userinfoDefined, rhs.m_userinfoDefined);
+    if (x != 0) return x;
+    return strcmp(m_userinfo.c_str(), rhs.m_userinfo.c_str());
+}
+
 bool
 URI::Authority::operator==(const Authority &rhs) const
 {
-    return m_userinfoDefined == rhs.m_userinfoDefined &&
-           m_portDefined == rhs.m_portDefined &&
-           m_hostDefined == rhs.m_hostDefined &&
-           m_port == rhs.m_port &&
-           m_host == rhs.m_host &&
-           m_userinfo == rhs.m_userinfo;
+    return cmp(rhs) == 0;
 }
 
 std::ostream&
@@ -564,6 +584,28 @@ std::ostream&
 operator<<(std::ostream& os, const URI::Path& path)
 {
     return os << path.serialize();
+}
+
+int
+URI::Path::cmp(const Path &rhs) const
+{
+    if (type == ABSOLUTE && rhs.type == RELATIVE)
+        return -1;
+    if (type == RELATIVE && rhs.type == ABSOLUTE)
+        return 1;
+    std::vector<std::string>::const_iterator itl, itr;
+    itl = segments.begin(); itr = rhs.segments.begin();
+    while (true) {
+        if (itl == segments.end() && itr != rhs.segments.end())
+            return -1;
+        if (itl != segments.end() && itr == rhs.segments.end())
+            return 1;
+        if (itl == segments.end() && itr == rhs.segments.end())
+            return 0;
+        int x = strcmp(itl->c_str(), itr->c_str());
+        if (x != 0) return x;
+        ++itl; ++itr;
+    }
 }
 
 bool
@@ -693,17 +735,36 @@ URI::transform(const URI& base, const URI& relative)
     return target;
 }
 
+int
+URI::cmp(const URI &rhs) const
+{
+    int x = boolcmp(m_schemeDefined, rhs.m_schemeDefined);
+    if (x != 0) return x;
+    x = strcmp(m_scheme.c_str(), rhs.m_scheme.c_str());
+    if (x != 0) return x;
+    x = authority.cmp(rhs.authority);
+    if (x != 0) return x;
+    x = path.cmp(rhs.path);
+    if (x != 0) return x;
+    x = boolcmp(m_queryDefined, rhs.m_queryDefined);
+    if (x != 0) return x;
+    x = strcmp(m_query.c_str(), rhs.m_query.c_str());
+    if (x != 0) return x;
+    x = boolcmp(m_fragmentDefined, rhs.m_fragmentDefined);
+    if (x != 0) return x;
+    return strcmp(m_fragment.c_str(), rhs.m_fragment.c_str());
+}
+
+bool
+URI::operator<(const URI &rhs) const
+{
+    return cmp(rhs) < 0;    
+}
+
 bool
 URI::operator==(const URI &rhs) const
 {
-    return m_schemeDefined == rhs.m_schemeDefined &&
-           m_queryDefined == rhs.m_queryDefined &&
-           m_fragmentDefined == rhs.m_fragmentDefined &&
-           m_scheme == rhs.m_scheme &&
-           authority == rhs.authority &&
-           path == rhs.path &&
-           m_query == rhs.m_query &&
-           m_fragment == rhs.m_fragment;
+    return cmp(rhs) == 0;
 }
 
 URI::QueryString &
