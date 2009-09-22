@@ -71,7 +71,17 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
 : m_sock(-1),
   m_family(family),
   m_protocol(protocol),
-  m_ioManager(ioManager)
+  m_ioManager(ioManager),
+  m_receiveTimeout(~0ull),
+  m_sendTimeout(~0ull),
+#ifdef WINDOWS
+  m_cancelled(true),
+  m_hEvent(NULL),
+  m_scheduler(NULL)
+#else
+  m_cancelledSend(true),
+  m_cancelledReceive(true)
+#endif
 {
 #ifdef WINDOWS
     if (m_ioManager) {
@@ -113,7 +123,15 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
   m_protocol(protocol),
   m_ioManager(&ioManager),
   m_receiveTimeout(~0ull),
-  m_sendTimeout(~0ull)
+  m_sendTimeout(~0ull),
+#ifdef WINDOWS
+  m_cancelled(true),
+  m_hEvent(NULL),
+  m_scheduler(NULL)
+#else
+  m_cancelledSend(true),
+  m_cancelledReceive(true)
+#endif
 {
     m_sock = socket(family, type, protocol);
     LOG_VERBOSE(g_log) << this << " socket(" << family << ", " << type << ", "
@@ -146,6 +164,10 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
 Socket::~Socket()
 {
     close();
+#ifdef WINDOWS
+    if (m_ioManager && m_hEvent)
+        CloseHandle(m_hEvent);
+#endif
 }
 
 void
@@ -235,55 +257,55 @@ Socket::connect(const Address &to)
                 << ")";
             setOption(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
         } else {
-            HANDLE hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
-            try {
-                if (WSAEventSelect(m_sock, hEvent, FD_CONNECT))
+            if (!m_hEvent) {
+                m_hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+                if (!m_hEvent)
                     throwExceptionFromLastError();
-                if (!::connect(m_sock, to.name(), to.nameLen())) {
-                    LOG_INFO(g_log) << this << " connect(" << m_sock << ", "
-                        << to << ")";
-                    // Worked first time
-                    CloseHandle(hEvent);
-                    return;
-                }
-                if (GetLastError() == WSAEWOULDBLOCK) {
-                    m_ioManager->registerEvent(hEvent);
-                    bool cancelled = false;
-                    bool unregistered = false;
-                    Timer::ptr timeout;
-                    if (m_sendTimeout != ~0ull)
-                        timeout = m_ioManager->registerTimer(m_sendTimeout,
-                            boost::bind(&Socket::cancelIo, this, hEvent,
-                            boost::ref(cancelled), boost::ref(unregistered)));
-                    Scheduler::getThis()->yieldTo();
-                    if (timeout)
-                        timeout->cancel();
-                    // The timeout expired, but the event fired before we could
-                    // cancel it, so we got scheduled twice
-                    if (cancelled && !unregistered)
-                        Scheduler::getThis()->yieldTo();
-                    if (unregistered) {
-                        LOG_ERROR(g_log) << this << " connect(" << m_sock
-                            << ", " << to << "): (cancelled)";
-                        throw OperationAbortedException();
-                    }
-                    ::connect(m_sock, to.name(), to.nameLen());
-                    LOG_LEVEL(g_log, GetLastError() ? Log::ERROR : Log::INFO)
-                        << this << " connect(" << m_sock << ", " << to
-                        << "): (" << lastError() << ")";
-                    if (GetLastError() != ERROR_SUCCESS)
-                        throwExceptionFromLastError();
-                } else {
-                    LOG_ERROR(g_log) << this << " connect(" << m_sock << ", "
-                        << to << "): (" << lastError() << ")";
-                    throwExceptionFromLastError();
-                }
-
-            } catch (...) {
-                CloseHandle(hEvent);
-                throw;
             }
-            CloseHandle(hEvent);
+            if (WSAEventSelect(m_sock, m_hEvent, FD_CONNECT))
+                throwExceptionFromLastError();
+            if (!::connect(m_sock, to.name(), to.nameLen())) {
+                LOG_INFO(g_log) << this << " connect(" << m_sock << ", "
+                    << to << ")";
+                // Worked first time
+                return;
+            }
+            if (GetLastError() == WSAEWOULDBLOCK) {
+                m_ioManager->registerEvent(m_hEvent);
+                m_fiber = Fiber::getThis();
+                m_scheduler = Scheduler::getThis();
+                m_cancelled = false;
+                m_unregistered = false;
+                Timer::ptr timeout;
+                if (m_sendTimeout != ~0ull)
+                    timeout = m_ioManager->registerTimer(m_sendTimeout,
+                        boost::bind(&Socket::cancelConnect, this));
+                Scheduler::getThis()->yieldTo();
+                m_fiber.reset();
+                m_scheduler = NULL;
+                if (timeout)
+                    timeout->cancel();
+                // The timeout expired, but the event fired before we could
+                // cancel it, so we got scheduled twice
+                if (m_cancelled && !m_unregistered)
+                    Scheduler::getThis()->yieldTo();
+                m_cancelled = true;
+                if (m_unregistered) {
+                    LOG_ERROR(g_log) << this << " connect(" << m_sock
+                        << ", " << to << "): (cancelled)";
+                    throw OperationAbortedException();
+                }
+                ::connect(m_sock, to.name(), to.nameLen());
+                LOG_LEVEL(g_log, GetLastError() ? Log::ERROR : Log::INFO)
+                    << this << " connect(" << m_sock << ", " << to
+                    << "): (" << lastError() << ")";
+                if (GetLastError() != ERROR_SUCCESS)
+                    throwExceptionFromLastError();
+            } else {
+                LOG_ERROR(g_log) << this << " connect(" << m_sock << ", "
+                    << to << "): (" << lastError() << ")";
+                throwExceptionFromLastError();
+            }
         }
 #else
         if (!::connect(m_sock, to.name(), to.nameLen())) {
@@ -295,19 +317,20 @@ Socket::connect(const Address &to)
         if (errno == EINPROGRESS) {
             ptr self = shared_from_this();
             m_ioManager->registerEvent(m_sock, IOManager::WRITE);
-            bool cancelled = false;
+            m_cancelledSend = false;
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                    &Socket::cancelIo, this, IOManager::WRITE, boost::ref(cancelled)));
+                    &Socket::cancelConnect, this));
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled) {
+            if (m_cancelledSend) {
                 LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                     << "): (cancelled)";
                 throw OperationAbortedException();
             }
+            m_cancelledSend = true;
             int err;
             size_t size = sizeof(int);
             getOption(SOL_SOCKET, SO_ERROR, &err, &size);
@@ -371,51 +394,105 @@ Socket::accept(Socket &target)
     } else {
         ptr self = shared_from_this();
 #ifdef WINDOWS
-        m_ioManager->registerEvent(&m_receiveEvent);
-        unsigned char addrs[sizeof(SOCKADDR_STORAGE) * 2 + 16];
-        DWORD bytes;
-        BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE), &bytes,
-            &m_receiveEvent.overlapped);
-        DWORD dwLastError = GetLastError();
-        if (!ret && dwLastError != WSA_IO_PENDING) {
-            LOG_ERROR(g_log) << this << " accept(" << m_sock << "):  ("
-                << lastError() << ")";
-            m_ioManager->unregisterEvent(&m_receiveEvent);
-            throwExceptionFromLastError(dwLastError);
+        if (pAcceptEx) {
+            m_ioManager->registerEvent(&m_receiveEvent);
+            unsigned char addrs[sizeof(SOCKADDR_STORAGE) * 2 + 16];
+            DWORD bytes;
+            BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE), &bytes,
+                &m_receiveEvent.overlapped);
+            DWORD dwLastError = GetLastError();
+            if (!ret && dwLastError != WSA_IO_PENDING) {
+                LOG_ERROR(g_log) << this << " accept(" << m_sock << "):  ("
+                    << lastError() << ")";
+                m_ioManager->unregisterEvent(&m_receiveEvent);
+                throwExceptionFromLastError(dwLastError);
+            }
+            Timer::ptr timeout;
+            if (m_receiveTimeout != ~0ull)
+                timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
+                    &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
+            Scheduler::getThis()->yieldTo();
+            if (timeout)
+                timeout->cancel();
+            if (!m_receiveEvent.ret && m_receiveEvent.lastError != ERROR_MORE_DATA) {
+                LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
+                    << m_receiveEvent.lastError << ")";
+                throwExceptionFromLastError(m_receiveEvent.lastError);
+            }
+            LOG_TRACE(g_log) << this << " accept(" << m_sock << "): "
+                << target.m_sock;
+            target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
+            target.m_ioManager->registerFile((HANDLE)target.m_sock);
+        } else {
+            if (!m_hEvent) {
+                m_hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+                if (!m_hEvent)
+                    throwExceptionFromLastError();
+            }
+            if (WSAEventSelect(m_sock, m_hEvent, FD_ACCEPT))
+                throwExceptionFromLastError();
+            socket_t newsock = ::accept(m_sock, NULL, NULL);
+            if (newsock != -1) {
+                LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
+                    << newsock;
+                // Worked first time
+                return;
+            }
+            if (GetLastError() == WSAEWOULDBLOCK) {
+                m_ioManager->registerEvent(m_hEvent);
+                m_fiber = Fiber::getThis();
+                m_scheduler = Scheduler::getThis();
+                m_cancelled = false;
+                m_unregistered = false;
+                Timer::ptr timeout;
+                if (m_receiveTimeout != ~0ull)
+                    timeout = m_ioManager->registerTimer(m_sendTimeout,
+                        boost::bind(&Socket::cancelAccept, this));
+                Scheduler::getThis()->yieldTo();
+                m_fiber.reset();
+                m_scheduler = NULL;
+                if (timeout)
+                    timeout->cancel();
+                // The timeout expired, but the event fired before we could
+                // cancel it, so we got scheduled twice
+                if (m_cancelled && !m_unregistered)
+                    Scheduler::getThis()->yieldTo();
+                m_cancelled = true;
+                if (m_unregistered) {
+                    LOG_ERROR(g_log) << this << " accept(" << m_sock
+                        << "): (cancelled)";
+                    throw OperationAbortedException();
+                }
+                newsock = ::accept(m_sock, NULL, NULL);
+                LOG_LEVEL(g_log, GetLastError() ? Log::ERROR : Log::INFO)
+                    << this << " accept(" << m_sock << "): " << newsock << " ("
+                    << lastError() << ")";
+                if (newsock == -1)
+                    throwExceptionFromLastError();
+            } else {
+                LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
+                    << lastError() << ")";
+                throwExceptionFromLastError();
+            }
         }
-        Timer::ptr timeout;
-        if (m_receiveTimeout != ~0ull)
-            timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
-                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
-        Scheduler::getThis()->yieldTo();
-        if (timeout)
-            timeout->cancel();
-        if (!m_receiveEvent.ret && m_receiveEvent.lastError != ERROR_MORE_DATA) {
-            LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
-                << m_receiveEvent.lastError << ")";
-            throwExceptionFromLastError(m_receiveEvent.lastError);
-        }
-        LOG_TRACE(g_log) << this << " accept(" << m_sock << "): "
-            << target.m_sock;
-        target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
-        target.m_ioManager->registerFile((HANDLE)target.m_sock);
 #else
         int newsock = ::accept(m_sock, NULL, NULL);
         while (newsock == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::READ);
-            bool cancelled = false;
+            m_cancelledReceive = false;
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
-                    &Socket::cancelIo, this, IOManager::READ, boost::ref(cancelled)));
+                    &Socket::cancelAccept, this));
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled) {
+            if (m_cancelledReceive) {
                 LOG_ERROR(g_log) << this << " accept(" << m_sock
                     << "): (cancelled)";
                 throw OperationAbortedException();
             }
+            m_cancelledReceive = true;
             newsock = ::accept(m_sock, NULL, NULL);
         }
         LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::TRACE)
@@ -509,19 +586,20 @@ Socket::send(const void *buf, size_t len, int flags)
 #ifndef WINDOWS
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::WRITE);
-            bool cancelled = false;
+            m_cancelledSend = false;
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                    &Socket::cancelIo, this, IOManager::WRITE, boost::ref(cancelled)));
+                    &Socket::cancelSend, this));
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled) {
+            if (m_cancelledSend) {
                 LOG_ERROR(g_log) << this << " send(" << m_sock << ", "
                     << len << "): (cancelled)";
                 throw OperationAbortedException();
             }
+            m_cancelledSend = true;
             rc = ::send(m_sock, buf, len, flags);
         }
 #endif
@@ -593,19 +671,20 @@ Socket::send(const iovec *bufs, size_t len, int flags)
     int rc = ::sendmsg(m_sock, &msg, flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(m_sock, IOManager::WRITE);
-        bool cancelled = false;
+        m_cancelledSend = false;
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
             timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                &Socket::cancelIo, this, IOManager::WRITE, boost::ref(cancelled)));
+                &Socket::cancelSend, this));
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled) {
+        if (m_cancelledSend) {
             LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
                     << len << "): (cancelled)";
             throw OperationAbortedException();
         }
+        m_cancelledSend = true;
         rc = ::sendmsg(m_sock, &msg, flags);
     }
     LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
@@ -664,19 +743,20 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
         ptr self = shared_from_this();
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::WRITE);
-            bool cancelled = false;
+            m_cancelledSend = false;
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                    &Socket::cancelIo, this, IOManager::WRITE, boost::ref(cancelled)));
+                    &Socket::cancelSend, this));
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled) {
+            if (m_cancelledSend) {
                 LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", "
                     << len << ", " << to << "): (cancelled)";
                 throw OperationAbortedException();
             }
+            m_cancelledSend = true;
             rc = ::sendto(m_sock, buf, len, flags, to.name(), to.nameLen());
         }
 #endif
@@ -747,19 +827,20 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
     int rc = ::sendmsg(m_sock, &msg, flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(m_sock, IOManager::WRITE);
-        bool cancelled = false;
+        m_cancelledSend = false;
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
             timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                &Socket::cancelIo, this, IOManager::WRITE, boost::ref(cancelled)));
+                &Socket::cancelSend, this));
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled) {
+        if (m_cancelledSend) {
             LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", "
                     << len << ", " << to << "): (cancelled)";
             throw OperationAbortedException();
         }
+        m_cancelledSend = true;
         rc = ::sendmsg(m_sock, &msg, flags);
     }
     LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
@@ -816,19 +897,20 @@ Socket::receive(void *buf, size_t len, int flags)
         ptr self = shared_from_this();
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::READ);
-            bool cancelled = false;
+            m_cancelledReceive = false;
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
-                    &Socket::cancelIo, this, IOManager::READ, boost::ref(cancelled)));
+                    &Socket::cancelReceive, this));
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
-            if (cancelled) {
+            if (m_cancelledReceive) {
                 LOG_ERROR(g_log) << this << " recv(" << m_sock << ", "
                     << len << "): (cancelled)";
                 throw OperationAbortedException();
             }
+            m_cancelledReceive = true;
             rc = ::recv(m_sock, buf, len, flags);
         }
 #endif
@@ -896,19 +978,20 @@ Socket::receive(iovec *bufs, size_t len, int flags)
     int rc = ::recvmsg(m_sock, &msg, flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(m_sock, IOManager::READ);
-        bool cancelled = false;
+        m_cancelledReceive = false;
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
             timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
-                &Socket::cancelIo, this, IOManager::READ, boost::ref(cancelled)));
+                &Socket::cancelReceive));
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled) {
+        if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
                     << len << "): (cancelled)";
             throw OperationAbortedException();
         }
+        m_cancelledReceive = true;
         rc = ::recvmsg(m_sock, &msg, flags);
     }
     LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
@@ -987,19 +1070,20 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
     int rc = ::recvmsg(m_sock, &msg, *flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(m_sock, IOManager::READ);
-        bool cancelled = false;
+        m_cancelledReceive = false;
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
             timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
-                &Socket::cancelIo, this, IOManager::READ, boost::ref(cancelled)));
+                &Socket::cancelReceive, this));
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled) {
+        if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
                 << len << "): (cancelled)";
             throw OperationAbortedException();
         }
+        m_cancelledReceive = true;
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
     LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
@@ -1073,19 +1157,20 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
     int rc = ::recvmsg(m_sock, &msg, *flags);
     while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(m_sock, IOManager::READ);
-        bool cancelled = false;
+        m_cancelledReceive = false;
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
             timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
-                &Socket::cancelIo, this, IOManager::READ, boost::ref(cancelled)));
+                &Socket::cancelReceive, this));
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
-        if (cancelled) {
+        if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", "
                 << len << "): (cancelled)";
             throw OperationAbortedException();
         }
+        m_cancelledReceive = true;
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
     LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
@@ -1115,6 +1200,77 @@ Socket::setOption(int level, int option, const void *value, size_t len)
         throwExceptionFromLastError();
     }
 }
+
+void
+Socket::cancelAccept()
+{
+    ASSERT(m_ioManager);
+#ifdef WINDOWS
+    if (pAcceptEx) {
+        m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
+    } else {
+        if (m_cancelled)
+            return;
+        m_cancelled = true;
+        m_unregistered = m_ioManager->unregisterEvent(m_hEvent);
+        m_scheduler->schedule(m_fiber);
+    }
+#else
+    cancelIo(IOManager::READ, m_cancelledReceive);
+#endif 
+}
+
+void
+Socket::cancelConnect()
+{
+    ASSERT(m_ioManager);
+#ifdef WINDOWS
+    if (ConnectEx) {
+        m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
+    } else {
+        if (m_cancelled)
+            return;
+        m_cancelled = true;
+        m_unregistered = m_ioManager->unregisterEvent(m_hEvent);
+        m_scheduler->schedule(m_fiber);
+    }
+#else
+    cancelIo(IOManager::WRITE, m_cancelledSend);
+#endif 
+}
+
+void
+Socket::cancelSend()
+{
+    ASSERT(m_ioManager);
+#ifdef WINDOWS
+    m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
+#else
+    cancelIo(IOManager::WRITE, m_cancelledSend);
+#endif 
+}
+
+void
+Socket::cancelReceive()
+{
+    ASSERT(m_ioManager);
+#ifdef WINDOWS
+    m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
+#else
+    cancelIo(IOManager::READ, m_cancelledReceive);
+#endif 
+}
+
+#ifndef WINDOWS
+void
+Socket::cancelIo(IOManager::Event event, bool &cancelled)
+{
+    if (cancelled)
+        return;
+    cancelled = true;
+    m_ioManager->cancelEvent(m_sock, event);
+}
+#endif
 
 Address::ptr
 Socket::emptyAddress()
@@ -1183,22 +1339,6 @@ Socket::type()
     getOption(SOL_SOCKET, SO_TYPE, &result, &len);
     return result;
 }
-
-#ifdef WINDOWS
-void
-Socket::cancelIo(HANDLE hEvent, bool &cancelled, bool &unregistered)
-{
-    cancelled = true;
-    unregistered = m_ioManager->unregisterEvent(hEvent);
-}
-#else
-void
-Socket::cancelIo(IOManager::Event event, bool &cancelled)
-{
-    cancelled = true;
-    m_ioManager->cancelEvent(m_sock, event);
-}
-#endif
 
 
 Address::Address(int type, int protocol)

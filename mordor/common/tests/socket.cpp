@@ -189,3 +189,26 @@ TEST_WITH_SUITE(Address, formatAddresses)
     testAddress("[2001:470::273:20c:0:0:5ddf]:0");
     testAddress("[2001:470:0:0:273:20c::5ddf]:0", "[2001:470::273:20c:0:5ddf]:0");
 }
+
+static void cancelMe(Socket::ptr sock)
+{
+    sock->cancelAccept();
+}
+
+TEST_WITH_SUITE(Socket, cancelAccept)
+{
+    Fiber::ptr mainfiber(new Fiber());
+    IOManager ioManager;
+    std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
+    TEST_ASSERT(!addresses.empty());
+    // TODO: random port
+    Socket::ptr listen = addresses.front()->createSocket(ioManager);
+    unsigned int opt = 1;
+    listen->setOption(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    listen->bind(addresses.front());
+    listen->listen();
+
+    // cancelMe will get run when this fiber yields because it would block
+    ioManager.schedule(Fiber::ptr(new Fiber(boost::bind(&cancelMe, listen))));
+    TEST_ASSERT_EXCEPTION(listen->accept(), OperationAbortedException);
+}

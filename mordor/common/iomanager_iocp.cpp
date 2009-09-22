@@ -218,12 +218,16 @@ static void CancelIoShim(HANDLE hFile)
 void
 IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
 {
-    // TODO: Use CancelIoEx if available
-    if (e->m_thread == boost::this_thread::get_id()) {
-        CancelIo(hFile);
+    if (true) {
+        CancelIoEx(hFile, &e->overlapped);
     } else {
-        // Have to marshal to the original thread
-        e->m_scheduler->schedule(boost::bind(&CancelIoShim, hFile), e->m_thread);
+        if (e->m_thread == boost::this_thread::get_id()) {
+            CancelIo(hFile);
+        } else {
+            // Have to marshal to the original thread
+            e->m_scheduler->schedule(boost::bind(&CancelIoShim, hFile),
+                e->m_thread);
+        }
     }
 }
 

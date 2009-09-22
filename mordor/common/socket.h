@@ -69,6 +69,11 @@ public:
     void getOption(int level, int option, void *result, size_t *len);
     void setOption(int level, int option, const void *value, size_t len);
 
+    void cancelAccept();
+    void cancelConnect();
+    void cancelSend();
+    void cancelReceive();
+
     size_t send(const void *buf, size_t len, int flags = 0);
     size_t send(const iovec *bufs, size_t len, int flags = 0);
     size_t sendTo(const void *buf, size_t len, int flags, const Address &to);
@@ -92,9 +97,7 @@ public:
     int protocol() { return m_protocol; }
 
 private:
-#ifdef WINDOWS
-    void cancelIo(HANDLE hEvent, bool &cancelled, bool &unregistered);
-#else
+#ifndef WINDOWS
     void cancelIo(IOManager::Event event, bool &cancelled);
 #endif
 
@@ -104,7 +107,16 @@ private:
     IOManager *m_ioManager;
     unsigned long long m_receiveTimeout, m_sendTimeout;
 #ifdef WINDOWS
+    // All this, just so a connect/accept can be cancelled on win2k
+    bool m_cancelled;
+    bool m_unregistered;
+    HANDLE m_hEvent;
+    Fiber::ptr m_fiber;
+    Scheduler *m_scheduler;
+
     AsyncEvent m_sendEvent, m_receiveEvent;
+#else
+    bool m_cancelledSend, m_cancelledReceive;
 #endif
 };
 
