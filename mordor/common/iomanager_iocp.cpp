@@ -8,6 +8,7 @@
 
 #include "assert.h"
 #include "exception.h"
+#include "runtime_linking.h"
 
 AsyncEventIOCP::AsyncEventIOCP()
 {
@@ -218,9 +219,8 @@ static void CancelIoShim(HANDLE hFile)
 void
 IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
 {
-    if (true) {
-        CancelIoEx(hFile, &e->overlapped);
-    } else {
+    if (!pCancelIoEx(hFile, &e->overlapped) &&
+        GetLastError() == ERROR_CALL_NOT_IMPLEMENTED) {
         if (e->m_thread == boost::this_thread::get_id()) {
             CancelIo(hFile);
         } else {

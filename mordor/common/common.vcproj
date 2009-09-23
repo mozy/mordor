@@ -554,6 +554,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\runtime_linking.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\scheduler.cpp"
 				>
 			</File>
@@ -809,6 +813,10 @@
 			</File>
 			<File
 				RelativePath=".\ragel.h"
+				>
+			</File>
+			<File
+				RelativePath=".\runtime_linking.h"
 				>
 			</File>
 			<File
