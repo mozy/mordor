@@ -132,7 +132,7 @@ parallel_foreach_impl(boost::function<bool (T&)> dg, T *&t,
 }
 
 template<class Iterator, class T>
-void
+bool
 parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
     int parallelism = -1)
 {
@@ -202,6 +202,13 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
         ++it2) {
         (*it2)->throwExceptions();
     }
+    for(std::vector<int>::iterator it2 = result.begin();
+        it2 != result.end();
+        ++it2) {
+        if (!*it2)
+            return false;
+    }
+    return true;
 }
 
 #endif
