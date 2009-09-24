@@ -11,6 +11,8 @@ static void throwSocketException(error_t lastError)
             throw ConnectionAbortedException();
         case WSA(ECONNRESET):
             throw ConnectionResetException();
+        case WSA(ETIMEDOUT):
+            throw TimedOutException();
         default:
             break;
     }

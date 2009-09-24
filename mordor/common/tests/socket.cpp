@@ -29,7 +29,7 @@ TEST_WITH_SUITE(Socket, acceptTimeout)
     listen->bind(addresses.front());
     listen->listen();
     unsigned long long start = TimerManager::now();
-    TEST_ASSERT_EXCEPTION(listen->accept(), OperationAbortedException);
+    TEST_ASSERT_EXCEPTION(listen->accept(), TimedOutException);
     TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
 }
 
@@ -50,7 +50,7 @@ TEST_WITH_SUITE(Socket, receiveTimeout)
     connect->connect(addresses.front());
     char buf;
     unsigned long long start = TimerManager::now();
-    TEST_ASSERT_EXCEPTION(connect->receive(&buf, 1), OperationAbortedException);
+    TEST_ASSERT_EXCEPTION(connect->receive(&buf, 1), TimedOutException);
     TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
 }
 

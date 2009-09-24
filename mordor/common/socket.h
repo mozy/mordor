@@ -98,7 +98,7 @@ public:
 
 private:
 #ifndef WINDOWS
-    void cancelIo(IOManager::Event event, bool &cancelled);
+    void cancelIo(IOManager::Event event, error_t &cancelled, error_t error);
 #endif
 
 private:
@@ -106,17 +106,15 @@ private:
     int m_family, m_protocol;
     IOManager *m_ioManager;
     unsigned long long m_receiveTimeout, m_sendTimeout;
+    error_t m_cancelledSend, m_cancelledReceive;
 #ifdef WINDOWS
     // All this, just so a connect/accept can be cancelled on win2k
-    bool m_cancelled;
     bool m_unregistered;
     HANDLE m_hEvent;
     Fiber::ptr m_fiber;
     Scheduler *m_scheduler;
 
     AsyncEvent m_sendEvent, m_receiveEvent;
-#else
-    bool m_cancelledSend, m_cancelledReceive;
 #endif
 };
 
