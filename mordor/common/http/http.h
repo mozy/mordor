@@ -183,7 +183,7 @@ namespace HTTP
         ETag()
             : weak(false), unspecified(true)
         {}
-        ETag(const std::string &v, bool w)
+        ETag(const std::string &v, bool w = false)
             : weak(w), unspecified(false), value(v)
         {}
 
