@@ -229,6 +229,8 @@ namespace HTTP
     {
         ValueWithParameters()
         {}
+        ValueWithParameters(const char *val) : value(val)
+        {}
         ValueWithParameters(const std::string &val) : value(val)
         {}
 
