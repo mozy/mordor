@@ -18,13 +18,28 @@
 #include "mordor/common/streams/std.h"
 #include "mordor/common/streams/transfer.h"
 
-HTTP::ClientConnection::ptr establishConn(IOManager &ioManager, Address::ptr address, bool ssl)
+HTTP::ClientConnection::ptr establishConn(IOManager &ioManager, Address::ptr address,
+                                          const std::string &host, bool ssl)
 {
     Socket::ptr s(address->createSocket(ioManager));
     s->connect(address);
     Stream::ptr stream(new SocketStream(s));
-    if (ssl)
-        stream.reset(new SSLStream(stream));
+    if (ssl) {
+        SSLStream::ptr sslStream(new SSLStream(stream));
+        sslStream->connect();
+        try {
+            try {
+                sslStream->verifyPeerCertificate();
+            } catch (CertificateVerificationException &ex) {
+                if (ex.verifyResult() != X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY)
+                    throw;
+            }
+            sslStream->verifyPeerCertificate(host);
+        } catch (CertificateVerificationException &ex) {
+            std::cerr << "Warning: " << ex.what() << std::endl;
+        }
+        stream = sslStream;
+    }
 
     HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(stream));
     return conn;
@@ -73,7 +88,7 @@ int main(int argc, const char *argv[])
         }
         
         HTTP::ClientAuthBroker authBroker(boost::bind(&establishConn,
-            boost::ref(ioManager), addresses[0],
+            boost::ref(ioManager), addresses[0], uri.authority.host(),
             proxy.empty() && uri.schemeDefined() && uri.scheme() == "https"),
             username, password, proxyUsername, proxyPassword);
 

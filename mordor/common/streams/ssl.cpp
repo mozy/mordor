@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include <openssl/err.h>
+#include <openssl/x509v3.h>
 
 #include "mordor/common/log.h"
 
@@ -57,6 +58,12 @@ OpenSSLException::constructMessage()
     }
     ASSERT(!os.str().empty());
     return os.str();
+}
+
+std::string
+CertificateVerificationException::constructMessage(long verifyResult)
+{
+    return X509_verify_cert_error_string(verifyResult);
 }
 
 static void delete_nothing(SSL_CTX *) {}
@@ -297,6 +304,78 @@ SSLStream::connect()
                 NOTREACHED();
         }
     }
+}
+
+void
+SSLStream::verifyPeerCertificate()
+{
+    long verifyResult = SSL_get_verify_result(m_ssl.get());
+    LOG_LEVEL(g_log, verifyResult ? Log::WARNING : Log::VERBOSE) << this
+        << " SSL_get_verify_result(" << m_ssl.get() << "): "
+        << verifyResult;
+    if (verifyResult != X509_V_OK)
+        throw CertificateVerificationException(verifyResult);
+}
+
+void
+SSLStream::verifyPeerCertificate(const std::string &hostname)
+{
+    if (!hostname.empty()) {
+        std::string wildcardHostname = "*";
+        size_t dot = hostname.find('.');
+        if (dot != std::string::npos)
+            wildcardHostname.append(hostname.substr(dot));
+        boost::shared_ptr<X509> cert;
+        cert.reset(SSL_get_peer_certificate(m_ssl.get()), &X509_free);
+        if (!cert)
+            throw CertificateVerificationException(
+                X509_V_ERR_APPLICATION_VERIFICATION,
+                "No Certificate Presented");
+        int critical = -1, altNameIndex = -1;
+        GENERAL_NAMES *gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert.get(), NID_subject_alt_name, &critical, &altNameIndex);
+        if (gens) {
+            do {
+                try {
+                    bool success = false;
+                    for(int i = 0; i < sk_GENERAL_NAME_num(gens); i++)
+	                {
+		                GENERAL_NAME *gen = sk_GENERAL_NAME_value(gens, i);
+		                if(gen->type != GEN_DNS) continue;
+                        std::string altName((const char *)gen->d.dNSName->data, gen->d.dNSName->length);
+                        if (altName == wildcardHostname || altName == hostname) {
+                            success = true;
+                            break;
+                        }
+	                }
+                    sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
+                    if (success)
+                        return;
+                } catch (...) {
+                    sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
+                    throw;
+                }
+                gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert.get(), NID_subject_alt_name, &critical, &altNameIndex);
+            } while (gens);
+        }
+        X509_NAME *name = X509_get_subject_name(cert.get());        
+        if (!name)
+            throw CertificateVerificationException(
+                X509_V_ERR_APPLICATION_VERIFICATION,
+                "No Subject Name");
+        int len = X509_NAME_get_text_by_NID(name, NID_commonName, NULL, 0);
+        if (len == -1)
+            throw CertificateVerificationException(
+                X509_V_ERR_APPLICATION_VERIFICATION,
+                "No Common Name");
+        std::string commonName;
+        commonName.resize(len);
+        X509_NAME_get_text_by_NID(name, NID_commonName, &commonName[0], len + 1);
+        if (commonName == wildcardHostname || commonName == hostname)
+            return;
+        throw CertificateVerificationException(
+                X509_V_ERR_APPLICATION_VERIFICATION,
+                "No Matching Common Name");
+    }    
 }
 
 void

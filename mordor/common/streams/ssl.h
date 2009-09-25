@@ -14,14 +14,41 @@ public:
     OpenSSLException()
         : std::runtime_error(constructMessage())
     {}
+    OpenSSLException(const std::string &message)
+        : std::runtime_error(message)
+    {}
 
 private:
     static std::string constructMessage();
 };
 
+class CertificateVerificationException : public OpenSSLException
+{
+public:
+    CertificateVerificationException(long verifyResult)
+        : OpenSSLException(constructMessage(verifyResult)),
+          m_verifyResult(verifyResult)
+    {}
+    CertificateVerificationException(long verifyResult,
+        const std::string &message)
+        : OpenSSLException(message),
+          m_verifyResult(verifyResult)
+    {}
+
+    long verifyResult() const { return m_verifyResult; }
+
+private:
+    static std::string constructMessage(long verifyResult);
+
+private:
+    long m_verifyResult;
+};
+
 class SSLStream : public MutatingFilterStream
 {
+public:
     typedef boost::shared_ptr<SSLStream> ptr;
+
 public:
     SSLStream(Stream::ptr parent, bool client = true, bool own = true, SSL_CTX *ctx = NULL);
 
@@ -33,7 +60,8 @@ public:
     void accept();
     void connect();
 
-    SSL *ssl() { return m_ssl.get(); }
+    void verifyPeerCertificate();
+    void verifyPeerCertificate(const std::string &hostname);
 
 private:
     void flushBuffer();
