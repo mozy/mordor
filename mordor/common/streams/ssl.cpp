@@ -59,13 +59,18 @@ OpenSSLException::constructMessage()
     return os.str();
 }
 
-SSLStream::SSLStream(Stream::ptr parent, bool client, bool own)
+static void delete_nothing(SSL_CTX *) {}
+
+SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
 : MutatingFilterStream(parent, own)
 {
     ASSERT(parent);
     ERR_clear_error();
-    m_ctx.reset(SSL_CTX_new(client ? SSLv23_client_method() :
-        SSLv23_server_method()), &SSL_CTX_free);
+    if (ctx)
+        m_ctx.reset(ctx, &delete_nothing);
+    else
+        m_ctx.reset(SSL_CTX_new(client ? SSLv23_client_method() :
+            SSLv23_server_method()), &SSL_CTX_free);
     if (!m_ctx)
         throwOpenSSLException();
     SSL_CTX_set_mode(m_ctx.get(), SSL_MODE_ENABLE_PARTIAL_WRITE);

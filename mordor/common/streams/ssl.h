@@ -22,7 +22,7 @@ private:
 class SSLStream : public MutatingFilterStream
 {
 public:
-    SSLStream(Stream::ptr parent, bool client = true, bool own = true);
+    SSLStream(Stream::ptr parent, bool client = true, bool own = true, SSL_CTX *ctx = NULL);
 
     void close(CloseType type = BOTH);
     size_t read(Buffer &b, size_t len);
@@ -31,6 +31,8 @@ public:
 
     void accept();
     void connect();
+
+    SSL *ssl() { return m_ssl.get(); }
 
 private:
     void flushBuffer();
