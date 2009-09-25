@@ -3,23 +3,28 @@
 // Copyright (c) 2009 - Decho Corp.
 
 #include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include "http.h"
-#include "mordor/common/streams/stream.h"
+
+class Stream;
 
 namespace HTTP
 {
     class Connection
     {
+    public:
+        boost::shared_ptr<Stream> stream() { return m_stream; }
+
     protected:
-        Connection(Stream::ptr stream);
+        Connection(boost::shared_ptr<Stream> stream);
 
         static bool hasMessageBody(const GeneralHeaders &general,
             const EntityHeaders &entity,
             Method method,
             Status status);
 
-        Stream::ptr getStream(const GeneralHeaders &general,
+        boost::shared_ptr<Stream> getStream(const GeneralHeaders &general,
             const EntityHeaders &entity,
             Method method,
             Status status,
@@ -28,7 +33,7 @@ namespace HTTP
             bool forRead);
 
     protected:
-        Stream::ptr m_stream;
+        boost::shared_ptr<Stream> m_stream;
     };
 };
 
