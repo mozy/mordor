@@ -21,6 +21,7 @@ private:
 
 class SSLStream : public MutatingFilterStream
 {
+    typedef boost::shared_ptr<SSLStream> ptr;
 public:
     SSLStream(Stream::ptr parent, bool client = true, bool own = true, SSL_CTX *ctx = NULL);
 
