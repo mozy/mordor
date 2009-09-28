@@ -46,7 +46,7 @@ TimerManager::now()
 #ifdef WINDOWS
     LARGE_INTEGER count;
     if (!QueryPerformanceCounter(&count))
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("QueryPerformanceCounter");
     unsigned long long countUll = (unsigned long long)count.QuadPart;
     return countUll * 1000000 / g_frequency;
 #elif defined(OSX)
@@ -56,7 +56,7 @@ TimerManager::now()
     struct timespec ts;
 
     if (clock_gettime(CLOCK_MONOTONIC, &ts))
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("clock_gettime");
     return ts.tv_sec * 1000000ull + ts.tv_nsec / 1000;
 #endif
 }

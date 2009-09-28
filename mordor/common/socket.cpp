@@ -88,7 +88,7 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
             << " socket(" << family << ", " << type << ", " << protocol
             << "): " << m_sock << " (" << lastError() << ")";
         if (m_sock == -1) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("socket");
         }
     }
 #endif
@@ -104,13 +104,13 @@ Socket::Socket(int family, int type, int protocol)
     LOG_VERBOSE(g_log) << this << " socket(" << family << ", " << type << ", "
         << protocol << "): " << m_sock << " (" << lastError() << ")";
     if (m_sock == -1) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("socket");
     }
 #ifdef OSX
     unsigned int opt = 1;
     if (setsockopt(m_sock, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt)) == -1) {
         ::closesocket(m_sock);
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("setsockopt");
     }
 #endif
 }
@@ -133,7 +133,7 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
     LOG_VERBOSE(g_log) << this << " socket(" << family << ", " << type << ", "
         << protocol << "): " << m_sock << " (" << lastError() << ")";
     if (m_sock == -1) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("socket");
     }
 #ifdef WINDOWS
     try {
@@ -145,14 +145,14 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
 #else
     if (fcntl(m_sock, F_SETFL, O_NONBLOCK) == -1) {
         ::closesocket(m_sock);
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("fcntl");
     }
 #endif
 #ifdef OSX
     unsigned int opt = 1;
     if (setsockopt(m_sock, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt)) == -1) {
         ::closesocket(m_sock);
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("setsockopt");
     }
 #endif
 }
@@ -173,7 +173,7 @@ Socket::bind(const Address &addr)
     if (::bind(m_sock, addr.name(), addr.nameLen())) {
         LOG_ERROR(g_log) << this << " bind(" << m_sock << ", " << addr
             << "): (" << lastError() << ")";
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("bind");
     }
     LOG_VERBOSE(g_log) << this << " bind(" << m_sock << ", " << addr << ")";
 }
@@ -186,7 +186,7 @@ Socket::connect(const Address &to)
         if (::connect(m_sock, to.name(), to.nameLen())) {
             LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                 << "): (" << lastError() << ")";
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("connect");
         }
         LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to << ")";
     } else {
@@ -203,7 +203,7 @@ Socket::connect(const Address &to)
                         if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
                             LOG_ERROR(g_log) << this << " bind(" << m_sock
                                 << ", 0.0.0.0:0): (" << lastError() << ")";
-                            throwExceptionFromLastError();
+                            throwExceptionFromLastError("bind");
                         }
                         break;
                     }
@@ -218,12 +218,12 @@ Socket::connect(const Address &to)
                         if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in6))) {
                             LOG_ERROR(g_log) << this << " bind(" << m_sock
                                 << ", [::]:0): (" << lastError() << ")";
-                            throwExceptionFromLastError();
+                            throwExceptionFromLastError("bind");
                         }
                         break;
                     }
                 default:
-                    ASSERT(false);
+                    NOTREACHED();
             }
 
             ptr self = shared_from_this();
@@ -234,7 +234,7 @@ Socket::connect(const Address &to)
                     LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                         << "): (" << lastError() << ")";
                     m_ioManager->unregisterEvent(&m_sendEvent);
-                    throwExceptionFromLastError(dwLastError);
+                    throwExceptionFromLastError(dwLastError, "ConnectEx");
                 }
             }
             if (m_cancelledSend) {
@@ -242,7 +242,7 @@ Socket::connect(const Address &to)
                         << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
                 Scheduler::getThis()->yieldTo();
-                throwExceptionFromLastError(m_cancelledSend);
+                throwExceptionFromLastError(m_cancelledSend, "ConnectEx");
             }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
@@ -257,7 +257,7 @@ Socket::connect(const Address &to)
                     m_sendEvent.lastError = WSAETIMEDOUT;
                 LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                     << "): (" << m_sendEvent.lastError << ")";
-                throwExceptionFromLastError(m_sendEvent.lastError);
+                throwExceptionFromLastError(m_sendEvent.lastError, "ConnectEx");
             }
             LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
                 << ")";
@@ -266,10 +266,10 @@ Socket::connect(const Address &to)
             if (!m_hEvent) {
                 m_hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
                 if (!m_hEvent)
-                    throwExceptionFromLastError();
+                    throwExceptionFromLastError("CreateEventW");
             }
             if (WSAEventSelect(m_sock, m_hEvent, FD_CONNECT))
-                throwExceptionFromLastError();
+                throwExceptionFromLastError("WSAEventSelect");
             if (!::connect(m_sock, to.name(), to.nameLen())) {
                 LOG_INFO(g_log) << this << " connect(" << m_sock << ", "
                     << to << ")";
@@ -286,7 +286,7 @@ Socket::connect(const Address &to)
                             << "): (" << m_cancelledSend << ")";
                     if (!m_ioManager->unregisterEvent(m_hEvent))
                         Scheduler::getThis()->yieldTo();
-                    throwExceptionFromLastError(m_cancelledSend);
+                    throwExceptionFromLastError(m_cancelledSend, "connect");
                 }
                 Timer::ptr timeout;
                 if (m_sendTimeout != ~0ull)
@@ -304,18 +304,18 @@ Socket::connect(const Address &to)
                 if (m_cancelledSend) {
                     LOG_ERROR(g_log) << this << " connect(" << m_sock
                         << ", " << to << "): (" << m_cancelledSend << ")";
-                    throwExceptionFromLastError(m_cancelledSend);
+                    throwExceptionFromLastError(m_cancelledSend, "connect");
                 }
                 ::connect(m_sock, to.name(), to.nameLen());
                 LOG_LEVEL(g_log, GetLastError() ? Log::ERROR : Log::INFO)
                     << this << " connect(" << m_sock << ", " << to
                     << "): (" << lastError() << ")";
                 if (GetLastError() != ERROR_SUCCESS)
-                    throwExceptionFromLastError();
+                    throwExceptionFromLastError("connect");
             } else {
                 LOG_ERROR(g_log) << this << " connect(" << m_sock << ", "
                     << to << "): (" << lastError() << ")";
-                throwExceptionFromLastError();
+                throwExceptionFromLastError("connect");
             }
         }
 #else
@@ -333,7 +333,7 @@ Socket::connect(const Address &to)
                     << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
                 Scheduler::getThis()->yieldTo();
-                throwExceptionFromLastError(m_cancelledSend);
+                throwExceptionFromLastError(m_cancelledSend, "connect");
             }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
@@ -346,7 +346,7 @@ Socket::connect(const Address &to)
             if (m_cancelledSend) {
                 LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                     << "): (" << m_cancelledSend << ")";
-                throwExceptionFromLastError(m_cancelledSend);
+                throwExceptionFromLastError(m_cancelledSend, "connect");
             }
             int err;
             size_t size = sizeof(int);
@@ -354,14 +354,14 @@ Socket::connect(const Address &to)
             if (err != 0) {
                 LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                     << "): (" << err << ")";
-                throwExceptionFromLastError(err);
+                throwExceptionFromLastError(err, "connect");
             }
             LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
                 << ")";
         } else {
             LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                 << "): (" << lastError() << ")";
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("connect");
         }
 #endif
     }
@@ -373,7 +373,7 @@ Socket::listen(int backlog)
     if (::listen(m_sock, backlog)) {
         LOG_ERROR(g_log) << this << " listen(" << m_sock << "): ("
             << lastError() << ")";
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("listen");
     }
 }
 
@@ -405,7 +405,7 @@ Socket::accept(Socket &target)
             << this << " accept(" << m_sock << "): " << newsock << " ("
             << lastError() << ")";
         if (newsock == -1) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("accept");
         }
         target.m_sock = newsock;
     } else {
@@ -422,14 +422,14 @@ Socket::accept(Socket &target)
                 LOG_ERROR(g_log) << this << " accept(" << m_sock << "):  ("
                     << lastError() << ")";
                 m_ioManager->unregisterEvent(&m_receiveEvent);
-                throwExceptionFromLastError(dwLastError);
+                throwExceptionFromLastError(dwLastError, "AcceptEx");
             }
             if (m_cancelledReceive) {
                 LOG_ERROR(g_log) << this << " accept(" << m_sock << "): (" 
                     << m_cancelledReceive << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
                 Scheduler::getThis()->yieldTo();
-                throwExceptionFromLastError(m_cancelledReceive);
+                throwExceptionFromLastError(m_cancelledReceive, "AcceptEx");
             }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
@@ -444,7 +444,7 @@ Socket::accept(Socket &target)
                     m_receiveEvent.lastError = WSAETIMEDOUT;
                 LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
                     << m_receiveEvent.lastError << ")";
-                throwExceptionFromLastError(m_receiveEvent.lastError);
+                throwExceptionFromLastError(m_receiveEvent.lastError, "AcceptEx");
             }
             LOG_TRACE(g_log) << this << " accept(" << m_sock << "): "
                 << target.m_sock;
@@ -454,10 +454,10 @@ Socket::accept(Socket &target)
             if (!m_hEvent) {
                 m_hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
                 if (!m_hEvent)
-                    throwExceptionFromLastError();
+                    throwExceptionFromLastError("CreateEventW");
             }
             if (WSAEventSelect(m_sock, m_hEvent, FD_ACCEPT))
-                throwExceptionFromLastError();
+                throwExceptionFromLastError("WSAEventSelect");
             socket_t newsock = ::accept(m_sock, NULL, NULL);
             if (newsock != -1) {
                 LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
@@ -474,7 +474,7 @@ Socket::accept(Socket &target)
                         << m_cancelledReceive << ")";
                     if (!m_ioManager->unregisterEvent(m_hEvent))
                         Scheduler::getThis()->yieldTo();
-                    throwExceptionFromLastError(m_cancelledReceive);
+                    throwExceptionFromLastError(m_cancelledReceive, "accept");
                 }
                 m_unregistered = false;
                 Timer::ptr timeout;
@@ -493,18 +493,18 @@ Socket::accept(Socket &target)
                 if (m_cancelledReceive) {
                     LOG_ERROR(g_log) << this << " accept(" << m_sock
                         << "): (" << m_cancelledReceive << ")";
-                    throwExceptionFromLastError(m_cancelledReceive);
+                    throwExceptionFromLastError(m_cancelledReceive, "accept");
                 }
                 newsock = ::accept(m_sock, NULL, NULL);
                 LOG_LEVEL(g_log, GetLastError() ? Log::ERROR : Log::INFO)
                     << this << " accept(" << m_sock << "): " << newsock << " ("
                     << lastError() << ")";
                 if (newsock == -1)
-                    throwExceptionFromLastError();
+                    throwExceptionFromLastError("accept");
             } else {
                 LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
                     << lastError() << ")";
-                throwExceptionFromLastError();
+                throwExceptionFromLastError("accept");
             }
         }
 #else
@@ -516,7 +516,7 @@ Socket::accept(Socket &target)
                     << m_cancelledReceive << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::READ);
                 Scheduler::getThis()->yieldTo();
-                throwExceptionFromLastError(m_cancelledReceive);
+                throwExceptionFromLastError(m_cancelledReceive, "accept");
             }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
@@ -529,7 +529,7 @@ Socket::accept(Socket &target)
             if (m_cancelledReceive) {
                 LOG_ERROR(g_log) << this << " accept(" << m_sock
                     << "): (" << m_cancelledReceive << ")";
-                throwExceptionFromLastError(m_cancelledReceive);
+                throwExceptionFromLastError(m_cancelledReceive, "accept");
             }
             newsock = ::accept(m_sock, NULL, NULL);
         }
@@ -537,11 +537,11 @@ Socket::accept(Socket &target)
             << this << " accept(" << m_sock << "): " << newsock
             << " (" << lastError() << ")";
         if (newsock == -1) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("accept");
         }
         if (fcntl(newsock, F_SETFL, O_NONBLOCK) == -1) {
             ::close(newsock);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("fcntl");
         }
         target.m_sock = newsock;
 #endif
@@ -554,7 +554,7 @@ Socket::shutdown(int how)
     if(::shutdown(m_sock, how)) {
         LOG_ERROR(g_log) << this << " shutdown(" << m_sock << ", "
             << how << "): (" << lastError() << ")";
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("shutdown");
     }
     LOG_TRACE(g_log) << this << " shutdown(" << m_sock << ", "
         << how << ")";
@@ -567,7 +567,7 @@ Socket::close()
         if (::closesocket(m_sock)) {
             LOG_ERROR(g_log) << this << " close(" << m_sock << "): ("
                 << lastError() << ")";
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("close");
         }
         LOG_VERBOSE(g_log) << this << " close(" << m_sock << ")";
         m_sock = -1;
@@ -597,14 +597,14 @@ Socket::send(const void *buf, size_t len, int flags)
             LOG_ERROR(g_log) << this << " send(" << m_sock << ", " << len
                 << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError(dwLastError);
+            throwExceptionFromLastError(dwLastError, "WSASend");
         }
         if (m_cancelledSend) {
             LOG_ERROR(g_log) << this << " send(" << m_sock << ", " << len
                 << "): (" << m_cancelledSend << ")";
             m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledSend);
+            throwExceptionFromLastError(m_cancelledSend, "WSASend");
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -619,7 +619,7 @@ Socket::send(const void *buf, size_t len, int flags)
                 m_sendEvent.lastError = WSAETIMEDOUT;
             LOG_ERROR(g_log) << this << " send(" << m_sock << ", "
                 << len << "): (" << m_sendEvent.lastError << ")";
-            throwExceptionFromLastError(m_sendEvent.lastError);
+            throwExceptionFromLastError(m_sendEvent.lastError, "WSASend");
         }
         LOG_VERBOSE(g_log) << this << " send(" << m_sock << ", "
             << len << "): " << m_sendEvent.numberOfBytes;
@@ -639,7 +639,7 @@ Socket::send(const void *buf, size_t len, int flags)
                     << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
                 Scheduler::getThis()->yieldTo();
-                throwExceptionFromLastError(m_cancelledSend);
+                throwExceptionFromLastError(m_cancelledSend, "send");
             }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
@@ -652,7 +652,7 @@ Socket::send(const void *buf, size_t len, int flags)
             if (m_cancelledSend) {
                 LOG_ERROR(g_log) << this << " send(" << m_sock << ", "
                     << len << "): (" << m_cancelledSend << ")";
-                throwExceptionFromLastError(m_cancelledSend);
+                throwExceptionFromLastError(m_cancelledSend, "send");
             }
             rc = ::send(m_sock, buf, len, flags);
         }
@@ -661,7 +661,7 @@ Socket::send(const void *buf, size_t len, int flags)
             << " send(" << m_sock << ", " << len << "): " << rc << " ("
             << lastError() << ")";
         if (rc == -1) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("send");
         }
         return rc;
     }
@@ -686,14 +686,14 @@ Socket::send(const iovec *bufs, size_t len, int flags)
             LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", " << len
                 << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError(dwLastError);
+            throwExceptionFromLastError(dwLastError, "WSASend");
         }
         if (m_cancelledSend) {
             LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", " << len
                 << "): (" << m_cancelledSend << ")";
             m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledSend);
+            throwExceptionFromLastError(m_cancelledSend, "WSASend");
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -708,7 +708,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
                 m_sendEvent.lastError = WSAETIMEDOUT;
             LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
                 << len << "): (" << m_sendEvent.lastError << ")";
-            throwExceptionFromLastError(m_sendEvent.lastError);
+            throwExceptionFromLastError(m_sendEvent.lastError, "WSASend");
         }
         LOG_VERBOSE(g_log) << this << " sendv(" << m_sock << ", "
             << len << "): " << m_sendEvent.numberOfBytes;
@@ -720,7 +720,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
             NULL, NULL)) {
             LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("WSASend");
         }
         LOG_VERBOSE(g_log) << this << " sendv(" << m_sock << ", "
             << len << "): " << sent;
@@ -740,7 +740,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
                 << "): (" << m_cancelledSend << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledSend);
+            throwExceptionFromLastError(m_cancelledSend, "sendmsg");
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -753,7 +753,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         if (m_cancelledSend) {
             LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
                     << len << "): (" << m_cancelledSend << ")";
-            throwExceptionFromLastError(m_cancelledSend);
+            throwExceptionFromLastError(m_cancelledSend, "sendmsg");
         }
         rc = ::sendmsg(m_sock, &msg, flags);
     }
@@ -761,7 +761,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
             << " sendv(" << m_sock << ", " << len << "): " << rc << " ("
             << lastError() << ")";
     if (rc == -1) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("sendmsg");
     }
     return rc;
 #endif
@@ -788,14 +788,14 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
             LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", " << len
                 << ", " << to << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError(dwLastError);
+            throwExceptionFromLastError(dwLastError, "WSASendTo");
         }
         if (m_cancelledSend) {
             LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", " << len
                 << ", " << to << "): (" << m_cancelledSend << ")";
             m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledSend);
+            throwExceptionFromLastError(m_cancelledSend, "WSASendTo");
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -810,7 +810,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
                 m_sendEvent.lastError = WSAETIMEDOUT;
             LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
                 << len << ", " << to << "): (" << m_sendEvent.lastError << ")";
-            throwExceptionFromLastError(m_sendEvent.lastError);
+            throwExceptionFromLastError(m_sendEvent.lastError, "WSASendTo");
         }
         LOG_VERBOSE(g_log) << this << " sendv(" << m_sock << ", "
             << len << ", " << to << "): " << m_sendEvent.numberOfBytes;
@@ -828,7 +828,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
                     << ", " << to << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
                 Scheduler::getThis()->yieldTo();
-                throwExceptionFromLastError(m_cancelledSend);
+                throwExceptionFromLastError(m_cancelledSend, "sendto");
             }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
@@ -841,7 +841,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
             if (m_cancelledSend) {
                 LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", "
                     << len << ", " << to << "): (" << m_cancelledSend << ")";
-                throwExceptionFromLastError(m_cancelledSend);
+                throwExceptionFromLastError(m_cancelledSend, "sendto");
             }
             rc = ::sendto(m_sock, buf, len, flags, to.name(), to.nameLen());
         }
@@ -850,7 +850,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
             << " sendto(" << m_sock << ", " << len << ", " << to << "): "
             << rc << " (" << lastError() << ")";
         if (rc == -1) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("sendto");
         }
         return rc;
     }
@@ -873,14 +873,14 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
             LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", " << len
                 << ", " << to << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
-            throwExceptionFromLastError(dwLastError);
+            throwExceptionFromLastError(dwLastError, "WSASendTo");
         }
         if (m_cancelledSend) {
             LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", " << len
                 << ", " << to << "): (" << m_cancelledSend << ")";
             m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledSend);
+            throwExceptionFromLastError(m_cancelledSend, "WSASendTo");
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -895,7 +895,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
                 m_sendEvent.lastError = WSAETIMEDOUT;
             LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", "
                 << len << ", " << to << "): (" << m_sendEvent.lastError << ")";
-            throwExceptionFromLastError(m_sendEvent.lastError);
+            throwExceptionFromLastError(m_sendEvent.lastError, "WSASendTo");
         }
         return m_sendEvent.numberOfBytes;
     } else {
@@ -906,7 +906,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
             NULL, NULL)) {
             LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", "
                 << len << ", " << to << "): (" << lastError() << ")";
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("WSASendTo");
         }
         LOG_VERBOSE(g_log) << this << " sendtov(" << m_sock << ", "
             << len << ", " << to << "): " << sent;
@@ -928,7 +928,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
                 << ", " << to << "): (" << m_cancelledSend << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledSend);
+            throwExceptionFromLastError(m_cancelledSend, "sendmsg");
         }
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
@@ -941,7 +941,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         if (m_cancelledSend) {
             LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", "
                     << len << ", " << to << "): (" << m_cancelledSend << ")";
-            throwExceptionFromLastError(m_cancelledSend);
+            throwExceptionFromLastError(m_cancelledSend, "sendmsg");
         }
         rc = ::sendmsg(m_sock, &msg, flags);
     }
@@ -949,7 +949,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
             << " sendtov(" << m_sock << ", " << len << ", " << to << "): "
             << rc << " (" << lastError() << ")";
     if (rc == -1) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("sendmsg");
     }
     return rc;
 #endif
@@ -974,14 +974,14 @@ Socket::receive(void *buf, size_t len, int flags)
             LOG_ERROR(g_log) << this << " recv(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
-            throwExceptionFromLastError(dwLastError);
+            throwExceptionFromLastError(dwLastError, "WSARecv");
         }
         if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recv(" << m_sock << ", " << len
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "WSARecv");
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -996,7 +996,7 @@ Socket::receive(void *buf, size_t len, int flags)
                 m_receiveEvent.lastError = WSAETIMEDOUT;
             LOG_ERROR(g_log) << this << " recv(" << m_sock << ", "
                 << len << "): (" << m_receiveEvent.lastError << ")";
-            throwExceptionFromLastError(m_receiveEvent.lastError);
+            throwExceptionFromLastError(m_receiveEvent.lastError, "WSARecv");
         }
         LOG_VERBOSE(g_log) << this << " recv(" << m_sock << ", "
             << len << "): " << m_receiveEvent.numberOfBytes;
@@ -1014,7 +1014,7 @@ Socket::receive(void *buf, size_t len, int flags)
                     << "): (" << m_cancelledReceive << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::READ);
                 Scheduler::getThis()->yieldTo();
-                throwExceptionFromLastError(m_cancelledReceive);
+                throwExceptionFromLastError(m_cancelledReceive, "recv");
             }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
@@ -1027,7 +1027,7 @@ Socket::receive(void *buf, size_t len, int flags)
             if (m_cancelledReceive) {
                 LOG_ERROR(g_log) << this << " recv(" << m_sock << ", "
                     << len << "): (" << m_cancelledReceive << ")";
-                throwExceptionFromLastError(m_cancelledReceive);
+                throwExceptionFromLastError(m_cancelledReceive, "recv");
             }
             rc = ::recv(m_sock, buf, len, flags);
         }
@@ -1036,7 +1036,7 @@ Socket::receive(void *buf, size_t len, int flags)
             << " recv(" << m_sock << ", " << len << "): " << rc << " ("
             << lastError() << ")";
         if (rc == -1) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("recv");
         }
         return rc;
     }
@@ -1057,14 +1057,14 @@ Socket::receive(iovec *bufs, size_t len, int flags)
             LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
-            throwExceptionFromLastError(dwLastError);
+            throwExceptionFromLastError(dwLastError, "WSARecv");
         }
         if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", " << len
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "WSARecv");
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -1079,7 +1079,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
                 m_receiveEvent.lastError = WSAETIMEDOUT;
             LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
                 << len << "): (" << m_receiveEvent.lastError << ")";
-            throwExceptionFromLastError(m_receiveEvent.lastError);
+            throwExceptionFromLastError(m_receiveEvent.lastError, "WSARecv");
         }
         LOG_VERBOSE(g_log) << this << " recvv(" << m_sock << ", "
             << len << "): " << m_receiveEvent.numberOfBytes;
@@ -1091,7 +1091,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
             NULL, NULL)) {
             LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("WSARecv");
         }
         LOG_VERBOSE(g_log) << this << " recvv(" << m_sock << ", "
             << len << "): " << received;
@@ -1111,7 +1111,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::READ);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "recvmsg");
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -1124,7 +1124,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
                     << len << "): (" << m_cancelledReceive << ")";
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "recvmsg");
         }
         rc = ::recvmsg(m_sock, &msg, flags);
     }
@@ -1132,7 +1132,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
             << " recvv(" << m_sock << ", " << len << "): " << rc << " ("
             << lastError() << ")";
     if (rc == -1) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("recvmsg");
     }
     return rc;
 #endif
@@ -1160,14 +1160,14 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
             LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
-            throwExceptionFromLastError(dwLastError);
+            throwExceptionFromLastError(dwLastError, "WSARecvFrom");
         }
         if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", " << len
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "WSARecvFrom");
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -1182,7 +1182,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
                 m_receiveEvent.lastError = WSAETIMEDOUT;
             LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
                 << len << "): (" << m_receiveEvent.lastError << ")";
-            throwExceptionFromLastError(m_receiveEvent.lastError);
+            throwExceptionFromLastError(m_receiveEvent.lastError, "WSARecvFrom");
         }
         LOG_VERBOSE(g_log) << this << " recvfrom(" << m_sock << ", "
             << len << "): " << m_receiveEvent.numberOfBytes << ", " << from;
@@ -1194,7 +1194,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
             NULL, NULL)) {
             LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("WSARecvFrom");
         }
         LOG_VERBOSE(g_log) << this << " recvfrom(" << m_sock << ", "
             << len << "): " << sent << ", " << from;
@@ -1219,7 +1219,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::READ);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "recvmsg");
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -1232,7 +1232,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
         if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
                 << len << "): (" << m_cancelledReceive << ")";
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "recvmsg");
         }
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
@@ -1240,7 +1240,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
         << " recvfrom(" << m_sock << ", " << len << "): "
         << rc << ", " << from << " (" << lastError() << ")";
     if (rc == -1) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("recvmsg");
     }
     *flags = msg.msg_flags;
     return rc;
@@ -1265,14 +1265,14 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
             LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", " << len
                 << "): (" << lastError() << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
-            throwExceptionFromLastError(dwLastError);
+            throwExceptionFromLastError(dwLastError, "WSARecvFrom");
         }
         if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", " << len
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "WSARecvFrom");
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -1287,7 +1287,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
                 m_receiveEvent.lastError = WSAETIMEDOUT;
             LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
                 << len << "): (" << m_receiveEvent.lastError << ")";
-            throwExceptionFromLastError(m_receiveEvent.lastError);
+            throwExceptionFromLastError(m_receiveEvent.lastError, "WSARecvFrom");
         }
         LOG_VERBOSE(g_log) << this << " recvfrom(" << m_sock << ", "
             << len << "): " << m_receiveEvent.numberOfBytes << ", " << from;
@@ -1300,7 +1300,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
             NULL, NULL)) {
             LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("WSARecvFrom");
         }
         LOG_VERBOSE(g_log) << this << " recvfromv(" << m_sock << ", "
             << len << "): " << sent << ", " << from;
@@ -1322,7 +1322,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::READ);
             Scheduler::getThis()->yieldTo();
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "recvmsg");
         }
         Timer::ptr timeout;
         if (m_receiveTimeout != ~0ull)
@@ -1335,7 +1335,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
         if (m_cancelledReceive) {
             LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", "
                 << len << "): (" << m_cancelledReceive << ")";
-            throwExceptionFromLastError(m_cancelledReceive);
+            throwExceptionFromLastError(m_cancelledReceive, "recvmsg");
         }
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
@@ -1343,7 +1343,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
         << " recvfromv(" << m_sock << ", " << len << "): "
         << rc << ", " << from << " (" << lastError() << ")";
     if (rc == -1) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("recvmsg");
     }
     *flags = msg.msg_flags;
     return rc;
@@ -1355,7 +1355,7 @@ Socket::getOption(int level, int option, void *result, size_t *len)
 {
     int ret = getsockopt(m_sock, level, option, (char*)result, (socklen_t*)len);
     if (ret) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("getsockopt");
     }
 }
 
@@ -1363,7 +1363,7 @@ void
 Socket::setOption(int level, int option, const void *value, size_t len)
 {
     if (setsockopt(m_sock, level, option, (const char*)value, (socklen_t)len)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("setsockopt");
     }
 }
 
@@ -1475,7 +1475,7 @@ Socket::remoteAddress()
     }
     socklen_t namelen = result->nameLen();
     if (getpeername(m_sock, result->name(), &namelen)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("getpeername");
     }
     ASSERT(namelen <= result->nameLen());
     return result;
@@ -1498,7 +1498,7 @@ Socket::localAddress()
     }
     socklen_t namelen = result->nameLen();
     if (getsockname(m_sock, result->name(), &namelen)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("getsockname");
     }
     ASSERT(namelen <= result->nameLen());
     return result;
@@ -1560,7 +1560,7 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
         node = host;
     addrinfo *results, *next;
     if (getaddrinfo(node.c_str(), service, &hints, &results)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("getaddrinfo");
     }
     std::vector<Address::ptr> result;
     next = results;

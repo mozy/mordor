@@ -21,7 +21,7 @@ IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
 {
     m_handles[0] = CreateEventW(NULL, FALSE, FALSE, NULL);
     if (!m_handles[0])
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("CreateEventW");
 }
 
 IOManagerIOCP::WaitBlock::~WaitBlock()
@@ -115,7 +115,7 @@ IOManagerIOCP::WaitBlock::run()
         } else if (dwRet == WAIT_FAILED) {
             // What to do, what to do?  Probably a bad handle.
             // This will bring down the whole process
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("WaitForMultipleObjects");
         } else {
             NOTREACHED();
         }
@@ -137,7 +137,7 @@ IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
 {
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
     if (!m_hCompletionPort) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("CreateIoCompletionPort");
     }
 }
 
@@ -146,7 +146,7 @@ IOManagerIOCP::registerFile(HANDLE handle)
 {
     HANDLE hRet = CreateIoCompletionPort(handle, m_hCompletionPort, 0, 0);
     if (hRet != m_hCompletionPort) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("CreateIoCompletionPort");
     }
 }
 
@@ -270,7 +270,7 @@ IOManagerIOCP::idle()
                 processTimers();
                 continue;
             }
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("GetQueuedCompletionStatus");
         }
         processTimers();
 
@@ -298,6 +298,6 @@ void
 IOManagerIOCP::tickle()
 {
     if (!PostQueuedCompletionStatus(m_hCompletionPort, 0, ~0, NULL)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("PostQueuedCompletionStatus");
     }
 }

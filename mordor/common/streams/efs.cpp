@@ -32,7 +32,7 @@ EFSStream::EFSStream(const char *filename, bool read)
     DWORD dwRet = OpenEncryptedFileRawW(toUtf16(filename).c_str(),
         read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
-        throwExceptionFromLastError(dwRet);
+        throwExceptionFromLastError(dwRet, "OpenEncryptedFileRawW");
     init();
 }
 
@@ -48,7 +48,7 @@ EFSStream::EFSStream(const wchar_t *filename, bool read)
     DWORD dwRet = OpenEncryptedFileRawW(filename,
         read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
-        throwExceptionFromLastError(dwRet);
+        throwExceptionFromLastError(dwRet, "OpenEncryptedFileRawW");
     init();
 }
 
@@ -64,7 +64,7 @@ EFSStream::EFSStream(const std::string &filename, bool read)
     DWORD dwRet = OpenEncryptedFileRawW(toUtf16(filename).c_str(),
         read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
-        throwExceptionFromLastError(dwRet);
+        throwExceptionFromLastError(dwRet, "OpenEncryptedFileRawW");
     init();
 }
 
@@ -80,7 +80,7 @@ EFSStream::EFSStream(const std::wstring &filename, bool read)
     DWORD dwRet = OpenEncryptedFileRawW(filename.c_str(),
         read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
-        throwExceptionFromLastError(dwRet);
+        throwExceptionFromLastError(dwRet, "OpenEncryptedFileRawW");
     init();
 }
 
@@ -190,7 +190,7 @@ EFSStream::readFiber()
     ASSERT(m_read);
     DWORD dwRet = ReadEncryptedFileRaw(&EFSStream::ExportCallback, this, m_context);
     if (dwRet != ERROR_SUCCESS && dwRet != ERROR_CANCELLED)
-        throwExceptionFromLastError(dwRet);
+        throwExceptionFromLastError(dwRet, "ReadEncryptedFileRaw");
 }
 
 DWORD WINAPI
@@ -239,7 +239,7 @@ EFSStream::writeFiber()
     ASSERT(!m_read);
     DWORD dwRet = WriteEncryptedFileRaw(&EFSStream::ImportCallback, this, m_context);
     if (dwRet != ERROR_SUCCESS && dwRet != ERROR_CANCELLED)
-        throwExceptionFromLastError(dwRet);
+        throwExceptionFromLastError(dwRet, "WriteEncryptedFileRaw");
 }
 
 DWORD WINAPI

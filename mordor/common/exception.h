@@ -44,14 +44,16 @@ public:
 class Win32Error : public std::runtime_error
 {
 public:
-    Win32Error(unsigned int lastError);
-    const char *what() const { return m_message.c_str(); }
+    Win32Error(unsigned int lastError, const char *function = NULL);
 
     unsigned int error() const { return m_lastError; }
+    const char *function() const { return m_function; }
 
 private:
+    static std::string constructMessage(unsigned int lastError);
+private:
     int m_lastError;
-    std::string m_message;
+    const char *m_function;
 };
 typedef Win32Error NativeError;
 typedef unsigned int error_t;
@@ -60,15 +62,16 @@ typedef unsigned int error_t;
 class ErrnoError : public std::runtime_error
 {
 public:
-    ErrnoError(int error);
+    ErrnoError(int error, const char *function = NULL);
     ~ErrnoError() throw() {}
-    const char *what() const throw() { return m_message.c_str(); }
 
     int error() const { return m_error; }
 
 private:
+    static std::string constructMessage(int error);
+private:
     int m_error;
-    std::string m_message;
+    const char *m_function;
 };
 typedef ErrnoError NativeError;
 typedef int error_t;
@@ -79,14 +82,16 @@ typedef int error_t;
     class Name ## Exception : public NativeError                                \
     {                                                                           \
     public:                                                                     \
-        Name ## Exception() : NativeError(win32error) {}                        \
+        Name ## Exception(const char *function = NULL)                          \
+        : NativeError(win32error, function) {}                                  \
     };
 #else
 #define CREATE_NATIVE_EXCEPTION(Name, win32error, errnoerror)                   \
     class Name ## Exception : public NativeError                                \
     {                                                                           \
     public:                                                                     \
-        Name ## Exception() : NativeError(errnoerror) {}                        \
+        Name ## Exception(const char *function = NULL)                          \
+        : NativeError(errnoerror, function) {}                                  \
     };
 #endif
 
@@ -100,7 +105,8 @@ CREATE_NATIVE_EXCEPTION(BrokenPipe, WSAESHUTDOWN, EPIPE);
 class SocketException : public NativeError
 {
 public:
-    SocketException(error_t lastError) : NativeError(lastError) {}
+    SocketException(error_t lastError, const char *function = NULL)
+    : NativeError(lastError, function) {}
 };
 
 #ifdef WINDOWS
@@ -113,7 +119,8 @@ public:
     class Name ## Exception : public SocketException                            \
     {                                                                           \
     public:                                                                     \
-        Name ## Exception() : SocketException(WSA(errnoerror)) {}               \
+        Name ## Exception(const char *function)                                 \
+        : SocketException(WSA(errnoerror), function) {}                         \
     };
 
 CREATE_SOCKET_EXCEPTION(ConnectionAborted, ECONNABORTED);
@@ -123,7 +130,7 @@ CREATE_SOCKET_EXCEPTION(TimedOut, ETIMEDOUT);
 #undef CREATE_SOCKET_EXCEPTION
 
 error_t lastError();
-void throwExceptionFromLastError();
-void throwExceptionFromLastError(error_t lastError);
+void throwExceptionFromLastError(const char *function = NULL);
+void throwExceptionFromLastError(error_t lastError, const char *function = NULL);
 
 #endif

@@ -11,10 +11,10 @@ StdinStream::StdinStream()
 #ifdef WINDOWS
     HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
     if (hStdIn == INVALID_HANDLE_VALUE) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("GetStdHandle");
     }
     if (hStdIn == NULL) {
-        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND, "GetStdHandle");
     }
     init(hStdIn, false);
 #else
@@ -27,10 +27,10 @@ StdinStream::StdinStream(IOManager &ioManager)
 #ifdef WINDOWS
     HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
     if (hStdIn == INVALID_HANDLE_VALUE) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("GetStdHandle");
     }
     if (hStdIn == NULL) {
-        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND, "GetStdHandle");
     }
     init(&ioManager, hStdIn, false);
 #else
@@ -43,10 +43,10 @@ StdoutStream::StdoutStream()
 #ifdef WINDOWS
     HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hStdOut == INVALID_HANDLE_VALUE) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("GetStdHandle");
     }
     if (hStdOut == NULL) {
-        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND, "GetStdHandle");
     }
     init(hStdOut, false);
 #else
@@ -59,10 +59,10 @@ StdoutStream::StdoutStream(IOManager &ioManager)
 #ifdef WINDOWS
     HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hStdOut == INVALID_HANDLE_VALUE) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("GetStdHandle");
     }
     if (hStdOut == NULL) {
-        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND, "GetStdHandle");
     }
     init(&ioManager, hStdOut, false);
 #else
@@ -75,10 +75,10 @@ StderrStream::StderrStream()
 #ifdef WINDOWS
     HANDLE hStdErr = GetStdHandle(STD_ERROR_HANDLE);
     if (hStdErr == INVALID_HANDLE_VALUE) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("GetStdHandle");
     }
     if (hStdErr == NULL) {
-        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND, "GetStdHandle");
     }
     init(hStdErr, false);
 #else
@@ -91,10 +91,10 @@ StderrStream::StderrStream(IOManager &ioManager)
 #ifdef WINDOWS
     HANDLE hStdErr = GetStdHandle(STD_ERROR_HANDLE);
     if (hStdErr == INVALID_HANDLE_VALUE) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("GetStdHandle");
     }
     if (hStdErr == NULL) {
-        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND);
+        throwExceptionFromLastError(ERROR_FILE_NOT_FOUND, "GetStdHandle");
     }
     init(&ioManager, hStdErr, false);
 #else

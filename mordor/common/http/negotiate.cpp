@@ -104,7 +104,7 @@ HTTP::NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
             &m_creds,
             &lifetime);
         if (!SUCCEEDED(status)) {
-            throwExceptionFromLastError(status);
+            throwExceptionFromLastError(status, "AcquireCredentialsHandleW");
         }
 
         status = InitializeSecurityContextW(

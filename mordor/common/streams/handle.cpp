@@ -62,7 +62,7 @@ HandleStream::close(CloseType type)
     ASSERT(type == BOTH);
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
         if (!CloseHandle(m_hFile)) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("CloseHandle");
         }
         m_hFile = INVALID_HANDLE_VALUE;
     }
@@ -94,7 +94,7 @@ HandleStream::read(Buffer &b, size_t len)
         }
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_readEvent);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("ReadFile");
         }
         Scheduler::getThis()->yieldTo();
         if (!m_readEvent.ret &&
@@ -102,7 +102,7 @@ HandleStream::read(Buffer &b, size_t len)
             return 0;
         }
         if (!m_readEvent.ret) {
-            throwExceptionFromLastError(m_readEvent.lastError);
+            throwExceptionFromLastError(m_readEvent.lastError, "ReadFile");
         }
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
@@ -115,7 +115,7 @@ HandleStream::read(Buffer &b, size_t len)
         return 0;
     }
     if (!ret) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("ReadFile");
     }
     b.produce(read);
     return read;
@@ -142,11 +142,11 @@ HandleStream::write(const Buffer &b, size_t len)
     if (m_ioManager) {
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_writeEvent);
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("WriteFile");
         }
         Scheduler::getThis()->yieldTo();
         if (!m_writeEvent.ret) {
-            throwExceptionFromLastError(m_writeEvent.lastError);
+            throwExceptionFromLastError(m_writeEvent.lastError, "WriteFile");
         }
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
@@ -155,7 +155,7 @@ HandleStream::write(const Buffer &b, size_t len)
         return m_writeEvent.numberOfBytes;
     }
     if (!ret) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("WriteFile");
     }
     return written;
 }
@@ -195,7 +195,7 @@ HandleStream::seek(long long offset, Anchor anchor)
     long long pos;
     if (!SetFilePointerEx(m_hFile, *(LARGE_INTEGER*)&offset,
         (LARGE_INTEGER*)&pos, (DWORD)anchor)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("SetFilePointerEx");
     }
     return pos;
 }
@@ -205,7 +205,7 @@ HandleStream::size()
 {
     long long size;
     if (!GetFileSizeEx(m_hFile, (LARGE_INTEGER*)&size)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("GetFileSizeEx");
     }
     return size;
 }
@@ -219,6 +219,6 @@ HandleStream::truncate(long long size)
     DWORD lastError = GetLastError();
     seek(pos, BEGIN);
     if (!ret) {
-        throwExceptionFromLastError(lastError);
+        throwExceptionFromLastError(lastError, "SetEndOfFile");
     }
 }

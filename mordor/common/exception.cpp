@@ -4,15 +4,15 @@
 
 #include "exception.h"
 
-static void throwSocketException(error_t lastError)
+static void throwSocketException(error_t lastError, const char *function)
 {
     switch (lastError) {
         case WSA(ECONNABORTED):
-            throw ConnectionAbortedException();
+            throw ConnectionAbortedException(function);
         case WSA(ECONNRESET):
-            throw ConnectionResetException();
+            throw ConnectionResetException(function);
         case WSA(ETIMEDOUT):
-            throw TimedOutException();
+            throw TimedOutException(function);
         default:
             break;
     }
@@ -21,10 +21,16 @@ static void throwSocketException(error_t lastError)
 #ifdef WINDOWS
 #include <windows.h>
 
-Win32Error::Win32Error(unsigned int lastError)
-: std::runtime_error(""),
-  m_lastError(lastError)
+Win32Error::Win32Error(unsigned int lastError, const char *function)
+: std::runtime_error(constructMessage(lastError)),
+  m_lastError(lastError),
+  m_function(function)
+{}
+
+std::string
+Win32Error::constructMessage(unsigned int lastError)
 {
+    std::string result;
     char *desc;
     DWORD numChars = FormatMessage(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
@@ -34,9 +40,10 @@ Win32Error::Win32Error(unsigned int lastError)
         lastError, 0,
         (char*)&desc, 0, NULL);
     if (numChars > 0) {
-        m_message = desc;
+        result = desc;
         LocalFree((HANDLE)desc);
     }
+    return result;
 }
 
 error_t lastError()
@@ -44,35 +51,40 @@ error_t lastError()
     return GetLastError();
 }
 
-void throwExceptionFromLastError(unsigned int lastError)
+void throwExceptionFromLastError(unsigned int lastError, const char *function)
 {
     switch (lastError) {
         case ERROR_INVALID_HANDLE:
         case WSAENOTSOCK:
-            throw BadHandleException();
+            throw BadHandleException(function);
         case ERROR_FILE_NOT_FOUND:
-            throw FileNotFoundException();
+            throw FileNotFoundException(function);
         case ERROR_OPERATION_ABORTED:
-            throw OperationAbortedException();
+            throw OperationAbortedException(function);
         case WSAESHUTDOWN:
-            throw BrokenPipeException();
+            throw BrokenPipeException(function);
         default:
-            throwSocketException(lastError);
-            throw Win32Error(lastError);
+            throwSocketException(lastError, function);
+            throw Win32Error(lastError, function);
     }
 }
 #else
 #include <errno.h>
 #include <string.h>
 
-ErrnoError::ErrnoError(int error)
-: std::runtime_error(""),
-  m_error(error)
+ErrnoError::ErrnoError(int error, const char *function)
+: std::runtime_error(constructMessage(error)),
+  m_error(error),
+  m_function(function)
+{}
+
+std::string
+ErrnoError::constructMessage(int error)
 {
-    char *desc = strerror(error);
-    if (desc) {
-        m_message = desc;
-    }
+    const char *message = strerror(error);
+    if (message)
+        return message;
+    return "";
 }
 
 error_t lastError()
@@ -80,25 +92,25 @@ error_t lastError()
     return errno;
 }
 
-void throwExceptionFromLastError(int error)
+void throwExceptionFromLastError(int error, const char *function)
 {
     switch (error) {
         case EBADF:
-            throw BadHandleException();
+            throw BadHandleException(function);
         case ENOENT:
-            throw FileNotFoundException();
+            throw FileNotFoundException(function);
         case ECANCELED:
-            throw OperationAbortedException();
+            throw OperationAbortedException(function);
         case EPIPE:
-            throw BrokenPipeException();
+            throw BrokenPipeException(function);
         default:
-            throwSocketException(error);
+            throwSocketException(error, function);
             throw ErrnoError(error);
     }
 }
 #endif
 
-void throwExceptionFromLastError()
+void throwExceptionFromLastError(const char *function)
 {
-    throwExceptionFromLastError(lastError());
+    throwExceptionFromLastError(lastError(), function);
 }

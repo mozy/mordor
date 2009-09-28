@@ -355,7 +355,8 @@ Fiber::throwExceptions()
 
         NativeError *nativeError = dynamic_cast<NativeError *>(m_exception);
         if (nativeError)
-            throwExceptionFromLastError(nativeError->error());
+            throwExceptionFromLastError(nativeError->error(),
+                nativeError->function());
 
         throw FiberException(shared_from_this(), *m_exception);
     }
@@ -395,14 +396,14 @@ allocStack(void **stack, void **sp, size_t *stacksize)
 #elif defined(WINDOWS)
     *stack = VirtualAlloc(NULL, *stacksize + g_pagesize, MEM_RESERVE, PAGE_NOACCESS);
     if (!*stack)
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("VirtualAlloc");
     VirtualAlloc(*stack, g_pagesize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
     VirtualAlloc((char*)*stack + g_pagesize, *stacksize, MEM_COMMIT, PAGE_READWRITE);
     *sp = (char*)*stack + *stacksize + g_pagesize;
 #elif defined(POSIX)
     *stack = mmap(NULL, *stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     if (*stack == MAP_FAILED)
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("mmap");
     *sp = (char*)*stack + *stacksize;
 #endif
 }
@@ -438,7 +439,7 @@ static void
 fiber_switchContext(void **oldsp, void *newsp)
 {
     if (swapcontext(*(ucontext_t**)oldsp, (ucontext_t*)newsp))
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("swapcontext");
 }
 #elif defined(_MSC_VER) && defined(ASM_X86_WINDOWS_FIBERS)
 static
@@ -488,11 +489,11 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
         return;
     *sp = *stack = CreateFiber(stacksize, &native_fiber_entryPoint, entryPoint);
     if (!*stack)
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("CreateFiber");
 #elif defined(UCONTEXT_FIBERS)
     ucontext_t *ctx = *(ucontext_t**)sp;
     if (getcontext(ctx))
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("getcontext");
     ctx->uc_stack.ss_sp = *stack;
     ctx->uc_stack.ss_size = stacksize;
     makecontext(ctx, entryPoint, 0);
