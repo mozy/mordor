@@ -53,7 +53,9 @@ HandleStream::HandleStream(IOManagerIOCP &ioManager, HANDLE hFile, bool own)
 
 HandleStream::~HandleStream()
 {
-    close();
+    if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
+        CloseHandle(m_hFile);
+    }
 }
 
 void
