@@ -89,8 +89,7 @@ HandleStream::read(Buffer &b, size_t len)
     Buffer::SegmentData buf = b.writeBuf(len);
     BOOL ret = ReadFile(m_hFile, buf.start(), (DWORD)len, &read, overlapped);
     if (m_ioManager) {
-        if (!ret &&
-            (GetLastError() == ERROR_HANDLE_EOF || GetLastError() == ERROR_BROKEN_PIPE)) {
+        if (!ret && GetLastError() == ERROR_HANDLE_EOF) {
             m_ioManager->unregisterEvent(&m_readEvent);
             return 0;
         }
@@ -99,8 +98,7 @@ HandleStream::read(Buffer &b, size_t len)
             throwExceptionFromLastError("ReadFile");
         }
         Scheduler::getThis()->yieldTo();
-        if (!m_readEvent.ret &&
-            (m_readEvent.lastError == ERROR_HANDLE_EOF || m_readEvent.lastError == ERROR_BROKEN_PIPE)) {
+        if (!m_readEvent.ret && m_readEvent.lastError == ERROR_HANDLE_EOF) {
             return 0;
         }
         if (!m_readEvent.ret) {
@@ -112,9 +110,6 @@ HandleStream::read(Buffer &b, size_t len)
         }
         b.produce(m_readEvent.numberOfBytes);
         return m_readEvent.numberOfBytes;
-    }
-    if (!ret && GetLastError() == ERROR_BROKEN_PIPE) {
-        return 0;
     }
     if (!ret) {
         throwExceptionFromLastError("ReadFile");

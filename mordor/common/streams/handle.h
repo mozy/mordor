@@ -31,7 +31,9 @@ public:
     long long size();
     void truncate(long long size);
 
-private:
+    HANDLE handle() { return m_hFile; }
+
+protected:
     IOManagerIOCP *m_ioManager;
     AsyncEventIOCP m_readEvent;
     AsyncEventIOCP m_writeEvent;
