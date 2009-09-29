@@ -19,7 +19,8 @@ namespace HTTP
         if (request->response().status.status == HTTP::OK) {
             return request->stream();
         } else {
-            throw std::runtime_error("proxy connection failed");
+            throw InvalidResponseException("proxy connection failed",
+                request->response());
         }
     }
 }
