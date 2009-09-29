@@ -521,7 +521,7 @@ HTTP::unquote(const std::string &str)
     }
     
     action set_if_none_match {
-        m_eTagSet = &m_request->request.ifMatch;
+        m_eTagSet = &m_request->request.ifNoneMatch;
     }
     
     action set_if_range_entity_tag {
