@@ -31,7 +31,8 @@ IOManagerIOCP::WaitBlock::~WaitBlock()
 }
 
 bool
-IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent)
+IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
+                                        boost::function <void ()> dg)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     if (m_inUseCount == -1 || m_inUseCount == MAXIMUM_WAIT_OBJECTS)
@@ -40,6 +41,7 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent)
     m_handles[m_inUseCount] = hEvent;
     m_schedulers[m_inUseCount] = Scheduler::getThis();
     m_fibers[m_inUseCount] = Fiber::getThis();
+    m_dgs[m_inUseCount] = dg;
     if (m_inUseCount == 1) {
         boost::thread thread(boost::bind(&WaitBlock::run, this));
     } else {
@@ -48,6 +50,7 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent)
     return true;
 }
 
+typedef boost::function<void ()> functor;
 bool
 IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
 {
@@ -56,6 +59,10 @@ IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
     if (srcHandle != m_handles + m_inUseCount + 1) {
         int index = (int)(srcHandle - m_handles);
         memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
+        // Manually destruct old object, move others down, and default construct unused one
+        m_dgs[index].~functor();
+        memmove(&m_dgs[index], &m_dgs[index + 1], (m_inUseCount - index) * sizeof(boost::function<void ()>));
+        new(&m_dgs[m_inUseCount]) boost::function<void ()>();
         // Manually destruct old object, move others down, and default construct unused one
         m_fibers[index].~shared_ptr<Fiber>();
         memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
@@ -98,8 +105,15 @@ IOManagerIOCP::WaitBlock::run()
             HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
             if (srcHandle != m_handles + m_inUseCount + 1) {
                 int index = (int)(srcHandle - m_handles);
-                m_schedulers[index]->schedule(m_fibers[index]);
+                if (!m_dgs[index])
+                    m_schedulers[index]->schedule(m_fibers[index]);
+                else
+                    m_schedulers[index]->schedule(m_dgs[index]);
                 memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
+                // Manually destruct old object, move others down, and default construct unused one
+                m_dgs[index].~functor();
+                memmove(&m_dgs[index], &m_dgs[index + 1], (m_inUseCount - index) * sizeof(boost::function<void ()>));
+                new(&m_dgs[m_inUseCount]) boost::function<void ()>();
                 // Manually destruct old object, move others down, and default construct unused one
                 m_fibers[index].~shared_ptr<Fiber>();
                 memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
@@ -180,21 +194,23 @@ IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
 }
 
 void
-IOManagerIOCP::registerEvent(HANDLE handle)
+IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg)
 {
     ASSERT(handle);
-    ASSERT(Scheduler::getThis());
-    ASSERT(Fiber::getThis());
+    if (!dg) {
+        ASSERT(Scheduler::getThis());
+        ASSERT(Fiber::getThis());
+    }
 
     boost::mutex::scoped_lock lock(m_mutex);
     for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();
         it != m_waitBlocks.end();
         ++it) {
-        if ((*it)->registerEvent(handle))
+        if ((*it)->registerEvent(handle, dg))
             return;
     }
     m_waitBlocks.push_back(WaitBlock::ptr(new WaitBlock(*this)));
-    bool result = m_waitBlocks.back()->registerEvent(handle);
+    bool result = m_waitBlocks.back()->registerEvent(handle, dg);
     ASSERT(result);
 }
 

@@ -43,7 +43,7 @@ private:
         WaitBlock(IOManagerIOCP &outer);
         ~WaitBlock();
 
-        bool registerEvent(HANDLE handle);
+        bool registerEvent(HANDLE handle, boost::function<void ()> dg);
         bool unregisterEvent(HANDLE handle);
 
     private:
@@ -55,6 +55,7 @@ private:
         HANDLE m_handles[MAXIMUM_WAIT_OBJECTS];
         Scheduler *m_schedulers[MAXIMUM_WAIT_OBJECTS];
         Fiber::ptr m_fibers[MAXIMUM_WAIT_OBJECTS];
+        boost::function<void ()> m_dgs[MAXIMUM_WAIT_OBJECTS];
         int m_inUseCount;
     };
 
@@ -66,7 +67,7 @@ public:
     void registerEvent(AsyncEventIOCP *e);
     // Only use if the async call failed, not for cancelling it
     void unregisterEvent(AsyncEventIOCP *e);
-    void registerEvent(HANDLE handle);
+    void registerEvent(HANDLE handle, boost::function<void ()> dg = NULL);
     bool unregisterEvent(HANDLE handle);
     void cancelEvent(HANDLE hFile, AsyncEventIOCP *e);
 
