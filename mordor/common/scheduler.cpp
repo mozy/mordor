@@ -352,7 +352,7 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
     Fiber::ptr caller = Fiber::getThis();
     std::vector<boost::function<void ()> >::const_iterator it;
 
-    if (scheduler == NULL) {
+    if (scheduler == NULL || dgs.size() <= 1) {
         for(it = dgs.begin(); it != dgs.end(); ++it) {
             (*it)();
         }

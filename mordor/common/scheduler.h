@@ -142,6 +142,15 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
     Fiber::ptr caller = Fiber::getThis();
     Iterator it = begin;
 
+    if (parallelism == 1) {
+        while (it != end) {
+            if (!dg(*it))
+                return false;
+            ++it;
+        }
+        return true;
+    }
+
     std::vector<Fiber::ptr> fibers;
     std::vector<T *> current;
     // Not bool, because that's specialized, and it doesn't return just a
