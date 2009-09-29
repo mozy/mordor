@@ -66,6 +66,7 @@ public:
     ~ErrnoError() throw() {}
 
     int error() const { return m_error; }
+    const char *function() const { return m_function; }
 
 private:
     static std::string constructMessage(int error);
