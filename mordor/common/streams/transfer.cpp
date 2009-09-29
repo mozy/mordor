@@ -58,7 +58,11 @@ void transferStream(Stream &src, Stream &dst, unsigned long long toTransfer,
         return;
 
     std::vector<boost::function<void ()> > dgs;
+    std::vector<Fiber::ptr> fibers;
     dgs.resize(2);
+    fibers.resize(2);
+    fibers[0].reset(new Fiber(NULL, 16384));
+    fibers[1].reset(new Fiber(NULL, 16384));
     while (*totalRead < toTransfer) {
         writeBuffer = readBuffer;
         if (readBuffer == &buf1)
@@ -72,7 +76,7 @@ void transferStream(Stream &src, Stream &dst, unsigned long long toTransfer,
 boost::ref(readResult));
         dgs[1] = boost::bind(&writeOne, boost::ref(dst), boost::ref(*writeBuffer), 
 totalWritten);
-        parallel_do(dgs);
+        parallel_do(dgs, fibers);
         *totalRead += readResult;
         if (readResult == 0 && toTransfer != ~0ull && *totalRead < toTransfer) {
             throw UnexpectedEofError();

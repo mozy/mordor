@@ -368,6 +368,7 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
         fibers.push_back(f);
         scheduler->schedule(f);
     }
+
     scheduler->yieldTo();
     // Pass the first exception along
     // TODO: group exceptions?
@@ -375,5 +376,35 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
         it2 != fibers.end();
         ++it2) {
         (*it2)->throwExceptions();
+    }
+}
+
+void
+parallel_do(const std::vector<boost::function<void ()> > &dgs,
+            std::vector<Fiber::ptr> &fibers)
+{
+    ASSERT(fibers.size() >= dgs.size());
+    size_t completed = 0;
+    Scheduler *scheduler = Scheduler::getThis();
+    Fiber::ptr caller = Fiber::getThis();
+    std::vector<boost::function<void ()> >::const_iterator it;
+
+    if (scheduler == NULL || dgs.size() <= 1) {
+        for(it = dgs.begin(); it != dgs.end(); ++it) {
+            (*it)();
+        }
+        return;
+    }
+
+    for(size_t i = 0; i < dgs.size(); ++i) {
+        fibers[i]->reset(boost::bind(&parallel_do_impl, *it,
+            boost::ref(completed), dgs.size(), scheduler, caller));
+        scheduler->schedule(fibers[i]);
+    }
+    scheduler->yieldTo();
+    // Pass the first exception along
+    // TODO: group exceptions?
+    for(size_t i = 0; i < dgs.size(); ++i) {
+        fibers[i]->throwExceptions();
     }
 }

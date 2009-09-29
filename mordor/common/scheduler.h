@@ -99,6 +99,9 @@ private:
 
 void
 parallel_do(const std::vector<boost::function<void ()> > &dgs);
+void
+parallel_do(const std::vector<boost::function<void ()> > &dgs,
+            std::vector<Fiber::ptr> &fibers);
 
 // Automatically returns to calling scheduler when goes out of scope
 struct SchedulerSwitcher : public boost::noncopyable
