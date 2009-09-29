@@ -390,6 +390,21 @@ namespace HTTP
     bool isAcceptable(const AcceptList &list, const AcceptValueWithParameters &value, bool defaultMissing = false);
     bool isPreferred(const AcceptList &list, const AcceptValueWithParameters &lhs, const AcceptValueWithParameters &rhs);
     const AcceptValueWithParameters *preferred(const AcceptList &accept, const AcceptList &available);
+
+    // Logically the entire response is unexpected
+    class InvalidResponseException : public HTTPException
+    {
+    public:
+        InvalidResponseException(const std::string &message, const Response &response)
+            : HTTPException(message),
+              m_response(response)
+        {}
+
+        const Response &response() { return m_response; }
+
+    private:
+        Response m_response;
+    };
 };
 
 std::ostream& operator<<(std::ostream& os, HTTP::Method m);
