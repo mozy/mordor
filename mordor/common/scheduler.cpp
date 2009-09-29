@@ -397,7 +397,7 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs,
     }
 
     for(size_t i = 0; i < dgs.size(); ++i) {
-        fibers[i]->reset(boost::bind(&parallel_do_impl, *it,
+        fibers[i]->reset(boost::bind(&parallel_do_impl, dgs[i],
             boost::ref(completed), dgs.size(), scheduler, caller));
         scheduler->schedule(fibers[i]);
     }
