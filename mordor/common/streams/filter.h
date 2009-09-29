@@ -9,6 +9,9 @@
 class FilterStream : public Stream
 {
 public:
+    typedef boost::shared_ptr<FilterStream> ptr;
+
+public:
     FilterStream(Stream::ptr parent, bool own = true)
         : m_parent(parent), m_own(own)
     {

@@ -28,6 +28,7 @@ public:
         END
     };
 
+public:
     virtual ~Stream() {}
 
     virtual bool supportsRead() { return false; }

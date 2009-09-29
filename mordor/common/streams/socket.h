@@ -9,6 +9,9 @@ class Socket;
 class SocketStream : public Stream
 {
 public:
+    typedef boost::shared_ptr<SocketStream> ptr;
+
+public:
     SocketStream(boost::shared_ptr<Socket> s, bool own = true);
 
     bool supportsRead() { return true; }
