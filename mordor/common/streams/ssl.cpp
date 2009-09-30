@@ -122,6 +122,10 @@ SSLStream::close(CloseType type)
                 case SSL_ERROR_WANT_X509_LOOKUP:
                     NOTREACHED();
                 case SSL_ERROR_SYSCALL:
+                    if (ERR_peek_error())
+                        throwOpenSSLException();
+                    if (result == 0)
+                        break;
                     NOTREACHED();
                 case SSL_ERROR_SSL:
                     throwOpenSSLException();
@@ -160,7 +164,12 @@ SSLStream::read(Buffer &b, size_t len)
             case SSL_ERROR_WANT_CONNECT:
             case SSL_ERROR_WANT_ACCEPT:
             case SSL_ERROR_WANT_X509_LOOKUP:
+                NOTREACHED();
             case SSL_ERROR_SYSCALL:
+                if (ERR_peek_error())
+                    throwOpenSSLException();
+                if (result == 0)
+                    throw UnexpectedEofError();
                 NOTREACHED();
             case SSL_ERROR_SSL:
                 throwOpenSSLException();
@@ -199,7 +208,12 @@ SSLStream::write(const Buffer &b, size_t len)
             case SSL_ERROR_WANT_CONNECT:
             case SSL_ERROR_WANT_ACCEPT:
             case SSL_ERROR_WANT_X509_LOOKUP:
+                NOTREACHED();
             case SSL_ERROR_SYSCALL:
+                if (ERR_peek_error())
+                    throwOpenSSLException();
+                if (result == 0)
+                    throw UnexpectedEofError();
                 NOTREACHED();
             case SSL_ERROR_SSL:
                 throwOpenSSLException();
@@ -230,7 +244,12 @@ SSLStream::flush()
                 case SSL_ERROR_WANT_CONNECT:
                 case SSL_ERROR_WANT_ACCEPT:
                 case SSL_ERROR_WANT_X509_LOOKUP:
+                    NOTREACHED();
                 case SSL_ERROR_SYSCALL:
+                    if (ERR_peek_error())
+                        throwOpenSSLException();
+                    if (result == 0)
+                        throw UnexpectedEofError();
                     NOTREACHED();
                 case SSL_ERROR_SSL:
                     throwOpenSSLException();
@@ -264,7 +283,12 @@ SSLStream::accept()
             case SSL_ERROR_WANT_CONNECT:
             case SSL_ERROR_WANT_ACCEPT:
             case SSL_ERROR_WANT_X509_LOOKUP:
+                NOTREACHED();
             case SSL_ERROR_SYSCALL:
+                if (ERR_peek_error())
+                    throwOpenSSLException();
+                if (result == 0)
+                    throw UnexpectedEofError();
                 NOTREACHED();
             case SSL_ERROR_SSL:
                 throwOpenSSLException();
@@ -296,7 +320,12 @@ SSLStream::connect()
             case SSL_ERROR_WANT_CONNECT:
             case SSL_ERROR_WANT_ACCEPT:
             case SSL_ERROR_WANT_X509_LOOKUP:
+                NOTREACHED();
             case SSL_ERROR_SYSCALL:
+                if (ERR_peek_error())
+                    throwOpenSSLException();
+                if (result == 0)
+                    throw UnexpectedEofError();
                 NOTREACHED();
             case SSL_ERROR_SSL:
                 throwOpenSSLException();
