@@ -533,7 +533,20 @@ HTTP::ClientRequest::doRequest()
         os << m_request;
         std::string str = os.str();
         if (g_log->enabled(Log::VERBOSE)) {
-            LOG_VERBOSE(g_log) << this << " " << str;
+            std::string webAuth, proxyAuth;
+            if (stricmp(m_request.request.authorization.scheme.c_str(), "Basic") == 0) {
+                webAuth = m_request.request.authorization.base64;
+                m_request.request.authorization.base64 = "<hidden>";
+            }
+            if (stricmp(m_request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0) {
+                proxyAuth = m_request.request.proxyAuthorization.base64;
+                m_request.request.proxyAuthorization.base64 = "<hidden>";
+            }
+            LOG_VERBOSE(g_log) << this << " " << m_request;
+            if (!webAuth.empty())
+                m_request.request.authorization.base64 = webAuth;
+            if (!proxyAuth.empty())
+                m_request.request.proxyAuthorization.base64 = proxyAuth;
         } else {
             LOG_TRACE(g_log) << this << " " << m_request.requestLine;
         }
