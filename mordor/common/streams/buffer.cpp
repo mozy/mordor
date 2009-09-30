@@ -493,6 +493,7 @@ Buffer::copyIn(const Buffer &buf, size_t len)
                 len -= toConsume;
                 if (len == 0)
                     break;
+                continue;
             }
         }
         Segment newBuf = Segment(it->readBuf().slice(0, toConsume));
