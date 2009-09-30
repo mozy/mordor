@@ -11,6 +11,18 @@ static void throwSocketException(error_t lastError, const char *function)
             throw ConnectionAbortedException(function);
         case WSA(ECONNRESET):
             throw ConnectionResetException(function);
+        case WSA(ECONNREFUSED):
+            throw ConnectionRefusedException(function);
+        case WSA(EHOSTDOWN):
+            throw HostDownException(function);
+        case WSA(EHOSTUNREACH):
+            throw HostUnreachableException(function);
+        case WSA(ENETDOWN):
+            throw NetworkDownException(function);
+        case WSA(ENETRESET):
+            throw NetworkResetException(function);
+        case WSA(ENETUNREACH):
+            throw NetworkUnreachableException(function);
         case WSA(ETIMEDOUT):
             throw TimedOutException(function);
         default:
