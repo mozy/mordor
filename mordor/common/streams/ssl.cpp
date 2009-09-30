@@ -28,9 +28,11 @@ struct SSLInitializer {
 
 static SSLInitializer g_init;
 
-static void throwOpenSSLException()
+static bool hasOpenSSLError()
 {
     int err = ERR_peek_error();
+    if (err == 0)
+        return false;
     switch (ERR_GET_REASON(err)) {
         case ERR_R_MALLOC_FAILURE:
             throw std::bad_alloc();
@@ -41,12 +43,11 @@ static void throwOpenSSLException()
                 throw std::invalid_argument(buf);
             }
         default:
-            throw OpenSSLException();
+            return true;
     }
-};
+}
 
-std::string
-OpenSSLException::constructMessage()
+static std::string getOpenSSLErrorMessage()
 {
     std::ostringstream os;
     unsigned long err;
@@ -78,18 +79,23 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
     else
         m_ctx.reset(SSL_CTX_new(client ? SSLv23_client_method() :
             SSLv23_server_method()), &SSL_CTX_free);
-    if (!m_ctx)
-        throwOpenSSLException();
+    if (!m_ctx) {
+        VERIFY(hasOpenSSLError());
+        throw OpenSSLException(getOpenSSLErrorMessage(), "SSL_CTX_new");
+    }
     SSL_CTX_set_mode(m_ctx.get(), SSL_MODE_ENABLE_PARTIAL_WRITE);
     m_ssl.reset(SSL_new(m_ctx.get()), &SSL_free);
-    if (!m_ssl)
-        throwOpenSSLException();
+    if (!m_ssl) {
+        VERIFY(hasOpenSSLError());
+        throw OpenSSLException(getOpenSSLErrorMessage(), "SSL_CTX_new");
+    }
     m_readBio = BIO_new_mem_buf((void *)"", 0);
     m_writeBio = BIO_new(BIO_s_mem());
     if (!m_readBio || !m_writeBio) {
         if (m_readBio) BIO_free(m_readBio);
         if (m_writeBio) BIO_free(m_writeBio);
-        throwOpenSSLException();
+        VERIFY(hasOpenSSLError());
+        throw OpenSSLException(getOpenSSLErrorMessage(), "BIO_new");
     }
     BIO_set_mem_eof_return(m_readBio, -1);
 
@@ -122,13 +128,25 @@ SSLStream::close(CloseType type)
                 case SSL_ERROR_WANT_X509_LOOKUP:
                     NOTREACHED();
                 case SSL_ERROR_SYSCALL:
-                    if (ERR_peek_error())
-                        throwOpenSSLException();
+                    if (hasOpenSSLError()) {
+                        std::string message = getOpenSSLErrorMessage();
+                        LOG_ERROR(g_log) << this << " SSL_shutdown("
+                            << m_ssl.get() << "): " << result << " (" << error
+                            << ", " << message << ")";
+                        throw OpenSSLException(message, "SSL_shutdown");
+                    }
                     if (result == 0)
                         break;
                     NOTREACHED();
                 case SSL_ERROR_SSL:
-                    throwOpenSSLException();
+                    {
+                        VERIFY(hasOpenSSLError());
+                        std::string message = getOpenSSLErrorMessage();
+                        LOG_ERROR(g_log) << this << " SSL_shutdown("
+                            << m_ssl.get() << "): " << result << " (" << error
+                            << ", " << message << ")";
+                        throw OpenSSLException(message, "SSL_shutdown");
+                    }
                 default:
                     NOTREACHED();
             }                
@@ -166,13 +184,29 @@ SSLStream::read(Buffer &b, size_t len)
             case SSL_ERROR_WANT_X509_LOOKUP:
                 NOTREACHED();
             case SSL_ERROR_SYSCALL:
-                if (ERR_peek_error())
-                    throwOpenSSLException();
-                if (result == 0)
+                if (hasOpenSSLError()) {
+                    std::string message = getOpenSSLErrorMessage();
+                    LOG_ERROR(g_log) << this << " SSL_read("
+                        << m_ssl.get() << ", " << toRead << "): " << result
+                        << " (" << error << ", " << message << ")";
+                    throw OpenSSLException(message, "SSL_read");
+                }
+                if (result == 0) {
+                    LOG_ERROR(g_log) << this << " SSL_read(" << m_ssl.get()
+                        << ", " << toRead << "): " << result << " ("
+                        << error << ")";
                     throw UnexpectedEofError();
+                }
                 NOTREACHED();
             case SSL_ERROR_SSL:
-                throwOpenSSLException();
+                {
+                    VERIFY(hasOpenSSLError());
+                    std::string message = getOpenSSLErrorMessage();
+                    LOG_ERROR(g_log) << this << " SSL_read("
+                        << m_ssl.get() << ", " << toRead << "): " << result
+                        << " (" << error << ", " << message << ")";
+                    throw OpenSSLException(message, "SSL_read");
+                }
             default:
                 NOTREACHED();
         }
@@ -210,13 +244,30 @@ SSLStream::write(const Buffer &b, size_t len)
             case SSL_ERROR_WANT_X509_LOOKUP:
                 NOTREACHED();
             case SSL_ERROR_SYSCALL:
-                if (ERR_peek_error())
-                    throwOpenSSLException();
-                if (result == 0)
+                if (hasOpenSSLError()) {
+                        std::string message = getOpenSSLErrorMessage();
+                        LOG_ERROR(g_log) << this << " SSL_write("
+                            << m_ssl.get() << ", " << toWrite << "): "
+                            << result << " (" << error << ", " << message
+                            << ")";
+                        throw OpenSSLException(message, "SSL_write");
+                    }
+                if (result == 0) {
+                    LOG_ERROR(g_log) << this << " SSL_write(" << m_ssl.get()
+                        << ", " << toWrite << "): " << result << " ("
+                        << error << ")";
                     throw UnexpectedEofError();
+                }
                 NOTREACHED();
             case SSL_ERROR_SSL:
-                throwOpenSSLException();
+                {
+                    VERIFY(hasOpenSSLError());
+                    std::string message = getOpenSSLErrorMessage();
+                    LOG_ERROR(g_log) << this << " SSL_write("
+                        << m_ssl.get() << ", " << toWrite << "): " << result
+                        << " (" << error << ", " << message << ")";
+                    throw OpenSSLException(message, "SSL_write");
+                }
             default:
                 NOTREACHED();
         }
@@ -246,13 +297,28 @@ SSLStream::flush()
                 case SSL_ERROR_WANT_X509_LOOKUP:
                     NOTREACHED();
                 case SSL_ERROR_SYSCALL:
-                    if (ERR_peek_error())
-                        throwOpenSSLException();
-                    if (result == 0)
+                    if (hasOpenSSLError()) {
+                        std::string message = getOpenSSLErrorMessage();
+                        LOG_ERROR(g_log) << this << " SSL_shutdown("
+                            << m_ssl.get() << "): " << result << " (" << error
+                            << ", " << message << ")";
+                        throw OpenSSLException(message, "SSL_shutdown");
+                    }
+                    if (result == 0) {
+                        LOG_ERROR(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+                            << "): " << result << " (" << error << ")";
                         throw UnexpectedEofError();
+                    }
                     NOTREACHED();
                 case SSL_ERROR_SSL:
-                    throwOpenSSLException();
+                    {
+                        VERIFY(hasOpenSSLError());
+                        std::string message = getOpenSSLErrorMessage();
+                        LOG_ERROR(g_log) << this << " SSL_shutdown("
+                            << m_ssl.get() << "): " << result << " (" << error
+                            << ", " << message << ")";
+                        throw OpenSSLException(message, "SSL_shutdown");
+                    }
                 default:
                     NOTREACHED();
             }
@@ -285,13 +351,28 @@ SSLStream::accept()
             case SSL_ERROR_WANT_X509_LOOKUP:
                 NOTREACHED();
             case SSL_ERROR_SYSCALL:
-                if (ERR_peek_error())
-                    throwOpenSSLException();
-                if (result == 0)
+                if (hasOpenSSLError()) {
+                    std::string message = getOpenSSLErrorMessage();
+                    LOG_ERROR(g_log) << this << " SSL_accept("
+                        << m_ssl.get() << "): " << result << " (" << error
+                        << ", " << message << ")";
+                    throw OpenSSLException(message, "SSL_accept");
+                }
+                if (result == 0) {
+                    LOG_ERROR(g_log) << this << " SSL_accept(" << m_ssl.get()
+                        << "): " << result << " (" << error << ")";
                     throw UnexpectedEofError();
+                }
                 NOTREACHED();
             case SSL_ERROR_SSL:
-                throwOpenSSLException();
+                {
+                    VERIFY(hasOpenSSLError());
+                    std::string message = getOpenSSLErrorMessage();
+                    LOG_ERROR(g_log) << this << " SSL_accept("
+                        << m_ssl.get() << "): " << result << " (" << error
+                        << ", " << message << ")";
+                    throw OpenSSLException(message, "SSL_accept");
+                }
             default:
                 NOTREACHED();
         }
@@ -322,13 +403,28 @@ SSLStream::connect()
             case SSL_ERROR_WANT_X509_LOOKUP:
                 NOTREACHED();
             case SSL_ERROR_SYSCALL:
-                if (ERR_peek_error())
-                    throwOpenSSLException();
-                if (result == 0)
+                if (hasOpenSSLError()) {
+                    std::string message = getOpenSSLErrorMessage();
+                    LOG_ERROR(g_log) << this << " SSL_connect("
+                        << m_ssl.get() << "): " << result << " (" << error
+                        << ", " << message << ")";
+                    throw OpenSSLException(message, "SSL_connect");
+                }
+                if (result == 0) {
+                    LOG_ERROR(g_log) << this << " SSL_connect(" << m_ssl.get()
+                        << "): " << result << " (" << error << ")";
                     throw UnexpectedEofError();
+                }
                 NOTREACHED();
             case SSL_ERROR_SSL:
-                throwOpenSSLException();
+                {
+                    VERIFY(hasOpenSSLError());
+                    std::string message = getOpenSSLErrorMessage();
+                    LOG_ERROR(g_log) << this << " SSL_connect("
+                        << m_ssl.get() << "): " << result << " (" << error
+                        << ", " << message << ")";
+                    throw OpenSSLException(message, "SSL_connect");
+                }
             default:
                 NOTREACHED();
         }

@@ -11,15 +11,15 @@
 class OpenSSLException : public std::runtime_error
 {
 public:
-    OpenSSLException()
-        : std::runtime_error(constructMessage())
-    {}
-    OpenSSLException(const std::string &message)
-        : std::runtime_error(message)
+    OpenSSLException(const std::string &message, const char *function = NULL)
+        : std::runtime_error(message),
+          m_function(function)
     {}
 
+    const char *function() const;
+
 private:
-    static std::string constructMessage();
+    const char *m_function;
 };
 
 class CertificateVerificationException : public OpenSSLException
