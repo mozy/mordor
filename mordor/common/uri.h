@@ -7,6 +7,7 @@
 
 #include "assert.h"
 #include "mordor/common/streams/buffer.h"
+#include "mordor/common/string.h"
 
 namespace HTTP
 {
@@ -19,6 +20,12 @@ struct URI
     friend class URIParser;
     friend class HTTP::RequestParser;
     friend class HTTP::ResponseParser;
+
+    enum CharacterClass {
+        QUERYSTRING
+    };
+
+    static std::string encode(const std::string &str, CharacterClass charClass);
 
     URI();
     URI(const std::string& uri);
@@ -113,7 +120,7 @@ struct URI
     };
     Path path;
 
-    class QueryString : public std::multimap<std::string, std::string>
+    class QueryString : public std::multimap<std::string, std::string, caseinsensitiveless>
     {
     public:
         QueryString();

@@ -111,6 +111,17 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
     return result;
 }
 
+std::string
+URI::encode(const std::string &str, CharacterClass charClass)
+{
+    switch (charClass) {
+        case QUERYSTRING:
+            return escape(str, ::queryString, true);
+        default:
+            NOTREACHED();
+    }
+}
+
 %%{
     # See RFC 3986: http://www.ietf.org/rfc/rfc3986.txt
 

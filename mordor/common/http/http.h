@@ -11,6 +11,7 @@
 #include <boost/variant.hpp>
 #include <boost/date_time.hpp>
 
+#include "mordor/common/string.h"
 #include "mordor/common/uri.h"
 #include "mordor/common/version.h"
 
@@ -215,13 +216,6 @@ namespace HTTP
     typedef std::vector<Product> ProductList;
     typedef std::vector<boost::variant<Product, std::string> > ProductAndCommentList;
 
-    struct caseinsensitiveless
-    {
-        bool operator()(const std::string& lhs, const std::string& rhs) const
-        {
-            return stricmp(lhs.c_str(), rhs.c_str()) < 0;
-        }
-    };
     typedef std::set<std::string, caseinsensitiveless> StringSet;
     typedef std::map<std::string, std::string, caseinsensitiveless> StringMap;
 
