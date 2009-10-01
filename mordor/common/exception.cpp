@@ -101,7 +101,25 @@ ErrnoError::ErrnoError(int error, const char *function)
 std::string
 ErrnoError::constructMessage(int error)
 {
-    const char *message = strerror(error);
+    const char *message;
+    switch (error) {
+        case EAI_ADDRFAMILY:
+        case EAI_AGAIN:
+        case EAI_BADFLAGS:
+        case EAI_FAIL:
+        case EAI_FAMILY:
+        case EAI_MEMORY:
+        case EAI_NODATA:
+        case EAI_NONAME:
+        case EAI_SERVICE:
+        case EAI_SOCKTYPE:
+        case EAI_SYSTEM:
+            message = gai_strerror(error);
+            break;
+        default:
+            message = strerror(error);
+            break;
+    }
     if (message)
         return message;
     return "";
