@@ -17,6 +17,8 @@ std::string md5sum(const std::string &data);
 std::string md5sum(const void *data, size_t len);
 std::string sha1sum(const std::string &data);
 std::string sha1sum(const void *data, size_t len);
+std::string hmacMd5(const std::string &text, std::string key);
+std::string hmacSha1(const std::string &text, std::string key);
 
 void hexstringFromData(const void *data, size_t len, void *output);
 std::string hexstringFromData(const void *data, size_t len);
@@ -32,6 +34,14 @@ std::string toUtf8(const std::wstring &str);
 std::wstring toUtf16(const char *str, size_t len = ~0);
 std::wstring toUtf16(const std::string &str);
 #endif
+
+struct caseinsensitiveless
+{
+    bool operator()(const std::string& lhs, const std::string& rhs) const
+    {
+        return stricmp(lhs.c_str(), rhs.c_str()) < 0;
+    }
+};
 
 struct charslice
 {

@@ -159,6 +159,63 @@ sha1sum(const std::string &data)
     return sha1sum(data.c_str(), data.size());
 }
 
+struct xorStruct
+{
+    xorStruct(char value) : m_value(value) {}
+    char m_value;
+    char operator()(char in) const { return in ^ m_value; }
+};
+
+std::string
+hmacMd5(const std::string &text, std::string key)
+{
+    const unsigned int B = 64;
+    const unsigned int L = MD5_DIGEST_LENGTH;
+    if (key.size() > B)
+        key = md5sum(key);
+    key.append(B - key.size(), '\0');
+    std::string ipad = key, opad = key;
+    std::transform(ipad.begin(), ipad.end(), ipad.begin(), xorStruct(0x36));
+    std::transform(opad.begin(), opad.end(), opad.begin(), xorStruct(0x5c));
+    MD5_CTX ctx;
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, ipad.c_str(), B);
+    MD5_Update(&ctx, text.c_str(), text.size());
+    std::string result;
+    result.resize(L);
+    MD5_Final((unsigned char *)&result[0], &ctx);
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, opad.c_str(), B);
+    MD5_Update(&ctx, result.c_str(), L);
+    MD5_Final((unsigned char *)&result[0], &ctx);
+    return result;
+}
+
+std::string
+hmacSha1(const std::string &text, std::string key)
+{
+    const unsigned int B = 64;
+    const unsigned int L = SHA_DIGEST_LENGTH;
+    if (key.size() > B)
+        key = sha1sum(key);
+    key.append(B - key.size(), '\0');
+    std::string ipad = key, opad = key;
+    std::transform(ipad.begin(), ipad.end(), ipad.begin(), xorStruct(0x36));
+    std::transform(opad.begin(), opad.end(), opad.begin(), xorStruct(0x5c));
+    SHA_CTX ctx;
+    SHA1_Init(&ctx);
+    SHA1_Update(&ctx, ipad.c_str(), B);
+    SHA1_Update(&ctx, text.c_str(), text.size());
+    std::string result;
+    result.resize(L);
+    SHA1_Final((unsigned char *)&result[0], &ctx);
+    SHA1_Init(&ctx);
+    SHA1_Update(&ctx, opad.c_str(), B);
+    SHA1_Update(&ctx, result.c_str(), L);
+    SHA1_Final((unsigned char *)&result[0], &ctx);
+    return result;
+}
+
 void
 hexstringFromData(const void *data, size_t len, char *hex)
 {
