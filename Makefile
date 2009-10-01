@@ -398,6 +398,7 @@ LIBMORDOROBJECTS := 								\
 	mordor/common/http/digest.o						\
 	mordor/common/http/http.o						\
 	mordor/common/http/multipart.o						\
+	mordor/common/http/oauth.o						\
 	mordor/common/http/http_parser.o					\
 	mordor/common/http/server.o						\
 	mordor/common/iomanager_$(IOMANAGER).o					\
