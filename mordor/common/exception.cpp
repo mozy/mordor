@@ -25,6 +25,14 @@ static void throwSocketException(error_t lastError, const char *function)
             throw NetworkUnreachableException(function);
         case WSA(ETIMEDOUT):
             throw TimedOutException(function);
+        case EAI_AGAIN:
+            throw TemporaryNameServerFailureException(function);
+        case EAI_FAIL:
+            throw PermanentNameServerFailureException(function);
+        case NATIVE_ERROR(WSANO_DATA, EAI_NODATA):
+            throw NoNameServerDataException(function);
+        case EAI_NONAME:
+            throw HostNotFoundException(function);
         default:
             break;
     }

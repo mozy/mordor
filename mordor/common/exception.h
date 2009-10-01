@@ -116,13 +116,25 @@ public:
 #define WSA(error) error
 #endif
 
-#define CREATE_SOCKET_EXCEPTION(Name, errnoerror)                               \
+#ifdef WINDOWS
+#define NATIVE_ERROR(win32error, errnoerror) win32error
+#else
+#define NATIVE_ERROR(win32error, errnoerror) errnoerror
+#endif
+
+#define CREATE_SOCKET_EXCEPTION_DISTINCT(Name, win32error, errnoerror)          \
     class Name ## Exception : public SocketException                            \
     {                                                                           \
     public:                                                                     \
         Name ## Exception(const char *function)                                 \
-        : SocketException(WSA(errnoerror), function) {}                         \
+        : SocketException(NATIVE_ERROR(win32error, errnoerror), function) {}    \
     };
+
+#define CREATE_SOCKET_EXCEPTION_UNIFORM(Name, error)                            \
+    CREATE_SOCKET_EXCEPTION_DISTINCT(Name, error, error);
+
+#define CREATE_SOCKET_EXCEPTION(Name, errnoerror)                               \
+    CREATE_SOCKET_EXCEPTION_DISTINCT(Name, WSA(errnoerror), errnoerror);
 
 CREATE_SOCKET_EXCEPTION(ConnectionAborted, ECONNABORTED);
 CREATE_SOCKET_EXCEPTION(ConnectionReset, ECONNRESET);
@@ -133,6 +145,11 @@ CREATE_SOCKET_EXCEPTION(NetworkDown, ENETDOWN);
 CREATE_SOCKET_EXCEPTION(NetworkReset, ENETRESET);
 CREATE_SOCKET_EXCEPTION(NetworkUnreachable, ENETUNREACH);
 CREATE_SOCKET_EXCEPTION(TimedOut, ETIMEDOUT);
+CREATE_SOCKET_EXCEPTION_UNIFORM(TemporaryNameServerFailure, EAI_AGAIN);
+CREATE_SOCKET_EXCEPTION_UNIFORM(PermanentNameServerFailure, EAI_FAIL);
+// EAI_NODATA == EAI_NONAME on Windows
+CREATE_SOCKET_EXCEPTION_DISTINCT(NoNameServerData, WSANO_DATA, EAI_NODATA);
+CREATE_SOCKET_EXCEPTION_UNIFORM(HostNotFound, EAI_NONAME);
 
 #undef CREATE_SOCKET_EXCEPTION
 
