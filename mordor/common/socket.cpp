@@ -9,6 +9,7 @@
 #include "assert.h"
 #include "exception.h"
 #include "log.h"
+#include "mordor/common/string.h"
 #include "version.h"
 
 #ifdef WINDOWS
@@ -1522,7 +1523,11 @@ Address::Address(int type, int protocol)
 std::vector<Address::ptr>
 Address::lookup(const std::string &host, int family, int type, int protocol)
 {
-    addrinfo hints;
+#ifdef WINDOWS
+    addrinfoW hints, *results, *next;
+#else
+    addrinfo hints, *results, *next;
+#endif
     hints.ai_flags = 0;
     hints.ai_family = family;
     hints.ai_socktype = type;
@@ -1558,10 +1563,21 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     }
     if (node.empty())
         node = host;
-    addrinfo *results, *next;
+#ifdef WINDOWS
+    std::wstring serviceWStorage;
+    const wchar_t *serviceW = NULL;
+    if (service) {
+        serviceWStorage = toUtf16(service);
+        serviceW = serviceWStorage.c_str();
+    }
+    if (GetAddrInfoW(toUtf16(node).c_str(), serviceW, &hints, &results)) {
+        throwExceptionFromLastError("GetAddrInfoW");
+    }
+#else
     if (getaddrinfo(node.c_str(), service, &hints, &results)) {
         throwExceptionFromLastError("getaddrinfo");
     }
+#endif
     std::vector<Address::ptr> result;
     next = results;
     while (next) {
@@ -1586,7 +1602,11 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
         result.push_back(addr);
         next = next->ai_next;
     }
+#ifdef WINDOWS
+    FreeAddrInfoW(results);
+#else
     freeaddrinfo(results);
+#endif
     return result;
 }
 
