@@ -327,6 +327,35 @@ TEST_WITH_SUITE(HTTP, serverHeader)
         "\r\n");
 }
 
+TEST_WITH_SUITE(HTTP, teHeader)
+{
+    HTTP::Request request;
+    HTTP::RequestParser parser(request);
+    std::ostringstream os;
+
+    parser.run("GET / HTTP/1.0\r\n"
+               "TE: deflate, chunked;q=0, x-gzip;q=0.050\r\n"
+               "\r\n");
+    TEST_ASSERT(!parser.error());
+    TEST_ASSERT(parser.complete());
+    TEST_ASSERT_EQUAL(request.request.te.size(), 3u);
+    HTTP::AcceptList::iterator it = request.request.te.begin();
+    TEST_ASSERT_EQUAL(it->value, "deflate");
+    TEST_ASSERT_EQUAL(it->qvalue, ~0u);
+    ++it;
+    TEST_ASSERT_EQUAL(it->value, "chunked");
+    TEST_ASSERT_EQUAL(it->qvalue, 0u);
+    ++it;
+    TEST_ASSERT_EQUAL(it->value, "x-gzip");
+    TEST_ASSERT_EQUAL(it->qvalue, 50u);
+
+    os << request;
+    TEST_ASSERT_EQUAL(os.str(),
+        "GET / HTTP/1.0\r\n"
+        "TE: deflate, chunked;q=0, x-gzip;q=0.05\r\n"
+        "\r\n");
+}
+
 TEST_WITH_SUITE(HTTP, trailer)
 {
     HTTP::EntityHeaders trailer;

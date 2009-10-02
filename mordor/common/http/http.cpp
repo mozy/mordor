@@ -547,25 +547,26 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters
     if (v.qvalue != ~0u) {
         ASSERT(v.qvalue <= 1000);
         unsigned int qvalue = v.qvalue;
-        unsigned int curPlace = 1000;
-        while (curPlace > 0 && qvalue > 0) {
-            if (curPlace == 100)
-                os << ".";
-            if (qvalue >= curPlace)
-                os << "1";
-            else
-                os << "0";
-            qvalue -= curPlace;
-            curPlace /= 10;
+        unsigned int curPlace = 100;
+        if (qvalue == 1000) {
+            os << ";q=1";
+        } else {
+            os << ";q=0";
+            while (curPlace > 0 && qvalue > 0) {
+                if (curPlace == 100)
+                    os << '.';
+                unsigned int cur = qvalue / curPlace;
+                ASSERT(cur < 10);
+                os << cur;
+                qvalue -= cur * curPlace;
+                curPlace /= 10;
+            }
         }
         os << serializeStringMapWithOptionalValue(v.acceptParams);
     } else {
         ASSERT(v.acceptParams.empty());
     }
 
-    if (!v.value.empty())
-        os << "=" << HTTP::quote(v.value)
-            << serializeStringMapWithOptionalValue(v.parameters);
     return os;
 }
 
