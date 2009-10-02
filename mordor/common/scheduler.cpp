@@ -229,6 +229,7 @@ Scheduler::run()
         threadfiber.reset();
     }
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this), 65536 * 4));
+    Fiber::ptr dgFiber;
     while (true) {
         Fiber::ptr f;
         boost::function<void ()> dg;
@@ -277,7 +278,12 @@ Scheduler::run()
             }
             continue;
         } else if (dg) {
-            dg();
+            if (!dgFiber)
+                dgFiber.reset(new Fiber(dg, 65536));
+            dgFiber->reset(dg);
+            dgFiber->yieldTo();
+            if (dgFiber->state() != Fiber::TERM)
+                dgFiber.reset();
             continue;
         }
         if (idleFiber->state() == Fiber::TERM) {

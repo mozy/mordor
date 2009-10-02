@@ -4,6 +4,7 @@
 
 #include "iomanager_epoll.h"
 
+#include "assert.h"
 #include "exception.h"
 
 IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
@@ -11,14 +12,14 @@ IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
 {
     m_epfd = epoll_create(5000);
     if (m_epfd <= 0) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("epoll_create");
     }
     if (pipe(m_tickleFds)) {
         close(m_epfd);
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("pipe");
     }
-    assert(m_tickleFds[0] > 0);
-    assert(m_tickleFds[1] > 0);
+    ASSERT(m_tickleFds[0] > 0);
+    ASSERT(m_tickleFds[1] > 0);
     epoll_event event;
     event.events = EPOLLIN;
     event.data.fd = m_tickleFds[0];
@@ -26,7 +27,7 @@ IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
         close(m_epfd);
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("epoll_ctl");
     }
 }
 
@@ -39,14 +40,14 @@ IOManagerEPoll::~IOManagerEPoll()
 }
 
 void
-IOManagerEPoll::registerEvent(int fd, Event events)
+IOManagerEPoll::registerEvent(int fd, Event events, boost::function<void ()> dg)
 {
-    assert(fd > 0);
-    assert(Scheduler::getThis());
-    assert(Fiber::getThis());
+    ASSERT(fd > 0);
+    ASSERT(Scheduler::getThis());
+    ASSERT(Fiber::getThis());
 
     int epollevents = (int)events & (EPOLLIN | EPOLLOUT);
-    assert(epollevents != 0);
+    ASSERT(epollevents != 0);
     boost::mutex::scoped_lock lock(m_mutex);
     int op;
     std::map<int, AsyncEvent>::iterator it = 
@@ -61,20 +62,32 @@ m_pendingEvents.find(fd);
         op = EPOLL_CTL_MOD;
         event = &it->second;
         // OR == XOR means that none of the same bits were set
-        assert((event->event.events | epollevents)
+        ASSERT((event->event.events | epollevents)
             == (event->event.events ^ epollevents));
         event->event.events |= epollevents;
     }
     if (epollevents & EPOLLIN) {
         event->m_schedulerIn = Scheduler::getThis();
-        event->m_fiberIn = Fiber::getThis();
+        if (dg) {
+            event->m_dgIn = dg;
+            event->m_fiberIn.reset();
+        } else {
+            event->m_dgIn = NULL;
+            event->m_fiberIn = Fiber::getThis();
+        }
     }
     if (epollevents & EPOLLOUT) {
         event->m_schedulerOut = Scheduler::getThis();
-        event->m_fiberOut = Fiber::getThis();
+        if (dg) {
+            event->m_dgOut = dg;
+            event->m_fiberOut.reset();
+        } else {
+            event->m_dgOut = NULL;
+            event->m_fiberOut = Fiber::getThis();
+        }
     }
     if (epoll_ctl(m_epfd, op, event->event.data.fd, &event->event)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("epoll_ctl");
     }
 }
 
@@ -87,15 +100,25 @@ IOManagerEPoll::cancelEvent(int fd, Event events)
         return;
     AsyncEvent &e = it->second;
     if ((events & EPOLLIN) && (e.event.events & EPOLLIN)) {
-        e.m_schedulerIn->schedule(e.m_fiberIn);
+        if (e.m_dgIn)
+            e.m_schedulerIn->schedule(e.m_dgIn);
+        else
+            e.m_schedulerIn->schedule(e.m_fiberIn);
+        e.m_dgIn = NULL;
+        e.m_fiberIn.reset();
     }
     if ((events & EPOLLOUT) && (e.event.events & EPOLLOUT)) {
-        e.m_schedulerOut->schedule(e.m_fiberOut);
+        if (e.m_dgOut)
+            e.m_schedulerOut->schedule(e.m_dgOut);
+        else
+            e.m_schedulerOut->schedule(e.m_fiberOut);
+        e.m_dgOut = NULL;
+        e.m_fiberOut.reset();
     }
     e.event.events &= ~events;
     if (e.event.events == 0) {
         if (epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &e.event)) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("epoll_ctl");
         }
         m_pendingEvents.erase(it);
     }
@@ -133,7 +156,7 @@ IOManagerEPoll::idle()
             rc = epoll_wait(m_epfd, events, 64, timeout);
         }
         if (rc < 0) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("epoll_wait");
         }
         processTimers();
 
@@ -142,7 +165,7 @@ IOManagerEPoll::idle()
             if (event.data.fd == m_tickleFds[0]) {
                 unsigned char dummy;
                 int rc2 = read(m_tickleFds[0], &dummy, 1);
-                assert(rc2 == 1);
+                ASSERT(rc2 == 1);
                 continue;
             }
             bool err = event.events & (EPOLLERR | EPOLLHUP);
@@ -154,16 +177,26 @@ m_pendingEvents.find(event.data.fd);
             AsyncEvent &e = it->second;
             if ((event.events & EPOLLIN) ||
                 (err && (e.event.events & EPOLLIN))) {
-                e.m_schedulerIn->schedule(e.m_fiberIn);
+                if (e.m_dgIn)
+                    e.m_schedulerIn->schedule(e.m_dgIn);
+                else
+                    e.m_schedulerIn->schedule(e.m_fiberIn);
+                e.m_dgIn = NULL;
+                e.m_fiberIn.reset();
             }
             if ((event.events & EPOLLOUT) ||
                 (err && (e.event.events & EPOLLOUT))) {
-                e.m_schedulerOut->schedule(e.m_fiberOut);
+                if (e.m_dgOut)
+                    e.m_schedulerOut->schedule(e.m_dgOut);
+                else
+                    e.m_schedulerOut->schedule(e.m_fiberOut);
+                e.m_dgOut = NULL;
+                e.m_fiberOut.reset();
             }
             e.event.events &= ~event.events;
             if (err || e.event.events == 0) {
                 if (epoll_ctl(m_epfd, EPOLL_CTL_DEL, event.data.fd, &e.event)) {
-                    throwExceptionFromLastError();
+                    throwExceptionFromLastError("epoll_ctl");
                 }
                 m_pendingEvents.erase(it);
             }
@@ -176,5 +209,5 @@ void
 IOManagerEPoll::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
-    assert(rc == 1);
+    ASSERT(rc == 1);
 }

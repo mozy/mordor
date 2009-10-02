@@ -30,6 +30,7 @@ private:
 
         Scheduler *m_scheduler;
         Fiber::ptr m_fiber;
+        boost::function<void ()> m_dg;
 
         bool operator<(const AsyncEvent &rhs) const
         { if (event.ident < rhs.event.ident) return true; return event.filter < rhs.event.filter; }
@@ -39,7 +40,7 @@ public:
     IOManagerKQueue(int threads = 1, bool useCaller = true);
     ~IOManagerKQueue();
 
-    void registerEvent(int fd, Event events);
+    void registerEvent(int fd, Event events, boost::function<void ()> dg = NULL);
     void cancelEvent(int fd, Event events);
 
     Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,

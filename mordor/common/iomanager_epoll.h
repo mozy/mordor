@@ -27,13 +27,14 @@ private:
 
         Scheduler *m_schedulerIn, *m_schedulerOut;
         Fiber::ptr m_fiberIn, m_fiberOut;
+        boost::function<void ()> m_dgIn, m_dgOut;
     };
 
 public:
     IOManagerEPoll(int threads = 1, bool useCaller = true);
     ~IOManagerEPoll();
 
-    void registerEvent(int fd, Event events);
+    void registerEvent(int fd, Event events, boost::function<void ()> dg = NULL);
     void cancelEvent(int fd, Event events);
 
     Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,

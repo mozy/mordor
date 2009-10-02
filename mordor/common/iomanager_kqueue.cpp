@@ -4,6 +4,7 @@
 
 #include "iomanager_kqueue.h"
 
+#include "assert.h"
 #include "exception.h"
 
 IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
@@ -11,21 +12,21 @@ IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
 {
     m_kqfd = kqueue();
     if (m_kqfd <= 0) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("kqueue");
     }
     if (pipe(m_tickleFds)) {
         close(m_kqfd);
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("pipe");
     }
-    assert(m_tickleFds[0] > 0);
-    assert(m_tickleFds[1] > 0);
+    ASSERT(m_tickleFds[0] > 0);
+    ASSERT(m_tickleFds[1] > 0);
     struct kevent event;
     EV_SET(&event, m_tickleFds[0], EVFILT_READ, EV_ADD, 0, 0, NULL);
     if (kevent(m_kqfd, &event, 1, NULL, 0, NULL)) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
         close(m_kqfd);
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("event");
     }
 }
 
@@ -38,23 +39,29 @@ IOManagerKQueue::~IOManagerKQueue()
 }
 
 void
-IOManagerKQueue::registerEvent(int fd, Event events)
+IOManagerKQueue::registerEvent(int fd, Event events,
+                               boost::function<void ()> dg)
 {
-    assert(fd > 0);
-    assert(Scheduler::getThis());
-    assert(Fiber::getThis());
+    ASSERT(fd > 0);
+    ASSERT(Scheduler::getThis());
+    ASSERT(Fiber::getThis());
 
     std::map<std::pair<int, Event>, AsyncEvent>::iterator it =
         m_pendingEvents.find(std::pair<int, Event>(fd, events));
-    assert(it == m_pendingEvents.end());
+    ASSERT(it == m_pendingEvents.end());
     AsyncEvent& e = m_pendingEvents[std::pair<int, Event>(fd, events)];
     e.event.ident = fd;
     e.event.flags = EV_ADD;
     e.event.filter = (short)events;
     e.m_scheduler = Scheduler::getThis();
-    e.m_fiber = Fiber::getThis();
+    if (dg) {
+        e.m_dg = dg;
+    } else {
+        e.m_dg = NULL;
+        e.m_fiber = Fiber::getThis();
+    }
     if (kevent(m_kqfd, &e.event, 1, NULL, 0, NULL)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("kevent");
     }
 }
 
@@ -70,9 +77,12 @@ IOManagerKQueue::cancelEvent(int fd, Event events)
 
     e.event.flags = EV_DELETE;
     if (kevent(m_kqfd, &e.event, 1, NULL, 0, NULL)) {
-        throwExceptionFromLastError();
+        throwExceptionFromLastError("kevent");
     }
-    e.m_scheduler->schedule(e.m_fiber);
+    if (e.m_dg)
+        e.m_scheduler->schedule(e.m_dg);
+    else
+        e.m_scheduler->schedule(e.m_fiber);
     m_pendingEvents.erase(it);
 }
 
@@ -111,7 +121,7 @@ IOManagerKQueue::idle()
             rc = kevent(m_kqfd, NULL, 0, events, 64, timeout);
         }
         if (rc < 0) {
-            throwExceptionFromLastError();
+            throwExceptionFromLastError("kevent");
         }
         processTimers();
 
@@ -120,7 +130,7 @@ IOManagerKQueue::idle()
             if ((int)event.ident == m_tickleFds[0]) {
                 unsigned char dummy;
                 int rc2 = read(m_tickleFds[0], &dummy, 1);
-                assert(rc2 == 1);
+                ASSERT(rc2 == 1);
                 continue;
             }
 
@@ -133,9 +143,12 @@ IOManagerKQueue::idle()
 
             event.flags = EV_DELETE;
             if (kevent(m_kqfd, &event, 1, NULL, 0, NULL)) {
-                throwExceptionFromLastError();
+                throwExceptionFromLastError("kevent");
             }
-            e.m_scheduler->schedule(e.m_fiber);
+            if (e.m_dg)
+                e.m_scheduler->schedule(e.m_dg);
+            else
+                e.m_scheduler->schedule(e.m_fiber);
             m_pendingEvents.erase(it);
         }
         Fiber::yield();
@@ -146,5 +159,5 @@ void
 IOManagerKQueue::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
-    assert(rc == 1);
+    ASSERT(rc == 1);
 }
