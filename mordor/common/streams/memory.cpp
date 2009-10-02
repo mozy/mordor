@@ -157,7 +157,7 @@ MemoryStream::truncate(long long size)
     ASSERT(m_original.readAvailable() == (size_t)size);
 }
 
-size_t
+ptrdiff_t
 MemoryStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 {
     ptrdiff_t result = m_read.find(delim, std::min(sanitySize, m_read.readAvailable()));
@@ -165,10 +165,10 @@ MemoryStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
         return result;
     if (throwIfNotFound)
         throw UnexpectedEofError();
-    return ~0;
+    return -(ptrdiff_t)m_read.readAvailable() - 1;
 }
 
-size_t
+ptrdiff_t
 MemoryStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFound)
 {
     ptrdiff_t result = m_read.find(str, std::min(sanitySize, m_read.readAvailable()));
@@ -176,5 +176,5 @@ MemoryStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFou
         return result;
     if (throwIfNotFound)
         throw UnexpectedEofError();
-    return ~0;
+    return -(ptrdiff_t)m_read.readAvailable() - 1;
 }

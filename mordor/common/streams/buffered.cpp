@@ -211,7 +211,7 @@ BufferedStream::flush()
     parent()->flush();
 }
 
-size_t
+ptrdiff_t
 BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 {
     ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
@@ -229,7 +229,7 @@ BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
         if (readAvailable >= sanitySize) {
             if (throwIfNotFound)
                 throw BufferOverflowError();
-            return ~0;
+            return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
 
         LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
@@ -241,12 +241,12 @@ BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
             // EOF
             if (throwIfNotFound)
                 throw UnexpectedEofError();
-            return ~0;
+            return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
     }
 }
 
-size_t
+ptrdiff_t
 BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFound)
 {
     ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
@@ -264,7 +264,7 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
         if (readAvailable >= sanitySize) {
             if (throwIfNotFound)
                 throw BufferOverflowError();
-            return ~0;
+            return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
 
         LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
@@ -276,7 +276,7 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
             // EOF
             if (throwIfNotFound)
                 throw UnexpectedEofError();
-            return ~0;
+            return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
     }
 }

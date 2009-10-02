@@ -46,8 +46,12 @@ public:
     virtual long long size() { NOTREACHED(); }
     virtual void truncate(long long size) { NOTREACHED(); }
     virtual void flush() {}
-    virtual size_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
-    virtual size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
+    // Offset into the stream of the delimiter
+    // If throwIfNotFound, instead of throwing an exception on error, it will
+    // return a negative number.  Negate and subtract 1 to find out how much
+    // buffered data is available before hitting the error
+    virtual ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
+    virtual ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
     virtual void unread(const Buffer &b, size_t len) { NOTREACHED(); }
 
     // Convenience functions - do *not* implement in FilterStream, so that
@@ -55,7 +59,7 @@ public:
     virtual size_t write(const void *b, size_t len);
     size_t write(const char *sz);
 
-    std::string getDelimited(char delim = '\n');
+    std::string getDelimited(char delim = '\n', bool eofIsDelimiter = false);
 };
 
 #endif

@@ -220,10 +220,10 @@ TEST_WITH_SUITE(BufferedStream, findSanityChecks)
     TEST_ASSERT_EXCEPTION(bufferedStream->find('\n', 20), UnexpectedEofError);
     TEST_ASSERT_EXCEPTION(bufferedStream->find("\r\n", 20), UnexpectedEofError);
 
-    TEST_ASSERT_EQUAL(bufferedStream->find('\n', ~0, false), (size_t)~0);
-    TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", ~0, false), (size_t)~0);
-    TEST_ASSERT_EQUAL(bufferedStream->find('\n', 20, false), (size_t)~0);
-    TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", 20, false), (size_t)~0);
+    TEST_ASSERT_LESS_THAN(bufferedStream->find('\n', ~0, false), 0);
+    TEST_ASSERT_LESS_THAN(bufferedStream->find("\r\n", ~0, false), 0);
+    TEST_ASSERT_EQUAL(bufferedStream->find('\n', 20, false), -21);
+    TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", 20, false), -21);
 }
 
 static void throwRuntimeError()

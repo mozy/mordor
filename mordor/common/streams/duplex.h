@@ -60,12 +60,12 @@ public:
         if (!m_writeParent.get()) throw BrokenPipeException();
         m_writeParent->flush();
     }
-    size_t find(char delim)
+    ptrdiff_t find(char delim)
     {
         if (!m_readParent.get()) throw BrokenPipeException();
         return m_readParent->find(delim);
     }
-    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwOnNotFound = true)
+    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwOnNotFound = true)
     {
         if (!m_readParent.get()) throw BrokenPipeException();
         return m_readParent->find(str, sanitySize, throwOnNotFound);

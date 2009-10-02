@@ -131,7 +131,7 @@ public:
     size_t read(Buffer &b, size_t len)
     {
         size_t boundary = parent()->find(m_boundary, len, false);
-        if (boundary != (size_t)~0)
+        if (boundary >= 0)
             len = std::min(boundary, len);
         return parent()->read(b, len);
     }

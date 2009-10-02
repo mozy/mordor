@@ -21,12 +21,15 @@ Stream::write(const void *b, size_t len)
 }
 
 std::string
-Stream::getDelimited(char delim)
+Stream::getDelimited(char delim, bool eofIsDelimiter)
 {
-    size_t offset = find(delim);
+    ptrdiff_t offset = find(delim, ~0, !eofIsDelimiter);
+    eofIsDelimiter = offset < 0;
+    if (offset < 0)
+        offset = -offset - 1;
     Buffer buf;
-    size_t readResult = read(buf, offset + 1);
-    ASSERT(readResult == offset + 1);
+    size_t readResult = read(buf, offset + (eofIsDelimiter ? 0 : 1));
+    ASSERT(readResult == offset + (eofIsDelimiter ? 0 : 1));
     // Don't copyOut the delimiter itself
     std::string result;
     result.resize(offset);

@@ -59,12 +59,12 @@ public:
             return;
         return parent()->flush();
     }
-    size_t find(char delim)
+    ptrdiff_t find(char delim)
     {
         ASSERT(m_type == READ);
         return parent()->find(delim);
     }
-    size_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)
+    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)
     {
         ASSERT(m_type == READ);
         return parent()->find(str, sanitySize, throwIfNotFound);
