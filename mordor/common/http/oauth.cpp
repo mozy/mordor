@@ -169,9 +169,23 @@ HTTP::OAuth::signRequest(const URI &uri, Method method)
 void
 HTTP::OAuth::nonceAndTimestamp(URI::QueryString &params)
 {
-    // TODO: fill in with better data
-    params.insert(std::make_pair("oauth_timestamp", "123"));
-    params.insert(std::make_pair("oauth_nonce", "abc"));
+    static boost::posix_time::ptime start(boost::gregorian::date(1970, 1, 1));
+    static const char *allowedChars =
+        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    std::ostringstream os;
+    boost::posix_time::ptime now =
+        boost::posix_time::second_clock::universal_time();    
+    boost::posix_time::time_duration duration = now - start;
+    os << duration.total_seconds();
+
+    std::string nonce;
+    nonce.resize(40);
+    for (size_t i = 0; i < 40; ++i) {
+        nonce[i] = allowedChars[rand() % 36];
+    }
+
+    params.insert(std::make_pair("oauth_timestamp", os.str()));
+    params.insert(std::make_pair("oauth_nonce", nonce));
 }
 
 void
@@ -194,18 +208,31 @@ HTTP::OAuth::sign(URI uri, Method method, URI::QueryString &params)
     uri.fragmentDefined(false);
     uri.normalize();
     os << method << '&' << uri;
-    URI::QueryString combined = params;
-    it = combined.find("realm");
-    if (it != combined.end())
-        combined.erase(it);
+    std::map<std::string, std::multiset<std::string> > combined;
+    std::map<std::string, std::multiset<std::string> >::iterator
+        combinedIt;
+    for (it = params.begin(); it != params.end(); ++it)
+        if (stricmp(it->first.c_str(), "realm") != 0)
+            combined[it->first].insert(it->second);
     // TODO: POST params of application/x-www-form-urlencoded
     if (uri.queryDefined()) {
         URI::QueryString queryParams = uri.queryString();
-        combined.insert(queryParams.begin(), queryParams.end());
+        for (it = queryParams.begin(); it != queryParams.end(); ++it)
+            combined[it->first].insert(it->second);
     }
     
-    // TODO: ordering of duplicate keys
-    std::string signatureBaseString = combined.toString();
+    for (combinedIt = combined.begin();
+        combinedIt != combined.end();
+        ++combinedIt) {
+        for (std::multiset<std::string>::iterator it2 =
+            combinedIt->second.begin();
+            it2 != combinedIt->second.end();
+            ++it2) {
+            os << '&' << URI::encode(combinedIt->first, URI::QUERYSTRING)
+                << '=' << URI::encode(*it2, URI::QUERYSTRING);
+        }
+    }
+    std::string signatureBaseString = os.str();
 
     std::string secrets = URI::encode(m_consumerSecret, URI::QUERYSTRING);
     secrets.append(1, '&');
