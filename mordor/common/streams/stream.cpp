@@ -29,7 +29,7 @@ Stream::getDelimited(char delim, bool eofIsDelimiter)
         offset = -offset - 1;
     Buffer buf;
     size_t readResult = read(buf, offset + (eofIsDelimiter ? 0 : 1));
-    ASSERT(readResult == offset + (eofIsDelimiter ? 0 : 1));
+    ASSERT((ptrdiff_t)readResult == offset + (eofIsDelimiter ? 0 : 1));
     // Don't copyOut the delimiter itself
     std::string result;
     result.resize(offset);
