@@ -9,5 +9,6 @@ x64
 *.gcno
 *.gcda
 *.gch
+*.swp
 lcov*
 obj*
