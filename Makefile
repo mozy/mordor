@@ -59,11 +59,11 @@ endif
 PLATFORMDIR := $(PLATFORM)/$(ARCH)
 
 ifeq ($(PLATFORM), Darwin)
+    DARWIN := 1
     IOMANAGER := kqueue
     UNDERSCORE := _underscore
-    ifeq ($(ARCH), amd64)
-        MACH_TARGET := -arch x86_64
-    endif
+    ARCH := amd64
+    MACH_TARGET := -arch x86_64
 endif
 ifeq ($(PLATFORM), FreeBSD)
     IOMANAGER := kqueue
@@ -109,6 +109,10 @@ endif
 # add current dir to include dir
 INC_FLAGS := -I$(SRCDIR)
 
+ifdef DARWIN
+	INC_FLAGS += -I/opt/local/include
+endif
+
 # run with 'make V=1' for verbose make output
 ifeq ($(V),1)
     Q :=
@@ -124,17 +128,15 @@ BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 # it started complaining about our logger variables.  Same with
 # no-strict-aliasing
 CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET)
-CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS)
+CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET)
 
 RLCODEGEN	:= $(shell which rlcodegen rlgen-cd 2>/dev/null)
 RAGEL   	:= ragel
 
-RAGEL_MAJOR	:= $(shell ragel -v | sed -n 's/.*\([0-9]\)\.[0-9]\+.*/\1/p')
+RAGEL_MAJOR	:= $(shell ragel -v | sed -n 's/.*\([0-9]\)\.[0-9].*/\1/p')
 
 ifeq ($(RAGEL_MAJOR), 6)
-    ifdef RLCODEGEN
-        RAGEL_FLAGS += -x
-    endif
+    RLCODEGEN :=
 endif
 
 LIBS := -lboost_thread -lboost_regex -lboost_date_time -lssl -lcrypto -lz
@@ -433,11 +435,16 @@ LIBMORDOROBJECTS := 								\
 
 $(LIBMORDOROBJECTS): mordor/common/pch.h.gch
 
+ARFLAGS := ruc
+ifdef DARWIN
+	ARFLAGS := -rucs
+endif
+
 mordor/common/libmordor.a: $(LIBMORDOROBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)$(AR) ruc $@ $(filter %.o,$?)
+	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
 
 LIBTRITONCLIENTOBJECTS :=							\
 	mordor/triton/client/client.o						\
@@ -453,7 +460,7 @@ mordor/triton/client/libtritonclient.a:	$(LIBTRITONCLIENTOBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)$(AR) ruc $@ $(filter %.o,$?)
+	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
 
 LIBKALYPSOOBJECTS := 								\
 	mordor/kalypso/vfs/helpers.o						\
@@ -466,7 +473,7 @@ mordor/kalypso/libkalypso.a: $(LIBKALYPSOOBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)$(AR) ruc $@ $(filter %.o,$?)
+	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
 
 LIBMORDORTESTOBJECTS :=								\
  	mordor/test/test.o							\
@@ -478,7 +485,7 @@ mordor/test/libmordortest.a: $(LIBMORDORTESTOBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)$(AR) ruc $@ $(filter %.o,$?)
+	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
 
 LIBTRITONVFSOBJECTS :=								\
 	mordor/kalypso/vfs/triton/container.o					\
@@ -492,5 +499,5 @@ mordor/kalypso/vfs/triton/libtritonvfs.a: $(LIBTRITONVFSOBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
-	$(Q)$(AR) ruc $@ $(filter %.o,$?)
+	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
 
