@@ -109,10 +109,6 @@ endif
 # add current dir to include dir
 INC_FLAGS := -I$(SRCDIR)
 
-ifdef DARWIN
-	INC_FLAGS += -I/opt/local/include
-endif
-
 # run with 'make V=1' for verbose make output
 ifeq ($(V),1)
     Q :=
