@@ -4,7 +4,6 @@
 
 #include <stdexcept>
 #include <string>
-#include <netdb.h>
 
 #include "version.h"
 
@@ -60,6 +59,7 @@ typedef Win32Error NativeError;
 typedef unsigned int error_t;
 #else
 #include <errno.h>
+#include <netdb.h>
 class ErrnoError : public std::runtime_error
 {
 public:
