@@ -6,10 +6,13 @@
 
 #include "mordor/common/assert.h"
 #include "mordor/common/exception.h"
+#include "mordor/common/log.h"
 
 #ifdef MSVC
 #pragma comment(lib, "zdll")
 #endif
+
+static Logger::ptr g_log = Log::lookup("mordor:common:streams:zlib");
 
 ZlibStream::ZlibStream(Stream::ptr parent, bool own, Type type, int level,
     int windowBits, int memlevel, Strategy strategy)
@@ -53,7 +56,7 @@ ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy st
             throw std::bad_alloc();
         case Z_STREAM_ERROR:
         {
-            std::string message(m_strm.msg);
+            std::string message(m_strm.msg ? m_strm.msg : "");
             if (supportsRead()) {
                 inflateEnd(&m_strm);
             } else {
@@ -62,7 +65,7 @@ ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy st
             throw std::runtime_error(message);
         }
         default:
-            ASSERT(false);
+            NOTREACHED();
     }
 }
 
@@ -136,6 +139,10 @@ ZlibStream::read(Buffer &b, size_t len)
             m_strm.avail_in = 0;
         }
         int rc = inflate(&m_strm, Z_NO_FLUSH);
+        LOG_VERBOSE(g_log) << this << " inflate(("
+            << (inbufs.empty() ? 0 : inbufs[0].iov_len) << ", "
+            << outbuf.iov_len << ")): " << rc << " (" << m_strm.avail_in
+            << ", " << m_strm.avail_out << ")";
         if (!inbufs.empty()) {
             m_inBuffer.consume(inbufs[0].iov_len - m_strm.avail_in);
         }
@@ -164,8 +171,14 @@ ZlibStream::read(Buffer &b, size_t len)
                 if (result == 0)
                     throw UnexpectedEofError();
                 break;
+            case Z_MEM_ERROR:
+                throw std::bad_alloc();
+            case Z_NEED_DICT:
+                throw NeedPresetDictionaryException();
+            case Z_DATA_ERROR:
+                throw CorruptedZlibStreamException();
             default:
-                throw std::runtime_error("zlib error");
+                NOTREACHED();
         }
     }
 }
@@ -185,6 +198,9 @@ ZlibStream::write(const Buffer &b, size_t len)
         m_strm.next_out = (Bytef*)outbuf.iov_base;
         m_strm.avail_out = outbuf.iov_len;
         int rc = deflate(&m_strm, Z_NO_FLUSH);
+        LOG_VERBOSE(g_log) << this << " deflate((" << inbuf.iov_len << ", "
+            << outbuf.iov_len << "), Z_NO_FLUSH): " << rc << " ("
+            << m_strm.avail_in << ", " << m_strm.avail_out << ")";
         // We are always providing both input and output
         ASSERT(rc != Z_BUF_ERROR);
         // We're not doing Z_FINISH, so we shouldn't get EOF
@@ -203,7 +219,7 @@ ZlibStream::write(const Buffer &b, size_t len)
                 }
                 return result;
             default:
-                throw std::runtime_error("zlib error");
+                NOTREACHED();
         }
     }
 }
@@ -223,9 +239,14 @@ ZlibStream::flush(int flush)
         if (m_outBuffer.writeAvailable() == 0)
             m_outBuffer.reserve(m_bufferSize);
         struct iovec outbuf = m_outBuffer.writeBufs()[0];
+        ASSERT(m_strm.avail_in == 0);
         m_strm.next_out = (Bytef*)outbuf.iov_base;
         m_strm.avail_out = outbuf.iov_len;
         int rc = deflate(&m_strm, flush);
+        ASSERT(m_strm.avail_in == 0);
+        LOG_VERBOSE(g_log) << this << " deflate((0, " << outbuf.iov_len
+            << "), " << flush << "): " << rc << " (0, " << m_strm.avail_out
+            << ")";
         m_outBuffer.produce(outbuf.iov_len - m_strm.avail_out);
         ASSERT(flush == Z_FINISH || rc != Z_STREAM_END);
         switch (rc) {
@@ -240,7 +261,7 @@ ZlibStream::flush(int flush)
                 flushBuffer();
                 return;
             default:
-                throw std::runtime_error("zlib error");
+                NOTREACHED();
         }
     }
 }

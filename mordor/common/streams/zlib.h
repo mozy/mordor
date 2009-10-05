@@ -6,6 +6,34 @@
 
 #include "filter.h"
 
+class ZlibException : public std::runtime_error
+{
+public:
+    ZlibException(int rc) :
+      std::runtime_error(""),
+      m_rc(rc)
+    {}
+    
+    int rc() const { return m_rc; }
+
+private:
+    int m_rc;
+};
+
+class NeedPresetDictionaryException : public ZlibException
+{
+public:
+    NeedPresetDictionaryException() : ZlibException(Z_NEED_DICT)
+    {}
+};
+
+class CorruptedZlibStreamException : public ZlibException
+{
+public:
+    CorruptedZlibStreamException() : ZlibException(Z_DATA_ERROR)
+    {}
+};
+
 class ZlibStream : public MutatingFilterStream
 {
 public:
