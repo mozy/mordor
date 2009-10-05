@@ -6,15 +6,23 @@
 
 #include "assert.h"
 #include "exception.h"
+#include "log.h"
+
+static Logger::ptr g_log = Log::lookup("mordor:common:iomanager");
 
 IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_kqfd = kqueue();
+    LOG_LEVEL(g_log, m_kqfd <= 0 ? Log::ERROR : Log::TRACE) << this
+        << " kqueue(): " << m_kqfd;
     if (m_kqfd <= 0) {
         throwExceptionFromLastError("kqueue");
     }
-    if (pipe(m_tickleFds)) {
+    int rc = pipe(m_tickleFds);
+    LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " pipe(): "
+        << rc << " (" << errno << ")";
+    if (rc) {
         close(m_kqfd);
         throwExceptionFromLastError("pipe");
     }
@@ -22,11 +30,15 @@ IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
     ASSERT(m_tickleFds[1] > 0);
     struct kevent event;
     EV_SET(&event, m_tickleFds[0], EVFILT_READ, EV_ADD, 0, 0, NULL);
-    if (kevent(m_kqfd, &event, 1, NULL, 0, NULL)) {
+    rc = kevent(m_kqfd, &event, 1, NULL, 0, NULL);
+    LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
+        << m_kqfd << ", " << m_tickleFds[0] << ", EVFILT_READ, EV_ADD): " << rc
+        << " (" << errno << ")";
+    if (rc) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
         close(m_kqfd);
-        throwExceptionFromLastError("event");
+        throwExceptionFromLastError("kevent");
     }
 }
 
@@ -34,7 +46,9 @@ IOManagerKQueue::~IOManagerKQueue()
 {
     stop();
     close(m_kqfd);
+    LOG_TRACE(g_log) << this << " close(" << m_kqfd << ")";
     close(m_tickleFds[0]);
+    LOG_VERBOSE(g_log) << this << " close(" << m_tickleFds[0] << ")";
     close(m_tickleFds[1]);
 }
 
@@ -60,7 +74,11 @@ IOManagerKQueue::registerEvent(int fd, Event events,
         e.m_dg = NULL;
         e.m_fiber = Fiber::getThis();
     }
-    if (kevent(m_kqfd, &e.event, 1, NULL, 0, NULL)) {
+    int rc = kevent(m_kqfd, &e.event, 1, NULL, 0, NULL);
+    LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
+        << m_kqfd << ", (" << fd << ", " << events << ", EV_ADD)): " << rc
+        << " (" << errno << ")";
+    if (rc) {
         throwExceptionFromLastError("kevent");
     }
 }
@@ -74,9 +92,14 @@ IOManagerKQueue::cancelEvent(int fd, Event events)
     if (it == m_pendingEvents.end())
         return;
     AsyncEvent &e = it->second;
-
+    ASSERT(e.event.ident == (unsigned)fd);
+    ASSERT(e.event.filter == (short)events);
     e.event.flags = EV_DELETE;
-    if (kevent(m_kqfd, &e.event, 1, NULL, 0, NULL)) {
+    int rc = kevent(m_kqfd, &e.event, 1, NULL, 0, NULL);
+    LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
+        << m_kqfd << ", (" << fd << ", " << events << ", EV_DELETE)): " << rc
+        << " (" << errno << ")";
+    if (rc) {
         throwExceptionFromLastError("kevent");
     }
     if (e.m_dg)
@@ -120,6 +143,8 @@ IOManagerKQueue::idle()
             }
             rc = kevent(m_kqfd, NULL, 0, events, 64, timeout);
         }
+        LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
+            << " kevent(" << m_kqfd << "): " << rc << " (" << errno << ")";
         if (rc < 0) {
             throwExceptionFromLastError("kevent");
         }
@@ -142,7 +167,12 @@ IOManagerKQueue::idle()
             const AsyncEvent &e = it->second;
 
             event.flags = EV_DELETE;
-            if (kevent(m_kqfd, &event, 1, NULL, 0, NULL)) {
+            rc = kevent(m_kqfd, &event, 1, NULL, 0, NULL);
+            LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+                << " kevent(" << m_kqfd << ", (" << event.ident << ", "
+                << event.filter << ", EV_DELETE)): " << rc << " (" << errno
+                << ")";
+            if (rc) {
                 throwExceptionFromLastError("kevent");
             }
             if (e.m_dg)
@@ -159,5 +189,7 @@ void
 IOManagerKQueue::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
-    ASSERT(rc == 1);
+    LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
+        << rc << " (" << errno << ")";
+    VERIFY(rc == 1);
 }
