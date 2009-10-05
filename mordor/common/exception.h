@@ -4,6 +4,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <netdb.h>
 
 #include "version.h"
 
