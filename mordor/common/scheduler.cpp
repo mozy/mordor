@@ -8,6 +8,10 @@
 
 #include "assert.h"
 #include "atomic.h"
+#include "log.h"
+
+static Logger::ptr g_log = Log::lookup("mordor:common:scheduler");
+static Logger::ptr g_workerLog = Log::lookup("mordor:common:workerpool");
 
 void
 ThreadPool2::init(boost::function<void()> proc)
@@ -89,6 +93,7 @@ Scheduler::getThis()
 void
 Scheduler::start()
 {
+    LOG_TRACE(g_log) << this << " starting " << m_threadCount << " threads";
     ASSERT(m_stopping);
     m_stopping = false;
     m_threads.start(m_threadCount);
@@ -101,6 +106,7 @@ Scheduler::stop()
     if (m_rootFiber &&
         m_threads.size() == 0 &&
         (m_rootFiber->state() == Fiber::TERM || m_rootFiber->state() == Fiber::INIT)) {
+        LOG_TRACE(g_log) << this << " stopped";
         m_stopping = true;
         return;
     }
@@ -111,6 +117,7 @@ Scheduler::stop()
         // original thread
         ASSERT(Scheduler::getThis() == this);
         // First switch to the correct thread
+        LOG_VERBOSE(g_log) << this << " switching to root thread to stop";
         switchTo(m_rootThread);
     } else {
         // A spawned-threads only scheduler cannot be stopped from within
@@ -125,14 +132,17 @@ Scheduler::stop()
         tickle();
     if (Scheduler::getThis() == this) {
         // Give this thread's run fiber a chance to kill itself off
+        LOG_VERBOSE(g_log) << this << " yielding to this thread to stop";
         yieldTo(true);
     }
     if (m_rootThread == boost::this_thread::get_id() ||
         Scheduler::getThis() != this) {
+        LOG_VERBOSE(g_log) << this << " waiting for other threads to stop";
         m_threads.join_all();
     } else {
-        ASSERT(false);
+        NOTREACHED();
     }
+    LOG_TRACE(g_log) << this << " stopped";
 }
 
 bool
@@ -144,6 +154,8 @@ Scheduler::stopping()
 void
 Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
 {
+    LOG_VERBOSE(g_log) << this << " scheduling " << f << " on thread "
+        << thread;
     ASSERT(f);
     boost::mutex::scoped_lock lock(m_mutex);
     FiberAndThread ft = {f, NULL, thread };
@@ -155,6 +167,8 @@ Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
 void
 Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
 {
+    LOG_VERBOSE(g_log) << this << " scheduling " << dg << " on thread "
+        << thread;
     ASSERT(dg);
     boost::mutex::scoped_lock lock(m_mutex);
     FiberAndThread ft = {Fiber::ptr(), dg, thread };
@@ -166,6 +180,7 @@ Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
 void
 Scheduler::switchTo(boost::thread::id thread)
 {
+    LOG_VERBOSE(g_log) << this << " switching to thread " << thread;
     ASSERT(Scheduler::getThis() != NULL);
     if (Scheduler::getThis() == this) {
         if (thread == boost::thread::id() ||
@@ -180,6 +195,7 @@ Scheduler::switchTo(boost::thread::id thread)
 void
 Scheduler::yieldTo()
 {
+    LOG_VERBOSE(g_log) << this << " yielding to scheduler";
     ASSERT(t_fiber.get());
     if (m_rootThread == boost::this_thread::get_id() &&
         (t_fiber->state() == Fiber::INIT || t_fiber->state() == Fiber::TERM)) {
@@ -192,6 +208,7 @@ Scheduler::yieldTo()
 void
 Scheduler::dispatch()
 {
+    LOG_VERBOSE(g_log) << this << " dispatching";
     ASSERT(m_rootThread == boost::this_thread::get_id() &&
         m_threads.size() == 0);
     m_stopping = true;
@@ -229,6 +246,7 @@ Scheduler::run()
         threadfiber.reset();
     }
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this), 65536 * 4));
+    LOG_TRACE(g_log) << this << " starting thread with idle fiber " << idleFiber;
     Fiber::ptr dgFiber;
     while (true) {
         Fiber::ptr f;
@@ -243,6 +261,9 @@ Scheduler::run()
                 for (it = m_fibers.begin(); it != m_fibers.end(); ++it) {
                     if (it->thread != boost::thread::id() &&
                         it->thread != boost::this_thread::get_id()) {
+                        LOG_VERBOSE(g_log) << this
+                            << " skipping item scheduled for thread "
+                            << it->thread;
                         // Wake up another thread to hopefully service this
                         tickle();
                         loop = true;
@@ -274,6 +295,7 @@ Scheduler::run()
         }
         if (f) {
             if (f->state() != Fiber::TERM) {
+                LOG_VERBOSE(g_log) << this << " running " << f;
                 f->yieldTo();
             }
             continue;
@@ -281,14 +303,17 @@ Scheduler::run()
             if (!dgFiber)
                 dgFiber.reset(new Fiber(dg, 65536));
             dgFiber->reset(dg);
+            LOG_VERBOSE(g_log) << this << " running " << f;
             dgFiber->yieldTo();
             if (dgFiber->state() != Fiber::TERM)
                 dgFiber.reset();
             continue;
         }
         if (idleFiber->state() == Fiber::TERM) {
+            LOG_VERBOSE(g_log) << this << " idle fiber terminated";
             return;
         }
+        LOG_VERBOSE(g_log) << this << " idling";
         idleFiber->call();
     }
 }
@@ -314,6 +339,7 @@ WorkerPool::idle()
 void
 WorkerPool::tickle()
 {
+    LOG_VERBOSE(g_workerLog) << this << " tickling";
     m_semaphore.notify();
 }
 
