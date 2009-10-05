@@ -15,6 +15,11 @@
 #include "mordor/common/uri.h"
 #include "mordor/common/version.h"
 
+#ifdef major
+#undef major
+#undef minor
+#endif
+
 class HTTPException : public std::runtime_error
 {
 public:

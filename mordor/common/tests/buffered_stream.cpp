@@ -195,15 +195,15 @@ TEST_WITH_SUITE(BufferedStream, find)
     TEST_ASSERT(bufferedStream->supportsFind());
     TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 0);
     TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
-    TEST_ASSERT_EQUAL(bufferedStream->find('0'), 0u);
+    TEST_ASSERT_EQUAL(bufferedStream->find('0'), 0);
     TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 5);
     TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
-    TEST_ASSERT_EQUAL(bufferedStream->find("01234"), 0u);
+    TEST_ASSERT_EQUAL(bufferedStream->find("01234"), 0);
     TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 5);
     TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
     Buffer output;
     TEST_ASSERT_EQUAL(bufferedStream->read(output, 1), 1u);
-    TEST_ASSERT_EQUAL(bufferedStream->find("0123"), 9u);
+    TEST_ASSERT_EQUAL(bufferedStream->find("0123"), 9);
     TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
     TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 1);
 }

@@ -4,6 +4,7 @@
 
 #include <ostream>
 #include <string>
+#include <vector>
 
 std::string base64decode(const std::string &src);
 std::string base64encode(const std::string &data);
@@ -37,10 +38,7 @@ std::wstring toUtf16(const std::string &str);
 
 struct caseinsensitiveless
 {
-    bool operator()(const std::string& lhs, const std::string& rhs) const
-    {
-        return stricmp(lhs.c_str(), rhs.c_str()) < 0;
-    }
+    bool operator()(const std::string& lhs, const std::string& rhs) const;
 };
 
 struct charslice

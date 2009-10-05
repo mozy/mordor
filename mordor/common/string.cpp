@@ -2,7 +2,12 @@
 
 #include "mordor/common/pch.h"
 
+#include <algorithm>
+
+#include <string.h>
+
 #include <openssl/md5.h>
+#include <openssl/sha.h>
 
 #include "mordor/common/string.h"
 
@@ -343,6 +348,12 @@ std::wstring toUtf16(const std::string &str)
     return toUtf16(str.c_str(), str.size());
 }
 #endif
+
+bool
+caseinsensitiveless::operator ()(const std::string &lhs, const std::string &rhs) const
+{
+    return stricmp(lhs.c_str(), rhs.c_str()) < 0;
+}
 
 std::ostream &operator <<(std::ostream &os, const charslice &slice)
 {
