@@ -115,6 +115,8 @@ std::string
 URI::encode(const std::string &str, CharacterClass charClass)
 {
     switch (charClass) {
+		case UNRESERVED:
+		    return escape(str, ::unreserved, false);
         case QUERYSTRING:
             return escape(str, ::queryString, true);
         default:
@@ -493,6 +495,11 @@ operator<<(std::ostream& os, const URI::Authority& authority)
 URI::Path::Path()
 {
     type = RELATIVE;
+}
+
+URI::Path::Path(const char *path)
+{
+    *this = path;
 }
 
 URI::Path::Path(const std::string& path)

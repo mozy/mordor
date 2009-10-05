@@ -368,7 +368,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http_helper.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\http_helper.h"
+				>
+			</File>
+			<File
 				RelativePath=".\memory_stream.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\oauth.cpp"
 				>
 			</File>
 			<File

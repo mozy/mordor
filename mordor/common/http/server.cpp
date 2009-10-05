@@ -415,9 +415,11 @@ HTTP::ServerRequest::doRequest()
             if (stricmp(it->key.c_str(), "100-continue") == 0) {
                 if (!it->value.empty() || !it->parameters.empty()) {
                     respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized parameters to 100-continue expectation", false);
+                    return;
                 }
             } else {
                 respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized expectation: " + it->key, false);
+                return;
             }
         }
 
@@ -432,7 +434,11 @@ HTTP::ServerRequest::doRequest()
         m_conn->m_dg(shared_from_this());
     } catch (OperationAbortedException) {
         // Do nothing (this occurs when a pipelined request fails because a prior request closed the connection
+    } catch (Assertion &) {
+        throw;
     } catch (std::exception &ex) {
+        LOG_ERROR(g_log) << this << " Unexpected exception: "
+            << typeid(ex).name() << ": " << ex.what();
         if (!m_responseDone) {
             try {
                 if (!committed()) {

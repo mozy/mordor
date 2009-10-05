@@ -100,7 +100,8 @@ PipeStream::read(Buffer &b, size_t len)
 {
     {
         boost::mutex::scoped_lock lock(*m_mutex);
-        ASSERT(!(m_closed & READ));
+        if (m_closed & READ)
+            throw BadHandleException();
         if (m_otherStream.expired() && !(m_otherClosed & WRITE)) {
             throw BrokenPipeException();
         }
@@ -139,7 +140,8 @@ PipeStream::write(const Buffer &b, size_t len)
     while (true) {
         {
             boost::mutex::scoped_lock lock(*m_mutex);
-            ASSERT(!(m_closed & WRITE));
+            if (m_closed & WRITE)
+                throw BadHandleException();
             if (m_otherStream.expired()) {
                 throw BrokenPipeException();
             }

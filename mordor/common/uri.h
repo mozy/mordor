@@ -22,10 +22,12 @@ struct URI
     friend class HTTP::ResponseParser;
 
     enum CharacterClass {
+        UNRESERVED,
         QUERYSTRING
     };
 
-    static std::string encode(const std::string &str, CharacterClass charClass);
+    static std::string encode(const std::string &str,
+        CharacterClass charClass = UNRESERVED);
 
     URI();
     URI(const std::string& uri);
@@ -87,9 +89,11 @@ struct URI
         };
 
         Path();
+        Path(const char *path);
         Path(const std::string& path);
 
         Path& operator=(const std::string& path);
+        Path& operator=(const char *path) { return *this = std::string(path); }
 
         Type type;
 
@@ -123,7 +127,7 @@ struct URI
     class QueryString : public std::multimap<std::string, std::string, caseinsensitiveless>
     {
     public:
-        QueryString();
+        QueryString() {}
         QueryString(const std::string &str)
         {
             *this = str;
