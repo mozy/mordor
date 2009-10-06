@@ -127,13 +127,16 @@ StdoutLogSink::log(const std::string &logger, tid_t thread,
     void *fiber, Log::Level level,
     const std::string &str, const char *file, int line)
 {
+    std::ostringstream os;
     if (file) {
-        std::cout << level << " " << thread << " " << fiber << " "
+        os << level << " " << thread << " " << fiber << " "
             << logger << " " << file << ":" << line << " " << str << std::endl;
     } else {
-        std::cout << level << " " << thread << " " << fiber << " "
+        os << level << " " << thread << " " << fiber << " "
             << logger << " " << str << std::endl;
     }
+    std::cout << os.str();
+    std::cout.flush();
 }
 
 FileLogSink::FileLogSink(const std::string &file)
