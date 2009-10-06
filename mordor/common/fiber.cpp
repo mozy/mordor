@@ -35,7 +35,7 @@ struct FiberInitializer {
         GetSystemInfo(&info);
         g_pagesize = info.dwPageSize;
 #elif defined(POSIX)
-        g_pagesize = 4096;
+        g_pagesize = sysconf(_SC_PAGESIZE);
 #endif
     }
 };
