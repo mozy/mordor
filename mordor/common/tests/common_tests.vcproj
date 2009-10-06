@@ -376,6 +376,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\iomanager_iocp.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\memory_stream.cpp"
 				>
 			</File>

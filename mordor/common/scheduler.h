@@ -43,7 +43,6 @@ public:
     static Scheduler* getThis();
 
     void stop();
-    bool stopping();
 
     void schedule(Fiber::ptr f, boost::thread::id thread = boost::thread::id());
     void schedule(boost::function<void ()> dg, boost::thread::id thread = boost::thread::id());
@@ -55,8 +54,7 @@ public:
 
 protected:
     void start();
-    // Call from derived destructors
-    void selfStop();
+    virtual bool stopping();
 
     virtual void idle() = 0;
     virtual void tickle() = 0;

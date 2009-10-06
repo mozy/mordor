@@ -63,6 +63,8 @@ public:
     IOManagerIOCP(int threads = 1, bool useCaller = true);
     ~IOManagerIOCP() { stop(); }
 
+    bool stopping();
+
     void registerFile(HANDLE handle);
     void registerEvent(AsyncEventIOCP *e);
     // Only use if the async call failed, not for cancelling it
@@ -75,6 +77,7 @@ public:
         bool recurring = false);
     
 protected:
+    bool stopping(unsigned long long &nextTimeout);
     void idle();
     void tickle();
 

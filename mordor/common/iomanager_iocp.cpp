@@ -179,6 +179,13 @@ IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
         throwExceptionFromLastError("CreateIoCompletionPort");
 }
 
+bool
+IOManagerIOCP::stopping()
+{
+    unsigned long long timeout;
+    return stopping(timeout);
+}
+
 void
 IOManagerIOCP::registerFile(HANDLE handle)
 {
@@ -296,6 +303,19 @@ IOManagerIOCP::registerTimer(unsigned long long us, boost::function<void ()> dg,
     return result;
 }
 
+bool
+IOManagerIOCP::stopping(unsigned long long &nextTimeout)
+{
+    nextTimeout = nextTimer();
+    if (nextTimeout == ~0ull && Scheduler::stopping()) {
+        boost::mutex::scoped_lock lock(m_mutex);
+        if (m_pendingEvents.empty() && m_waitBlocks.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void
 IOManagerIOCP::idle()
 {
@@ -303,13 +323,9 @@ IOManagerIOCP::idle()
     ULONG_PTR completionKey;
     OVERLAPPED *overlapped;
     while (true) {
-        unsigned long long nextTimeout = nextTimer();
-        if (nextTimeout == ~0ull && stopping()) {
-            boost::mutex::scoped_lock lock(m_mutex);
-            if (m_pendingEvents.empty() && m_waitBlocks.empty()) {
-                return;
-            }
-        }
+        unsigned long long nextTimeout;
+        if (stopping(nextTimeout))
+            return;
         DWORD timeout = INFINITE;
         if (nextTimeout != ~0ull)
             timeout = (DWORD)(nextTimeout / 1000);

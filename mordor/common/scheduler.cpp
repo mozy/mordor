@@ -108,7 +108,10 @@ Scheduler::stop()
         (m_rootFiber->state() == Fiber::TERM || m_rootFiber->state() == Fiber::INIT)) {
         LOG_TRACE(g_log) << this << " stopped";
         m_stopping = true;
-        return;
+        // A derived class may inhibit stopping while it has things to do in
+        // its idle loop, so we can't break early
+        if (stopping())
+            return;
     }
 
     if (m_rootThread != boost::thread::id()) {
