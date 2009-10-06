@@ -371,9 +371,11 @@ Socket::connect(const Address &to)
 void
 Socket::listen(int backlog)
 {
-    if (::listen(m_sock, backlog)) {
-        LOG_ERROR(g_log) << this << " listen(" << m_sock << "): ("
-            << lastError() << ")";
+    int rc = ::listen(m_sock, backlog);
+    LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " listen("
+        << m_sock << ", " << backlog << "): " << rc << " (" << lastError()
+        << ")";
+    if (rc) {
         throwExceptionFromLastError("listen");
     }
 }
