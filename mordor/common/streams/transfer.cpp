@@ -61,8 +61,8 @@ void transferStream(Stream &src, Stream &dst, unsigned long long toTransfer,
     std::vector<Fiber::ptr> fibers;
     dgs.resize(2);
     fibers.resize(2);
-    fibers[0].reset(new Fiber(NULL, 16384));
-    fibers[1].reset(new Fiber(NULL, 16384));
+    fibers[0].reset(new Fiber(NULL));
+    fibers[1].reset(new Fiber(NULL));
     while (*totalRead < toTransfer) {
         writeBuffer = readBuffer;
         if (readBuffer == &buf1)

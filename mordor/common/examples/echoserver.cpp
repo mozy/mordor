@@ -31,7 +31,7 @@ void socketServer(Socket::ptr s)
 
     while (true) {
         Socket::ptr newsocket = s->accept();
-        Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&socketConnection, newsocket), 8192)));
+        Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&socketConnection, newsocket))));
     }
 }
 

@@ -5,6 +5,7 @@
 #include "fiber.h"
 
 #include "assert.h"
+#include "config.h"
 #include "version.h"
 
 #ifdef WINDOWS
@@ -41,6 +42,16 @@ struct FiberInitializer {
 };
 
 static FiberInitializer g_init;
+
+static ConfigVar<size_t>::ptr g_defaultStackSize = Config::lookup<size_t>(
+    "fiber.defaultstacksize",
+#ifdef NATIVE_WINDOWS_FIBERS
+    0u,
+#else
+    1024 * 1024u,
+#endif
+    "Default stack size for new fibers.  This is the virtual size; physical "
+    "memory isn't consumed until it is actually referenced.");
 
 static void delete_nothing(Fiber* f) {}
 
@@ -390,7 +401,7 @@ allocStack(void **stack, void **sp, size_t *stacksize)
     ASSERT(stack);
     ASSERT(sp);
     if (*stacksize == 0)
-        *stacksize = g_pagesize;
+        *stacksize = g_defaultStackSize->val();
 #ifdef NATIVE_WINDOWS_FIBERS
     // Fibers are allocated in initStack
 #elif defined(WINDOWS)
@@ -398,6 +409,7 @@ allocStack(void **stack, void **sp, size_t *stacksize)
     if (!*stack)
         throwExceptionFromLastError("VirtualAlloc");
     VirtualAlloc(*stack, g_pagesize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
+    // TODO: don't commit until referenced
     VirtualAlloc((char*)*stack + g_pagesize, *stacksize, MEM_COMMIT, PAGE_READWRITE);
     *sp = (char*)*stack + *stacksize + g_pagesize;
 #elif defined(POSIX)

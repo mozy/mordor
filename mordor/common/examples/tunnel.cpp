@@ -126,7 +126,7 @@ static void socketServer(Socket::ptr s, IOManager &ioManager,
             Socket::ptr newsocket = s->accept();
             Stream::ptr sockstream(new SocketStream(newsocket));
             Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(
-                outgoing, sockstream), 65536)));
+                outgoing, sockstream))));
         }
     } catch (std::exception &ex) {
         std::cerr << typeid(ex).name() << ": " << ex.what( ) << std::endl;

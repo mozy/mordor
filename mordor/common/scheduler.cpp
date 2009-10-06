@@ -68,7 +68,7 @@ Scheduler::Scheduler(int threads, bool useCaller)
         --threads;
         ASSERT(getThis() == NULL);
         t_scheduler.reset(this);
-        m_rootFiber.reset(new Fiber(boost::bind(&Scheduler::run, this), 65536));
+        m_rootFiber.reset(new Fiber(boost::bind(&Scheduler::run, this)));
         t_scheduler.reset(this);
         t_fiber.reset(m_rootFiber.get());
         m_rootThread = boost::this_thread::get_id();
@@ -248,7 +248,7 @@ Scheduler::run()
         ASSERT(t_fiber.get() == Fiber::getThis().get());
         threadfiber.reset();
     }
-    Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this), 65536 * 4));
+    Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this)));
     LOG_TRACE(g_log) << this << " starting thread with idle fiber " << idleFiber;
     Fiber::ptr dgFiber;
     while (true) {
@@ -304,7 +304,7 @@ Scheduler::run()
             continue;
         } else if (dg) {
             if (!dgFiber)
-                dgFiber.reset(new Fiber(dg, 65536));
+                dgFiber.reset(new Fiber(dg));
             dgFiber->reset(dg);
             LOG_VERBOSE(g_log) << this << " running " << f;
             dgFiber->yieldTo();
@@ -398,8 +398,7 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
     fibers.reserve(dgs.size());
     for(it = dgs.begin(); it != dgs.end(); ++it) {
         Fiber::ptr f(new Fiber(boost::bind(&parallel_do_impl, *it,
-            boost::ref(completed), dgs.size(), scheduler, caller),
-            16384));
+            boost::ref(completed), dgs.size(), scheduler, caller)));
         fibers.push_back(f);
         scheduler->schedule(f);
     }

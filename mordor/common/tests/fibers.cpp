@@ -35,7 +35,7 @@ TEST_WITH_SUITE(Fibers, call)
 {
     int sequence = 0;
     Fiber::ptr mainFiber(new Fiber());
-    Fiber::ptr a(new Fiber(NULL, 65536 * 6));
+    Fiber::ptr a(new Fiber(NULL));
     a->reset(boost::bind(&fiberProc1, mainFiber, Fiber::weak_ptr(a), boost::ref(sequence)));
     TEST_ASSERT(Fiber::getThis() == mainFiber);
     TEST_ASSERT(a != mainFiber);
@@ -92,8 +92,8 @@ TEST_WITH_SUITE(Fibers, nestedCall)
 {
     int sequence = 0;
     Fiber::ptr mainFiber(new Fiber());
-    Fiber::ptr a(new Fiber(NULL, 65536 * 6));
-    Fiber::ptr b(new Fiber(NULL, 65536 * 6));
+    Fiber::ptr a(new Fiber(NULL));
+    Fiber::ptr b(new Fiber(NULL));
     a->reset(boost::bind(&fiberProc2a, mainFiber, Fiber::weak_ptr(a),
         Fiber::weak_ptr(b), boost::ref(sequence)));
     b->reset(boost::bind(&fiberProc2b, mainFiber, Fiber::weak_ptr(b),
@@ -221,10 +221,10 @@ TEST_WITH_SUITE(Fibers, yieldTo)
 {
     int sequence = 0;
     Fiber::ptr mainFiber(new Fiber());
-    Fiber::ptr a(new Fiber(NULL, 65536 * 6));
-    Fiber::ptr b(new Fiber(NULL, 65536 * 6));
-    Fiber::ptr c(new Fiber(NULL, 65536 * 6));
-    Fiber::ptr d(new Fiber(NULL, 65536 * 6));
+    Fiber::ptr a(new Fiber(NULL));
+    Fiber::ptr b(new Fiber(NULL));
+    Fiber::ptr c(new Fiber(NULL));
+    Fiber::ptr d(new Fiber(NULL));
     a->reset(boost::bind(&fiberProc3a, mainFiber, Fiber::weak_ptr(a),
         Fiber::weak_ptr(b), Fiber::weak_ptr(c),
         Fiber::weak_ptr(d), boost::ref(sequence)));
@@ -284,7 +284,7 @@ TEST_WITH_SUITE(Fibers, reset)
 {
     int sequence = 0;
     Fiber::ptr mainFiber(new Fiber());
-    Fiber::ptr a(new Fiber(NULL, 65536 * 6));
+    Fiber::ptr a(new Fiber(NULL));
     a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
         boost::ref(sequence), false));
     TEST_ASSERT(Fiber::getThis() == mainFiber);
