@@ -8,7 +8,11 @@
 
 #include "assert.h"
 #include "exception.h"
+#include "log.h"
 #include "runtime_linking.h"
+
+static Logger::ptr g_log = Log::lookup("mordor:common:iomanager");
+static Logger::ptr g_logWaitBlock = Log::lookup("mordor:common:iomanager:waitblock");
 
 AsyncEventIOCP::AsyncEventIOCP()
 {
@@ -20,6 +24,8 @@ IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
   m_inUseCount(0)
 {
     m_handles[0] = CreateEventW(NULL, FALSE, FALSE, NULL);
+    LOG_VERBOSE(g_logWaitBlock) << this << " CreateEventW(): " << m_handles[0]
+        << " (" << GetLastError() << ")";
     if (!m_handles[0])
         throwExceptionFromLastError("CreateEventW");
 }
@@ -27,7 +33,9 @@ IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
 IOManagerIOCP::WaitBlock::~WaitBlock()
 {
     ASSERT(m_inUseCount <= 0);
-    CloseHandle(m_handles[0]);
+    BOOL bRet = CloseHandle(m_handles[0]);
+    LOG_VERBOSE(g_logWaitBlock) << this << " CloseHandle(" << m_handles[0]
+        << "): " << bRet << " (" << GetLastError() << ")";
 }
 
 bool
@@ -42,10 +50,13 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
     m_schedulers[m_inUseCount] = Scheduler::getThis();
     m_fibers[m_inUseCount] = Fiber::getThis();
     m_dgs[m_inUseCount] = dg;
+    LOG_VERBOSE(g_logWaitBlock) << this << " registerEvent(" << hEvent << ", "
+        << dg << ")";
     if (m_inUseCount == 1) {
         boost::thread thread(boost::bind(&WaitBlock::run, this));
     } else {
-        SetEvent(m_handles[0]);
+        if (!SetEvent(m_handles[0]))
+            throwExceptionFromLastError();
     }
     return true;
 }
@@ -56,6 +67,8 @@ IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
+    LOG_VERBOSE(g_logWaitBlock) << this << " unregisterEvent(" << handle
+        << "): " << (srcHandle != m_handles + m_inUseCount + 1);
     if (srcHandle != m_handles + m_inUseCount + 1) {
         int index = (int)(srcHandle - m_handles);
         memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
@@ -89,8 +102,13 @@ IOManagerIOCP::WaitBlock::run()
         memcpy(handles, m_handles, (count) * sizeof(HANDLE));        
     }
 
+    LOG_VERBOSE(g_logWaitBlock) << this << " run " << count;
+
     while (true) {
         dwRet = WaitForMultipleObjects(count, handles, FALSE, INFINITE);
+        LOG_LEVEL(g_log, dwRet == WAIT_FAILED ? Log::ERROR : Log::VERBOSE)
+            << this << " WaitForMultipleObjects(" << count << ", " << handles
+            << "): " << dwRet << " (" << GetLastError() << ")";
         if (dwRet == WAIT_OBJECT_0) {
             // Array just got reconfigured
             boost::mutex::scoped_lock lock(m_mutex);
@@ -98,11 +116,14 @@ IOManagerIOCP::WaitBlock::run()
                 break;
             count = m_inUseCount + 1;
             memcpy(handles, m_handles, (count) * sizeof(HANDLE));
+            LOG_VERBOSE(g_logWaitBlock) << this << " reconfigure " << count;
         } else if (dwRet >= WAIT_OBJECT_0 + 1 && dwRet < WAIT_OBJECT_0 + MAXIMUM_WAIT_OBJECTS) {
             boost::mutex::scoped_lock lock(m_mutex);
 
             HANDLE handle = handles[dwRet - WAIT_OBJECT_0];
             HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
+            LOG_VERBOSE(g_log) << this << " event " << handle << " "
+                << (srcHandle != m_handles + m_inUseCount + 1);
             if (srcHandle != m_handles + m_inUseCount + 1) {
                 int index = (int)(srcHandle - m_handles);
                 if (!m_dgs[index])
@@ -134,6 +155,7 @@ IOManagerIOCP::WaitBlock::run()
             NOTREACHED();
         }
     }
+    LOG_VERBOSE(g_logWaitBlock) << this << " done";
     {
         ptr self = shared_from_this();
         boost::mutex::scoped_lock lock(m_outer.m_mutex);
@@ -150,15 +172,20 @@ IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-    if (!m_hCompletionPort) {
+    LOG_LEVEL(g_log, m_hCompletionPort ? Log::TRACE : Log::ERROR) << this <<
+        " CreateIoCompletionPort(): " << m_hCompletionPort << " ("
+        << GetLastError() << ")";
+    if (!m_hCompletionPort)
         throwExceptionFromLastError("CreateIoCompletionPort");
-    }
 }
 
 void
 IOManagerIOCP::registerFile(HANDLE handle)
 {
     HANDLE hRet = CreateIoCompletionPort(handle, m_hCompletionPort, 0, 0);
+    LOG_LEVEL(g_log, m_hCompletionPort ? Log::VERBOSE : Log::ERROR) << this <<
+        " CreateIoCompletionPort(" << handle << ", " << m_hCompletionPort
+        << "): " << hRet << " (" << GetLastError() << ")";
     if (hRet != m_hCompletionPort) {
         throwExceptionFromLastError("CreateIoCompletionPort");
     }
@@ -173,6 +200,7 @@ IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
     e->m_scheduler = Scheduler::getThis();
     e->m_thread = boost::this_thread::get_id();
     e->m_fiber = Fiber::getThis();
+    LOG_VERBOSE(g_log) << this << " registerEvent(" << &e->overlapped << ")";
     {
         boost::mutex::scoped_lock lock(m_mutex);
         ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
@@ -184,6 +212,7 @@ void
 IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
 {
     ASSERT(e);
+    LOG_VERBOSE(g_log) << this << " unregisterEvent(" << &e->overlapped << ")";
     {
         boost::mutex::scoped_lock lock(m_mutex);
         std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
@@ -196,6 +225,8 @@ IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
 void
 IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg)
 {
+    LOG_VERBOSE(g_log) << this << " registerEvent(" << handle << ", " << dg
+        << ")";
     ASSERT(handle);
     if (!dg) {
         ASSERT(Scheduler::getThis());
@@ -218,12 +249,17 @@ bool
 IOManagerIOCP::unregisterEvent(HANDLE handle)
 {
     ASSERT(handle);
+    boost::mutex::scoped_lock lock(m_mutex);
     for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();
         it != m_waitBlocks.end();
         ++it) {
-        if ((*it)->unregisterEvent(handle))
+        if ((*it)->unregisterEvent(handle)) {
+            LOG_VERBOSE(g_log) << this << " unregisterEvent(" << handle
+                << "): 1";
             return true;
+        }
     }
+    LOG_VERBOSE(g_log) << this << " unregisterEvent(" << handle << "): 0";
     return false;
 }
 
@@ -235,6 +271,8 @@ static void CancelIoShim(HANDLE hFile)
 void
 IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
 {
+    LOG_VERBOSE(g_log) << this << " cancelEvent(" << hFile << ", "
+        << &e->overlapped << ")";
     if (!pCancelIoEx(hFile, &e->overlapped) &&
         GetLastError() == ERROR_CALL_NOT_IMPLEMENTED) {
         if (e->m_thread == boost::this_thread::get_id()) {
@@ -277,6 +315,10 @@ IOManagerIOCP::idle()
             timeout = (DWORD)(nextTimeout / 1000);
         BOOL ret = GetQueuedCompletionStatus(m_hCompletionPort,
             &numberOfBytes, &completionKey, &overlapped, timeout);
+        LOG_VERBOSE(g_log) << this << " GetQueuedCompletionStatus("
+            << m_hCompletionPort << ", " << timeout << "): " << ret << ", ("
+            << numberOfBytes << ", " << completionKey << ", " << overlapped
+            << ") (" << GetLastError() << ")";
         if (ret && completionKey == ~0) {
             Fiber::yield();
             continue;
@@ -313,7 +355,10 @@ IOManagerIOCP::idle()
 void
 IOManagerIOCP::tickle()
 {
-    if (!PostQueuedCompletionStatus(m_hCompletionPort, 0, ~0, NULL)) {
+    BOOL bRet = PostQueuedCompletionStatus(m_hCompletionPort, 0, ~0, NULL);
+    LOG_LEVEL(g_log, bRet ? Log::VERBOSE : Log::ERROR) << this
+        << " PostQueuedCompletionStatus(" << m_hCompletionPort
+        << ", 0, ~0, NULL): " << bRet << " (" << GetLastError() << ")";
+    if (!bRet)
         throwExceptionFromLastError("PostQueuedCompletionStatus");
-    }
 }
