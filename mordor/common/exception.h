@@ -60,6 +60,12 @@ typedef unsigned int error_t;
 #else
 #include <errno.h>
 #include <netdb.h>
+
+#if defined(FREEBSD) && !defined(EAI_NODATA)
+#define EAI_ADDRFAMILY 1
+#define EAI_NODATA 7
+#endif
+
 class ErrnoError : public std::runtime_error
 {
 public:
