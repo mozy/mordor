@@ -33,6 +33,12 @@ public:
     UnexpectedEofError() {}
 };
 
+class WriteBeyondEofError : public StreamError
+{
+public:
+    WriteBeyondEofError() {}
+};
+
 class BufferOverflowError : public StreamError
 {
 public:

@@ -30,7 +30,7 @@ size_t
 LimitedStream::write(const Buffer &b, size_t len)
 {
     if (m_pos >= m_size)
-        throw std::runtime_error("Write beyond EOF");
+        throw WriteBeyondEofError();
     len = (size_t)std::min<long long>(len, m_size - m_pos);
     size_t result = parent()->write(b, len);
     m_pos += result;
@@ -43,6 +43,15 @@ LimitedStream::seek(long long offset, Anchor anchor)
     if (anchor == END) {
         offset += size();
         anchor = BEGIN;
+    }
+    if (anchor == BEGIN && offset == m_pos) {
+        anchor = CURRENT;
+        offset = 0;
+    }
+    // If the parent doesn't support seek, we only support tell
+    if (!parent()->supportsSeek()) {
+        ASSERT(anchor == CURRENT && offset == 0);
+        return m_pos;
     }
     return m_pos = parent()->seek(offset, anchor);
 }

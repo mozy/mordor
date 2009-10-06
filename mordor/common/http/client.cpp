@@ -245,6 +245,7 @@ HTTP::ClientRequest::requestStream()
         return m_requestStream;
     ASSERT(!m_requestMultipart);
     ASSERT(m_request.entity.contentType.type != "multipart");
+    ASSERT(!m_requestDone);
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ClientRequest::requestDone, this),
@@ -258,6 +259,7 @@ HTTP::ClientRequest::requestMultipart()
         return m_requestMultipart;
     ASSERT(m_request.entity.contentType.type == "multipart");
     ASSERT(!m_requestStream);
+    ASSERT(!m_requestDone);
     HTTP::StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
     if (it == m_request.entity.contentType.parameters.end()) {
         throw MissingMultipartBoundaryError();
@@ -308,6 +310,7 @@ HTTP::ClientRequest::responseStream()
     if (m_responseStream)
         return m_responseStream;
     ASSERT(!m_responseMultipart);
+    ASSERT(!m_responseDone);
     ensureResponse();
     ASSERT(m_response.entity.contentType.type != "multipart");
     return m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
@@ -729,7 +732,16 @@ HTTP::ClientRequest::requestMultipartDone()
 void
 HTTP::ClientRequest::requestDone()
 {
-    m_requestStream.reset();
+    if (m_requestDone)
+        return;
+    ASSERT(m_requestStream);
+    if (m_requestStream->supportsSize()) {
+        if (m_requestStream->size() !=
+            m_requestStream->seek(0, Stream::CURRENT)) {
+            cancel(true);
+            throw UnexpectedEofError();
+        }
+    }
     if (!m_request.general.transferEncoding.empty()) {
         std::ostringstream os;
         os << m_requestTrailer << "\r\n";
@@ -743,7 +755,8 @@ HTTP::ClientRequest::requestDone()
 void
 HTTP::ClientRequest::responseDone()
 {
-    m_responseStream.reset();
+    if (m_responseDone)
+        return;
     if (!m_response.general.transferEncoding.empty()) {
         // Read and parse the trailer
         TrailerParser parser(m_responseTrailer);

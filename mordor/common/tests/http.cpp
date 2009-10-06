@@ -948,6 +948,42 @@ TEST_WITH_SUITE(HTTPClient, simpleResponseBody)
     TEST_ASSERT(responseBody.buffer() == "hello");
 }
 
+TEST_WITH_SUITE(HTTPClient, readPastEof)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 5\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "hello")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    // Verify response characteristics
+    TEST_ASSERT(request->hasResponseBody());
+
+    // Verify response itself
+    MemoryStream responseBody;
+    transferStream(request->responseStream(), responseBody);
+    TEST_ASSERT(responseBody.buffer() == "hello");
+    Buffer buf;
+    // Read EOF a few times just to be sure nothing asplodes
+    TEST_ASSERT_EQUAL(request->responseStream()->read(buf, 10), 0u);
+    TEST_ASSERT_EQUAL(request->responseStream()->read(buf, 10), 0u);
+    TEST_ASSERT_EQUAL(request->responseStream()->read(buf, 10), 0u);
+}
+
 TEST_WITH_SUITE(HTTPClient, chunkedResponseBody)
 {
     MemoryStream::ptr requestStream(new MemoryStream());
@@ -1088,6 +1124,90 @@ TEST_WITH_SUITE(HTTPClient, simpleRequestBody)
     TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
     // Verify response characteristics
     TEST_ASSERT(!request->hasResponseBody());
+}
+
+TEST_WITH_SUITE(HTTPClient, multipleCloseRequestBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+    requestHeaders.entity.contentLength = 5;
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    // Nothing has been flushed yet
+    TEST_ASSERT_EQUAL(requestStream->size(), 0);
+    Stream::ptr requestBody = request->requestStream();
+
+    // Write the body
+    TEST_ASSERT_EQUAL(requestBody->write("hello"), 5u);
+    // Do it multiple times, to make sure nothing asplodes
+    requestBody->close();
+    requestBody->close();
+    requestBody->close();
+}
+
+TEST_WITH_SUITE(HTTPClient, underflowRequestBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+    requestHeaders.entity.contentLength = 5;
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    // Nothing has been flushed yet
+    TEST_ASSERT_EQUAL(requestStream->size(), 0);
+    Stream::ptr requestBody = request->requestStream();
+
+    // Write the body
+    TEST_ASSERT_EQUAL(requestBody->write("hel"), 3u);
+    TEST_ASSERT_EXCEPTION(requestBody->close(), UnexpectedEofError);
+}
+
+TEST_WITH_SUITE(HTTPClient, overflowRequestBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(duplexStream));
+
+    HTTP::Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+    requestHeaders.entity.contentLength = 5;
+
+    HTTP::ClientRequest::ptr request = conn->request(requestHeaders);
+    // Nothing has been flushed yet
+    TEST_ASSERT_EQUAL(requestStream->size(), 0);
+    Stream::ptr requestBody = request->requestStream();
+
+    // Write the body
+    TEST_ASSERT_EQUAL(requestBody->write("helloworld"), 5u);
+    TEST_ASSERT_EXCEPTION(requestBody->write("hello", 5), WriteBeyondEofError);
 }
 
 TEST_WITH_SUITE(HTTPClient, chunkedRequestBody)
