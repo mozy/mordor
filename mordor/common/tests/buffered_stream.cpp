@@ -215,10 +215,10 @@ TEST_WITH_SUITE(BufferedStream, findSanityChecks)
     bufferedStream->bufferSize(5);
 
     // Buffer size is 5, default sanity size is twice the buffer size
-    TEST_ASSERT_EXCEPTION(bufferedStream->find('\n'), BufferOverflowError);
-    TEST_ASSERT_EXCEPTION(bufferedStream->find("\r\n"), BufferOverflowError);
-    TEST_ASSERT_EXCEPTION(bufferedStream->find('\n', 20), UnexpectedEofError);
-    TEST_ASSERT_EXCEPTION(bufferedStream->find("\r\n", 20), UnexpectedEofError);
+    TEST_ASSERT_EXCEPTION(bufferedStream->find('\n'), BufferOverflowException);
+    TEST_ASSERT_EXCEPTION(bufferedStream->find("\r\n"), BufferOverflowException);
+    TEST_ASSERT_EXCEPTION(bufferedStream->find('\n', 20), UnexpectedEofException);
+    TEST_ASSERT_EXCEPTION(bufferedStream->find("\r\n", 20), UnexpectedEofException);
 
     TEST_ASSERT_LESS_THAN(bufferedStream->find('\n', ~0, false), 0);
     TEST_ASSERT_LESS_THAN(bufferedStream->find("\r\n", ~0, false), 0);

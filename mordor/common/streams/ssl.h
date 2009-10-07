@@ -11,15 +11,9 @@
 class OpenSSLException : public std::runtime_error
 {
 public:
-    OpenSSLException(const std::string &message, const char *function = NULL)
-        : std::runtime_error(message),
-          m_function(function)
+    OpenSSLException(const std::string &message)
+        : std::runtime_error(message)
     {}
-
-    const char *function() const;
-
-private:
-    const char *m_function;
 };
 
 class CertificateVerificationException : public OpenSSLException

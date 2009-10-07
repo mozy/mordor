@@ -19,8 +19,8 @@ namespace HTTP
         if (request->response().status.status == HTTP::OK) {
             return request->stream();
         } else {
-            throw InvalidResponseException("proxy connection failed",
-                request->response());
+            MORDOR_THROW_EXCEPTION(InvalidResponseException("proxy connection failed",
+                request->response()));
         }
     }
 }

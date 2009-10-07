@@ -1185,7 +1185,7 @@ TEST_WITH_SUITE(HTTPClient, underflowRequestBody)
 
     // Write the body
     TEST_ASSERT_EQUAL(requestBody->write("hel"), 3u);
-    TEST_ASSERT_EXCEPTION(requestBody->close(), UnexpectedEofError);
+    TEST_ASSERT_EXCEPTION(requestBody->close(), UnexpectedEofException);
 }
 
 TEST_WITH_SUITE(HTTPClient, overflowRequestBody)
@@ -1212,7 +1212,7 @@ TEST_WITH_SUITE(HTTPClient, overflowRequestBody)
 
     // Write the body
     TEST_ASSERT_EQUAL(requestBody->write("helloworld"), 5u);
-    TEST_ASSERT_EXCEPTION(requestBody->write("hello", 5), WriteBeyondEofError);
+    TEST_ASSERT_EXCEPTION(requestBody->write("hello", 5), WriteBeyondEofException);
 }
 
 TEST_WITH_SUITE(HTTPClient, chunkedRequestBody)

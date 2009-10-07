@@ -72,10 +72,6 @@ public:
 
     State state();
 
-    bool autoThrowExceptions() const { return m_autoThrow; }
-    void autoThrowExceptions(bool autoThrow) { m_autoThrow = autoThrow; }
-    void throwExceptions();
-
 private:
     void call(bool destructor);
     Fiber::ptr yieldTo(bool yieldToCallerOnTerminate, State targetState);
@@ -93,30 +89,9 @@ private:
     State m_state, m_yielderNextState;
     ptr m_outer, m_yielder;
     weak_ptr m_terminateOuter;
-    bool m_autoThrow;
-    std::exception *m_exception;
+    boost::exception_ptr m_exception;
 
     static boost::thread_specific_ptr<Fiber> t_fiber;
-};
-
-#define THROW_ORIGINAL_EXCEPTION(exceptionPtr, exceptionType)                   \
-    if (typeid(*exceptionPtr) == typeid(exceptionType))                         \
-            throw *dynamic_cast<exceptionType *>(exceptionPtr);
-
-class FiberException : public NestedException
-{
-    friend class Fiber;
-public:
-    FiberException(Fiber::ptr fiber, std::exception &ex);
-
-    static void registerExceptionHandler(boost::function<void (std::exception &)> handler);
-
-    Fiber::ptr fiber() { return m_fiber; }
-
-private:
-    Fiber::ptr m_fiber;
-
-    static std::list<boost::function<void (std::exception &)> > m_handlers;
 };
 
 #endif // __FIBER_H__

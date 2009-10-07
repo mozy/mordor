@@ -80,10 +80,10 @@ MemoryStream::seek(long long offset, Anchor anchor)
     switch (anchor) {
         case BEGIN:
             if (offset < 0)
-                throw std::invalid_argument("resulting offset is negative");
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("resulting offset is negative"));
             if ((unsigned long long)offset > (size_t)~0) {
-                throw std::invalid_argument(
-                    "Memory stream position cannot exceed virtual address space.");
+                MORDOR_THROW_EXCEPTION(std::invalid_argument(
+                    "Memory stream position cannot exceed virtual address space."));
             }
             m_read.clear();
             m_read.copyIn(m_original, m_original.readAvailable());
@@ -96,8 +96,8 @@ MemoryStream::seek(long long offset, Anchor anchor)
             } else {
                 // Optimized forward seek
                 if (m_offset + offset > (size_t)~0) {
-                    throw std::invalid_argument(
-                        "Memory stream position cannot exceed virtual address space.");
+                    MORDOR_THROW_EXCEPTION(std::invalid_argument(
+                        "Memory stream position cannot exceed virtual address space."));
                 }
                 if (m_offset <= size) {
                     m_read.consume(std::min((size_t)offset, size - m_offset));
@@ -126,8 +126,8 @@ MemoryStream::truncate(long long size)
 {
     ASSERT(size >= 0);
     if ((unsigned long long)size > (size_t)~0) {
-        throw std::invalid_argument(
-            "Memory stream size cannot exceed virtual address space.");
+        MORDOR_THROW_EXCEPTION(std::invalid_argument(
+            "Memory stream size cannot exceed virtual address space."));
     }
     size_t currentSize = m_original.readAvailable();
 
@@ -164,7 +164,7 @@ MemoryStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
     if (result != -1)
         return result;
     if (throwIfNotFound)
-        throw UnexpectedEofError();
+        MORDOR_THROW_EXCEPTION(UnexpectedEofException());
     return -(ptrdiff_t)m_read.readAvailable() - 1;
 }
 
@@ -175,6 +175,6 @@ MemoryStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFou
     if (result != -1)
         return result;
     if (throwIfNotFound)
-        throw UnexpectedEofError();
+        MORDOR_THROW_EXCEPTION(UnexpectedEofException());
     return -(ptrdiff_t)m_read.readAvailable() - 1;
 }

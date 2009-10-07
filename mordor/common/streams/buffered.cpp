@@ -228,7 +228,7 @@ BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
         }
         if (readAvailable >= sanitySize) {
             if (throwIfNotFound)
-                throw BufferOverflowError();
+                MORDOR_THROW_EXCEPTION(BufferOverflowException());
             return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
 
@@ -240,7 +240,7 @@ BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
         if (result == 0) {
             // EOF
             if (throwIfNotFound)
-                throw UnexpectedEofError();
+                MORDOR_THROW_EXCEPTION(UnexpectedEofException());
             return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
     }
@@ -263,7 +263,7 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
         }
         if (readAvailable >= sanitySize) {
             if (throwIfNotFound)
-                throw BufferOverflowError();
+                MORDOR_THROW_EXCEPTION(BufferOverflowException());
             return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
 
@@ -275,7 +275,7 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
         if (result == 0) {
             // EOF
             if (throwIfNotFound)
-                throw UnexpectedEofError();
+                MORDOR_THROW_EXCEPTION(UnexpectedEofException());
             return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
     }

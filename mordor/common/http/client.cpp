@@ -263,7 +263,7 @@ HTTP::ClientRequest::requestMultipart()
     ASSERT(!m_requestDone);
     HTTP::StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
     if (it == m_request.entity.contentType.parameters.end()) {
-        throw MissingMultipartBoundaryError();
+        MORDOR_THROW_EXCEPTION(MissingMultipartBoundaryException());
     }
     m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
@@ -324,9 +324,9 @@ const HTTP::EntityHeaders &
 HTTP::ClientRequest::responseTrailer() const
 {
     if (m_badTrailer)
-        throw BadMessageHeaderException();
+        MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
     if (m_incompleteTrailer)
-        throw IncompleteMessageHeaderException();
+        MORDOR_THROW_EXCEPTION(IncompleteMessageHeaderException());
     ASSERT(m_responseDone);
     ASSERT(!m_response.general.transferEncoding.empty());
     return m_responseTrailer;
@@ -350,7 +350,7 @@ HTTP::ClientRequest::responseMultipart()
     ASSERT(m_response.entity.contentType.type == "multipart");
     HTTP::StringMap::const_iterator it = m_response.entity.contentType.parameters.find("boundary");
     if (it == m_response.entity.contentType.parameters.end()) {
-        throw MissingMultipartBoundaryError();
+        MORDOR_THROW_EXCEPTION(MissingMultipartBoundaryException());
     }
     m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
@@ -519,11 +519,11 @@ HTTP::ClientRequest::doRequest()
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         if (!m_conn->m_allowNewRequests)
-            throw ConnectionVoluntarilyClosedException();
+            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
         if (m_conn->m_priorResponseClosed)
-            throw ConnectionVoluntarilyClosedException();
+            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
         if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseFailed)
-            throw PriorRequestFailedException();
+            MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         firstRequest = m_conn->m_currentRequest == m_conn->m_pendingRequests.end();
         m_conn->m_pendingRequests.push_back(shared_from_this());
         if (firstRequest) {
@@ -543,9 +543,9 @@ HTTP::ClientRequest::doRequest()
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         if (m_conn->m_priorResponseClosed)
-            throw ConnectionVoluntarilyClosedException();
+            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
         if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseFailed)
-            throw PriorRequestFailedException();
+            MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         m_requestInFlight = true;
     }
 
@@ -605,9 +605,9 @@ HTTP::ClientRequest::ensureResponse()
             ASSERT(it != m_conn->m_pendingRequests.end());             
             m_conn->m_pendingRequests.erase(it);
             if (m_conn->m_priorResponseClosed)
-                throw ConnectionVoluntarilyClosedException();
+                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
             else
-                throw PriorRequestFailedException();
+                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         }
         ASSERT(!m_conn->m_pendingRequests.empty());
         ClientRequest::ptr request = m_conn->m_pendingRequests.front();
@@ -631,9 +631,9 @@ HTTP::ClientRequest::ensureResponse()
         // and returned to us, because there is no other work to be done
         ASSERT(m_conn->m_pendingRequests.front() == shared_from_this());
         if (m_conn->m_priorResponseClosed)
-            throw ConnectionVoluntarilyClosedException();
+            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
         if (m_conn->m_priorResponseFailed)
-            throw PriorRequestFailedException();
+            MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
     }
 
     try {
@@ -641,9 +641,9 @@ HTTP::ClientRequest::ensureResponse()
         ResponseParser parser(m_response);
         parser.run(m_conn->m_stream);
         if (parser.error())
-            throw BadMessageHeaderException();
+            MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
         if (!parser.complete())
-            throw IncompleteMessageHeaderException();
+            MORDOR_THROW_EXCEPTION(IncompleteMessageHeaderException());
         if (g_log->enabled(Log::VERBOSE)) {
             LOG_VERBOSE(g_log) << this << " " << m_response;
         } else {
@@ -659,7 +659,7 @@ HTTP::ClientRequest::ensureResponse()
             if (connection.find("close") != connection.end())
                 close = true;
         } else {
-            throw BadMessageHeaderException();
+            MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
         }
         // NON-STANDARD!!!
         StringSet &proxyConnection = m_response.general.proxyConnection;
@@ -678,22 +678,22 @@ HTTP::ClientRequest::ensureResponse()
         }
         if (!transferEncoding.empty()) {
             if (stricmp(transferEncoding.back().value.c_str(), "chunked") != 0) {
-                throw InvalidTransferEncodingException("The last transfer-coding is not chunked.");
+                MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("The last transfer-coding is not chunked."));
             }
             for (ParameterizedList::const_iterator it(transferEncoding.begin());
                 it + 1 != transferEncoding.end();
                 ++it) {
                 if (stricmp(it->value.c_str(), "chunked") == 0) {
-                    throw InvalidTransferEncodingException("chunked transfer-coding applied multiple times");
+                    MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("chunked transfer-coding applied multiple times"));
                 } else if (stricmp(it->value.c_str(), "deflate") == 0 ||
                     stricmp(it->value.c_str(), "gzip") == 0 ||
                     stricmp(it->value.c_str(), "x-gzip") == 0) {
                     // Supported transfer-codings
                 } else if (stricmp(it->value.c_str(), "compress") == 0 ||
                     stricmp(it->value.c_str(), "x-compress") == 0) {
-                    throw InvalidTransferEncodingException("compress transfer-coding is unsupported");
+                    MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("compress transfer-coding is unsupported"));
                 } else {
-                    throw InvalidTransferEncodingException("Unrecognized transfer-coding: " + it->value);
+                    MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("Unrecognized transfer-coding: " + it->value));
                 }
             }
         }
@@ -766,7 +766,7 @@ HTTP::ClientRequest::requestDone()
         if (m_requestStream->size() !=
             m_requestStream->seek(0, Stream::CURRENT)) {
             cancel(true);
-            throw UnexpectedEofError();
+            MORDOR_THROW_EXCEPTION(UnexpectedEofException());
         }
     }
     if (!m_request.general.transferEncoding.empty()) {

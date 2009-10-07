@@ -47,9 +47,8 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
     }
     handle = open(filename.c_str(), oflags, 0777);
 #endif
-    if (handle == (NativeHandle)-1) {
-        throwExceptionFromLastError();
-    }
+    if (handle == (NativeHandle)-1)
+        THROW_EXCEPTION_FROM_LAST_ERROR();
     init(handle);
     m_supportsRead = flags == READ || flags == READWRITE;
     m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;
@@ -74,9 +73,8 @@ FileStream::FileStream(std::wstring filename, Flags flags, CreateFlags createFla
         createFlags,
         0,
         NULL);
-    if (handle == (NativeHandle)-1) {
-        throwExceptionFromLastError();
-    }
+    if (handle == (NativeHandle)-1)
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
     init(handle);
     m_supportsRead = flags == READ || flags == READWRITE;
     m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;

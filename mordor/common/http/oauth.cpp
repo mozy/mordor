@@ -65,7 +65,7 @@ HTTP::OAuth::getRequestToken()
     }
     if (request->response().status.status != HTTP::OK) {
         request->cancel();
-        throw HTTP::InvalidResponseException("", request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("", request->response()));
     }
 
     MemoryStream responseStream;
@@ -76,22 +76,22 @@ HTTP::OAuth::getRequestToken()
     m_params = response;
     URI::QueryString::iterator it = m_params.find("oauth_token");
     if (it == m_params.end())
-        throw HTTP::InvalidResponseException("Missing oauth_token in response",
-            request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Missing oauth_token in response",
+            request->response()));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token") == 0)
-        throw HTTP::InvalidResponseException("Duplicate oauth_token in response",
-            request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Duplicate oauth_token in response",
+            request->response()));
     it = m_params.find("oauth_token_secret");
     if (it == m_params.end())
-        throw HTTP::InvalidResponseException("Missing oauth_token_secret in response",
-            request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Missing oauth_token_secret in response",
+            request->response()));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token_secret") == 0)
-        throw HTTP::InvalidResponseException("Duplicate oauth_token_secret in response",
-            request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Duplicate oauth_token_secret in response",
+            request->response()));
 }
 
 void
@@ -131,7 +131,7 @@ HTTP::OAuth::getAccessToken(const std::string &verifier)
     }
     if (request->response().status.status != HTTP::OK) {
         request->cancel();
-        throw HTTP::InvalidResponseException("", request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("", request->response()));
     }
 
     MemoryStream responseStream;
@@ -142,22 +142,22 @@ HTTP::OAuth::getAccessToken(const std::string &verifier)
     m_params = response;
     URI::QueryString::iterator it = m_params.find("oauth_token");
     if (it == m_params.end())
-        throw HTTP::InvalidResponseException("Missing oauth_token in response",
-            request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Missing oauth_token in response",
+            request->response()));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token") == 0)
-        throw HTTP::InvalidResponseException("Duplicate oauth_token in response",
-            request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Duplicate oauth_token in response",
+            request->response()));
     it = m_params.find("oauth_token_secret");
     if (it == m_params.end())
-        throw HTTP::InvalidResponseException("Missing oauth_token_secret in response",
-            request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Missing oauth_token_secret in response",
+            request->response()));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token_secret") == 0)
-        throw HTTP::InvalidResponseException("Duplicate oauth_token_secret in response",
-            request->response());
+        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Duplicate oauth_token_secret in response",
+            request->response()));
 }
 
 URI::QueryString

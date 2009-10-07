@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <boost/bind.hpp>
+#include <boost/exception.hpp>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>
@@ -116,20 +117,21 @@ template<class T>
 static
 void
 parallel_foreach_impl(boost::function<bool (T&)> dg, T *&t,
-                      int &result,
+                      int &result, boost::exception_ptr &exception,
                       Scheduler *scheduler, Fiber::ptr caller)
 {
-    Fiber::getThis()->autoThrowExceptions(false);
     try {
         result = dg(*t) ? 1 : 0;
-        t = NULL;
-        scheduler->schedule(caller);
+    } catch (boost::exception &ex) {
+        result = 0;
+        removeTopFrames(ex);
+        exception = boost::current_exception();
     } catch (...) {
         result = 0;
-        t = NULL;
-        scheduler->schedule(caller);
-        throw;
+        exception = boost::current_exception();
     }
+    t = NULL;
+    scheduler->schedule(caller);
 }
 
 template<class Iterator, class T>
@@ -157,13 +159,15 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
     // Not bool, because that's specialized, and it doesn't return just a
     // bool &, but instead some reference wrapper that the compiler hates
     std::vector<int> result;
+    std::vector<boost::exception_ptr> exceptions;
     fibers.resize(parallelism);
     current.resize(parallelism);
     result.resize(parallelism);
+    exceptions.resize(parallelism);
     for (int i = 0; i < parallelism; ++i) {
         fibers[i] = Fiber::ptr(new Fiber(boost::bind(&parallel_foreach_impl<T>,
-            dg, boost::ref(current[i]), boost::ref(result[i]), scheduler,
-            caller)));
+            dg, boost::ref(current[i]), boost::ref(result[i]),
+            boost::ref(exceptions[i]), scheduler, caller)));
     }
 
     int curFiber = 0;
@@ -207,10 +211,11 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
 
     // Pass the first exception along
     // TODO: group exceptions?
-    for(std::vector<Fiber::ptr>::iterator it2 = fibers.begin();
-        it2 != fibers.end();
+    for(std::vector<boost::exception_ptr>::iterator it2 = exceptions.begin();
+        it2 != exceptions.end();
         ++it2) {
-        (*it2)->throwExceptions();
+        if (*it2)
+            ::rethrow_exception(*it2);
     }
     for(std::vector<int>::iterator it2 = result.begin();
         it2 != result.end();

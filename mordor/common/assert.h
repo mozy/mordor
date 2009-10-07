@@ -2,32 +2,23 @@
 #define __ASSERT_H__
 // Copyright (c) 2009 - Decho Corp.
 
-#include <stdexcept>
-
+#include "exception.h"
 #include "version.h"
 
-class Assertion : public std::logic_error
+struct Assertion : virtual ExceptionBase
 {
-public:
-    Assertion(const std::string &expr, const char *file, int line)
-        : std::logic_error(expr),
-          m_file(file),
-          m_line(line)
-    {}
+    Assertion(const std::string &expr) : m_expr(expr) {}
+    ~Assertion() throw() {}
 
-    const char *file() const { return m_file; }
-    int line() const { return m_line; }
-
+    const char *what() const throw() { return m_expr.c_str(); }
 private:
-    const char *m_file;
-    int m_line;
+    std::string m_expr;
 };
 
 #define VERIFY(x)                                                               \
-    if (!(x)) throw Assertion(# x, __FILE__, __LINE__);
+    if (!(x)) MORDOR_THROW_EXCEPTION(Assertion(# x));
 
-#define NOTREACHED()                                                            \
-    throw Assertion("Not Reached", __FILE__, __LINE__);
+#define NOTREACHED() MORDOR_THROW_EXCEPTION(Assertion("Not Reached"))
 
 #ifdef DEBUG
 #define ASSERT VERIFY

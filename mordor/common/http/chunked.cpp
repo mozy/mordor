@@ -9,7 +9,7 @@
 
 #include "mordor/common/version.h"
 
-HTTP::InvalidChunkError::InvalidChunkError(const std::string &line,
+HTTP::InvalidChunkException::InvalidChunkException(const std::string &line,
                                            Type type)
 : m_line(line),
   m_type(type)
@@ -42,7 +42,7 @@ HTTP::ChunkedStream::read(Buffer &b, size_t len)
         if (!chunk.empty() && chunk[chunk.size() - 1] == '\r')
             chunk.resize(chunk.size() - 1);
         if (!chunk.empty()) {
-            throw InvalidChunkError(chunk, InvalidChunkError::FOOTER);
+            MORDOR_THROW_EXCEPTION(InvalidChunkException(chunk, InvalidChunkException::FOOTER));
         }
         m_nextChunk = ~0;
     }
@@ -53,7 +53,7 @@ HTTP::ChunkedStream::read(Buffer &b, size_t len)
         char *end;
         m_nextChunk = strtoull(chunk.c_str(), &end, 16);
         if (end == chunk.c_str()) {
-            throw InvalidChunkError(chunk, InvalidChunkError::HEADER);
+            MORDOR_THROW_EXCEPTION(InvalidChunkException(chunk, InvalidChunkException::HEADER));
         }
     }
     if (m_nextChunk == 0)

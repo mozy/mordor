@@ -27,7 +27,7 @@ IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
     LOG_VERBOSE(g_logWaitBlock) << this << " CreateEventW(): " << m_handles[0]
         << " (" << GetLastError() << ")";
     if (!m_handles[0])
-        throwExceptionFromLastError("CreateEventW");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
 }
 
 IOManagerIOCP::WaitBlock::~WaitBlock()
@@ -56,7 +56,7 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
         boost::thread thread(boost::bind(&WaitBlock::run, this));
     } else {
         if (!SetEvent(m_handles[0]))
-            throwExceptionFromLastError();
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
     }
     return true;
 }
@@ -150,7 +150,7 @@ IOManagerIOCP::WaitBlock::run()
         } else if (dwRet == WAIT_FAILED) {
             // What to do, what to do?  Probably a bad handle.
             // This will bring down the whole process
-            throwExceptionFromLastError("WaitForMultipleObjects");
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("WaitForMultipleObjects");
         } else {
             NOTREACHED();
         }
@@ -176,7 +176,7 @@ IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
         " CreateIoCompletionPort(): " << m_hCompletionPort << " ("
         << GetLastError() << ")";
     if (!m_hCompletionPort)
-        throwExceptionFromLastError("CreateIoCompletionPort");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
 }
 
 bool
@@ -194,7 +194,7 @@ IOManagerIOCP::registerFile(HANDLE handle)
         " CreateIoCompletionPort(" << handle << ", " << m_hCompletionPort
         << "): " << hRet << " (" << GetLastError() << ")";
     if (hRet != m_hCompletionPort) {
-        throwExceptionFromLastError("CreateIoCompletionPort");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
     }
 }
 
@@ -344,7 +344,7 @@ IOManagerIOCP::idle()
                 processTimers();
                 continue;
             }
-            throwExceptionFromLastError("GetQueuedCompletionStatus");
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("GetQueuedCompletionStatus");
         }
         processTimers();
 
@@ -376,5 +376,5 @@ IOManagerIOCP::tickle()
         << " PostQueuedCompletionStatus(" << m_hCompletionPort
         << ", 0, ~0, NULL): " << bRet << " (" << GetLastError() << ")";
     if (!bRet)
-        throwExceptionFromLastError("PostQueuedCompletionStatus");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("PostQueuedCompletionStatus");
 }

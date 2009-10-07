@@ -6,26 +6,26 @@
 
 namespace HTTP
 {
-    class InvalidDigestParamsException : public InvalidMessageHeaderException
+    struct InvalidDigestParamsException : virtual InvalidMessageHeaderException {};
+    struct InvalidDigestQopException : virtual InvalidDigestParamsException
     {
     public:
-        InvalidDigestParamsException(const std::string &message)
-            : InvalidMessageHeaderException(message)
-        {}
+        InvalidDigestQopException(const std::string &message) : m_message(message) {}
+        ~InvalidDigestQopException() throw() {}
+        
+        const char *what() const throw() { return m_message.c_str(); }
+    private:
+        std::string m_message;
     };
-    class InvalidDigestQopException : public InvalidDigestParamsException
+    struct InvalidDigestAlgorithmException : virtual InvalidDigestParamsException
     {
     public:
-        InvalidDigestQopException(const std::string &message)
-            : InvalidDigestParamsException(message)
-        {}
-    };
-    class InvalidDigestAlgorithmException : public InvalidDigestParamsException
-    {
-    public:
-        InvalidDigestAlgorithmException(const std::string &message)
-            : InvalidDigestParamsException(message)
-        {}
+        InvalidDigestAlgorithmException(const std::string &message) : m_message(message) {}
+        ~InvalidDigestAlgorithmException() throw() {}
+
+        const char *what() const throw() { return m_message.c_str(); }
+    private:
+        std::string m_message;
     };
 
     class DigestAuth

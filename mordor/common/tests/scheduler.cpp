@@ -2,11 +2,12 @@
 
 #include "mordor/common/pch.h"
 
-#include "mordor/test/test.h"
-
 #include <boost/bind.hpp>
 
+#include <boost/exception.hpp>
+#include "mordor/common/exception.h"
 #include "mordor/common/scheduler.h"
+#include "mordor/test/test.h"
 
 SUITE_INVARIANT(Scheduler)
 {
@@ -141,7 +142,7 @@ runInContext(Scheduler &poolA, Scheduler &poolB)
     SchedulerSwitcher switcher(&poolB);
     TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolB);
     TEST_ASSERT_NOT_EQUAL(Scheduler::getThis(), &poolA);
-    throw std::runtime_error("pass through context switch");
+    MORDOR_THROW_EXCEPTION(OperationAbortedException());
 }
 
 TEST_WITH_SUITE(Scheduler, switcherExceptions)
@@ -152,7 +153,7 @@ TEST_WITH_SUITE(Scheduler, switcherExceptions)
     TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);
     TEST_ASSERT_NOT_EQUAL(Scheduler::getThis(), &poolB);
     
-    TEST_ASSERT_EXCEPTION(runInContext(poolA, poolB), std::runtime_error);
+    TEST_ASSERT_EXCEPTION(runInContext(poolA, poolB), OperationAbortedException);
 
     TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);
     TEST_ASSERT_NOT_EQUAL(Scheduler::getThis(), &poolB);
@@ -179,7 +180,7 @@ TEST_WITH_SUITE(Scheduler, parallelDo)
 
 static void exception()
 {
-    throw std::runtime_error("what's up?!");
+    MORDOR_THROW_EXCEPTION(OperationAbortedException());
 }
 
 TEST_WITH_SUITE(Scheduler, parallelDoException)
@@ -191,7 +192,7 @@ TEST_WITH_SUITE(Scheduler, parallelDoException)
     dgs.push_back(&exception);
     dgs.push_back(&exception);
 
-    TEST_ASSERT_EXCEPTION(parallel_do(dgs), std::runtime_error);    
+    TEST_ASSERT_EXCEPTION(parallel_do(dgs), OperationAbortedException);
 }
 
 static bool checkEqual(int x, int &sequence)
@@ -250,7 +251,7 @@ static bool checkEqualExceptionOn5(int x, int &sequence)
     TEST_ASSERT_EQUAL(x, sequence);
     ++sequence;
     if (sequence == 6)
-        throw std::runtime_error("exception");
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
     return true;
 }
 
@@ -265,8 +266,21 @@ TEST_WITH_SUITE(Scheduler, parallelForEachException)
         parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
             &checkEqualExceptionOn5, _1, boost::ref(sequence)), 4);
         TEST_ASSERT(false);
-    } catch (std::runtime_error)
+    } catch (OperationAbortedException)
     {}
     // 5 was told to stop (exception), 6, 7, and 8 were already scheduled
     TEST_ASSERT_EQUAL(sequence, 9);
 }
+
+/*
+TEST_WITH_SUITE(Scheduler, uncaughtExceptionHijack)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    WorkerPool pool;
+
+    pool.schedule(Fiber::ptr(new Fiber(&exception)));
+    
+    pool.dispatch();
+    TEST_ASSERT_EXCEPTION(pool.dispatch(), OperationAbortedException);
+}
+*/

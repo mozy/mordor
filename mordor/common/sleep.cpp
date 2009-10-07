@@ -38,7 +38,7 @@ sleep(unsigned long long us)
         if (nanosleep(&ts, &ts) == -1) {
             if (errno == EINTR)
                 continue;
-            throwExceptionFromLastError("nanosleep");
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("nanosleep");
         }
         break;
     }

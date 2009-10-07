@@ -137,6 +137,10 @@ endif
 
 LIBS := -lboost_thread -lboost_regex -lboost_date_time -lssl -lcrypto -lz
 
+ifeq ($(PLATFORM), FreeBSD)
+    LIBS += -lexecinfo
+endif
+
 # compile and link a binary.  this *must* be defined using = and not :=
 # because it uses target variables
 COMPLINK = $(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(filter %.o %.a, $^) $(CXXLDFLAGS) $(LDFLAGS) $(LIBS) -o $@

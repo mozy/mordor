@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "mordor/common/version.h"
+#include "mordor/common/config.h"
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -22,6 +22,10 @@ static TestSuites *g_allTests;
 #ifdef LINUX
 static bool g_traced;
 #endif
+
+static ConfigVar<bool>::ptr g_protect = Config::lookup(
+    "test.protect", false,
+    "Protect test while running under a debugger");
 
 static struct CleanupAllTests {
 #ifdef LINUX
@@ -73,7 +77,8 @@ registerSuiteInvariant(const std::string &suite, TestDg invariant)
 void
 assertion(const char *file, int line, const std::string &expr)
 {
-    throw Assertion(expr, file, line);
+    throw Assertion(expr) << boost::throw_file(file) << boost::throw_line(line)
+        << errinfo_backtrace(backtrace());
 }
 
 bool runTest(TestListener *listener, const std::string &suite,
@@ -100,30 +105,19 @@ bool runTest(TestListener *listener, const std::string &suite,
     sysctl(mib, 4, &info, &size, NULL, 0);
     protect = !(info.kp_proc.p_flag & P_TRACED);
 #endif
+    protect = protect || g_protect->val();
     if (protect) {
         try {
             test();
             if (listener)
                 listener->testComplete(suite, testName);
         } catch (const Assertion &assertion) {
-            std::ostringstream os;
-            os << "Assertion failed at " << assertion.file()
-#ifdef MSVC
-                << "(" << assertion.line() << ") : "
-#else
-                << ":" << assertion.line() << ": "
-#endif
-                << assertion.what() << std::endl;
             if (listener)
-                listener->testAsserted(suite, testName, os.str());
-            return false;
-        } catch (std::exception &ex) {
-            if (listener)
-                listener->testException(suite, testName, ex);
+                listener->testAsserted(suite, testName, assertion);
             return false;
         } catch (...) {
             if (listener)
-                listener->testUnknownException(suite, testName);
+                listener->testException(suite, testName);
             return false;
         }
     } else {

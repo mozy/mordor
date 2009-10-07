@@ -12,11 +12,11 @@ IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
 {
     m_epfd = epoll_create(5000);
     if (m_epfd <= 0) {
-        throwExceptionFromLastError("epoll_create");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_create");
     }
     if (pipe(m_tickleFds)) {
         close(m_epfd);
-        throwExceptionFromLastError("pipe");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
     }
     ASSERT(m_tickleFds[0] > 0);
     ASSERT(m_tickleFds[1] > 0);
@@ -27,7 +27,7 @@ IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
         close(m_epfd);
-        throwExceptionFromLastError("epoll_ctl");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
     }
 }
 
@@ -87,7 +87,7 @@ m_pendingEvents.find(fd);
         }
     }
     if (epoll_ctl(m_epfd, op, event->event.data.fd, &event->event)) {
-        throwExceptionFromLastError("epoll_ctl");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
     }
 }
 
@@ -118,7 +118,7 @@ IOManagerEPoll::cancelEvent(int fd, Event events)
     e.event.events &= ~events;
     if (e.event.events == 0) {
         if (epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &e.event)) {
-            throwExceptionFromLastError("epoll_ctl");
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
         }
         m_pendingEvents.erase(it);
     }
@@ -156,7 +156,7 @@ IOManagerEPoll::idle()
             rc = epoll_wait(m_epfd, events, 64, timeout);
         }
         if (rc < 0) {
-            throwExceptionFromLastError("epoll_wait");
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_wait");
         }
         processTimers();
 
@@ -196,7 +196,7 @@ m_pendingEvents.find(event.data.fd);
             e.event.events &= ~event.events;
             if (err || e.event.events == 0) {
                 if (epoll_ctl(m_epfd, EPOLL_CTL_DEL, event.data.fd, &e.event)) {
-                    throwExceptionFromLastError("epoll_ctl");
+                    THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
                 }
                 m_pendingEvents.erase(it);
             }

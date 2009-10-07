@@ -42,7 +42,7 @@ Multipart::Multipart(Stream::ptr stream, std::string boundary)
         if (stream->supportsWrite()) {
             ASSERT(false);
         } else {
-            throw std::runtime_error("Invalid multipart boundary");
+            MORDOR_THROW_EXCEPTION(InvalidMultipartBoundaryException());
         }
     }
     m_boundary = "\r\n--" + m_boundary;
@@ -88,7 +88,7 @@ Multipart::nextPart()
         if (b != "\r\n") {
             std::string restOfLine = m_stream->getDelimited();
             if (restOfLine.find_first_not_of(" \r\t") != std::string::npos) {
-                throw std::runtime_error("Invalid multipart boundary");
+                MORDOR_THROW_EXCEPTION(InvalidMultipartBoundaryException());
             }
         }
 
@@ -146,9 +146,10 @@ BodyPart::BodyPart(Multipart::ptr multipart)
     if (m_multipart->m_stream->supportsRead()) {
         HTTP::TrailerParser parser(m_headers);
         parser.run(m_multipart->m_stream);
-        if (!parser.complete() || parser.error()) {
-            throw std::runtime_error("Invalid multipart headers.");
-        }
+        if (parser.error())
+            MORDOR_THROW_EXCEPTION(HTTP::BadMessageHeaderException());
+        if (!parser.complete())
+            MORDOR_THROW_EXCEPTION(HTTP::IncompleteMessageHeaderException());
         m_stream.reset(new BodyPartStream(m_multipart->m_stream, m_multipart->m_boundary));
         NotifyStream *notify = new NotifyStream(m_stream);
         notify->notifyOnEof = boost::bind(&Multipart::partDone, m_multipart);
@@ -200,7 +201,7 @@ BodyPart::multipart()
     HTTP::StringMap::const_iterator it = m_headers.contentType.parameters.find("boundary");
     if (it == m_headers.contentType.parameters.end()) {
         ASSERT(!m_multipart->m_stream->supportsWrite());
-        throw std::runtime_error("No boundary with multipart");
+        MORDOR_THROW_EXCEPTION(InvalidMultipartBoundaryException());
     }
     m_childMultipart.reset(new Multipart(m_stream, it->second));
     return m_childMultipart;

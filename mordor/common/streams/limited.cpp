@@ -30,7 +30,7 @@ size_t
 LimitedStream::write(const Buffer &b, size_t len)
 {
     if (m_pos >= m_size)
-        throw WriteBeyondEofError();
+        MORDOR_THROW_EXCEPTION(WriteBeyondEofException());
     len = (size_t)std::min<long long>(len, m_size - m_pos);
     size_t result = parent()->write(b, len);
     m_pos += result;

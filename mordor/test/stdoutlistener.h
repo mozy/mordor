@@ -13,10 +13,8 @@ public:
     void testComplete(const std::string &suite,
         const std::string &test);
     void testAsserted(const std::string &suite,
-        const std::string &test, const std::string &message);
+        const std::string &test, const Assertion &message);
     void testException(const std::string &suite,
-        const std::string &test, const std::exception &ex);
-    void testUnknownException(const std::string &suite,
         const std::string &test);
     void testsComplete();
 

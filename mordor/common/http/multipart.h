@@ -14,7 +14,9 @@
 
 class BodyPart;
 
-class MissingMultipartBoundaryError : public HTTPException
+struct MissingMultipartBoundaryException : virtual HTTPException, virtual StreamException
+{};
+struct InvalidMultipartBoundaryException : virtual HTTPException
 {};
 
 class Multipart : public boost::enable_shared_from_this<Multipart>, boost::noncopyable

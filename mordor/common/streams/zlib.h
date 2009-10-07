@@ -6,11 +6,11 @@
 
 #include "filter.h"
 
-class ZlibException : public std::runtime_error
+struct ZlibException : virtual ExceptionBase
 {
 public:
+    ZlibException() : m_rc(0) {}
     ZlibException(int rc) :
-      std::runtime_error(""),
       m_rc(rc)
     {}
     
@@ -20,14 +20,14 @@ private:
     int m_rc;
 };
 
-class NeedPresetDictionaryException : public ZlibException
+struct NeedPresetDictionaryException : virtual ZlibException
 {
 public:
     NeedPresetDictionaryException() : ZlibException(Z_NEED_DICT)
     {}
 };
 
-class CorruptedZlibStreamException : public ZlibException
+struct CorruptedZlibStreamException : public ZlibException
 {
 public:
     CorruptedZlibStreamException() : ZlibException(Z_DATA_ERROR)

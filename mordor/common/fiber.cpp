@@ -6,6 +6,7 @@
 
 #include "assert.h"
 #include "config.h"
+#include "exception.h"
 #include "version.h"
 
 #ifdef WINDOWS
@@ -57,19 +58,6 @@ static void delete_nothing(Fiber* f) {}
 
 boost::thread_specific_ptr<Fiber> Fiber::t_fiber(&delete_nothing);
 
-std::list<boost::function<void (std::exception &)> > FiberException::m_handlers;
-
-FiberException::FiberException(Fiber::ptr fiber, std::exception &ex)
-: NestedException(ex),
-  m_fiber(fiber)
-{}
-
-void
-FiberException::registerExceptionHandler(boost::function<void (std::exception &)> handler)
-{
-    m_handlers.push_back(handler);
-}
-
 Fiber::Fiber()
 {
     ASSERT(!getThis());
@@ -77,8 +65,6 @@ Fiber::Fiber()
     m_stack = NULL;
     m_stacksize = 0;
     m_sp = NULL;
-    m_autoThrow = true;
-    m_exception = NULL;
     setThis(this);
 #ifdef NATIVE_WINDOWS_FIBERS
     m_sp = ConvertThreadToFiber(NULL);
@@ -95,8 +81,6 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
     m_state = INIT;
     m_stack = NULL;
     m_stacksize = stacksize;
-    m_autoThrow = true;
-    m_exception = NULL;
     allocStack(&m_stack, &m_sp, &m_stacksize);
 #ifdef UCONTEXT_FIBERS
     m_sp = &m_ctx;
@@ -136,7 +120,7 @@ Fiber::reset()
     ASSERT(m_dg);
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = INIT;
-    m_exception = NULL;
+    m_exception = boost::exception_ptr();
 }
 
 void
@@ -149,7 +133,7 @@ Fiber::reset(boost::function<void ()> dg)
     m_dg = dg;
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = INIT;
-    m_exception = NULL;
+    m_exception = boost::exception_ptr();
 }
 
 Fiber::ptr
@@ -224,7 +208,8 @@ Fiber::call(bool destructor)
         Fiber::ptr yielder = cur->m_yielder;
         yielder->m_state = cur->m_yielderNextState;
         cur->m_yielder.reset();
-        yielder->throwExceptions();
+        if (yielder->m_state == EXCEPT && yielder->m_exception)
+            ::rethrow_exception(yielder->m_exception);
     }
 }
 
@@ -263,8 +248,8 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
         Fiber::ptr yielder = curp->m_yielder;
         yielder->m_state = curp->m_yielderNextState;
         curp->m_yielder.reset();
-        if (yielder->m_autoThrow)
-            yielder->throwExceptions();
+        if (yielder->m_exception)
+            ::rethrow_exception(yielder->m_exception);
         return yielder;
     }
     return Fiber::ptr();
@@ -284,15 +269,17 @@ Fiber::entryPoint()
     Fiber *curp = cur.get();
     try {
         cur->m_dg();
-    } catch (std::exception &ex) {
+    } catch (boost::exception &ex) {
         Fiber::weak_ptr dummy = cur;
-        cur->m_exception = &ex;
+        removeTopFrames(ex);
+        cur->m_exception = boost::current_exception();
         exitPoint(cur, curp, EXCEPT);
         if (curp->m_state == EXCEPT)
             throw;
         cur = dummy.lock();
     } catch (...) {
         Fiber::weak_ptr dummy = cur;
+        cur->m_exception = boost::current_exception();
         exitPoint(cur, curp, EXCEPT);
         if (curp->m_state == EXCEPT)
             throw;
@@ -335,44 +322,6 @@ Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
     fiber_switchContext(&curp->m_sp, curp->m_outer->m_sp);
 }
 
-void
-Fiber::throwExceptions()
-{
-    if (m_state == EXCEPT) {
-        if (!m_exception)
-            throw 1;
-        // NOTE: You *cannot* throw *m_exception directly, because the throw statement
-        // will invoke the copy constructor, and you'll lose the original exception
-        for (std::list<boost::function<void (std::exception &)> >::const_iterator it(
-            FiberException::m_handlers.begin());
-            it != FiberException::m_handlers.end();
-            ++it) {
-            (*it)(*m_exception);
-        }
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::exception);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::bad_alloc);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::logic_error);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::domain_error);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::invalid_argument);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::length_error);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::out_of_range);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::runtime_error);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::overflow_error);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::range_error);
-        THROW_ORIGINAL_EXCEPTION(m_exception, std::underflow_error);
-
-        THROW_ORIGINAL_EXCEPTION(m_exception, Assertion);
-        THROW_ORIGINAL_EXCEPTION(m_exception, FiberException);
-
-        NativeError *nativeError = dynamic_cast<NativeError *>(m_exception);
-        if (nativeError)
-            throwExceptionFromLastError(nativeError->error(),
-                nativeError->function());
-
-        throw FiberException(shared_from_this(), *m_exception);
-    }
-}
-
 #if !defined(NATIVE_WINDOWS_FIBERS) && !defined(UCONTEXT_FIBERS)
 static
 void
@@ -407,7 +356,7 @@ allocStack(void **stack, void **sp, size_t *stacksize)
 #elif defined(WINDOWS)
     *stack = VirtualAlloc(NULL, *stacksize + g_pagesize, MEM_RESERVE, PAGE_NOACCESS);
     if (!*stack)
-        throwExceptionFromLastError("VirtualAlloc");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("VirtualAlloc");
     VirtualAlloc(*stack, g_pagesize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
     // TODO: don't commit until referenced
     VirtualAlloc((char*)*stack + g_pagesize, *stacksize, MEM_COMMIT, PAGE_READWRITE);
@@ -415,7 +364,7 @@ allocStack(void **stack, void **sp, size_t *stacksize)
 #elif defined(POSIX)
     *stack = mmap(NULL, *stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     if (*stack == MAP_FAILED)
-        throwExceptionFromLastError("mmap");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("mmap");
     *sp = (char*)*stack + *stacksize;
 #endif
 }
@@ -451,7 +400,7 @@ static void
 fiber_switchContext(void **oldsp, void *newsp)
 {
     if (swapcontext(*(ucontext_t**)oldsp, (ucontext_t*)newsp))
-        throwExceptionFromLastError("swapcontext");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("swapcontext");
 }
 #elif defined(_MSC_VER) && defined(ASM_X86_WINDOWS_FIBERS)
 static
@@ -501,11 +450,11 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
         return;
     *sp = *stack = CreateFiber(stacksize, &native_fiber_entryPoint, entryPoint);
     if (!*stack)
-        throwExceptionFromLastError("CreateFiber");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFiber");
 #elif defined(UCONTEXT_FIBERS)
     ucontext_t *ctx = *(ucontext_t**)sp;
     if (getcontext(ctx))
-        throwExceptionFromLastError("getcontext");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("getcontext");
     ctx->uc_stack.ss_sp = *stack;
     ctx->uc_stack.ss_size = stacksize;
     makecontext(ctx, entryPoint, 0);

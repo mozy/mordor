@@ -98,8 +98,8 @@ TEST_WITH_SUITE(ChunkedStream, invalidChunkSize)
         Buffer output;
         chunkedStream->read(output, 15);
         NOTREACHED();
-    } catch (const HTTP::InvalidChunkError &ex) {
-        TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkError::HEADER);
+    } catch (const HTTP::InvalidChunkException &ex) {
+        TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkException::HEADER);
         TEST_ASSERT_EQUAL(ex.line(), "hello");
     }
 }
@@ -115,8 +115,8 @@ TEST_WITH_SUITE(ChunkedStream, invalidChunkData)
     try {
         chunkedStream->read(output, 15);        
         NOTREACHED();
-    } catch (const HTTP::InvalidChunkError &ex) {
-        TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkError::FOOTER);
+    } catch (const HTTP::InvalidChunkException &ex) {
+        TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkException::FOOTER);
         TEST_ASSERT_EQUAL(ex.line(), "lo");
     }
 }

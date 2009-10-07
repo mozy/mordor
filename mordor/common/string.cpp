@@ -306,11 +306,11 @@ std::string toUtf8(const wchar_t *str, size_t len)
         return result;
     int ret = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str, (int)len, NULL, 0, NULL, NULL);
     if (ret == 0)
-        throwExceptionFromLastError("WideCharToMultiByte");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("WideCharToMultiByte");
     result.resize(ret);
     ret = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str, (int)len, &result[0], ret, NULL, NULL);
     if (ret == 0)
-        throwExceptionFromLastError("WideCharToMultiByte");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("WideCharToMultiByte");
     ASSERT(ret == result.size());
 
     return result;
@@ -332,11 +332,11 @@ std::wstring toUtf16(const char *str, size_t len)
         return result;
     int ret = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str, (int)len, NULL, 0);
     if (ret == 0)
-        throwExceptionFromLastError("MultiByteToWideChar");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("MultiByteToWideChar");
     result.resize(ret);
     ret = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str, (int)len, &result[0], ret);
     if (ret == 0)
-        throwExceptionFromLastError("MultiByteToWideChar");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("MultiByteToWideChar");
     ASSERT(ret == result.size());
 
     return result;

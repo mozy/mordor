@@ -26,6 +26,7 @@
 
 #ifdef POSIX
 #include <sys/types.h>
+#include <execinfo.h>
 #include <netdb.h>
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
@@ -110,6 +111,7 @@ enum {
 #endif
 #include <boost/date_time.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/exception.hpp>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/regex.hpp>

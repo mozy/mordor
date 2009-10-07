@@ -64,7 +64,7 @@ HandleStream::close(CloseType type)
     ASSERT(type == BOTH);
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
         if (!CloseHandle(m_hFile)) {
-            throwExceptionFromLastError("CloseHandle");
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("CloseHandle");
         }
         m_hFile = INVALID_HANDLE_VALUE;
     }
@@ -95,14 +95,14 @@ HandleStream::read(Buffer &b, size_t len)
         }
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_readEvent);
-            throwExceptionFromLastError("ReadFile");
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
         }
         Scheduler::getThis()->yieldTo();
         if (!m_readEvent.ret && m_readEvent.lastError == ERROR_HANDLE_EOF) {
             return 0;
         }
         if (!m_readEvent.ret) {
-            throwExceptionFromLastError(m_readEvent.lastError, "ReadFile");
+            THROW_EXCEPTION_FROM_ERROR_API(m_readEvent.lastError, "ReadFile");
         }
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
@@ -112,7 +112,7 @@ HandleStream::read(Buffer &b, size_t len)
         return m_readEvent.numberOfBytes;
     }
     if (!ret) {
-        throwExceptionFromLastError("ReadFile");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
     }
     b.produce(read);
     return read;
@@ -139,11 +139,11 @@ HandleStream::write(const Buffer &b, size_t len)
     if (m_ioManager) {
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_writeEvent);
-            throwExceptionFromLastError("WriteFile");
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
         }
         Scheduler::getThis()->yieldTo();
         if (!m_writeEvent.ret) {
-            throwExceptionFromLastError(m_writeEvent.lastError, "WriteFile");
+            THROW_EXCEPTION_FROM_ERROR_API(m_writeEvent.lastError, "WriteFile");
         }
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
@@ -152,7 +152,7 @@ HandleStream::write(const Buffer &b, size_t len)
         return m_writeEvent.numberOfBytes;
     }
     if (!ret) {
-        throwExceptionFromLastError("WriteFile");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
     }
     return written;
 }
@@ -165,19 +165,19 @@ HandleStream::seek(long long offset, Anchor anchor)
             switch (anchor) {
                 case BEGIN:
                     if (offset < 0) {
-                        throw std::invalid_argument("resulting offset is negative");
+                        MORDOR_THROW_EXCEPTION(std::invalid_argument("resulting offset is negative"));
                     }
                     return m_pos = offset;
                 case CURRENT:
                     if (m_pos + offset < 0) {
-                        throw std::invalid_argument("resulting offset is negative");
+                        MORDOR_THROW_EXCEPTION(std::invalid_argument("resulting offset is negative"));
                     }
                     return m_pos += offset;
                 case END:
                     {
                         long long end = size();
                         if (end + offset < 0) {
-                            throw std::invalid_argument("resulting offset is negative");
+                            MORDOR_THROW_EXCEPTION(std::invalid_argument("resulting offset is negative"));
                         }
                         return m_pos = end + offset;
                     }
@@ -192,7 +192,7 @@ HandleStream::seek(long long offset, Anchor anchor)
     long long pos;
     if (!SetFilePointerEx(m_hFile, *(LARGE_INTEGER*)&offset,
         (LARGE_INTEGER*)&pos, (DWORD)anchor)) {
-        throwExceptionFromLastError("SetFilePointerEx");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("SetFilePointerEx");
     }
     return pos;
 }
@@ -202,7 +202,7 @@ HandleStream::size()
 {
     long long size;
     if (!GetFileSizeEx(m_hFile, (LARGE_INTEGER*)&size)) {
-        throwExceptionFromLastError("GetFileSizeEx");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("GetFileSizeEx");
     }
     return size;
 }
@@ -216,6 +216,6 @@ HandleStream::truncate(long long size)
     DWORD lastError = GetLastError();
     seek(pos, BEGIN);
     if (!ret) {
-        throwExceptionFromLastError(lastError, "SetEndOfFile");
+        THROW_EXCEPTION_FROM_ERROR_API(lastError, "SetEndOfFile");
     }
 }

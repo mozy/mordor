@@ -17,14 +17,14 @@ IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
     LOG_LEVEL(g_log, m_kqfd <= 0 ? Log::ERROR : Log::TRACE) << this
         << " kqueue(): " << m_kqfd;
     if (m_kqfd <= 0) {
-        throwExceptionFromLastError("kqueue");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("kqueue");
     }
     int rc = pipe(m_tickleFds);
     LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " pipe(): "
         << rc << " (" << errno << ")";
     if (rc) {
         close(m_kqfd);
-        throwExceptionFromLastError("pipe");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
     }
     ASSERT(m_tickleFds[0] > 0);
     ASSERT(m_tickleFds[1] > 0);
@@ -38,7 +38,7 @@ IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
         close(m_kqfd);
-        throwExceptionFromLastError("kevent");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     }
 }
 
@@ -79,7 +79,7 @@ IOManagerKQueue::registerEvent(int fd, Event events,
         << m_kqfd << ", (" << fd << ", " << events << ", EV_ADD)): " << rc
         << " (" << errno << ")";
     if (rc) {
-        throwExceptionFromLastError("kevent");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     }
 }
 
@@ -100,7 +100,7 @@ IOManagerKQueue::cancelEvent(int fd, Event events)
         << m_kqfd << ", (" << fd << ", " << events << ", EV_DELETE)): " << rc
         << " (" << errno << ")";
     if (rc) {
-        throwExceptionFromLastError("kevent");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     }
     if (e.m_dg)
         e.m_scheduler->schedule(e.m_dg);
@@ -146,7 +146,7 @@ IOManagerKQueue::idle()
         LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " kevent(" << m_kqfd << "): " << rc << " (" << errno << ")";
         if (rc < 0) {
-            throwExceptionFromLastError("kevent");
+            THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
         }
         processTimers();
 
@@ -173,7 +173,7 @@ IOManagerKQueue::idle()
                 << event.filter << ", EV_DELETE)): " << rc << " (" << errno
                 << ")";
             if (rc) {
-                throwExceptionFromLastError("kevent");
+                THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
             }
             if (e.m_dg)
                 e.m_scheduler->schedule(e.m_dg);

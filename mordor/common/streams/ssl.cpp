@@ -40,7 +40,7 @@ static bool hasOpenSSLError()
             {
                 char buf[120];
                 ERR_error_string(err, buf);
-                throw std::invalid_argument(buf);
+                MORDOR_THROW_EXCEPTION(std::invalid_argument(buf));
             }
         default:
             return true;
@@ -81,13 +81,15 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
             SSLv23_server_method()), &SSL_CTX_free);
     if (!m_ctx) {
         VERIFY(hasOpenSSLError());
-        throw OpenSSLException(getOpenSSLErrorMessage(), "SSL_CTX_new");
+        MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
+            << boost::errinfo_api_function("SSL_CTX_new");
     }
     SSL_CTX_set_mode(m_ctx.get(), SSL_MODE_ENABLE_PARTIAL_WRITE);
     m_ssl.reset(SSL_new(m_ctx.get()), &SSL_free);
     if (!m_ssl) {
         VERIFY(hasOpenSSLError());
-        throw OpenSSLException(getOpenSSLErrorMessage(), "SSL_CTX_new");
+        MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
+            << boost::errinfo_api_function("SSL_CTX_new");
     }
     m_readBio = BIO_new_mem_buf((void *)"", 0);
     m_writeBio = BIO_new(BIO_s_mem());
@@ -95,7 +97,8 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
         if (m_readBio) BIO_free(m_readBio);
         if (m_writeBio) BIO_free(m_writeBio);
         VERIFY(hasOpenSSLError());
-        throw OpenSSLException(getOpenSSLErrorMessage(), "BIO_new");
+        MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
+            << boost::errinfo_api_function("BIO_new");
     }
     BIO_set_mem_eof_return(m_readBio, -1);
 
@@ -133,7 +136,8 @@ SSLStream::close(CloseType type)
                         LOG_ERROR(g_log) << this << " SSL_shutdown("
                             << m_ssl.get() << "): " << result << " (" << error
                             << ", " << message << ")";
-                        throw OpenSSLException(message, "SSL_shutdown");
+                        MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                            << boost::errinfo_api_function("SSL_shutdown");
                     }
                     if (result == 0)
                         break;
@@ -145,7 +149,8 @@ SSLStream::close(CloseType type)
                         LOG_ERROR(g_log) << this << " SSL_shutdown("
                             << m_ssl.get() << "): " << result << " (" << error
                             << ", " << message << ")";
-                        throw OpenSSLException(message, "SSL_shutdown");
+                        MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                            << boost::errinfo_api_function("SSL_shutdown");
                     }
                 default:
                     NOTREACHED();
@@ -189,13 +194,14 @@ SSLStream::read(Buffer &b, size_t len)
                     LOG_ERROR(g_log) << this << " SSL_read("
                         << m_ssl.get() << ", " << toRead << "): " << result
                         << " (" << error << ", " << message << ")";
-                    throw OpenSSLException(message, "SSL_read");
+                    MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                        << boost::errinfo_api_function("SSL_read");
                 }
                 if (result == 0) {
                     LOG_ERROR(g_log) << this << " SSL_read(" << m_ssl.get()
                         << ", " << toRead << "): " << result << " ("
                         << error << ")";
-                    throw UnexpectedEofError();
+                    MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
                 NOTREACHED();
             case SSL_ERROR_SSL:
@@ -205,7 +211,8 @@ SSLStream::read(Buffer &b, size_t len)
                     LOG_ERROR(g_log) << this << " SSL_read("
                         << m_ssl.get() << ", " << toRead << "): " << result
                         << " (" << error << ", " << message << ")";
-                    throw OpenSSLException(message, "SSL_read");
+                    MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                        << boost::errinfo_api_function("SSL_read");
                 }
             default:
                 NOTREACHED();
@@ -250,13 +257,14 @@ SSLStream::write(const Buffer &b, size_t len)
                             << m_ssl.get() << ", " << toWrite << "): "
                             << result << " (" << error << ", " << message
                             << ")";
-                        throw OpenSSLException(message, "SSL_write");
+                        MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                            << boost::errinfo_api_function("SSL_write");
                     }
                 if (result == 0) {
                     LOG_ERROR(g_log) << this << " SSL_write(" << m_ssl.get()
                         << ", " << toWrite << "): " << result << " ("
                         << error << ")";
-                    throw UnexpectedEofError();
+                    MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
                 NOTREACHED();
             case SSL_ERROR_SSL:
@@ -266,7 +274,8 @@ SSLStream::write(const Buffer &b, size_t len)
                     LOG_ERROR(g_log) << this << " SSL_write("
                         << m_ssl.get() << ", " << toWrite << "): " << result
                         << " (" << error << ", " << message << ")";
-                    throw OpenSSLException(message, "SSL_write");
+                    MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                        << boost::errinfo_api_function("SSL_write");
                 }
             default:
                 NOTREACHED();
@@ -302,12 +311,13 @@ SSLStream::flush()
                         LOG_ERROR(g_log) << this << " SSL_shutdown("
                             << m_ssl.get() << "): " << result << " (" << error
                             << ", " << message << ")";
-                        throw OpenSSLException(message, "SSL_shutdown");
+                        MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                            << boost::errinfo_api_function("SSL_shutdown");
                     }
                     if (result == 0) {
                         LOG_ERROR(g_log) << this << " SSL_shutdown(" << m_ssl.get()
                             << "): " << result << " (" << error << ")";
-                        throw UnexpectedEofError();
+                        MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                     }
                     NOTREACHED();
                 case SSL_ERROR_SSL:
@@ -317,7 +327,8 @@ SSLStream::flush()
                         LOG_ERROR(g_log) << this << " SSL_shutdown("
                             << m_ssl.get() << "): " << result << " (" << error
                             << ", " << message << ")";
-                        throw OpenSSLException(message, "SSL_shutdown");
+                        MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                            << boost::errinfo_api_function("SSL_shutdown");
                     }
                 default:
                     NOTREACHED();
@@ -356,12 +367,13 @@ SSLStream::accept()
                     LOG_ERROR(g_log) << this << " SSL_accept("
                         << m_ssl.get() << "): " << result << " (" << error
                         << ", " << message << ")";
-                    throw OpenSSLException(message, "SSL_accept");
+                    MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                        << boost::errinfo_api_function("SSL_accept");
                 }
                 if (result == 0) {
                     LOG_ERROR(g_log) << this << " SSL_accept(" << m_ssl.get()
                         << "): " << result << " (" << error << ")";
-                    throw UnexpectedEofError();
+                    MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
                 NOTREACHED();
             case SSL_ERROR_SSL:
@@ -371,7 +383,8 @@ SSLStream::accept()
                     LOG_ERROR(g_log) << this << " SSL_accept("
                         << m_ssl.get() << "): " << result << " (" << error
                         << ", " << message << ")";
-                    throw OpenSSLException(message, "SSL_accept");
+                    MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                        << boost::errinfo_api_function("SSL_accept");
                 }
             default:
                 NOTREACHED();
@@ -408,12 +421,13 @@ SSLStream::connect()
                     LOG_ERROR(g_log) << this << " SSL_connect("
                         << m_ssl.get() << "): " << result << " (" << error
                         << ", " << message << ")";
-                    throw OpenSSLException(message, "SSL_connect");
+                    MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                        << boost::errinfo_api_function("SSL_connect");
                 }
                 if (result == 0) {
                     LOG_ERROR(g_log) << this << " SSL_connect(" << m_ssl.get()
                         << "): " << result << " (" << error << ")";
-                    throw UnexpectedEofError();
+                    MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
                 NOTREACHED();
             case SSL_ERROR_SSL:
@@ -423,7 +437,8 @@ SSLStream::connect()
                     LOG_ERROR(g_log) << this << " SSL_connect("
                         << m_ssl.get() << "): " << result << " (" << error
                         << ", " << message << ")";
-                    throw OpenSSLException(message, "SSL_connect");
+                    MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+                        << boost::errinfo_api_function("SSL_connect");
                 }
             default:
                 NOTREACHED();
@@ -439,7 +454,7 @@ SSLStream::verifyPeerCertificate()
         << " SSL_get_verify_result(" << m_ssl.get() << "): "
         << verifyResult;
     if (verifyResult != X509_V_OK)
-        throw CertificateVerificationException(verifyResult);
+        MORDOR_THROW_EXCEPTION(CertificateVerificationException(verifyResult));
 }
 
 void
@@ -453,9 +468,9 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
         boost::shared_ptr<X509> cert;
         cert.reset(SSL_get_peer_certificate(m_ssl.get()), &X509_free);
         if (!cert)
-            throw CertificateVerificationException(
+            MORDOR_THROW_EXCEPTION(CertificateVerificationException(
                 X509_V_ERR_APPLICATION_VERIFICATION,
-                "No Certificate Presented");
+                "No Certificate Presented"));
         int critical = -1, altNameIndex = -1;
         GENERAL_NAMES *gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert.get(), NID_subject_alt_name, &critical, &altNameIndex);
         if (gens) {
@@ -484,22 +499,22 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
         }
         X509_NAME *name = X509_get_subject_name(cert.get());        
         if (!name)
-            throw CertificateVerificationException(
+            MORDOR_THROW_EXCEPTION(CertificateVerificationException(
                 X509_V_ERR_APPLICATION_VERIFICATION,
-                "No Subject Name");
+                "No Subject Name"));
         int len = X509_NAME_get_text_by_NID(name, NID_commonName, NULL, 0);
         if (len == -1)
-            throw CertificateVerificationException(
+            MORDOR_THROW_EXCEPTION(CertificateVerificationException(
                 X509_V_ERR_APPLICATION_VERIFICATION,
-                "No Common Name");
+                "No Common Name"));
         std::string commonName;
         commonName.resize(len);
         X509_NAME_get_text_by_NID(name, NID_commonName, &commonName[0], len + 1);
         if (commonName == wildcardHostname || commonName == hostname)
             return;
-        throw CertificateVerificationException(
+        MORDOR_THROW_EXCEPTION(CertificateVerificationException(
                 X509_V_ERR_APPLICATION_VERIFICATION,
-                "No Matching Common Name");
+                "No Matching Common Name"));
     }    
 }
 

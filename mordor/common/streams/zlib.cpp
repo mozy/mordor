@@ -169,14 +169,14 @@ ZlibStream::read(Buffer &b, size_t len)
                 ASSERT(inbufs.empty());
                 result = parent()->read(m_inBuffer, m_bufferSize);
                 if (result == 0)
-                    throw UnexpectedEofError();
+                    MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 break;
             case Z_MEM_ERROR:
                 throw std::bad_alloc();
             case Z_NEED_DICT:
-                throw NeedPresetDictionaryException();
+                MORDOR_THROW_EXCEPTION(NeedPresetDictionaryException());
             case Z_DATA_ERROR:
-                throw CorruptedZlibStreamException();
+                MORDOR_THROW_EXCEPTION(CorruptedZlibStreamException());
             default:
                 NOTREACHED();
         }

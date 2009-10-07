@@ -7,6 +7,8 @@
 #include "mordor/common/fiber.h"
 #include "mordor/test/test.h"
 
+struct DummyException : public boost::exception, public std::exception {};
+
 SUITE_INVARIANT(Fibers)
 {
     TEST_ASSERT(!Fiber::getThis());
@@ -277,7 +279,7 @@ fiberProc4(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence, bool e
     TEST_ASSERT(self->state() == Fiber::EXEC);
     ++sequence;
     if (exception)
-        throw std::runtime_error("error");
+        MORDOR_THROW_EXCEPTION(DummyException());
 }
 
 TEST_WITH_SUITE(Fibers, reset)
@@ -316,7 +318,7 @@ TEST_WITH_SUITE(Fibers, reset)
     a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
         boost::ref(sequence), true));
     TEST_ASSERT(a->state() == Fiber::INIT);
-    TEST_ASSERT_EXCEPTION(a->call(), std::runtime_error);
+    TEST_ASSERT_EXCEPTION(a->call(), DummyException);
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 8);
     TEST_ASSERT(Fiber::getThis() == mainFiber);
@@ -324,7 +326,7 @@ TEST_WITH_SUITE(Fibers, reset)
     TEST_ASSERT(a->state() == Fiber::EXCEPT);
     a->reset();
     TEST_ASSERT(a->state() == Fiber::INIT);
-    TEST_ASSERT_EXCEPTION(a->call(), std::runtime_error);
+    TEST_ASSERT_EXCEPTION(a->call(), DummyException);
     ++sequence;
     TEST_ASSERT_EQUAL(sequence, 10);
     TEST_ASSERT(Fiber::getThis() == mainFiber);
@@ -346,7 +348,7 @@ TEST_WITH_SUITE(Fibers, badAlloc)
 
 static void throwFileNotFound()
 {
-    throw FileNotFoundException();
+    MORDOR_THROW_EXCEPTION(FileNotFoundException());
 }
 
 TEST_WITH_SUITE(Fibers, nativeException)
@@ -379,28 +381,16 @@ TEST_WITH_SUITE(Fibers, badAllocYieldTo)
     TEST_ASSERT_EXCEPTION(fiber->yieldTo(), std::bad_alloc);
 }
 
-class GenericException : public std::runtime_error
-{
-public:
-    GenericException() : std::runtime_error("message")
-    {}
-};
-
 static void throwGenericException()
 {
-    throw GenericException();
+    MORDOR_THROW_EXCEPTION(DummyException());
 }
 
 TEST_WITH_SUITE(Fibers, genericException)
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwGenericException));
-    try {
-        fiber->call();
-    } catch (FiberException &ex) {
-        TEST_ASSERT(typeid(ex.inner()) == typeid(GenericException));
-        TEST_ASSERT_EQUAL(std::string(ex.inner().what()), "message");
-    }
+    TEST_ASSERT_EXCEPTION(fiber->call(), DummyException);
 }
 
 TEST_WITH_SUITE(Fibers, fiberThrowingExceptionOutOfScope)
@@ -409,9 +399,8 @@ TEST_WITH_SUITE(Fibers, fiberThrowingExceptionOutOfScope)
     try {
         Fiber::ptr fiber(new Fiber(&throwGenericException));
         fiber->call();
-    } catch (FiberException &ex) {
-        TEST_ASSERT(typeid(ex.inner()) == typeid(GenericException));
-        TEST_ASSERT_EQUAL(std::string(ex.inner().what()), "message");
+        NOTREACHED();
+    } catch (DummyException &) {
     }
 }
 

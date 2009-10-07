@@ -20,43 +20,33 @@
 #undef minor
 #endif
 
-class HTTPException : public std::runtime_error
-{
-public:
-    HTTPException()
-        : std::runtime_error("")
-    {}
-    HTTPException(const std::string &message)
-        : std::runtime_error(message)
-    {}
-};
+struct HTTPException : virtual ExceptionBase {};
 
 namespace HTTP
 {
-    class IncompleteMessageHeaderException : public HTTPException
-    {};
+    struct IncompleteMessageHeaderException : virtual HTTPException, virtual StreamException {};
 
     // Unparseable
-    class BadMessageHeaderException : public HTTPException
-    {};
+    struct BadMessageHeaderException : virtual HTTPException, StreamException {};
 
-    class PriorRequestFailedException : public HTTPException
-    {};
+    struct PriorRequestFailedException : virtual HTTPException {};
 
-    class ConnectionVoluntarilyClosedException : public PriorRequestFailedException
-    {};
+    struct ConnectionVoluntarilyClosedException : virtual PriorRequestFailedException {};
 
     // Logically doesn't make sense
-    class InvalidMessageHeaderException : public HTTPException
-    {
+    struct InvalidMessageHeaderException : virtual HTTPException, virtual StreamException {
     public:
         InvalidMessageHeaderException() {}
         InvalidMessageHeaderException(const std::string &message)
-            : HTTPException(message)
-        {}
+            : m_message(message) {}
+        ~InvalidMessageHeaderException() throw() {}
+
+        const char *what() const throw() { return m_message.c_str(); }
+    private:
+        std::string m_message;
     };
 
-    class InvalidTransferEncodingException : public InvalidMessageHeaderException
+    struct InvalidTransferEncodingException : virtual InvalidMessageHeaderException
     {
     public:
         InvalidTransferEncodingException(const std::string &message)
@@ -391,17 +381,20 @@ namespace HTTP
     const AcceptValueWithParameters *preferred(const AcceptList &accept, const AcceptList &available);
 
     // Logically the entire response is unexpected
-    class InvalidResponseException : public HTTPException
+    struct InvalidResponseException : virtual HTTPException
     {
     public:
         InvalidResponseException(const std::string &message, const Response &response)
-            : HTTPException(message),
+            : m_message(message),
               m_response(response)
         {}
+        ~InvalidResponseException() throw() {}
 
+        const char *what() const throw() { return m_message.c_str(); }
         const Response &response() { return m_response; }
 
     private:
+        std::string m_message;
         Response m_response;
     };
 };

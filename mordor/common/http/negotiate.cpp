@@ -104,7 +104,7 @@ HTTP::NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
             &m_creds,
             &lifetime);
         if (!SUCCEEDED(status)) {
-            throwExceptionFromLastError(status, "AcquireCredentialsHandleW");
+            THROW_EXCEPTION_FROM_ERROR_API(status, "AcquireCredentialsHandleW");
         }
 
         status = InitializeSecurityContextW(
@@ -154,7 +154,7 @@ HTTP::NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
     }
 
     if (!SUCCEEDED(status))
-        throwExceptionFromLastError(status);
+        THROW_EXCEPTION_FROM_ERROR(status);
 
     outboundBuffer.resize(outboundSecBuffer.cbBuffer);
     authorization.scheme = package;

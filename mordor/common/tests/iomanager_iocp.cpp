@@ -25,7 +25,7 @@ TEST_WITH_SUITE(IOManager, eventPreventsStop)
 {
     HANDLE hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
     if (!hEvent)
-        throwExceptionFromLastError("CreateEventW");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
     bool fired = false;
     try {
         Fiber::ptr mainfiber(new Fiber());

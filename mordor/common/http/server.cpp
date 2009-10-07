@@ -773,14 +773,14 @@ HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
             if (response->supportsSeek()) {
                 try {
                    response->seek(cr.first, Stream::BEGIN);
-                } catch (UnexpectedEofError) {
+                } catch (UnexpectedEofException) {
                     respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
                     return;
                 }
             } else {
                 try {
                     transferStream(response, NullStream::get(), cr.first);
-                } catch (UnexpectedEofError) {
+                } catch (UnexpectedEofException) {
                     respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
                     return;
                 }

@@ -101,9 +101,9 @@ PipeStream::read(Buffer &b, size_t len)
     {
         boost::mutex::scoped_lock lock(*m_mutex);
         if (m_closed & READ)
-            throw BadHandleException();
+            MORDOR_THROW_EXCEPTION(BadHandleException());
         if (m_otherStream.expired() && !(m_otherClosed & WRITE)) {
-            throw BrokenPipeException();
+            MORDOR_THROW_EXCEPTION(BrokenPipeException());
         }
         size_t avail = m_readBuffer.readAvailable();
         if (avail > 0) {
@@ -141,13 +141,13 @@ PipeStream::write(const Buffer &b, size_t len)
         {
             boost::mutex::scoped_lock lock(*m_mutex);
             if (m_closed & WRITE)
-                throw BadHandleException();
+                MORDOR_THROW_EXCEPTION(BadHandleException());
             if (m_otherStream.expired()) {
-                throw BrokenPipeException();
+                MORDOR_THROW_EXCEPTION(BrokenPipeException());
             }
             PipeStream::ptr otherStream(m_otherStream);
             if (otherStream->m_closed & READ) {
-                throw BrokenPipeException();            
+                MORDOR_THROW_EXCEPTION(BrokenPipeException());
             }
 
             if (otherStream->m_readBuffer.readAvailable() + len <= m_bufferSize) {
@@ -174,11 +174,11 @@ PipeStream::flush()
         {
             boost::mutex::scoped_lock lock(*m_mutex);
             if (m_otherStream.expired()) {
-                throw BrokenPipeException();
+                MORDOR_THROW_EXCEPTION(BrokenPipeException());
             }
             PipeStream::ptr otherStream(m_otherStream);
             if (otherStream->m_closed & READ) {
-                throw BrokenPipeException();            
+                MORDOR_THROW_EXCEPTION(BrokenPipeException());
             }
 
             if (otherStream->m_readBuffer.readAvailable() == 0) {

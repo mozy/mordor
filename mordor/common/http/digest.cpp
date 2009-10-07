@@ -50,9 +50,9 @@ HTTP::DigestAuth::authorize(const Response &challenge, Request &nextRequest,
         ListParser parser(qopValues);
         parser.run(qop);
         if (parser.error() || !parser.complete())
-            throw BadMessageHeaderException();
+            MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
         if (qopValues.find("auth") == qopValues.end())
-            throw InvalidDigestQopException(qop);
+            MORDOR_THROW_EXCEPTION(InvalidDigestQopException(qop));
         authQop = true;
     }
 
@@ -69,7 +69,7 @@ HTTP::DigestAuth::authorize(const Response &challenge, Request &nextRequest,
     else if (algorithm == "MD5-sess")
         A1 = md5( username + ':' + realm + ':' + password ) + ':' + nonce + ':' + cnonce;
     else
-        throw InvalidDigestAlgorithmException(algorithm);
+        MORDOR_THROW_EXCEPTION(InvalidDigestAlgorithmException(algorithm));
     
     // compute A2 - our qop is always auth or unspecified
     os.str("");

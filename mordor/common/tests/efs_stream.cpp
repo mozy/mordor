@@ -17,7 +17,7 @@ TEST_WITH_SUITE(EFSStream, basic)
         file.write("cody", 4);
     }
     if (!EncryptFileW(L"dummy.efs"))
-        throwExceptionFromLastError("EncryptFileW");
+        THROW_EXCEPTION_FROM_LAST_ERROR_API("EncryptFileW");
     Buffer b, b2;
     {
         EFSStream efs("dummy.efs", true);

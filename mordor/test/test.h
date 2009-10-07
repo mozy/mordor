@@ -59,10 +59,8 @@ public:
     virtual void testComplete(const std::string &suite,
         const std::string &test) = 0;
     virtual void testAsserted(const std::string &suite,
-        const std::string &test, const std::string &message) = 0;
+        const std::string &test, const Assertion &assertion) = 0;
     virtual void testException(const std::string &suite,
-        const std::string &test, const std::exception &ex) = 0;
-    virtual void testUnknownException(const std::string &suite,
         const std::string &test) = 0;
     virtual void testsComplete() = 0;
 };

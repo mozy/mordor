@@ -321,9 +321,8 @@ Logger::log(Log::Level level, const std::string &str,
             break;
         _this = m_parent;
     }
-    if (level == Log::FATAL) {
-        throw std::runtime_error("Fatal error: " + str);
-    }
+    if (level == Log::FATAL)
+        MORDOR_THROW_EXCEPTION(Assertion("Fatal error: " + str));
 }
 
 LogEvent::~LogEvent()

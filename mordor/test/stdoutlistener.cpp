@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include <boost/exception.hpp>
+
 StdoutListener::StdoutListener()
 : m_tests(0),
   m_success(0)
@@ -30,24 +32,17 @@ StdoutListener::testComplete(const std::string &suite, const std::string &test)
 
 void
 StdoutListener::testAsserted(const std::string &suite, const std::string &test,
-                             const std::string &message)
+                             const Assertion &assertion)
 {
-    std::cerr << message;
+    std::cerr << "Assertion: "
+        << boost::current_exception_diagnostic_information() << std::endl;
 }
 
 void
-StdoutListener::testException(const std::string &suite, const std::string &test,
-                              const std::exception &ex)
+StdoutListener::testException(const std::string &suite, const std::string &test)
 {
-    std::cerr << "Unexpected exception " << typeid(ex).name() << ":" << std::endl
-                << "" << ex.what() << std::endl;
-}
-
-void
-StdoutListener::testUnknownException(const std::string &suite,
-                                        const std::string &test)
-{
-    std::cerr << "Unexpected unknown exception" << std::endl;
+    std::cerr << "Unexpected exception: "
+        << boost::current_exception_diagnostic_information() << std::endl;
 }
 
 void

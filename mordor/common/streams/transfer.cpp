@@ -52,7 +52,7 @@ void transferStream(Stream &src, Stream &dst, unsigned long long toTransfer,
     readOne(src, *readBuffer, todo, readResult);
     *totalRead += readResult;
     if (readResult == 0 && toTransfer != ~0ull) {
-        throw UnexpectedEofError();
+        MORDOR_THROW_EXCEPTION(UnexpectedEofException());
     }
     if (readResult == 0)
         return;
@@ -79,7 +79,7 @@ totalWritten);
         parallel_do(dgs, fibers);
         *totalRead += readResult;
         if (readResult == 0 && toTransfer != ~0ull && *totalRead < toTransfer) {
-            throw UnexpectedEofError();
+            MORDOR_THROW_EXCEPTION(UnexpectedEofException());
         }
         if (readResult == 0)
             return;

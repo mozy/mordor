@@ -6,7 +6,7 @@
 
 namespace HTTP
 {
-    class InvalidChunkError : public StreamError
+    struct InvalidChunkException : virtual StreamException
     {
     public:
         enum Type
@@ -14,8 +14,8 @@ namespace HTTP
             HEADER,
             FOOTER
         };
-        InvalidChunkError(const std::string &line, Type type);
-        ~InvalidChunkError() throw() {}
+        InvalidChunkException(const std::string &line, Type type);
+        ~InvalidChunkException() throw() {}
 
         const std::string &line() const { return m_line; }
         Type type() const { return m_type; }
