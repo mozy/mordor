@@ -130,8 +130,8 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
     } else {
         // Delimited by closing the connection
     }
-    NotifyStream *notify = new NotifyStream(stream);
-    stream.reset(notify);
+    NotifyStream::ptr notify(new NotifyStream(stream));
+    stream = notify;
     notify->notifyOnClose = notifyOnEof;
     notify->notifyOnEof = notifyOnEof;
     notify->notifyOnException = notifyOnException;

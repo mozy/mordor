@@ -11,6 +11,7 @@
 #include "mordor/common/assert.h"
 #include "mordor/common/log.h"
 #include "mordor/common/scheduler.h"
+#include "mordor/common/streams/notify.h"
 #include "mordor/common/streams/null.h"
 #include "mordor/common/streams/transfer.h"
 #include "parser.h"
@@ -248,8 +249,8 @@ HTTP::ClientRequest::requestStream()
     ASSERT(!m_requestDone);
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
-        boost::bind(&ClientRequest::requestDone, this),
-        boost::bind(&ClientRequest::cancel, this, true), false);
+        boost::bind(&ClientRequest::requestDone, shared_from_this()),
+        boost::bind(&ClientRequest::cancel, shared_from_this(), true), false);
 }
 
 Multipart::ptr
@@ -266,10 +267,10 @@ HTTP::ClientRequest::requestMultipart()
     }
     m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
-        boost::bind(&ClientRequest::requestDone, this),
-        boost::bind(&ClientRequest::cancel, this, true), false);
+        boost::bind(&ClientRequest::requestDone, shared_from_this()),
+        boost::bind(&ClientRequest::cancel, shared_from_this(), true), false);
     m_requestMultipart.reset(new Multipart(m_requestStream, it->second));
-    m_requestMultipart->multipartFinished = boost::bind(&ClientRequest::requestMultipartDone, this);
+    m_requestMultipart->multipartFinished = boost::bind(&ClientRequest::requestMultipartDone, shared_from_this());
     return m_requestMultipart;
 }
 
@@ -315,8 +316,8 @@ HTTP::ClientRequest::responseStream()
     ASSERT(m_response.entity.contentType.type != "multipart");
     return m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
-        boost::bind(&ClientRequest::responseDone, this),
-        boost::bind(&ClientRequest::cancel, this, true), true);
+        boost::bind(&ClientRequest::responseDone, shared_from_this()),
+        boost::bind(&ClientRequest::cancel, shared_from_this(), true), true);
 }
 
 const HTTP::EntityHeaders &
@@ -354,9 +355,9 @@ HTTP::ClientRequest::responseMultipart()
     m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
         NULL,
-        boost::bind(&ClientRequest::cancel, this, true), true);
+        boost::bind(&ClientRequest::cancel, shared_from_this(), true), true);
     m_responseMultipart.reset(new Multipart(m_responseStream, it->second));
-    m_responseMultipart->multipartFinished = boost::bind(&ClientRequest::responseDone, this);
+    m_responseMultipart->multipartFinished = boost::bind(&ClientRequest::responseDone, shared_from_this());
     return m_responseMultipart;
 }
 
@@ -389,6 +390,24 @@ HTTP::ClientRequest::cancel(bool abort)
         }
     }
     m_aborted = true;
+    if (m_requestStream) {
+        // Break the circular reference
+        NotifyStream::ptr notify =
+            boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
+        ASSERT(notify);
+        notify->notifyOnClose = NULL;
+        notify->notifyOnEof = NULL;
+        notify->notifyOnException = NULL;
+    }
+    if (m_responseStream) {
+        // Break the circular reference
+        NotifyStream::ptr notify =
+            boost::dynamic_pointer_cast<NotifyStream>(m_responseStream);
+        ASSERT(notify);
+        notify->notifyOnClose = NULL;
+        notify->notifyOnEof = NULL;
+        notify->notifyOnException = NULL;
+    }
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
     m_conn->invariant();
     (m_requestDone ? m_conn->m_priorResponseFailed : m_conn->m_priorRequestFailed) = true;
@@ -726,6 +745,7 @@ HTTP::ClientRequest::ensureResponse()
 void
 HTTP::ClientRequest::requestMultipartDone()
 {
+    ASSERT(m_requestStream);
     m_requestStream->close();
 }
 
@@ -735,6 +755,13 @@ HTTP::ClientRequest::requestDone()
     if (m_requestDone)
         return;
     ASSERT(m_requestStream);
+    // Break the circular reference
+    NotifyStream::ptr notify =
+        boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
+    ASSERT(notify);
+    notify->notifyOnClose = NULL;
+    notify->notifyOnEof = NULL;
+    notify->notifyOnException = NULL;
     if (m_requestStream->supportsSize()) {
         if (m_requestStream->size() !=
             m_requestStream->seek(0, Stream::CURRENT)) {
@@ -757,6 +784,13 @@ HTTP::ClientRequest::responseDone()
 {
     if (m_responseDone)
         return;
+    // Break the circular reference
+    NotifyStream::ptr notify =
+        boost::dynamic_pointer_cast<NotifyStream>(m_responseStream);
+    ASSERT(notify);
+    notify->notifyOnClose = NULL;
+    notify->notifyOnEof = NULL;
+    notify->notifyOnException = NULL;
     if (!m_response.general.transferEncoding.empty()) {
         // Read and parse the trailer
         TrailerParser parser(m_responseTrailer);

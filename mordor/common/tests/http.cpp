@@ -14,6 +14,11 @@
 #include "mordor/common/streams/transfer.h"
 #include "mordor/test/test.h"
 
+SUITE_INVARIANT(HTTPClient)
+{
+    TEST_ASSERT(!Fiber::getThis());
+}
+
 // Simplest success case
 TEST_WITH_SUITE(HTTP, simpleRequest)
 {
