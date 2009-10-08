@@ -226,13 +226,7 @@ endif
 DEPS := $(shell find $(CURDIR) -name "*.d")
 -include $(DEPS)
 
-# clean current build
-#
-.PHONY: clean
-clean:
-	$(Q)git clean -dfx >/dev/null 2>&1 || rm -rf *
-
-all:	mordor/common/examples/cat						\
+ALLBINS = mordor/common/examples/cat						\
 	mordor/common/examples/echoserver					\
 	mordor/common/examples/simpleclient					\
 	mordor/common/examples/tunnel						\
@@ -244,6 +238,21 @@ all:	mordor/common/examples/cat						\
 	mordor/triton/client/list						\
 	mordor/triton/client/manifest						\
 	mordor/triton/client/put
+
+
+# clean current build
+#
+.PHONY: clean
+clean:
+	$(Q)find -name '*.gcno' | xargs rm -f
+	$(Q)find -name '*.d' | xargs rm -f
+	$(Q)find -name '*.o' | xargs rm -f
+	$(Q)find -name '*.a' | xargs rm -f
+	$(Q)rm -f mordor/common/uri.cpp mordor/common/http/parser.cpp mordor/common/xml/parser.cpp
+	$(Q)rm -f $(ALLBINS) mordor/common/tests/run_tests mordor/kalypso/tests/run_tests
+	$(Q)rm -rf lcov
+
+all: $(ALLBINS)
 
 .PHONY: check
 check: all
