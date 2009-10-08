@@ -34,8 +34,10 @@ DPKG := $(shell which dpkg 2>/dev/null)
 ifdef DPKG
     ARCH := $(shell dpkg --print-architecture 2>/dev/null)
 endif
-ifndef ARCH
-    ARCH := $(shell uname -m)
+ifneq ($(PLATFORM), Darwin)
+    ifndef ARCH
+        ARCH := $(shell uname -m)
+    endif
 endif
 DEBIANVER := $(shell cat /etc/debian_version 2>/dev/null)
 UBUNTUCODENAME := $(shell sed -n 's/DISTRIB_CODENAME\=\(.*\)/\1/p' /etc/lsb_release 2>/dev/null)
@@ -62,8 +64,26 @@ ifeq ($(PLATFORM), Darwin)
     DARWIN := 1
     IOMANAGER := kqueue
     UNDERSCORE := _underscore
-    ARCH := amd64
-    MACH_TARGET := -arch x86_64
+    GCC_ARCH := $(shell file `which gcc` | grep x86_64 -o | uniq)
+    ifndef GCC_ARCH
+        GCC_ARCH := i386
+    endif
+    ifndef ARCH
+        ARCH := $(GCC_ARCH)
+    endif
+    ifeq ($(ARCH), x86_64)
+        ARCH := amd64
+    endif
+    ifeq ($(ARCH), amd64)
+        ifneq ($(GCC_ARCH), x86_64)
+            MACH_TARGET := -arch x86_64
+        endif
+    endif
+    ifeq ($(ARCH), i386)
+        ifneq ($(GCC_ARCH), i386)
+            MACH_TARGET := -arch i386
+        endif
+    endif
 endif
 ifeq ($(PLATFORM), FreeBSD)
     IOMANAGER := kqueue
