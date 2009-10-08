@@ -294,10 +294,10 @@ HTTP::isAcceptable(const HTTP::ChallengeList &list, const std::string &scheme)
 }
 
 bool
-HTTP::isAcceptable(const HTTP::AcceptList &list, const AcceptValueWithParameters &value,
+HTTP::isAcceptable(const HTTP::AcceptListWithParameters &list, const AcceptValueWithParameters &value,
                    bool defaultMissing)
 {
-    for (HTTP::AcceptList::const_iterator it(list.begin());
+    for (HTTP::AcceptListWithParameters::const_iterator it(list.begin());
         it != list.end();
         ++it) {
         if (*it == value) {
@@ -308,12 +308,12 @@ HTTP::isAcceptable(const HTTP::AcceptList &list, const AcceptValueWithParameters
 }
 
 bool
-HTTP::isPreferred(const HTTP::AcceptList &list, const AcceptValueWithParameters &lhs,
+HTTP::isPreferred(const HTTP::AcceptListWithParameters &list, const AcceptValueWithParameters &lhs,
                   const AcceptValueWithParameters &rhs)
 {
     ASSERT(lhs != rhs);
     unsigned int lQvalue = ~0u, rQvalue = ~0u;
-    for (HTTP::AcceptList::const_iterator it(list.begin());
+    for (HTTP::AcceptListWithParameters::const_iterator it(list.begin());
         it != list.end();
         ++it) {
         if (*it == lhs) {
@@ -337,28 +337,28 @@ HTTP::isPreferred(const HTTP::AcceptList &list, const AcceptValueWithParameters 
 
 const
 HTTP::AcceptValueWithParameters *
-HTTP::preferred(const HTTP::AcceptList &accept, const HTTP::AcceptList &available)
+HTTP::preferred(const HTTP::AcceptListWithParameters &accept, const HTTP::AcceptListWithParameters &available)
 {
     ASSERT(!available.empty());
 #ifdef _DEBUG
     // Assert that the available list is ordered
-    for (HTTP::AcceptList::const_iterator it(available.begin());
+    for (HTTP::AcceptListWithParameters::const_iterator it(available.begin());
         it != available.end();
         ++it) {
         ASSERT(it->qvalue <= 1000);
-        HTTP::AcceptList::const_iterator next(it);
+        HTTP::AcceptListWithParameters::const_iterator next(it);
         ++next;
         if (next != available.end())
             ASSERT(it->qvalue >= next->qvalue);
     }
 #endif
-    HTTP::AcceptList::const_iterator availableIt(available.begin());
+    HTTP::AcceptListWithParameters::const_iterator availableIt(available.begin());
     while (availableIt != available.end()) {
-        HTTP::AcceptList::const_iterator nextIt(availableIt);
+        HTTP::AcceptListWithParameters::const_iterator nextIt(availableIt);
         ++nextIt;
         while (nextIt != available.end() && nextIt->qvalue == availableIt->qvalue)
             ++nextIt;
-        AcceptList preferred;
+        AcceptListWithParameters preferred;
         for (;
             availableIt != nextIt;
             ++availableIt) {
@@ -540,6 +540,48 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ContentRange &cr)
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValue &v)
+{
+    if (v.value.empty())
+        os << '*';
+    else
+        os << v.value;
+    if (v.qvalue != ~0u) {
+        ASSERT(v.qvalue <= 1000);
+        unsigned int qvalue = v.qvalue;
+        unsigned int curPlace = 100;
+        if (qvalue == 1000) {
+            os << ";q=1";
+        } else {
+            os << ";q=0";
+            while (curPlace > 0 && qvalue > 0) {
+                if (curPlace == 100)
+                    os << '.';
+                unsigned int cur = qvalue / curPlace;
+                ASSERT(cur < 10);
+                os << cur;
+                qvalue -= cur * curPlace;
+                curPlace /= 10;
+            }
+        }
+    }
+
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const HTTP::AcceptList &l)
+{
+    ASSERT(!l.empty());
+    for (HTTP::AcceptList::const_iterator it(l.begin());
+        it != l.end();
+        ++it) {
+        if (it != l.begin())
+            os << ", ";
+        os << *it;
+    }
+    return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters &v)
 {
     ASSERT(!v.value.empty());
@@ -570,10 +612,10 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::AcceptList &l)
+std::ostream& operator<<(std::ostream& os, const HTTP::AcceptListWithParameters &l)
 {
     ASSERT(!l.empty());
-    for (HTTP::AcceptList::const_iterator it(l.begin());
+    for (HTTP::AcceptListWithParameters::const_iterator it(l.begin());
         it != l.end();
         ++it) {
         if (it != l.begin())
@@ -618,6 +660,10 @@ std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)
 std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
 {
     os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
+    if (!r.acceptCharset.empty())
+        os << "Accept-Charset: " << r.acceptCharset << "\r\n";
+    if (!r.acceptEncoding.empty())
+        os << "Accept-Encoding: " << r.acceptEncoding << "\r\n";
     if (!r.authorization.scheme.empty())
         os << "Authorization: " << r.authorization << "\r\n";
     if (!r.expect.empty())

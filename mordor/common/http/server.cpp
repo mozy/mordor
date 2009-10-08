@@ -794,7 +794,7 @@ HTTP::respondStream(ServerRequest::ptr request, Stream::ptr response)
     if (fullEntity) {
         request->response().entity.contentLength = size;
         if (request->request().requestLine.ver >= Version(1, 1)) {
-            AcceptList available;
+            AcceptListWithParameters available;
             available.push_back(AcceptValueWithParameters("deflate", 1000));
             available.push_back(AcceptValueWithParameters("gzip", 500));
             available.push_back(AcceptValueWithParameters("x-gzip", 500));

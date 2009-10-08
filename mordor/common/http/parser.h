@@ -19,6 +19,7 @@ namespace HTTP
         std::vector<std::string> *m_list;
         ParameterizedList *m_parameterizedList;
         AcceptList *m_acceptList;
+        AcceptListWithParameters *m_acceptListWithParams;
         StringMap *m_parameters;
         AuthParams *m_auth;
         ChallengeList *m_challengeList;

@@ -483,6 +483,54 @@ HTTP::unquote(const std::string &str)
         m_uri = &m_request->requestLine.uri;
     }
     
+    action save_accept_list_element {
+        if (m_acceptList) {
+            AcceptValue av;
+            if (fpc - mark != 1 || *mark != '*')
+                av.value = std::string(mark, fpc - mark);
+            m_acceptList->push_back(av);
+            mark = NULL;
+        } else {
+            ASSERT(m_acceptListWithParams);
+		    AcceptValueWithParameters avp;
+		    avp.value = std::string(mark, fpc - mark);
+		    m_acceptListWithParams->push_back(avp);
+		    m_parameters = &m_acceptListWithParams->back().parameters;
+		    mark = NULL;
+	    }
+    }
+    
+    action save_qvalue {
+        unsigned int *qvalue = NULL;
+        if (m_acceptList) {
+            qvalue = &m_acceptList->back().qvalue;
+        } else {
+            ASSERT(m_acceptListWithParams);
+            qvalue = &m_acceptListWithParams->back().qvalue;
+        }
+        *qvalue = 0;
+        size_t i = 0;
+        unsigned int curPlace = 1000;
+        for (; i < 5 && mark < fpc; ++i, ++mark) {
+            if (i == 1)
+                continue;
+            unsigned int cur = *mark - '0';
+            *qvalue += cur * curPlace;
+            curPlace /= 10;
+        }
+        mark = NULL;
+    }
+    
+    action set_accept_charset {
+        m_acceptList = &m_request->request.acceptCharset;
+        m_acceptListWithParams = NULL;
+    }
+    
+    action set_accept_encoding {
+        m_acceptList = &m_request->request.acceptEncoding;
+        m_acceptListWithParams = NULL;
+    }
+    
     action set_authorization {
         m_challengeList = NULL;
         m_auth = &m_request->request.authorization;
@@ -563,47 +611,32 @@ HTTP::unquote(const std::string &str)
     action set_referer {
         m_uri = &m_request->request.referer;
     }
-
-    action save_accept_list_element {
-        AcceptValueWithParameters avp;
-        avp.value = std::string(mark, fpc - mark);
-        m_acceptList->push_back(avp);
-        m_parameters = &m_acceptList->back().parameters;
-        mark = NULL;
-    }
-    
-    action save_qvalue {
-        m_acceptList->back().qvalue = 0;
-        size_t i = 0;
-        unsigned int curPlace = 1000;
-        for (; i < 5 && mark < fpc; ++i, ++mark) {
-            if (i == 1)
-                continue;
-            unsigned int cur = *mark - '0';
-            m_acceptList->back().qvalue += cur * curPlace;
-            curPlace /= 10;
-        }
-        mark = NULL;
-    }
     
     action save_accept_attribute {
         m_temp1 = std::string(mark, fpc - mark);
-        m_acceptList->back().acceptParams[m_temp1] = "";
+        m_acceptListWithParams->back().acceptParams[m_temp1] = "";
         mark = NULL;
     }
     
     action save_accept_value {
-        m_acceptList->back().acceptParams[m_temp1] = unquote(mark, fpc - mark);
+        m_acceptListWithParams->back().acceptParams[m_temp1] = unquote(mark, fpc - mark);
         mark = NULL;
     }
     
     action set_te {
-        m_acceptList = &m_request->request.te;
+        m_acceptList = NULL;
+        m_acceptListWithParams = &m_request->request.te;
     }
     
     action set_user_agent {
         m_productAndCommentList = &m_request->request.userAgent;
     }
+    
+    acceptListElement = ( token | '*' ) >mark %save_accept_list_element (';q='i qvalue >mark %save_qvalue)?;
+    acceptList = LWS* acceptListElement ( LWS* ',' LWS* acceptListElement)* LWS*;
+    Accept_Charset = 'Accept-Charset:'i @set_accept_charset acceptList;
+    
+    Accept_Encoding = 'Accept-Encoding:'i @set_accept_encoding acceptList;
 
     Authorization = 'Authorization:'i @set_authorization LWS* credentials;
     
@@ -631,14 +664,14 @@ HTTP::unquote(const std::string &str)
 
     accept_extension = ';' token >mark %save_accept_attribute ('=' (token | quoted_string) >mark %save_accept_value)?;
     accept_params = ';q='i qvalue >mark %save_qvalue (accept_extension)*;
-    acceptListElement = token >mark %save_accept_list_element (';' parameter)* (accept_params)?;
-    acceptList = LWS* acceptListElement ( LWS* ',' LWS* acceptListElement)* LWS*;
-    TE = 'TE:'i @set_te acceptList;
+    acceptListWithParamsElement = token >mark %save_accept_list_element (';' parameter)* (accept_params)?;
+    acceptListWithParams = LWS* acceptListWithParamsElement ( LWS* ',' LWS* acceptListWithParamsElement)* LWS*;
+    TE = 'TE:'i @set_te acceptListWithParams;
     
     User_Agent = 'User-Agent:'i @set_user_agent product_and_comment_list;
     
-    request_header = Authorization | Expect | Host | If_Match | If_Modified_Since | If_None_Match | If_Range | If_Unmodified_Since | Proxy_Authorization | Range | Referer | TE | User_Agent;
-    request_header_names = 'Authorization'i | 'Expect'i | 'Host'i | 'If-Match'i | 'If-Modified-Since'i | 'If-None-Match'i | 'If-Range'i | 'If-Unmodified-Since'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i | 'User-Agent'i;
+    request_header = Accept_Charset | Accept_Encoding | Authorization | Expect | Host | If_Match | If_Modified_Since | If_None_Match | If_Range | If_Unmodified_Since | Proxy_Authorization | Range | Referer | TE | User_Agent;
+    request_header_names = 'Accept-Charset'i | 'Accept-Encoding'i | 'Authorization'i | 'Expect'i | 'Host'i | 'If-Match'i | 'If-Modified-Since'i | 'If-None-Match'i | 'If-Range'i | 'If-Unmodified-Since'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i | 'User-Agent'i;
     
     extension_header = (token - (general_header_names | request_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;
@@ -661,6 +694,8 @@ HTTP::HTTPParser::init()
     m_set = NULL;
     m_list = NULL;
     m_parameterizedList = NULL;
+    m_acceptList = NULL;
+    m_acceptListWithParams = NULL;
     m_parameters = NULL;
     m_auth = NULL;
     m_challengeList = NULL;

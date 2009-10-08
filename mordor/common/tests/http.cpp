@@ -344,7 +344,7 @@ TEST_WITH_SUITE(HTTP, teHeader)
     TEST_ASSERT(!parser.error());
     TEST_ASSERT(parser.complete());
     TEST_ASSERT_EQUAL(request.request.te.size(), 3u);
-    HTTP::AcceptList::iterator it = request.request.te.begin();
+    HTTP::AcceptListWithParameters::iterator it = request.request.te.begin();
     TEST_ASSERT_EQUAL(it->value, "deflate");
     TEST_ASSERT_EQUAL(it->qvalue, ~0u);
     ++it;
