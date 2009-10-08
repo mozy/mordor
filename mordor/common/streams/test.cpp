@@ -4,6 +4,8 @@
 
 #include "test.h"
 
+namespace Mordor {
+
 void
 TestStream::close(CloseType type)
 {
@@ -53,4 +55,6 @@ TestStream::flush()
     if (m_onFlush)
         m_onFlush();
     parent()->flush();
+}
+
 }

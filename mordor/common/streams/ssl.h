@@ -1,5 +1,5 @@
-#ifndef __SSL_STREAM_H__
-#define __SSL_STREAM_H__
+#ifndef __MORDOR_SSL_STREAM_H__
+#define __MORDOR_SSL_STREAM_H__
 // Copyright (c) 2009 - Decho Corp
 
 #include "filter.h"
@@ -7,6 +7,8 @@
 #include <vector>
 
 #include <openssl/ssl.h>
+
+namespace Mordor {
 
 class OpenSSLException : public std::runtime_error
 {
@@ -67,5 +69,7 @@ private:
     Buffer m_readBuffer;
     BIO *m_readBio, *m_writeBio;
 };
+
+}
 
 #endif

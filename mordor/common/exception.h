@@ -1,5 +1,5 @@
-#ifndef __EXCEPTION_H__
-#define __EXCEPTION_H__
+#ifndef __MORDOR_EXCEPTION_H__
+#define __MORDOR_EXCEPTION_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <stdexcept>
@@ -9,6 +9,12 @@
 #include <boost/exception.hpp>
 
 #include "version.h"
+
+#ifdef WINDOWS
+#include <windows.h>
+#endif
+
+namespace Mordor {
 
 typedef boost::error_info<struct tag_backtrace, std::vector<void *> > errinfo_backtrace;
 #ifdef WINDOWS
@@ -28,22 +34,22 @@ std::vector<void *> backtrace(int framesToSkip = 0);
 void removeTopFrames(boost::exception &ex, int framesToSkip = 0);
 
 #define MORDOR_THROW_EXCEPTION(x)                                               \
-    throw boost::enable_current_exception(boost::enable_error_info(x))          \
-        << boost::throw_function(BOOST_CURRENT_FUNCTION)                        \
-        << boost::throw_file(__FILE__)                                          \
-        << boost::throw_line((int)__LINE__)                                     \
-        << errinfo_backtrace(backtrace())
+    throw ::boost::enable_current_exception(::boost::enable_error_info(x))      \
+        << ::boost::throw_function(BOOST_CURRENT_FUNCTION)                      \
+        << ::boost::throw_file(__FILE__)                                        \
+        << ::boost::throw_line((int)__LINE__)                                   \
+        << ::Mordor::errinfo_backtrace(::Mordor::backtrace())
 
 void rethrow_exception(boost::exception_ptr const & ep);
 
-struct ExceptionBase : virtual boost::exception, virtual std::exception {};
+struct Exception : virtual boost::exception, virtual std::exception {};
 
-struct StreamException : virtual ExceptionBase {};
+struct StreamException : virtual Exception {};
 struct UnexpectedEofException : virtual StreamException {};
 struct WriteBeyondEofException : virtual StreamException {};
 struct BufferOverflowException : virtual StreamException {};
 
-struct NativeException : virtual ExceptionBase {};
+struct NativeException : virtual Exception {};
 
 #ifdef WINDOWS
 #include <winerror.h>
@@ -86,50 +92,52 @@ error_t lastError();
 
 void throwExceptionFromLastError(error_t lastError);
 
-#define THROW_EXCEPTION_FROM_LAST_ERROR()                                       \
+#define MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR()                                \
     try {                                                                       \
-        throwExceptionFromLastError(lastError());                               \
-    } catch (boost::exception &ex) {                                            \
-        ex << boost::throw_function(BOOST_CURRENT_FUNCTION)                     \
-            << boost::throw_file(__FILE__)                                      \
-            << boost::throw_line((int)__LINE__)                                 \
-            << errinfo_backtrace(backtrace());                                  \
+        ::Mordor::throwExceptionFromLastError(::Mordor::lastError());           \
+    } catch (::boost::exception &ex) {                                          \
+        ex << ::boost::throw_function(BOOST_CURRENT_FUNCTION)                   \
+            << ::boost::throw_file(__FILE__)                                    \
+            << ::boost::throw_line((int)__LINE__)                               \
+            << ::Mordor::errinfo_backtrace(::Mordor::backtrace());              \
         throw;                                                                  \
     }
 
-#define THROW_EXCEPTION_FROM_LAST_ERROR_API(api)                                \
+#define MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API(api)                         \
     try {                                                                       \
-        throwExceptionFromLastError(lastError());                               \
-    } catch (boost::exception &ex) {                                            \
-        ex << boost::throw_function(BOOST_CURRENT_FUNCTION)                     \
-            << boost::throw_file(__FILE__)                                      \
-            << boost::throw_line((int)__LINE__)                                 \
-            << boost::errinfo_api_function(api)                                 \
-            << errinfo_backtrace(backtrace());                                  \
+        ::Mordor::throwExceptionFromLastError(::Mordor::lastError());           \
+    } catch (::boost::exception &ex) {                                          \
+        ex << ::boost::throw_function(BOOST_CURRENT_FUNCTION)                   \
+            << ::boost::throw_file(__FILE__)                                    \
+            << ::boost::throw_line((int)__LINE__)                               \
+            << ::boost::errinfo_api_function(api)                               \
+            << ::Mordor::errinfo_backtrace(::Mordor::backtrace());              \
         throw;                                                                  \
     }
 
-#define THROW_EXCEPTION_FROM_ERROR(error)                                       \
+#define MORDOR_THROW_EXCEPTION_FROM_ERROR(error)                                \
     try {                                                                       \
-        throwExceptionFromLastError(error);                                     \
-    } catch (boost::exception &ex) {                                            \
-        ex << boost::throw_function(BOOST_CURRENT_FUNCTION)                     \
-            << boost::throw_file(__FILE__)                                      \
-            << boost::throw_line((int)__LINE__)                                 \
-            << errinfo_backtrace(backtrace());                                  \
+        ::Mordor::throwExceptionFromLastError(error);                           \
+    } catch (::boost::exception &ex) {                                          \
+        ex << ::boost::throw_function(BOOST_CURRENT_FUNCTION)                   \
+            << ::boost::throw_file(__FILE__)                                    \
+            << ::boost::throw_line((int)__LINE__)                               \
+            << ::Mordor::errinfo_backtrace(::Mordor::backtrace());              \
         throw;                                                                  \
     }
 
-#define THROW_EXCEPTION_FROM_ERROR_API(error, api)                              \
+#define MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, api)                       \
     try {                                                                       \
-        throwExceptionFromLastError(error);                                     \
-    } catch (boost::exception &ex) {                                            \
-        ex << boost::throw_function(BOOST_CURRENT_FUNCTION)                     \
-            << boost::throw_file(__FILE__)                                      \
-            << boost::throw_line((int)__LINE__)                                 \
-            << boost::errinfo_api_function(api)                                 \
-            << errinfo_backtrace(backtrace());                                  \
+        ::Mordor::throwExceptionFromLastError(error);                           \
+    } catch (::boost::exception &ex) {                                          \
+        ex << ::boost::throw_function(BOOST_CURRENT_FUNCTION)                   \
+            << ::boost::throw_file(__FILE__)                                    \
+            << ::boost::throw_line((int)__LINE__)                               \
+            << ::boost::errinfo_api_function(api)                               \
+            << ::Mordor::errinfo_backtrace(::Mordor::backtrace());              \
         throw;                                                                  \
     }
+
+}
 
 #endif

@@ -10,6 +10,9 @@
 #include "mordor/common/iomanager.h"
 #include "mordor/test/test.h"
 
+using namespace Mordor;
+using namespace Mordor::Test;
+
 static void handleEvent(bool &fired)
 {
     fired = true;
@@ -21,11 +24,11 @@ static void signalEvent(HANDLE hEvent)
     SetEvent(hEvent);
 }
 
-TEST_WITH_SUITE(IOManager, eventPreventsStop)
+MORDOR_UNITTEST(IOManager, eventPreventsStop)
 {
     HANDLE hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
     if (!hEvent)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
     bool fired = false;
     try {
         Fiber::ptr mainfiber(new Fiber());
@@ -36,7 +39,7 @@ TEST_WITH_SUITE(IOManager, eventPreventsStop)
     } catch (...) {
         CloseHandle(hEvent);
     }
-    TEST_ASSERT(fired);
+    MORDOR_TEST_ASSERT(fired);
     CloseHandle(hEvent);
 }
 

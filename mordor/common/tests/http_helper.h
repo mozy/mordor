@@ -10,18 +10,18 @@
 class HTTPHelper
 {
 private:
-    typedef std::map<URI,
-        std::pair<HTTP::ClientConnection::ptr, HTTP::ServerConnection::ptr> >
+    typedef std::map<Mordor::URI,
+        std::pair<Mordor::HTTP::ClientConnection::ptr, Mordor::HTTP::ServerConnection::ptr> >
         ConnectionCache;
 public:
-    HTTPHelper(boost::function<void (const URI &uri, HTTP::ServerRequest::ptr)> dg)
+    HTTPHelper(boost::function<void (const Mordor::URI &uri, Mordor::HTTP::ServerRequest::ptr)> dg)
         : m_dg(dg)
     {}
 
-    HTTP::ClientConnection::ptr getConn(const URI &uri);
+    Mordor::HTTP::ClientConnection::ptr getConn(const Mordor::URI &uri);
 
 private:
-    boost::function<void (const URI &uri, HTTP::ServerRequest::ptr)> m_dg;
+    boost::function<void (const Mordor::URI &uri, Mordor::HTTP::ServerRequest::ptr)> m_dg;
     ConnectionCache m_conns;
 };
 

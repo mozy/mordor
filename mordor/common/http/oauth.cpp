@@ -7,10 +7,13 @@
 #include "mordor/common/streams/memory.h"
 #include "mordor/common/streams/transfer.h"
 
+namespace Mordor {
+namespace HTTP {
+
 void
-HTTP::OAuth::authorize(Request &nextRequest,
-                       const std::string &signatureMethod,
-                       const std::string &realm)
+OAuth::authorize(Request &nextRequest,
+                 const std::string &signatureMethod,
+                 const std::string &realm)
 {
     if (m_params.find("oauth_token_secret") == m_params.end() ||
         m_params.find("oauth_token") == m_params.end()) {
@@ -27,9 +30,9 @@ HTTP::OAuth::authorize(Request &nextRequest,
 }
 
 void
-HTTP::OAuth::getRequestToken()
+OAuth::getRequestToken()
 {
-    ASSERT(m_requestTokenMethod == HTTP::GET || m_requestTokenMethod == HTTP::POST);
+    MORDOR_ASSERT(m_requestTokenMethod == GET || m_requestTokenMethod == POST);
     URI::QueryString qs;
  
     qs.insert(std::make_pair("oauth_consumer_key", m_consumerKey));
@@ -41,11 +44,11 @@ HTTP::OAuth::getRequestToken()
     nonceAndTimestamp(qs);
     sign(m_requestTokenUri, m_requestTokenMethod, m_requestTokenSignatureMethod, qs);
 
-    HTTP::Request requestHeaders;
+    Request requestHeaders;
     requestHeaders.requestLine.method = m_requestTokenMethod;
     requestHeaders.requestLine.uri = m_requestTokenUri;
     std::string body;
-    if (m_requestTokenMethod == HTTP::GET) {
+    if (m_requestTokenMethod == GET) {
         // Add parameters that are part of the request token URI
         URI::QueryString qsFromUri = m_requestTokenUri.queryString();
         qs.insert(qsFromUri.begin(), qsFromUri.end());
@@ -57,15 +60,15 @@ HTTP::OAuth::getRequestToken()
         requestHeaders.entity.contentLength = body.size();
     }
 
-    HTTP::ClientRequest::ptr request =
+    ClientRequest::ptr request =
         m_connDg(m_requestTokenUri)->request(requestHeaders);
     if (!body.empty()) {
         request->requestStream()->write(body.c_str(), body.size());
         request->requestStream()->close();
     }
-    if (request->response().status.status != HTTP::OK) {
+    if (request->response().status.status != OK) {
         request->cancel();
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("", request->response()));
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("", request->response()));
     }
 
     MemoryStream responseStream;
@@ -76,28 +79,28 @@ HTTP::OAuth::getRequestToken()
     m_params = response;
     URI::QueryString::iterator it = m_params.find("oauth_token");
     if (it == m_params.end())
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Missing oauth_token in response",
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token in response",
             request->response()));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token") == 0)
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Duplicate oauth_token in response",
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token in response",
             request->response()));
     it = m_params.find("oauth_token_secret");
     if (it == m_params.end())
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Missing oauth_token_secret in response",
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token_secret in response",
             request->response()));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token_secret") == 0)
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Duplicate oauth_token_secret in response",
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token_secret in response",
             request->response()));
 }
 
 void
-HTTP::OAuth::getAccessToken(const std::string &verifier)
+OAuth::getAccessToken(const std::string &verifier)
 {
-    ASSERT(m_accessTokenMethod == HTTP::GET || m_accessTokenMethod == HTTP::POST);
+    MORDOR_ASSERT(m_accessTokenMethod == GET || m_accessTokenMethod == POST);
     URI::QueryString qs;
 
     qs.insert(std::make_pair("oauth_consumer_key", m_consumerKey));
@@ -107,11 +110,11 @@ HTTP::OAuth::getAccessToken(const std::string &verifier)
     nonceAndTimestamp(qs);
     sign(m_accessTokenUri, m_accessTokenMethod, m_requestTokenSignatureMethod, qs);
 
-    HTTP::Request requestHeaders;
+    Request requestHeaders;
     requestHeaders.requestLine.method = m_accessTokenMethod;
     requestHeaders.requestLine.uri = m_accessTokenUri;
     std::string body;
-    if (m_accessTokenMethod == HTTP::GET) {
+    if (m_accessTokenMethod == GET) {
         // Add parameters that are part of the request token URI
         URI::QueryString qsFromUri = m_accessTokenUri.queryString();
         qs.insert(qsFromUri.begin(), qsFromUri.end());
@@ -123,15 +126,15 @@ HTTP::OAuth::getAccessToken(const std::string &verifier)
         requestHeaders.entity.contentLength = body.size();
     }
 
-    HTTP::ClientRequest::ptr request =
+    ClientRequest::ptr request =
         m_connDg(m_accessTokenUri)->request(requestHeaders);
     if (!body.empty()) {
         request->requestStream()->write(body.c_str(), body.size());
         request->requestStream()->close();
     }
-    if (request->response().status.status != HTTP::OK) {
+    if (request->response().status.status != OK) {
         request->cancel();
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("", request->response()));
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("", request->response()));
     }
 
     MemoryStream responseStream;
@@ -142,27 +145,27 @@ HTTP::OAuth::getAccessToken(const std::string &verifier)
     m_params = response;
     URI::QueryString::iterator it = m_params.find("oauth_token");
     if (it == m_params.end())
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Missing oauth_token in response",
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token in response",
             request->response()));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token") == 0)
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Duplicate oauth_token in response",
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token in response",
             request->response()));
     it = m_params.find("oauth_token_secret");
     if (it == m_params.end())
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Missing oauth_token_secret in response",
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token_secret in response",
             request->response()));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token_secret") == 0)
-        MORDOR_THROW_EXCEPTION(HTTP::InvalidResponseException("Duplicate oauth_token_secret in response",
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token_secret in response",
             request->response()));
 }
 
 URI::QueryString
-HTTP::OAuth::signRequest(const URI &uri, Method method,
-                         const std::string &signatureMethod)
+OAuth::signRequest(const URI &uri, Method method,
+                   const std::string &signatureMethod)
 {
     URI::QueryString result;
     result.insert(std::make_pair("oauth_consumer_key", m_consumerKey));
@@ -174,7 +177,7 @@ HTTP::OAuth::signRequest(const URI &uri, Method method,
 }
 
 void
-HTTP::OAuth::nonceAndTimestamp(URI::QueryString &params)
+OAuth::nonceAndTimestamp(URI::QueryString &params)
 {
     if (m_nonceDg) {
         std::ostringstream os;
@@ -205,12 +208,12 @@ HTTP::OAuth::nonceAndTimestamp(URI::QueryString &params)
 }
 
 void
-HTTP::OAuth::sign(const URI &uri, Method method, const std::string &signatureMethod,
-                  URI::QueryString &params)
+OAuth::sign(const URI &uri, Method method, const std::string &signatureMethod,
+            URI::QueryString &params)
 {
-    ASSERT(params.find("oauth_signature_method") == params.end());
+    MORDOR_ASSERT(params.find("oauth_signature_method") == params.end());
     params.insert(std::make_pair("oauth_signature_method", signatureMethod));
-    ASSERT(params.find("oauth_signature") == params.end());
+    MORDOR_ASSERT(params.find("oauth_signature") == params.end());
 
     URI::QueryString::iterator it;
 
@@ -265,6 +268,8 @@ HTTP::OAuth::sign(const URI &uri, Method method, const std::string &signatureMet
     } else if (stricmp(signatureMethod.c_str(), "PLAINTEXT") == 0) {
         params.insert(std::make_pair("oauth_signature", secrets));
     } else {
-        NOTREACHED();
+        MORDOR_NOTREACHED();
     }
 }
+
+}}

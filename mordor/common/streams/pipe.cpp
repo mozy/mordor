@@ -9,6 +9,8 @@
 #include "mordor/common/exception.h"
 #include "mordor/common/fiber.h"
 
+namespace Mordor {
+
 class PipeStream : public Stream
 {
     friend std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t);
@@ -63,8 +65,8 @@ PipeStream::~PipeStream()
     boost::mutex::scoped_lock lock(*m_mutex);
     if (!m_otherStream.expired()) {
         PipeStream::ptr otherStream(m_otherStream);
-        ASSERT(!otherStream->m_pendingReader);
-        ASSERT(!otherStream->m_pendingWriter);
+        MORDOR_ASSERT(!otherStream->m_pendingReader);
+        MORDOR_ASSERT(!otherStream->m_pendingWriter);
     }
     if (m_pendingReader) {
         m_pendingReaderScheduler->schedule(m_pendingReader);
@@ -123,7 +125,7 @@ PipeStream::read(Buffer &b, size_t len)
         PipeStream::ptr otherStream(m_otherStream);
 
         // Wait for the other stream to schedule us
-        ASSERT(!otherStream->m_pendingReader);
+        MORDOR_ASSERT(!otherStream->m_pendingReader);
         otherStream->m_pendingReader = Fiber::getThis();
         otherStream->m_pendingReaderScheduler = Scheduler::getThis();
     }
@@ -159,7 +161,7 @@ PipeStream::write(const Buffer &b, size_t len)
                 return len;
             }
             // Wait for the other stream to schedule us
-            ASSERT(!otherStream->m_pendingWriter);
+            MORDOR_ASSERT(!otherStream->m_pendingWriter);
             otherStream->m_pendingWriter = Fiber::getThis();
             otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }
@@ -185,10 +187,12 @@ PipeStream::flush()
                 return;
             }
             // Wait for the other stream to schedule us
-            ASSERT(!otherStream->m_pendingWriter);
+            MORDOR_ASSERT(!otherStream->m_pendingWriter);
             otherStream->m_pendingWriter = Fiber::getThis();
             otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }
         Scheduler::getThis()->yieldTo();
     }
+}
+
 }

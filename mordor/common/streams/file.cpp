@@ -7,6 +7,8 @@
 #include "mordor/common/exception.h"
 #include "mordor/common/string.h"
 
+namespace Mordor {
+
 FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlags)
 {
     NativeHandle handle;
@@ -43,12 +45,12 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
             oflags |= O_TRUNC;
             break;
         default:
-            ASSERT(false);
+            MORDOR_ASSERT(false);
     }
     handle = open(filename.c_str(), oflags, 0777);
 #endif
     if (handle == (NativeHandle)-1)
-        THROW_EXCEPTION_FROM_LAST_ERROR();
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR();
     init(handle);
     m_supportsRead = flags == READ || flags == READWRITE;
     m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;
@@ -74,10 +76,12 @@ FileStream::FileStream(std::wstring filename, Flags flags, CreateFlags createFla
         0,
         NULL);
     if (handle == (NativeHandle)-1)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
     init(handle);
     m_supportsRead = flags == READ || flags == READWRITE;
     m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;
     m_supportsSeek = flags != APPEND;
 }
 #endif
+
+}

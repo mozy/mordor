@@ -10,9 +10,12 @@
 #include "negotiate.h"
 #endif
 
-HTTP::ClientRequest::ptr
-HTTP::ClientAuthBroker::request(Request &requestHeaders,
-                                boost::function< void (ClientRequest::ptr)> dg)
+namespace Mordor {
+namespace HTTP {
+
+ClientRequest::ptr
+ClientAuthBroker::request(Request &requestHeaders,
+                          boost::function< void (ClientRequest::ptr)> dg)
 {
     if (!m_conn)
         m_conn = m_dg();
@@ -24,14 +27,14 @@ HTTP::ClientAuthBroker::request(Request &requestHeaders,
 #endif
     while (true) {
         try {
-            HTTP::ClientRequest::ptr request = m_conn->request(requestHeaders);
+            ClientRequest::ptr request = m_conn->request(requestHeaders);
             if (dg)
                 dg(request);
-            const HTTP::Response &responseHeaders = request->response();
-            if (responseHeaders.status.status == HTTP::UNAUTHORIZED ||
-                responseHeaders.status.status == HTTP::PROXY_AUTHENTICATION_REQUIRED)
+            const Response &responseHeaders = request->response();
+            if (responseHeaders.status.status == UNAUTHORIZED ||
+                responseHeaders.status.status == PROXY_AUTHENTICATION_REQUIRED)
             {
-                bool proxy = responseHeaders.status.status == HTTP::PROXY_AUTHENTICATION_REQUIRED;
+                bool proxy = responseHeaders.status.status == PROXY_AUTHENTICATION_REQUIRED;
                 if (proxy && triedProxyAuth)
                     return request;
                 if (!proxy && triedWwwAuth)
@@ -61,12 +64,12 @@ HTTP::ClientAuthBroker::request(Request &requestHeaders,
 #endif
                 if (isAcceptable(authenticate, "Digest") && hasCreds) {
                     request->finish();
-                    HTTP::DigestAuth::authorize(responseHeaders, requestHeaders,
+                    DigestAuth::authorize(responseHeaders, requestHeaders,
                         proxy ? m_proxyUsername : m_username,
                         proxy ? m_proxyPassword : m_password);
                 } else if (isAcceptable(authenticate, "Basic") && hasCreds) {
                     request->finish();
-                    HTTP::BasicAuth::authorize(requestHeaders,
+                    BasicAuth::authorize(requestHeaders,
                         proxy ? m_proxyUsername : m_username,
                         proxy ? m_proxyPassword : m_password, proxy);
                 } else {
@@ -79,9 +82,11 @@ HTTP::ClientAuthBroker::request(Request &requestHeaders,
         } catch (SocketException) {
             m_conn = m_dg();
             continue;
-        } catch (HTTP::PriorRequestFailedException) {
+        } catch (PriorRequestFailedException) {
             m_conn = m_dg();
             continue;
         }
     }
 }
+
+}}

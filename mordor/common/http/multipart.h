@@ -1,5 +1,5 @@
-#ifndef __MULTIPART_H__
-#define __MULTIPART_H__
+#ifndef __MORDOR_MULTIPART_H__
+#define __MORDOR_MULTIPART_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <string>
@@ -12,11 +12,13 @@
 #include "http.h"
 #include "mordor/common/streams/stream.h"
 
+namespace Mordor {
+
 class BodyPart;
 
-struct MissingMultipartBoundaryException : virtual HTTPException, virtual StreamException
+struct MissingMultipartBoundaryException : virtual HTTP::Exception, virtual StreamException
 {};
-struct InvalidMultipartBoundaryException : virtual HTTPException
+struct InvalidMultipartBoundaryException : virtual HTTP::Exception
 {};
 
 class Multipart : public boost::enable_shared_from_this<Multipart>, boost::noncopyable
@@ -64,5 +66,7 @@ private:
     Stream::ptr m_stream;
     Multipart::ptr m_childMultipart;
 };
+
+}
 
 #endif

@@ -10,6 +10,8 @@
 #include "mordor/common/scheduler.h"
 #include "stream.h"
 
+namespace Mordor {
+
 static void readOne(Stream &src, Buffer &buffer, size_t len, size_t &result)
 {
     result = src.read(buffer, len);
@@ -26,11 +28,13 @@ static void writeOne(Stream &dst, Buffer &buffer, unsigned long long *totalWritt
     }
 }
 
-void transferStream(Stream &src, Stream &dst, unsigned long long toTransfer,
-                    unsigned long long *totalRead, unsigned long long *totalWritten)
+void transferStream(Stream &src, Stream &dst,
+                            unsigned long long toTransfer,
+                            unsigned long long *totalRead,
+                            unsigned long long *totalWritten)
 {
-    ASSERT(src.supportsRead());
-    ASSERT(dst.supportsWrite());
+    MORDOR_ASSERT(src.supportsRead());
+    MORDOR_ASSERT(dst.supportsWrite());
     Buffer buf1, buf2;
     Buffer *readBuffer, *writeBuffer;
     size_t chunkSize = 65536;
@@ -88,25 +92,37 @@ totalWritten);
     writeOne(dst, *writeBuffer, totalWritten);
 }
 
-void transferStream(Stream::ptr src, Stream &dst, unsigned long long toTransfer,
-                    unsigned long long *totalRead, unsigned long long *totalWritten)
+void transferStream(Stream::ptr src, Stream &dst,
+                    unsigned long long toTransfer,
+                    unsigned long long *totalRead,
+                    unsigned long long *totalWritten)
 { transferStream(*src.get(), dst, toTransfer, totalRead, totalWritten); }
-void transferStream(Stream &src, Stream::ptr dst, unsigned long long toTransfer,
-                    unsigned long long *totalRead, unsigned long long *totalWritten)
+void transferStream(Stream &src, Stream::ptr dst,
+                    unsigned long long toTransfer,
+                    unsigned long long *totalRead,
+                    unsigned long long *totalWritten)
 { transferStream(src, *dst.get(), toTransfer, totalRead, totalWritten); }
-void transferStream(Stream::ptr src, Stream::ptr dst, unsigned long long toTransfer,
-                    unsigned long long *totalRead, unsigned long long *totalWritten)
+void transferStream(Stream::ptr src, Stream::ptr dst,
+                    unsigned long long toTransfer,
+                    unsigned long long *totalRead,
+                    unsigned long long *totalWritten)
 { transferStream(*src.get(), *dst.get(), toTransfer, totalRead, totalWritten); }
 
 void transferStream(Stream &src, Stream &dst,
-                    unsigned long long *totalRead, unsigned long long *totalWritten)
+                    unsigned long long *totalRead,
+                    unsigned long long *totalWritten)
 { transferStream(src, dst, ~0, totalRead, totalWritten); }
 void transferStream(Stream::ptr src, Stream &dst,
-                    unsigned long long *totalRead, unsigned long long *totalWritten)
+                    unsigned long long *totalRead,
+                    unsigned long long *totalWritten)
 { transferStream(*src.get(), dst, ~0, totalRead, totalWritten); }
 void transferStream(Stream &src, Stream::ptr dst,
-                    unsigned long long *totalRead, unsigned long long *totalWritten)
+                    unsigned long long *totalRead,
+                    unsigned long long *totalWritten)
 { transferStream(src, *dst.get(), ~0, totalRead, totalWritten); }
 void transferStream(Stream::ptr src, Stream::ptr dst,
-                    unsigned long long *totalRead, unsigned long long *totalWritten)
+                    unsigned long long *totalRead,
+                    unsigned long long *totalWritten)
 { transferStream(*src.get(), *dst.get(), ~0, totalRead, totalWritten); }
+
+}

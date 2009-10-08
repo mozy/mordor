@@ -1,5 +1,5 @@
-#ifndef __BUFFER_H__
-#define __BUFFER_H__
+#ifndef __MORDOR_BUFFER_H__
+#define __MORDOR_BUFFER_H__
 
 #include <list>
 #include <vector>
@@ -8,6 +8,8 @@
 #include <boost/function.hpp>
 
 #include "mordor/common/socket.h"
+
+namespace Mordor {
 
 struct Buffer
 {
@@ -116,5 +118,7 @@ private:
 
     void invariant() const;
 };
+
+}
 
 #endif

@@ -4,7 +4,9 @@
 
 #include "runtime_linking.h"
 
-RUNTIME_LINK_DEFINITION(CancelIoEx, BOOL, WINAPI,
+namespace Mordor {
+
+MORDOR_RUNTIME_LINK_DEFINITION(CancelIoEx, BOOL, WINAPI,
     (HANDLE hFile, LPOVERLAPPED lpOverlapped),
     (hFile, lpOverlapped),
     L"kernel32.dll")
@@ -13,7 +15,7 @@ RUNTIME_LINK_DEFINITION(CancelIoEx, BOOL, WINAPI,
     return FALSE;
 }
 
-RUNTIME_LINK_DEFINITION(RtlCaptureStackBackTrace, WORD, NTAPI,
+MORDOR_RUNTIME_LINK_DEFINITION(RtlCaptureStackBackTrace, WORD, NTAPI,
                         (DWORD FramesToSkip, DWORD FramesToCapture, PVOID *BackTrace, PDWORD BackTraceHash),
                         (FramesToSkip, FramesToCapture, BackTrace, BackTraceHash),
                         L"kernel32.dll")
@@ -23,7 +25,7 @@ RUNTIME_LINK_DEFINITION(RtlCaptureStackBackTrace, WORD, NTAPI,
     return 0;
 }
 
-RUNTIME_LINK_DEFINITION(FindFirstStreamW, HANDLE, WINAPI,
+MORDOR_RUNTIME_LINK_DEFINITION(FindFirstStreamW, HANDLE, WINAPI,
     (LPCWSTR lpFileName, STREAM_INFO_LEVELS InfoLevel, LPVOID lpFindStreamData, DWORD dwFlags),
     (lpFileName, InfoLevel, lpFindStreamData, dwFlags),
     L"kernel32.dll")
@@ -32,11 +34,13 @@ RUNTIME_LINK_DEFINITION(FindFirstStreamW, HANDLE, WINAPI,
     return INVALID_HANDLE_VALUE;
 }
 
-RUNTIME_LINK_DEFINITION(FindNextStreamW, BOOL, APIENTRY,
+MORDOR_RUNTIME_LINK_DEFINITION(FindNextStreamW, BOOL, APIENTRY,
     (HANDLE hFindStream, LPVOID lpFindStreamData),
     (hFindStream, lpFindStreamData),
     L"kernel32.dll")
 {
     SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
     return FALSE;
+}
+
 }

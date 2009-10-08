@@ -1,7 +1,9 @@
-#ifndef __ATOMIC_H__
-#define __ATOMIC_H__
+#ifndef __MORDOR_ATOMIC_H__
+#define __MORDOR_ATOMIC_H__
 
 #include "version.h"
+
+namespace Mordor {
 
 #ifdef WINDOWS
 template <class T> T atomicDecrement(T& t) { return InterlockedDecrement((LONG*)&t); }
@@ -15,5 +17,7 @@ __gnu_cxx::__exchange_and_add((_Atomic_word*)&t, -1) - 1; }
 template <class T> T atomicIncrement(T& t) { return 
 __gnu_cxx::__exchange_and_add((_Atomic_word*)&t, 1) + 1; }
 #endif
+
+}
 
 #endif

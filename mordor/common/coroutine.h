@@ -1,5 +1,5 @@
-#ifndef __COROUTINE_H__
-#define __COROUTINE_H__
+#ifndef __MORDOR_COROUTINE_H__
+#define __MORDOR_COROUTINE_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <boost/bind.hpp>
@@ -8,6 +8,8 @@
 #include <boost/shared_ptr.hpp>
 
 #include "fiber.h"
+
+namespace Mordor {
 
 struct DummyVoid;
 
@@ -158,5 +160,7 @@ private:
     Result m_result;
     Fiber::ptr m_fiber;    
 };
+
+}
 
 #endif

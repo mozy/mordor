@@ -1,12 +1,14 @@
-#ifndef __ZLIB_STREAM_H__
-#define __ZLIB_STREAM_H__
+#ifndef __MORDOR_ZLIB_STREAM_H__
+#define __MORDOR_ZLIB_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <zlib.h>
 
 #include "filter.h"
 
-struct ZlibException : virtual ExceptionBase
+namespace Mordor {
+
+struct ZlibException : virtual Exception
 {
 public:
     ZlibException() : m_rc(0) {}
@@ -84,5 +86,7 @@ private:
     z_stream m_strm;
     bool m_closed;
 };
+
+}
 
 #endif

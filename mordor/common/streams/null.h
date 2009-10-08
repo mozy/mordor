@@ -1,8 +1,10 @@
-#ifndef __NULL_STREAM_H__
-#define __NULL_STREAM_H__
+#ifndef __MORDOR_NULL_STREAM_H__
+#define __MORDOR_NULL_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "stream.h"
+
+namespace Mordor {
 
 class NullStream : public Stream
 {
@@ -21,5 +23,7 @@ public:
 private:
     static NullStream s_nullStream;
 };
+
+}
 
 #endif

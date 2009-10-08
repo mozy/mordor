@@ -20,12 +20,14 @@
  #include <time.h>
 #endif
 
+namespace Mordor {
+
 #ifdef WINDOWS
 static unsigned long long queryFrequency()
 {
     LARGE_INTEGER frequency;
     BOOL bRet = QueryPerformanceFrequency(&frequency);
-    ASSERT(bRet);
+    MORDOR_ASSERT(bRet);
     return (unsigned long long)frequency.QuadPart;
 }
 
@@ -46,7 +48,7 @@ TimerManager::now()
 #ifdef WINDOWS
     LARGE_INTEGER count;
     if (!QueryPerformanceCounter(&count))
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("QueryPerformanceCounter");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("QueryPerformanceCounter");
     unsigned long long countUll = (unsigned long long)count.QuadPart;
     return countUll * 1000000 / g_frequency;
 #elif defined(OSX)
@@ -56,7 +58,7 @@ TimerManager::now()
     struct timespec ts;
 
     if (clock_gettime(CLOCK_MONOTONIC, &ts))
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("clock_gettime");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("clock_gettime");
     return ts.tv_sec * 1000000ull + ts.tv_nsec / 1000;
 #endif
 }
@@ -68,7 +70,7 @@ Timer::Timer(unsigned long long us, boost::function<void ()> dg, bool recurring,
       m_recurring(recurring),
       m_manager(manager)
 {
-    ASSERT(m_dg);
+    MORDOR_ASSERT(m_dg);
     m_next = TimerManager::now() + m_us;
 }
 
@@ -83,7 +85,7 @@ Timer::cancel()
         boost::mutex::scoped_lock lock(m_manager->m_mutex);
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
             m_manager->m_timers.find(shared_from_this());
-        ASSERT(it != m_manager->m_timers.end());
+        MORDOR_ASSERT(it != m_manager->m_timers.end());
         m_next = 0;
         m_manager->m_timers.erase(it);
     }
@@ -93,7 +95,7 @@ TimerManager::~TimerManager()
 {
 #ifndef NDEBUG
     boost::mutex::scoped_lock lock(m_mutex);
-    ASSERT(m_timers.empty());
+    MORDOR_ASSERT(m_timers.empty());
 #endif
 }
 
@@ -194,4 +196,6 @@ Timer::Comparator::operator()(const Timer::ptr &lhs,
         return false;
     // Order by raw pointer for equivalent timeout values
     return lhs.get() < rhs.get();
+}
+
 }

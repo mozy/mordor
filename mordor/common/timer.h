@@ -1,5 +1,5 @@
-#ifndef __TIMER_H__
-#define __TIMER_H__
+#ifndef __MORDOR_TIMER_H__
+#define __MORDOR_TIMER_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <set>
@@ -9,6 +9,8 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
+
+namespace Mordor {
 
 class TimerManager;
 
@@ -70,5 +72,7 @@ private:
     std::set<Timer::ptr, Timer::Comparator> m_timers;
     boost::mutex m_mutex;
 };
+
+}
 
 #endif

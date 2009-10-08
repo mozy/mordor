@@ -11,6 +11,8 @@
 #include "log.h"
 #include "runtime_linking.h"
 
+namespace Mordor {
+
 static Logger::ptr g_log = Log::lookup("mordor:common:iomanager");
 static Logger::ptr g_logWaitBlock = Log::lookup("mordor:common:iomanager:waitblock");
 
@@ -24,17 +26,17 @@ IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
   m_inUseCount(0)
 {
     m_handles[0] = CreateEventW(NULL, FALSE, FALSE, NULL);
-    LOG_VERBOSE(g_logWaitBlock) << this << " CreateEventW(): " << m_handles[0]
+    MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " CreateEventW(): " << m_handles[0]
         << " (" << GetLastError() << ")";
     if (!m_handles[0])
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
 }
 
 IOManagerIOCP::WaitBlock::~WaitBlock()
 {
-    ASSERT(m_inUseCount <= 0);
+    MORDOR_ASSERT(m_inUseCount <= 0);
     BOOL bRet = CloseHandle(m_handles[0]);
-    LOG_VERBOSE(g_logWaitBlock) << this << " CloseHandle(" << m_handles[0]
+    MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " CloseHandle(" << m_handles[0]
         << "): " << bRet << " (" << GetLastError() << ")";
 }
 
@@ -50,13 +52,13 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
     m_schedulers[m_inUseCount] = Scheduler::getThis();
     m_fibers[m_inUseCount] = Fiber::getThis();
     m_dgs[m_inUseCount] = dg;
-    LOG_VERBOSE(g_logWaitBlock) << this << " registerEvent(" << hEvent << ", "
+    MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " registerEvent(" << hEvent << ", "
         << dg << ")";
     if (m_inUseCount == 1) {
         boost::thread thread(boost::bind(&WaitBlock::run, this));
     } else {
         if (!SetEvent(m_handles[0]))
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
     }
     return true;
 }
@@ -67,7 +69,7 @@ IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
-    LOG_VERBOSE(g_logWaitBlock) << this << " unregisterEvent(" << handle
+    MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " unregisterEvent(" << handle
         << "): " << (srcHandle != m_handles + m_inUseCount + 1);
     if (srcHandle != m_handles + m_inUseCount + 1) {
         int index = (int)(srcHandle - m_handles);
@@ -102,11 +104,11 @@ IOManagerIOCP::WaitBlock::run()
         memcpy(handles, m_handles, (count) * sizeof(HANDLE));        
     }
 
-    LOG_VERBOSE(g_logWaitBlock) << this << " run " << count;
+    MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " run " << count;
 
     while (true) {
         dwRet = WaitForMultipleObjects(count, handles, FALSE, INFINITE);
-        LOG_LEVEL(g_log, dwRet == WAIT_FAILED ? Log::ERROR : Log::VERBOSE)
+        MORDOR_LOG_LEVEL(g_log, dwRet == WAIT_FAILED ? Log::ERROR : Log::VERBOSE)
             << this << " WaitForMultipleObjects(" << count << ", " << handles
             << "): " << dwRet << " (" << GetLastError() << ")";
         if (dwRet == WAIT_OBJECT_0) {
@@ -116,13 +118,13 @@ IOManagerIOCP::WaitBlock::run()
                 break;
             count = m_inUseCount + 1;
             memcpy(handles, m_handles, (count) * sizeof(HANDLE));
-            LOG_VERBOSE(g_logWaitBlock) << this << " reconfigure " << count;
+            MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " reconfigure " << count;
         } else if (dwRet >= WAIT_OBJECT_0 + 1 && dwRet < WAIT_OBJECT_0 + MAXIMUM_WAIT_OBJECTS) {
             boost::mutex::scoped_lock lock(m_mutex);
 
             HANDLE handle = handles[dwRet - WAIT_OBJECT_0];
             HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
-            LOG_VERBOSE(g_log) << this << " event " << handle << " "
+            MORDOR_LOG_VERBOSE(g_log) << this << " event " << handle << " "
                 << (srcHandle != m_handles + m_inUseCount + 1);
             if (srcHandle != m_handles + m_inUseCount + 1) {
                 int index = (int)(srcHandle - m_handles);
@@ -150,19 +152,19 @@ IOManagerIOCP::WaitBlock::run()
         } else if (dwRet == WAIT_FAILED) {
             // What to do, what to do?  Probably a bad handle.
             // This will bring down the whole process
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("WaitForMultipleObjects");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WaitForMultipleObjects");
         } else {
-            NOTREACHED();
+            MORDOR_NOTREACHED();
         }
     }
-    LOG_VERBOSE(g_logWaitBlock) << this << " done";
+    MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " done";
     {
         ptr self = shared_from_this();
         boost::mutex::scoped_lock lock(m_outer.m_mutex);
         std::list<WaitBlock::ptr>::iterator it =
             std::find(m_outer.m_waitBlocks.begin(), m_outer.m_waitBlocks.end(),
                 shared_from_this());
-        ASSERT(it != m_outer.m_waitBlocks.end());
+        MORDOR_ASSERT(it != m_outer.m_waitBlocks.end());
         m_outer.m_waitBlocks.erase(it);
         m_outer.tickle();
     }
@@ -172,11 +174,11 @@ IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
-    LOG_LEVEL(g_log, m_hCompletionPort ? Log::TRACE : Log::ERROR) << this <<
+    MORDOR_LOG_LEVEL(g_log, m_hCompletionPort ? Log::TRACE : Log::ERROR) << this <<
         " CreateIoCompletionPort(): " << m_hCompletionPort << " ("
         << GetLastError() << ")";
     if (!m_hCompletionPort)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
 }
 
 bool
@@ -190,27 +192,27 @@ void
 IOManagerIOCP::registerFile(HANDLE handle)
 {
     HANDLE hRet = CreateIoCompletionPort(handle, m_hCompletionPort, 0, 0);
-    LOG_LEVEL(g_log, m_hCompletionPort ? Log::VERBOSE : Log::ERROR) << this <<
+    MORDOR_LOG_LEVEL(g_log, m_hCompletionPort ? Log::VERBOSE : Log::ERROR) << this <<
         " CreateIoCompletionPort(" << handle << ", " << m_hCompletionPort
         << "): " << hRet << " (" << GetLastError() << ")";
     if (hRet != m_hCompletionPort) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
     }
 }
 
 void
 IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
 {
-    ASSERT(e);
-    ASSERT(Scheduler::getThis());
-    ASSERT(Fiber::getThis());
+    MORDOR_ASSERT(e);
+    MORDOR_ASSERT(Scheduler::getThis());
+    MORDOR_ASSERT(Fiber::getThis());
     e->m_scheduler = Scheduler::getThis();
     e->m_thread = boost::this_thread::get_id();
     e->m_fiber = Fiber::getThis();
-    LOG_VERBOSE(g_log) << this << " registerEvent(" << &e->overlapped << ")";
+    MORDOR_LOG_VERBOSE(g_log) << this << " registerEvent(" << &e->overlapped << ")";
     {
         boost::mutex::scoped_lock lock(m_mutex);
-        ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
+        MORDOR_ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
         m_pendingEvents[&e->overlapped] = e;
     }
 }
@@ -218,13 +220,13 @@ IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
 void
 IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
 {
-    ASSERT(e);
-    LOG_VERBOSE(g_log) << this << " unregisterEvent(" << &e->overlapped << ")";
+    MORDOR_ASSERT(e);
+    MORDOR_LOG_VERBOSE(g_log) << this << " unregisterEvent(" << &e->overlapped << ")";
     {
         boost::mutex::scoped_lock lock(m_mutex);
         std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
             m_pendingEvents.find(&e->overlapped);
-        ASSERT(it != m_pendingEvents.end());
+        MORDOR_ASSERT(it != m_pendingEvents.end());
         m_pendingEvents.erase(it);
     }
 }
@@ -232,12 +234,12 @@ IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
 void
 IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg)
 {
-    LOG_VERBOSE(g_log) << this << " registerEvent(" << handle << ", " << dg
+    MORDOR_LOG_VERBOSE(g_log) << this << " registerEvent(" << handle << ", " << dg
         << ")";
-    ASSERT(handle);
+    MORDOR_ASSERT(handle);
     if (!dg) {
-        ASSERT(Scheduler::getThis());
-        ASSERT(Fiber::getThis());
+        MORDOR_ASSERT(Scheduler::getThis());
+        MORDOR_ASSERT(Fiber::getThis());
     }
 
     boost::mutex::scoped_lock lock(m_mutex);
@@ -249,24 +251,24 @@ IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg)
     }
     m_waitBlocks.push_back(WaitBlock::ptr(new WaitBlock(*this)));
     bool result = m_waitBlocks.back()->registerEvent(handle, dg);
-    ASSERT(result);
+    MORDOR_ASSERT(result);
 }
 
 bool
 IOManagerIOCP::unregisterEvent(HANDLE handle)
 {
-    ASSERT(handle);
+    MORDOR_ASSERT(handle);
     boost::mutex::scoped_lock lock(m_mutex);
     for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();
         it != m_waitBlocks.end();
         ++it) {
         if ((*it)->unregisterEvent(handle)) {
-            LOG_VERBOSE(g_log) << this << " unregisterEvent(" << handle
+            MORDOR_LOG_VERBOSE(g_log) << this << " unregisterEvent(" << handle
                 << "): 1";
             return true;
         }
     }
-    LOG_VERBOSE(g_log) << this << " unregisterEvent(" << handle << "): 0";
+    MORDOR_LOG_VERBOSE(g_log) << this << " unregisterEvent(" << handle << "): 0";
     return false;
 }
 
@@ -278,7 +280,7 @@ static void CancelIoShim(HANDLE hFile)
 void
 IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
 {
-    LOG_VERBOSE(g_log) << this << " cancelEvent(" << hFile << ", "
+    MORDOR_LOG_VERBOSE(g_log) << this << " cancelEvent(" << hFile << ", "
         << &e->overlapped << ")";
     if (!pCancelIoEx(hFile, &e->overlapped) &&
         GetLastError() == ERROR_CALL_NOT_IMPLEMENTED) {
@@ -331,7 +333,7 @@ IOManagerIOCP::idle()
             timeout = (DWORD)(nextTimeout / 1000);
         BOOL ret = GetQueuedCompletionStatus(m_hCompletionPort,
             &numberOfBytes, &completionKey, &overlapped, timeout);
-        LOG_VERBOSE(g_log) << this << " GetQueuedCompletionStatus("
+        MORDOR_LOG_VERBOSE(g_log) << this << " GetQueuedCompletionStatus("
             << m_hCompletionPort << ", " << timeout << "): " << ret << ", ("
             << numberOfBytes << ", " << completionKey << ", " << overlapped
             << ") (" << GetLastError() << ")";
@@ -344,7 +346,7 @@ IOManagerIOCP::idle()
                 processTimers();
                 continue;
             }
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("GetQueuedCompletionStatus");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetQueuedCompletionStatus");
         }
         processTimers();
 
@@ -353,7 +355,7 @@ IOManagerIOCP::idle()
             boost::mutex::scoped_lock lock(m_mutex);
             std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
                 m_pendingEvents.find(overlapped);
-            ASSERT(it != m_pendingEvents.end());
+            MORDOR_ASSERT(it != m_pendingEvents.end());
             e = it->second;
             m_pendingEvents.erase(it);
         }
@@ -372,9 +374,11 @@ void
 IOManagerIOCP::tickle()
 {
     BOOL bRet = PostQueuedCompletionStatus(m_hCompletionPort, 0, ~0, NULL);
-    LOG_LEVEL(g_log, bRet ? Log::VERBOSE : Log::ERROR) << this
+    MORDOR_LOG_LEVEL(g_log, bRet ? Log::VERBOSE : Log::ERROR) << this
         << " PostQueuedCompletionStatus(" << m_hCompletionPort
         << ", 0, ~0, NULL): " << bRet << " (" << GetLastError() << ")";
     if (!bRet)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("PostQueuedCompletionStatus");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("PostQueuedCompletionStatus");
+}
+
 }

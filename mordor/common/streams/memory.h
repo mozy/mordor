@@ -1,8 +1,10 @@
-#ifndef __MEMORY_STREAM_H__
-#define __MEMORY_STREAM_H__
+#ifndef __MORDOR_MEMORY_STREAM_H__
+#define __MORDOR_MEMORY_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "stream.h"
+
+namespace Mordor {
 
 class MemoryStream : public Stream
 {
@@ -39,5 +41,7 @@ private:
 
     template <class T> size_t writeInternal(const T &b, size_t len);
 };
+
+}
 
 #endif

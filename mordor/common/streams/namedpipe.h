@@ -1,8 +1,10 @@
-#ifndef __NAMEDPIPE_H__
-#define __NAMEDPIPE_H__
+#ifndef __MORDOR_NAMEDPIPE_STREAM_H__
+#define __MORDOR_NAMEDPIPE_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "handle.h"
+
+namespace Mordor {
 
 class NamedPipeStream : public HandleStream
 {
@@ -29,5 +31,7 @@ public:
 private:
     bool m_supportsRead, m_supportsWrite;
 };
+
+}
 
 #endif

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+namespace Mordor {
+
 std::string base64decode(const std::string &src);
 std::string base64encode(const std::string &data);
 std::string base64encode(const void *data, size_t len);
@@ -56,5 +58,7 @@ private:
 };
 
 std::ostream &operator <<(std::ostream &os, const charslice &slice);
+
+}
 
 #endif

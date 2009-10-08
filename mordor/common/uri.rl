@@ -13,6 +13,8 @@
 #include "mordor/common/string.h"
 #include "mordor/common/version.h"
 
+namespace Mordor {
+
 static const std::string unreserved("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~");
 static const std::string sub_delims("!$&'()*+,;=");
 static const std::string scheme("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-.");
@@ -55,9 +57,9 @@ static std::string escape(const std::string& str, const std::string& allowedChar
     }
 
     if (differed) {
-        ASSERT(result.length() >= str.length());
+        MORDOR_ASSERT(result.length() >= str.length());
     } else {
-        ASSERT(result == str);
+        MORDOR_ASSERT(result == str);
     }
     return result;
 }
@@ -72,7 +74,7 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
     while (c < end)
     {
         if (*c == '%') {
-            ASSERT(c + 2 < end);
+            MORDOR_ASSERT(c + 2 < end);
             if (!differed) {
                 result.resize(c - str.c_str());
                 differed = true;
@@ -84,7 +86,7 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
             else if (*c >= 'A' && *c <= 'F')
                 decoded = (*c - 'A' + 10) << 4;
             else {
-                ASSERT(*c >= '0' && *c <='9');
+                MORDOR_ASSERT(*c >= '0' && *c <='9');
                 decoded = (*c - '0') << 4;
             }
             ++c;
@@ -93,7 +95,7 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
             else if (*c >= 'A' && *c <= 'F')
                 decoded |= *c - 'A' + 10;
             else {
-                ASSERT(*c >= '0' && *c <='9');
+                MORDOR_ASSERT(*c >= '0' && *c <='9');
                 decoded |= *c - '0';
             }
             result.append(1, decoded);                            
@@ -116,11 +118,11 @@ URI::encode(const std::string &str, CharacterClass charClass)
 {
     switch (charClass) {
 		case UNRESERVED:
-		    return escape(str, ::unreserved, false);
+		    return escape(str, unreserved, false);
         case QUERYSTRING:
-            return escape(str, ::queryString, true);
+            return escape(str, Mordor::queryString, true);
         default:
-            NOTREACHED();
+            MORDOR_NOTREACHED();
     }
 }
 
@@ -248,6 +250,7 @@ URI::encode(const std::string &str, CharacterClass charClass)
         main := URI_reference;
         write data;
 }%%
+
 class URIParser : public RagelParser
 {
 public:
@@ -478,7 +481,7 @@ URI::Authority::operator==(const Authority &rhs) const
 std::ostream&
 operator<<(std::ostream& os, const URI::Authority& authority)
 {
-    ASSERT(authority.hostDefined());
+    MORDOR_ASSERT(authority.hostDefined());
     if (authority.userinfoDefined()) {
         os << escape(authority.userinfo(), userinfo) << "@";
     }
@@ -561,7 +564,7 @@ URI::Path::normalize(bool emptyPathValid)
 void
 URI::Path::merge(const Path& rhs)
 {
-    ASSERT(rhs.type == RELATIVE);
+    MORDOR_ASSERT(rhs.type == RELATIVE);
     if (!segments.empty()) {
         segments.pop_back();
         segments.insert(segments.end(), rhs.segments.begin(), rhs.segments.end());
@@ -653,7 +656,7 @@ URI::normalize()
 std::string
 URI::query() const
 {
-    ASSERT(m_queryDefined);
+    MORDOR_ASSERT(m_queryDefined);
     return unescape(m_query);
 }
 
@@ -661,7 +664,7 @@ void
 URI::query(const std::string &q)
 {
     m_queryDefined = true;
-    m_query = escape(q, ::query);
+    m_query = escape(q, Mordor::query);
 }
 
 std::string
@@ -705,7 +708,7 @@ operator<<(std::ostream& os, const URI& uri)
 URI
 URI::transform(const URI& base, const URI& relative)
 {
-    ASSERT(base.schemeDefined());
+    MORDOR_ASSERT(base.schemeDefined());
 
     URI target;
     if (relative.schemeDefined()) {
@@ -809,9 +812,11 @@ URI::QueryString::toString() const
         if (it != begin()) {
             os << '&';
         }
-        os << escape(it->first, ::queryString, true);
+        os << escape(it->first, Mordor::queryString, true);
         if (!it->second.empty())
-            os << '=' << escape(it->second, ::queryString, true);
+            os << '=' << escape(it->second, Mordor::queryString, true);
     }
     return os.str();
+}
+
 }

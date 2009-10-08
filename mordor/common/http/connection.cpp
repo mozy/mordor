@@ -12,12 +12,15 @@
 #include "mordor/common/streams/singleplex.h"
 #include "mordor/common/streams/zlib.h"
 
-HTTP::Connection::Connection(Stream::ptr stream)
+namespace Mordor {
+namespace HTTP {
+
+Connection::Connection(Stream::ptr stream)
 : m_stream(stream)
 {
-    ASSERT(stream);
-    ASSERT(stream->supportsRead());
-    ASSERT(stream->supportsWrite());
+    MORDOR_ASSERT(stream);
+    MORDOR_ASSERT(stream->supportsRead());
+    MORDOR_ASSERT(stream->supportsWrite());
     if (!stream->supportsUnread() || !stream->supportsFind()) {
         BufferedStream *buffered = new BufferedStream(stream);
         buffered->allowPartialReads(true);
@@ -26,7 +29,7 @@ HTTP::Connection::Connection(Stream::ptr stream)
 }
 
 bool
-HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
+Connection::hasMessageBody(const GeneralHeaders &general,
                                  const EntityHeaders &entity,
                                  Method method,
                                  Status status)
@@ -86,7 +89,7 @@ HTTP::Connection::hasMessageBody(const GeneralHeaders &general,
 }
 
 Stream::ptr
-HTTP::Connection::getStream(const GeneralHeaders &general,
+Connection::getStream(const GeneralHeaders &general,
                             const EntityHeaders &entity,
                             Method method,
                             Status status,
@@ -94,7 +97,7 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
                             boost::function<void()> notifyOnException,
                             bool forRead)
 {
-    ASSERT(hasMessageBody(general, entity, method, status));
+    MORDOR_ASSERT(hasMessageBody(general, entity, method, status));
     Stream::ptr stream;
     if (forRead) {
         stream.reset(new SingleplexStream(m_stream, SingleplexStream::READ, false));
@@ -115,11 +118,11 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
             stream.reset(new GzipStream(stream));
         } else if (stricmp(it->value.c_str(), "compress") == 0 ||
             stricmp(it->value.c_str(), "x-compress") == 0) {
-            ASSERT(false);
+            MORDOR_ASSERT(false);
         } else if (stricmp(it->value.c_str(), "identity") == 0) {
-            ASSERT(false);
+            MORDOR_ASSERT(false);
         } else {
-            ASSERT(false);
+            MORDOR_ASSERT(false);
         }
     }
     if (stream != baseStream) {
@@ -137,3 +140,5 @@ HTTP::Connection::getStream(const GeneralHeaders &general,
     notify->notifyOnException = notifyOnException;
     return stream;
 }
+
+}}

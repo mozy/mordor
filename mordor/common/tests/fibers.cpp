@@ -7,11 +7,14 @@
 #include "mordor/common/fiber.h"
 #include "mordor/test/test.h"
 
+using namespace Mordor;
+using namespace Mordor::Test;
+
 struct DummyException : public boost::exception, public std::exception {};
 
-SUITE_INVARIANT(Fibers)
+MORDOR_SUITE_INVARIANT(Fibers)
 {
-    TEST_ASSERT(!Fiber::getThis());
+    MORDOR_TEST_ASSERT(!Fiber::getThis());
 }
 
 static void
@@ -19,42 +22,42 @@ fiberProc1(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence)
 {
     Fiber::ptr self(weakself);
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 1);
-    TEST_ASSERT(Fiber::getThis() == self);
-    TEST_ASSERT(mainFiber != self);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(self->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == self);
+    MORDOR_TEST_ASSERT(mainFiber != self);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);
     Fiber::yield();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 3);
-    TEST_ASSERT(Fiber::getThis() == self);
-    TEST_ASSERT(mainFiber != self);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(self->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == self);
+    MORDOR_TEST_ASSERT(mainFiber != self);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);
 }
 
-TEST_WITH_SUITE(Fibers, call)
+MORDOR_UNITTEST(Fibers, call)
 {
     int sequence = 0;
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr a(new Fiber(NULL));
     a->reset(boost::bind(&fiberProc1, mainFiber, Fiber::weak_ptr(a), boost::ref(sequence)));
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(a != mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(a != mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
     a->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 2);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::HOLD);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::HOLD);
     a->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 4);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 4);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
 }
 
 static void
@@ -63,18 +66,18 @@ fiberProc2a(Fiber::ptr mainFiber, Fiber::weak_ptr weakself,
 {
     Fiber::ptr self(weakself), other(weakother);
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 1);
-    TEST_ASSERT(Fiber::getThis() == self);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(self->state() == Fiber::EXEC);
-    TEST_ASSERT(other->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == self);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(other->state() == Fiber::INIT);
     other->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 3);
-    TEST_ASSERT(Fiber::getThis() == self);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(self->state() == Fiber::EXEC);
-    TEST_ASSERT(other->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == self);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(other->state() == Fiber::TERM);
 }
 
 static void
@@ -83,14 +86,14 @@ fiberProc2b(Fiber::ptr mainFiber, Fiber::weak_ptr weakself,
 {
     Fiber::ptr self(weakself), other(weakother);
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 2);
-    TEST_ASSERT(Fiber::getThis() == self);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(other->state() == Fiber::EXEC);
-    TEST_ASSERT(self->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == self);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(other->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);
 }
 
-TEST_WITH_SUITE(Fibers, nestedCall)
+MORDOR_UNITTEST(Fibers, nestedCall)
 {
     int sequence = 0;
     Fiber::ptr mainFiber(new Fiber());
@@ -100,19 +103,19 @@ TEST_WITH_SUITE(Fibers, nestedCall)
         Fiber::weak_ptr(b), boost::ref(sequence)));
     b->reset(boost::bind(&fiberProc2b, mainFiber, Fiber::weak_ptr(b),
         Fiber::weak_ptr(a), boost::ref(sequence)));
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(a != mainFiber);
-    TEST_ASSERT(b != mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::INIT);
-    TEST_ASSERT(b->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(a != mainFiber);
+    MORDOR_TEST_ASSERT(b != mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::INIT);
     a->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 4);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::TERM);
-    TEST_ASSERT(b->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 4);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::TERM);
 }
 
 // Call graphs for this test:
@@ -128,22 +131,22 @@ fiberProc3a(Fiber::ptr mainFiber, Fiber::weak_ptr weaka, Fiber::weak_ptr weakb,
 {
     Fiber::ptr a(weaka), b(weakb), c(weakc), d(weakd);
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 1);
-    TEST_ASSERT(Fiber::getThis() == a);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::EXEC);
-    TEST_ASSERT(b->state() == Fiber::INIT);
-    TEST_ASSERT(c->state() == Fiber::INIT);
-    TEST_ASSERT(d->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == a);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::INIT);
     b->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 6);
-    TEST_ASSERT(Fiber::getThis() == a);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::EXEC);
-    TEST_ASSERT(b->state() == Fiber::TERM);
-    TEST_ASSERT(c->state() == Fiber::EXEC);
-    TEST_ASSERT(d->state() == Fiber::HOLD);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 6);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == a);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::HOLD);
 }
 
 static void
@@ -152,22 +155,22 @@ fiberProc3b(Fiber::ptr mainFiber, Fiber::weak_ptr weaka, Fiber::weak_ptr weakb,
 {
     Fiber::ptr a(weaka), b(weakb), c(weakc), d(weakd);
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 2);
-    TEST_ASSERT(Fiber::getThis() == b);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::EXEC);
-    TEST_ASSERT(b->state() == Fiber::EXEC);
-    TEST_ASSERT(c->state() == Fiber::INIT);
-    TEST_ASSERT(d->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == b);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::INIT);
     c->yieldTo();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 5);
-    TEST_ASSERT(Fiber::getThis() == b);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::EXEC);
-    TEST_ASSERT(b->state() == Fiber::EXEC);
-    TEST_ASSERT(c->state() == Fiber::EXEC);
-    TEST_ASSERT(d->state() == Fiber::HOLD);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 5);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == b);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::HOLD);
 }
 
 static void
@@ -176,22 +179,22 @@ fiberProc3c(Fiber::ptr mainFiber, Fiber::weak_ptr weaka, Fiber::weak_ptr weakb,
 {
     Fiber::ptr a(weaka), b(weakb), c(weakc), d(weakd);
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 3);
-    TEST_ASSERT(Fiber::getThis() == c);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::EXEC);
-    TEST_ASSERT(b->state() == Fiber::HOLD);
-    TEST_ASSERT(c->state() == Fiber::EXEC);
-    TEST_ASSERT(d->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == c);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::HOLD);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::INIT);
     d->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 9);
-    TEST_ASSERT(Fiber::getThis() == c);
-    TEST_ASSERT(mainFiber->state() == Fiber::HOLD);
-    TEST_ASSERT(a->state() == Fiber::TERM);
-    TEST_ASSERT(b->state() == Fiber::TERM);
-    TEST_ASSERT(c->state() == Fiber::EXEC);
-    TEST_ASSERT(d->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 9);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == c);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::HOLD);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::TERM);
     // Implicit yieldTo "caller"
 }
 
@@ -201,25 +204,25 @@ fiberProc3d(Fiber::ptr mainFiber, Fiber::weak_ptr weaka, Fiber::weak_ptr weakb,
 {
     Fiber::ptr a(weaka), b(weakb), c(weakc), d(weakd);
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 4);
-    TEST_ASSERT(Fiber::getThis() == d);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::EXEC);
-    TEST_ASSERT(b->state() == Fiber::HOLD);
-    TEST_ASSERT(c->state() == Fiber::EXEC);
-    TEST_ASSERT(d->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 4);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == d);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::HOLD);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::EXEC);
     b->yieldTo();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 8);
-    TEST_ASSERT(Fiber::getThis() == d);
-    TEST_ASSERT(mainFiber->state() == Fiber::HOLD);
-    TEST_ASSERT(a->state() == Fiber::TERM);
-    TEST_ASSERT(b->state() == Fiber::TERM);
-    TEST_ASSERT(c->state() == Fiber::EXEC);
-    TEST_ASSERT(d->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 8);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == d);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::HOLD);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::EXEC);
 }
 
-TEST_WITH_SUITE(Fibers, yieldTo)
+MORDOR_UNITTEST(Fibers, yieldTo)
 {
     int sequence = 0;
     Fiber::ptr mainFiber(new Fiber());
@@ -239,99 +242,99 @@ TEST_WITH_SUITE(Fibers, yieldTo)
     d->reset(boost::bind(&fiberProc3d, mainFiber, Fiber::weak_ptr(a),
         Fiber::weak_ptr(b), Fiber::weak_ptr(c),
         Fiber::weak_ptr(d), boost::ref(sequence)));
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(a != mainFiber);
-    TEST_ASSERT(b != mainFiber);
-    TEST_ASSERT(c != mainFiber);
-    TEST_ASSERT(d != mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::INIT);
-    TEST_ASSERT(b->state() == Fiber::INIT);
-    TEST_ASSERT(c->state() == Fiber::INIT);
-    TEST_ASSERT(d->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(a != mainFiber);
+    MORDOR_TEST_ASSERT(b != mainFiber);
+    MORDOR_TEST_ASSERT(c != mainFiber);
+    MORDOR_TEST_ASSERT(d != mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::INIT);
     a->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 7);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::TERM);
-    TEST_ASSERT(b->state() == Fiber::TERM);
-    TEST_ASSERT(c->state() == Fiber::EXEC);
-    TEST_ASSERT(d->state() == Fiber::HOLD);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 7);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::HOLD);
     d->yieldTo();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 10);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::TERM);
-    TEST_ASSERT(b->state() == Fiber::TERM);
-    TEST_ASSERT(c->state() == Fiber::TERM);
-    TEST_ASSERT(d->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 10);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(b->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(c->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT(d->state() == Fiber::TERM);
 }
 
 static void
 fiberProc4(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence, bool exception)
 {
     Fiber::ptr self(weakself);
-    TEST_ASSERT(Fiber::getThis() == self);
-    TEST_ASSERT(mainFiber != self);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(self->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == self);
+    MORDOR_TEST_ASSERT(mainFiber != self);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);
     ++sequence;
     if (exception)
         MORDOR_THROW_EXCEPTION(DummyException());
 }
 
-TEST_WITH_SUITE(Fibers, reset)
+MORDOR_UNITTEST(Fibers, reset)
 {
     int sequence = 0;
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr a(new Fiber(NULL));
     a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
         boost::ref(sequence), false));
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(a != mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(a != mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
     a->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 2);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
     a->reset();
-    TEST_ASSERT(a->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
     a->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 4);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 4);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
     a->reset();
-    TEST_ASSERT(a->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
     a->call();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 6);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 6);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
     a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
         boost::ref(sequence), true));
-    TEST_ASSERT(a->state() == Fiber::INIT);
-    TEST_ASSERT_EXCEPTION(a->call(), DummyException);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT_EXCEPTION(a->call(), DummyException);
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 8);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::EXCEPT);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 8);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::EXCEPT);
     a->reset();
-    TEST_ASSERT(a->state() == Fiber::INIT);
-    TEST_ASSERT_EXCEPTION(a->call(), DummyException);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
+    MORDOR_TEST_ASSERT_EXCEPTION(a->call(), DummyException);
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 10);
-    TEST_ASSERT(Fiber::getThis() == mainFiber);
-    TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
-    TEST_ASSERT(a->state() == Fiber::EXCEPT);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 10);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::EXCEPT);
 }
 
 static void throwBadAlloc()
@@ -339,11 +342,11 @@ static void throwBadAlloc()
     throw std::bad_alloc();
 }
 
-TEST_WITH_SUITE(Fibers, badAlloc)
+MORDOR_UNITTEST(Fibers, badAlloc)
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwBadAlloc));
-    TEST_ASSERT_EXCEPTION(fiber->call(), std::bad_alloc);
+    MORDOR_TEST_ASSERT_EXCEPTION(fiber->call(), std::bad_alloc);
 }
 
 static void throwFileNotFound()
@@ -351,11 +354,11 @@ static void throwFileNotFound()
     MORDOR_THROW_EXCEPTION(FileNotFoundException());
 }
 
-TEST_WITH_SUITE(Fibers, nativeException)
+MORDOR_UNITTEST(Fibers, nativeException)
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwFileNotFound));
-    TEST_ASSERT_EXCEPTION(fiber->call(), FileNotFoundException);
+    MORDOR_TEST_ASSERT_EXCEPTION(fiber->call(), FileNotFoundException);
 }
 
 static void throwRuntimeError()
@@ -363,22 +366,22 @@ static void throwRuntimeError()
     throw std::runtime_error("message");
 }
 
-TEST_WITH_SUITE(Fibers, runtimeError)
+MORDOR_UNITTEST(Fibers, runtimeError)
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwRuntimeError));
     try {
         fiber->call();
     } catch (std::runtime_error &ex) {
-        TEST_ASSERT_EQUAL(std::string(ex.what()), "message");
+        MORDOR_TEST_ASSERT_EQUAL(std::string(ex.what()), "message");
     }
 }
 
-TEST_WITH_SUITE(Fibers, badAllocYieldTo)
+MORDOR_UNITTEST(Fibers, badAllocYieldTo)
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwBadAlloc));
-    TEST_ASSERT_EXCEPTION(fiber->yieldTo(), std::bad_alloc);
+    MORDOR_TEST_ASSERT_EXCEPTION(fiber->yieldTo(), std::bad_alloc);
 }
 
 static void throwGenericException()
@@ -386,28 +389,28 @@ static void throwGenericException()
     MORDOR_THROW_EXCEPTION(DummyException());
 }
 
-TEST_WITH_SUITE(Fibers, genericException)
+MORDOR_UNITTEST(Fibers, genericException)
 {
     Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwGenericException));
-    TEST_ASSERT_EXCEPTION(fiber->call(), DummyException);
+    MORDOR_TEST_ASSERT_EXCEPTION(fiber->call(), DummyException);
 }
 
-TEST_WITH_SUITE(Fibers, fiberThrowingExceptionOutOfScope)
+MORDOR_UNITTEST(Fibers, fiberThrowingExceptionOutOfScope)
 {
     Fiber::ptr mainFiber(new Fiber());
     try {
         Fiber::ptr fiber(new Fiber(&throwGenericException));
         fiber->call();
-        NOTREACHED();
+        MORDOR_NOTREACHED();
     } catch (DummyException &) {
     }
 }
 
 #ifdef DEBUG
-TEST_WITH_SUITE(Fibers, assertNeedCallingFiber)
+MORDOR_UNITTEST(Fibers, assertNeedCallingFiber)
 {
     Fiber::ptr fiber(new Fiber(&throwGenericException));
-    TEST_ASSERT_ASSERTED(fiber->call());
+    MORDOR_TEST_ASSERT_ASSERTED(fiber->call());
 }
 #endif

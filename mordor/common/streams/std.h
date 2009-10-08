@@ -1,5 +1,5 @@
-#ifndef __STD_H__
-#define __STD_H__
+#ifndef __MORDOR_STD_STREAM_H__
+#define __MORDOR_STD_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "mordor/common/iomanager.h"
@@ -7,9 +7,15 @@
 
 #ifdef WINDOWS
 #include "handle.h"
-typedef HandleStream NativeStream;
 #else
 #include "fd.h"
+#endif
+
+namespace Mordor {
+
+#ifdef WINDOWS
+typedef HandleStream NativeStream;
+#else
 typedef FDStream NativeStream;
 #endif
 
@@ -39,5 +45,7 @@ public:
 
     bool supportsRead() { return false; }
 };
+
+}
 
 #endif

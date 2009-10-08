@@ -6,6 +6,8 @@
 
 #include <boost/bind.hpp>
 
+namespace Mordor {
+
 size_t
 HashStream::read(Buffer &b, size_t len)
 {
@@ -88,4 +90,6 @@ void
 MD5Stream::updateHash(const Buffer &b, size_t len)
 {
     b.visit(boost::bind(&MD5_Update, &m_ctx, _1, _2), len);
+}
+
 }

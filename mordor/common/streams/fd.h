@@ -1,9 +1,11 @@
-#ifndef __FD_STREAM_H__
-#define __FD_STREAM_H__
+#ifndef __MORDOR_FD_STREAM_H__
+#define __MORDOR_FD_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "mordor/common/iomanager.h"
 #include "stream.h"
+
+namespace Mordor {
 
 class FDStream : public Stream
 {
@@ -35,6 +37,8 @@ private:
     int m_fd;
     bool m_own;
 };
+
+}
 
 #endif
 

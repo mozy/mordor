@@ -6,11 +6,14 @@
 
 #include "mordor/common/string.h"
 
+namespace Mordor {
+namespace HTTP {
+
 void
-HTTP::BasicAuth::authorize(Request &nextRequest,
-                                                 const std::string &username,
-                                                 const std::string &password,
-                                                 bool proxy)
+BasicAuth::authorize(Request &nextRequest,
+                     const std::string &username,
+                     const std::string &password,
+                     bool proxy)
 {
     AuthParams &authorization = proxy ?
         nextRequest.request.proxyAuthorization :
@@ -19,3 +22,5 @@ HTTP::BasicAuth::authorize(Request &nextRequest,
     authorization.base64 = base64encode(username + ":" + password);
     authorization.parameters.clear();
 }
+
+}}

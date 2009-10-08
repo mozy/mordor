@@ -8,37 +8,39 @@
 #include "exception.h"
 #include "log.h"
 
+namespace Mordor {
+
 static Logger::ptr g_log = Log::lookup("mordor:common:iomanager");
 
 IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_kqfd = kqueue();
-    LOG_LEVEL(g_log, m_kqfd <= 0 ? Log::ERROR : Log::TRACE) << this
+    MORDOR_LOG_LEVEL(g_log, m_kqfd <= 0 ? Log::ERROR : Log::TRACE) << this
         << " kqueue(): " << m_kqfd;
     if (m_kqfd <= 0) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("kqueue");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kqueue");
     }
     int rc = pipe(m_tickleFds);
-    LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " pipe(): "
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " pipe(): "
         << rc << " (" << errno << ")";
     if (rc) {
         close(m_kqfd);
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
     }
-    ASSERT(m_tickleFds[0] > 0);
-    ASSERT(m_tickleFds[1] > 0);
+    MORDOR_ASSERT(m_tickleFds[0] > 0);
+    MORDOR_ASSERT(m_tickleFds[1] > 0);
     struct kevent event;
     EV_SET(&event, m_tickleFds[0], EVFILT_READ, EV_ADD, 0, 0, NULL);
     rc = kevent(m_kqfd, &event, 1, NULL, 0, NULL);
-    LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
         << m_kqfd << ", " << m_tickleFds[0] << ", EVFILT_READ, EV_ADD): " << rc
         << " (" << errno << ")";
     if (rc) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
         close(m_kqfd);
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     }
 }
 
@@ -46,9 +48,9 @@ IOManagerKQueue::~IOManagerKQueue()
 {
     stop();
     close(m_kqfd);
-    LOG_TRACE(g_log) << this << " close(" << m_kqfd << ")";
+    MORDOR_LOG_TRACE(g_log) << this << " close(" << m_kqfd << ")";
     close(m_tickleFds[0]);
-    LOG_VERBOSE(g_log) << this << " close(" << m_tickleFds[0] << ")";
+    MORDOR_LOG_VERBOSE(g_log) << this << " close(" << m_tickleFds[0] << ")";
     close(m_tickleFds[1]);
 }
 
@@ -56,13 +58,13 @@ void
 IOManagerKQueue::registerEvent(int fd, Event events,
                                boost::function<void ()> dg)
 {
-    ASSERT(fd > 0);
-    ASSERT(Scheduler::getThis());
-    ASSERT(Fiber::getThis());
+    MORDOR_ASSERT(fd > 0);
+    MORDOR_ASSERT(Scheduler::getThis());
+    MORDOR_ASSERT(Fiber::getThis());
 
     std::map<std::pair<int, Event>, AsyncEvent>::iterator it =
         m_pendingEvents.find(std::pair<int, Event>(fd, events));
-    ASSERT(it == m_pendingEvents.end());
+    MORDOR_ASSERT(it == m_pendingEvents.end());
     AsyncEvent& e = m_pendingEvents[std::pair<int, Event>(fd, events)];
     e.event.ident = fd;
     e.event.flags = EV_ADD;
@@ -75,11 +77,11 @@ IOManagerKQueue::registerEvent(int fd, Event events,
         e.m_fiber = Fiber::getThis();
     }
     int rc = kevent(m_kqfd, &e.event, 1, NULL, 0, NULL);
-    LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
         << m_kqfd << ", (" << fd << ", " << events << ", EV_ADD)): " << rc
         << " (" << errno << ")";
     if (rc) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     }
 }
 
@@ -92,15 +94,15 @@ IOManagerKQueue::cancelEvent(int fd, Event events)
     if (it == m_pendingEvents.end())
         return;
     AsyncEvent &e = it->second;
-    ASSERT(e.event.ident == (unsigned)fd);
-    ASSERT(e.event.filter == (short)events);
+    MORDOR_ASSERT(e.event.ident == (unsigned)fd);
+    MORDOR_ASSERT(e.event.filter == (short)events);
     e.event.flags = EV_DELETE;
     int rc = kevent(m_kqfd, &e.event, 1, NULL, 0, NULL);
-    LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
         << m_kqfd << ", (" << fd << ", " << events << ", EV_DELETE)): " << rc
         << " (" << errno << ")";
     if (rc) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     }
     if (e.m_dg)
         e.m_scheduler->schedule(e.m_dg);
@@ -143,10 +145,10 @@ IOManagerKQueue::idle()
             }
             rc = kevent(m_kqfd, NULL, 0, events, 64, timeout);
         }
-        LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
+        MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " kevent(" << m_kqfd << "): " << rc << " (" << errno << ")";
         if (rc < 0) {
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
         }
         processTimers();
 
@@ -155,7 +157,7 @@ IOManagerKQueue::idle()
             if ((int)event.ident == m_tickleFds[0]) {
                 unsigned char dummy;
                 int rc2 = read(m_tickleFds[0], &dummy, 1);
-                ASSERT(rc2 == 1);
+                MORDOR_ASSERT(rc2 == 1);
                 continue;
             }
 
@@ -168,12 +170,12 @@ IOManagerKQueue::idle()
 
             event.flags = EV_DELETE;
             rc = kevent(m_kqfd, &event, 1, NULL, 0, NULL);
-            LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+            MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
                 << " kevent(" << m_kqfd << ", (" << event.ident << ", "
                 << event.filter << ", EV_DELETE)): " << rc << " (" << errno
                 << ")";
             if (rc) {
-                THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
             }
             if (e.m_dg)
                 e.m_scheduler->schedule(e.m_dg);
@@ -189,7 +191,9 @@ void
 IOManagerKQueue::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
-    LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
+    MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
         << rc << " (" << errno << ")";
-    VERIFY(rc == 1);
+    MORDOR_VERIFY(rc == 1);
+}
+
 }

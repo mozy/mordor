@@ -1,5 +1,5 @@
-#ifndef __IOMANAGER_EPOLL_H__
-#define __IOMANAGER_EPOLL_H__
+#ifndef __MORDOR_IOMANAGER_EPOLL_H__
+#define __MORDOR_IOMANAGER_EPOLL_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <sys/types.h>
@@ -14,6 +14,8 @@
 #ifndef BSD
 #error IOManagerKQueue is BSD only
 #endif
+
+namespace Mordor {
 
 class IOManagerKQueue : public Scheduler, public TimerManager
 {
@@ -56,6 +58,8 @@ private:
     std::map<std::pair<int, Event>, AsyncEvent> m_pendingEvents;
     boost::mutex m_mutex;
 };
+
+}
 
 #endif
 

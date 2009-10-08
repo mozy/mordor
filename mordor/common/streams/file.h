@@ -1,16 +1,23 @@
-#ifndef __FILE_H__
-#define __FILE_H__
+#ifndef __MORDOR_FILE_STREAM_H__
+#define __MORDOR_FILE_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "mordor/common/version.h"
 
 #ifdef WINDOWS
 #include "handle.h"
+#else
+#include <fcntl.h>
+
+#include "fd.h"
+#endif
+
+namespace Mordor {
+
+#ifdef WINDOWS
 typedef HandleStream NativeStream;
 typedef HANDLE NativeHandle;
 #else
-#include "fd.h"
-#include <fcntl.h>
 typedef FDStream NativeStream;
 typedef int NativeHandle;
 #endif
@@ -55,5 +62,7 @@ public:
 private:
     bool m_supportsRead, m_supportsWrite, m_supportsSeek;
 };
+
+}
 
 #endif

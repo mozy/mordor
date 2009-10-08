@@ -10,12 +10,15 @@
 #include "mordor/common/streams/transfer.h"
 #include "mordor/test/test.h"
 
+using namespace Mordor;
+using namespace Mordor::Test;
+
 static void
 oauthExampleServer(const URI &uri, HTTP::ServerRequest::ptr request)
 {
-    TEST_ASSERT_EQUAL(request->request().requestLine.method, HTTP::POST);        
-    TEST_ASSERT_EQUAL(request->request().entity.contentType.type, "application");
-    TEST_ASSERT_EQUAL(request->request().entity.contentType.subtype, "x-www-form-urlencoded");
+    MORDOR_TEST_ASSERT_EQUAL(request->request().requestLine.method, HTTP::POST);        
+    MORDOR_TEST_ASSERT_EQUAL(request->request().entity.contentType.type, "application");
+    MORDOR_TEST_ASSERT_EQUAL(request->request().entity.contentType.subtype, "x-www-form-urlencoded");
     MemoryStream requestBody;
     transferStream(request->requestStream(), requestBody);
     std::string queryString;
@@ -24,69 +27,69 @@ oauthExampleServer(const URI &uri, HTTP::ServerRequest::ptr request)
 
     URI::QueryString qs(queryString);
     if (uri.path == "/request_token") {
-        TEST_ASSERT_EQUAL(uri, "https://photos.example.net/request_token");
+        MORDOR_TEST_ASSERT_EQUAL(uri, "https://photos.example.net/request_token");
         
-        TEST_ASSERT_EQUAL(qs.size(), 7u);
+        MORDOR_TEST_ASSERT_EQUAL(qs.size(), 7u);
         URI::QueryString::iterator it = qs.find("oauth_consumer_key");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "dpf43f3p2l4k3l03");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "dpf43f3p2l4k3l03");
         it = qs.find("oauth_signature_method");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "PLAINTEXT");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "PLAINTEXT");
         it = qs.find("oauth_signature");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "kd94hf93k423kf44&");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "kd94hf93k423kf44&");
         it = qs.find("oauth_timestamp");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "1191242090");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "1191242090");
         it = qs.find("oauth_nonce");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "hsu94j3884jdopsl");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "hsu94j3884jdopsl");
         it = qs.find("oauth_version");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "1.0");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "1.0");
         it = qs.find("oauth_callback");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "http://printer.example.com/request_token_ready");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "http://printer.example.com/request_token_ready");
 
         qs.clear();
         qs.insert(std::make_pair("oauth_token", "hh5s93j4hdidpola"));
         qs.insert(std::make_pair("oauth_token_secret", "hdhd0244k9j7ao03"));
         qs.insert(std::make_pair("oauth_callback_confirmed", "true"));
     } else if (uri.path == "/access_token") {
-        TEST_ASSERT_EQUAL(uri, "https://photos.example.net/access_token");
+        MORDOR_TEST_ASSERT_EQUAL(uri, "https://photos.example.net/access_token");
 
-        TEST_ASSERT_EQUAL(qs.size(), 8u);
+        MORDOR_TEST_ASSERT_EQUAL(qs.size(), 8u);
         URI::QueryString::iterator it = qs.find("oauth_consumer_key");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "dpf43f3p2l4k3l03");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "dpf43f3p2l4k3l03");
         it = qs.find("oauth_token");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "hh5s93j4hdidpola");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "hh5s93j4hdidpola");
         it = qs.find("oauth_signature_method");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "PLAINTEXT");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "PLAINTEXT");
         it = qs.find("oauth_signature");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "kd94hf93k423kf44&hdhd0244k9j7ao03");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "kd94hf93k423kf44&hdhd0244k9j7ao03");
         it = qs.find("oauth_timestamp");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "1191242092");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "1191242092");
         it = qs.find("oauth_nonce");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "dji430splmx33448");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "dji430splmx33448");
         it = qs.find("oauth_version");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "1.0");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "1.0");
         it = qs.find("oauth_verifier");
-        TEST_ASSERT(it != qs.end());
-        TEST_ASSERT_EQUAL(it->second, "hfdp7dh39dks9884");
+        MORDOR_TEST_ASSERT(it != qs.end());
+        MORDOR_TEST_ASSERT_EQUAL(it->second, "hfdp7dh39dks9884");
 
         qs.clear();
         qs.insert(std::make_pair("oauth_token", "nnch734d00sl2jdk"));
         qs.insert(std::make_pair("oauth_token_secret", "pfkkdhi9sl3r4s00"));
     } else {
-        NOTREACHED();
+        MORDOR_NOTREACHED();
     }
     std::string response = qs.toString();
     request->response().entity.contentLength = response.size();
@@ -98,10 +101,10 @@ oauthExampleServer(const URI &uri, HTTP::ServerRequest::ptr request)
 static std::string
 oauthExampleAuth(const URI::QueryString &params)
 {
-    TEST_ASSERT_GREATER_THAN_OR_EQUAL(params.size(), 1u);
+    MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(params.size(), 1u);
     URI::QueryString::const_iterator it = params.find("oauth_token");
-    TEST_ASSERT(it != params.end());
-    TEST_ASSERT_EQUAL(it->second, "hh5s93j4hdidpola");
+    MORDOR_TEST_ASSERT(it != params.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "hh5s93j4hdidpola");
     return "hfdp7dh39dks9884";
 }
 
@@ -120,11 +123,11 @@ getTimestampAndNonce()
             return std::make_pair(1191242096ull,
                 std::string("kllo9940pd9333jh"));
         default:
-            NOTREACHED();
+            MORDOR_NOTREACHED();
     }
 }
 
-TEST_WITH_SUITE(OAuth, oauthExample)
+MORDOR_UNITTEST(OAuth, oauthExample)
 {
     Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
@@ -143,31 +146,31 @@ TEST_WITH_SUITE(OAuth, oauthExample)
     requestHeaders.requestLine.uri =
         "http://photos.example.net/photos?file=vacation.jpg&size=original";
     oauth.authorize(requestHeaders, "HMAC-SHA1", "http://photos.example.net/");
-    TEST_ASSERT_EQUAL(requestHeaders.request.authorization.scheme, "OAuth");
+    MORDOR_TEST_ASSERT_EQUAL(requestHeaders.request.authorization.scheme, "OAuth");
     HTTP::StringMap &params = requestHeaders.request.authorization.parameters;
-    TEST_ASSERT_EQUAL(params.size(), 8u);
+    MORDOR_TEST_ASSERT_EQUAL(params.size(), 8u);
     HTTP::StringMap::iterator it = params.find("realm");
-    TEST_ASSERT(it != params.end());
-    TEST_ASSERT_EQUAL(it->second, "http://photos.example.net/");
+    MORDOR_TEST_ASSERT(it != params.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "http://photos.example.net/");
     it = params.find("oauth_consumer_key");
-    TEST_ASSERT(it != params.end());
-    TEST_ASSERT_EQUAL(it->second, "dpf43f3p2l4k3l03");
+    MORDOR_TEST_ASSERT(it != params.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "dpf43f3p2l4k3l03");
     it = params.find("oauth_token");
-    TEST_ASSERT(it != params.end());
-    TEST_ASSERT_EQUAL(it->second, "nnch734d00sl2jdk");
+    MORDOR_TEST_ASSERT(it != params.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "nnch734d00sl2jdk");
     it = params.find("oauth_signature_method");
-    TEST_ASSERT(it != params.end());
-    TEST_ASSERT_EQUAL(it->second, "HMAC-SHA1");
+    MORDOR_TEST_ASSERT(it != params.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "HMAC-SHA1");
     it = params.find("oauth_signature");
-    TEST_ASSERT(it != params.end());
-    TEST_ASSERT_EQUAL(it->second, "tR3+Ty81lMeYAr/Fid0kMTYa/WM=");
+    MORDOR_TEST_ASSERT(it != params.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "tR3+Ty81lMeYAr/Fid0kMTYa/WM=");
     it = params.find("oauth_timestamp");
-    TEST_ASSERT(it != params.end());
-    TEST_ASSERT_EQUAL(it->second, "1191242096");
+    MORDOR_TEST_ASSERT(it != params.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "1191242096");
     it = params.find("oauth_nonce");
-    TEST_ASSERT(it != params.end());
-    TEST_ASSERT_EQUAL(it->second, "kllo9940pd9333jh");
+    MORDOR_TEST_ASSERT(it != params.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "kllo9940pd9333jh");
     it = params.find("oauth_version");
-    TEST_ASSERT(it != params.end());
-    TEST_ASSERT_EQUAL(it->second, "1.0");
+    MORDOR_TEST_ASSERT(it != params.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "1.0");
 }

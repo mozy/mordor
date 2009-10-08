@@ -12,6 +12,8 @@
 #pragma comment(lib, "zdll")
 #endif
 
+namespace Mordor {
+
 static Logger::ptr g_log = Log::lookup("mordor:common:streams:zlib");
 
 ZlibStream::ZlibStream(Stream::ptr parent, bool own, Type type, int level,
@@ -25,11 +27,11 @@ ZlibStream::ZlibStream(Stream::ptr parent, bool own, Type type, int level,
 void
 ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy strategy)
 {
-    ASSERT(supportsRead() || supportsWrite());
-    ASSERT(!(supportsRead() && supportsWrite()));
-    ASSERT((level >= 0 && level <= 9) || level == Z_DEFAULT_COMPRESSION);
-    ASSERT(windowBits >= 8 && windowBits <= 15);
-    ASSERT(memlevel >= 1 && memlevel <= 9);
+    MORDOR_ASSERT(supportsRead() || supportsWrite());
+    MORDOR_ASSERT(!(supportsRead() && supportsWrite()));
+    MORDOR_ASSERT((level >= 0 && level <= 9) || level == Z_DEFAULT_COMPRESSION);
+    MORDOR_ASSERT(windowBits >= 8 && windowBits <= 15);
+    MORDOR_ASSERT(memlevel >= 1 && memlevel <= 9);
     switch (type) {
         case ZLIB:
             break;
@@ -40,7 +42,7 @@ ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy st
             windowBits += 16;
             break;
         default:
-            ASSERT(false);
+            MORDOR_ASSERT(false);
     }
     int rc;
     memset(&m_strm, 0, sizeof(z_stream));
@@ -65,7 +67,7 @@ ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy st
             throw std::runtime_error(message);
         }
         default:
-            NOTREACHED();
+            MORDOR_NOTREACHED();
     }
 }
 
@@ -139,7 +141,7 @@ ZlibStream::read(Buffer &b, size_t len)
             m_strm.avail_in = 0;
         }
         int rc = inflate(&m_strm, Z_NO_FLUSH);
-        LOG_VERBOSE(g_log) << this << " inflate(("
+        MORDOR_LOG_VERBOSE(g_log) << this << " inflate(("
             << (inbufs.empty() ? 0 : inbufs[0].iov_len) << ", "
             << outbuf.iov_len << ")): " << rc << " (" << m_strm.avail_in
             << ", " << m_strm.avail_out << ")";
@@ -165,8 +167,8 @@ ZlibStream::read(Buffer &b, size_t len)
             case Z_BUF_ERROR:
                 // no progress... we need to provide more input (since we're
                 // guaranteed to provide output)
-                ASSERT(m_strm.avail_in == 0);
-                ASSERT(inbufs.empty());
+                MORDOR_ASSERT(m_strm.avail_in == 0);
+                MORDOR_ASSERT(inbufs.empty());
                 result = parent()->read(m_inBuffer, m_bufferSize);
                 if (result == 0)
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
@@ -178,7 +180,7 @@ ZlibStream::read(Buffer &b, size_t len)
             case Z_DATA_ERROR:
                 MORDOR_THROW_EXCEPTION(CorruptedZlibStreamException());
             default:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
         }
     }
 }
@@ -186,7 +188,7 @@ ZlibStream::read(Buffer &b, size_t len)
 size_t
 ZlibStream::write(const Buffer &b, size_t len)
 {
-    ASSERT(!m_closed);
+    MORDOR_ASSERT(!m_closed);
     flushBuffer();
     while (true) {
         if (m_outBuffer.writeAvailable() == 0)
@@ -198,13 +200,13 @@ ZlibStream::write(const Buffer &b, size_t len)
         m_strm.next_out = (Bytef*)outbuf.iov_base;
         m_strm.avail_out = outbuf.iov_len;
         int rc = deflate(&m_strm, Z_NO_FLUSH);
-        LOG_VERBOSE(g_log) << this << " deflate((" << inbuf.iov_len << ", "
+        MORDOR_LOG_VERBOSE(g_log) << this << " deflate((" << inbuf.iov_len << ", "
             << outbuf.iov_len << "), Z_NO_FLUSH): " << rc << " ("
             << m_strm.avail_in << ", " << m_strm.avail_out << ")";
         // We are always providing both input and output
-        ASSERT(rc != Z_BUF_ERROR);
+        MORDOR_ASSERT(rc != Z_BUF_ERROR);
         // We're not doing Z_FINISH, so we shouldn't get EOF
-        ASSERT(rc != Z_STREAM_END);
+        MORDOR_ASSERT(rc != Z_STREAM_END);
         size_t result;
         switch(rc) {
             case Z_OK:
@@ -219,7 +221,7 @@ ZlibStream::write(const Buffer &b, size_t len)
                 }
                 return result;
             default:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
         }
     }
 }
@@ -239,16 +241,16 @@ ZlibStream::flush(int flush)
         if (m_outBuffer.writeAvailable() == 0)
             m_outBuffer.reserve(m_bufferSize);
         struct iovec outbuf = m_outBuffer.writeBufs()[0];
-        ASSERT(m_strm.avail_in == 0);
+        MORDOR_ASSERT(m_strm.avail_in == 0);
         m_strm.next_out = (Bytef*)outbuf.iov_base;
         m_strm.avail_out = outbuf.iov_len;
         int rc = deflate(&m_strm, flush);
-        ASSERT(m_strm.avail_in == 0);
-        LOG_VERBOSE(g_log) << this << " deflate((0, " << outbuf.iov_len
+        MORDOR_ASSERT(m_strm.avail_in == 0);
+        MORDOR_LOG_VERBOSE(g_log) << this << " deflate((0, " << outbuf.iov_len
             << "), " << flush << "): " << rc << " (0, " << m_strm.avail_out
             << ")";
         m_outBuffer.produce(outbuf.iov_len - m_strm.avail_out);
-        ASSERT(flush == Z_FINISH || rc != Z_STREAM_END);
+        MORDOR_ASSERT(flush == Z_FINISH || rc != Z_STREAM_END);
         switch (rc) {
             case Z_STREAM_END:
                 m_closed = true;
@@ -261,7 +263,7 @@ ZlibStream::flush(int flush)
                 flushBuffer();
                 return;
             default:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
         }
     }
 }
@@ -272,4 +274,6 @@ ZlibStream::flushBuffer()
     while (m_outBuffer.readAvailable() > 0) {
         m_outBuffer.consume(parent()->write(m_outBuffer, m_outBuffer.readAvailable()));
     }
+}
+
 }

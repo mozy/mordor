@@ -9,44 +9,47 @@
 #include "mordor/common/streams/pipe.h"
 #include "mordor/test/test.h"
 
-TEST_WITH_SUITE(PipeStream, basic)
+using namespace Mordor;
+using namespace Mordor::Test;
+
+MORDOR_UNITTEST(PipeStream, basic)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
 
-    TEST_ASSERT(pipe.first->supportsRead());
-    TEST_ASSERT(pipe.first->supportsWrite());
-    TEST_ASSERT(!pipe.first->supportsSeek());
-    TEST_ASSERT(!pipe.first->supportsSize());
-    TEST_ASSERT(!pipe.first->supportsTruncate());
-    TEST_ASSERT(!pipe.first->supportsFind());
-    TEST_ASSERT(!pipe.first->supportsUnread());
-    TEST_ASSERT(pipe.second->supportsRead());
-    TEST_ASSERT(pipe.second->supportsWrite());
-    TEST_ASSERT(!pipe.second->supportsSeek());
-    TEST_ASSERT(!pipe.second->supportsSize());
-    TEST_ASSERT(!pipe.second->supportsTruncate());
-    TEST_ASSERT(!pipe.second->supportsFind());
-    TEST_ASSERT(!pipe.second->supportsUnread());
+    MORDOR_TEST_ASSERT(pipe.first->supportsRead());
+    MORDOR_TEST_ASSERT(pipe.first->supportsWrite());
+    MORDOR_TEST_ASSERT(!pipe.first->supportsSeek());
+    MORDOR_TEST_ASSERT(!pipe.first->supportsSize());
+    MORDOR_TEST_ASSERT(!pipe.first->supportsTruncate());
+    MORDOR_TEST_ASSERT(!pipe.first->supportsFind());
+    MORDOR_TEST_ASSERT(!pipe.first->supportsUnread());
+    MORDOR_TEST_ASSERT(pipe.second->supportsRead());
+    MORDOR_TEST_ASSERT(pipe.second->supportsWrite());
+    MORDOR_TEST_ASSERT(!pipe.second->supportsSeek());
+    MORDOR_TEST_ASSERT(!pipe.second->supportsSize());
+    MORDOR_TEST_ASSERT(!pipe.second->supportsTruncate());
+    MORDOR_TEST_ASSERT(!pipe.second->supportsFind());
+    MORDOR_TEST_ASSERT(!pipe.second->supportsUnread());
 
     Buffer read;
-    TEST_ASSERT_EQUAL(pipe.first->write("a"), 1u);
-    TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 1u);
-    TEST_ASSERT(read == "a");
+    MORDOR_TEST_ASSERT_EQUAL(pipe.first->write("a"), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 1u);
+    MORDOR_TEST_ASSERT(read == "a");
     pipe.first->close();
-    TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 0u);
 }
 
 static void basicInFibers(Stream::ptr stream, int &sequence)
 {
-    TEST_ASSERT_EQUAL(sequence, 1);
-    TEST_ASSERT_EQUAL(stream->write("a"), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    MORDOR_TEST_ASSERT_EQUAL(stream->write("a"), 1u);
     stream->close();
     stream->flush();
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 3);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
 }
 
-TEST_WITH_SUITE(PipeStream, basicInFibers)
+MORDOR_UNITTEST(PipeStream, basicInFibers)
 {
     Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
@@ -60,48 +63,48 @@ TEST_WITH_SUITE(PipeStream, basicInFibers)
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&basicInFibers, pipe.first, boost::ref(sequence)))));
 
     Buffer read;
-    TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 1u);
-    TEST_ASSERT(read == "a");
+    MORDOR_TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 1u);
+    MORDOR_TEST_ASSERT(read == "a");
     ++sequence;
-    TEST_ASSERT_EQUAL(sequence, 2);
-    TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
+    MORDOR_TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 0u);
 }
 
-TEST_WITH_SUITE(PipeStream, readerClosed)
+MORDOR_UNITTEST(PipeStream, readerClosed)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
 
     pipe.second->close();
-    TEST_ASSERT_EXCEPTION(pipe.first->write("a"), BrokenPipeException);
-    TEST_ASSERT_EXCEPTION(pipe.first->flush(), BrokenPipeException);
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->write("a"), BrokenPipeException);
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->flush(), BrokenPipeException);
 }
 
-TEST_WITH_SUITE(PipeStream, readerGone)
+MORDOR_UNITTEST(PipeStream, readerGone)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
 
     pipe.second.reset();
-    TEST_ASSERT_EXCEPTION(pipe.first->write("a"), BrokenPipeException);
-    TEST_ASSERT_EXCEPTION(pipe.first->flush(), BrokenPipeException);
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->write("a"), BrokenPipeException);
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->flush(), BrokenPipeException);
 }
 
-TEST_WITH_SUITE(PipeStream, writerGone)
+MORDOR_UNITTEST(PipeStream, writerGone)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
 
     pipe.first.reset();
     Buffer read;
-    TEST_ASSERT_EXCEPTION(pipe.second->read(read, 10), BrokenPipeException);
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.second->read(read, 10), BrokenPipeException);
 }
 
 static void blockingRead(Stream::ptr stream, int &sequence)
 {
-    TEST_ASSERT_EQUAL(++sequence, 2);
-    TEST_ASSERT_EQUAL(stream->write("hello"), 5u);    
-    TEST_ASSERT_EQUAL(++sequence, 3);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    MORDOR_TEST_ASSERT_EQUAL(stream->write("hello"), 5u);    
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
 }
 
-TEST_WITH_SUITE(PipeStream, blockingRead)
+MORDOR_UNITTEST(PipeStream, blockingRead)
 {
     Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
@@ -112,20 +115,20 @@ TEST_WITH_SUITE(PipeStream, blockingRead)
         boost::ref(sequence)))));
 
     Buffer output;
-    TEST_ASSERT_EQUAL(pipe.first->read(output, 10), 5u);
-    TEST_ASSERT_EQUAL(++sequence, 4);
-    TEST_ASSERT(output == "hello");
+    MORDOR_TEST_ASSERT_EQUAL(pipe.first->read(output, 10), 5u);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
+    MORDOR_TEST_ASSERT(output == "hello");
 }
 
 static void blockingWrite(Stream::ptr stream, int &sequence)
 {
-    TEST_ASSERT_EQUAL(++sequence, 3);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
     Buffer output;
-    TEST_ASSERT_EQUAL(stream->read(output, 10), 5u);
-    TEST_ASSERT(output == "hello");
+    MORDOR_TEST_ASSERT_EQUAL(stream->read(output, 10), 5u);
+    MORDOR_TEST_ASSERT(output == "hello");
 }
 
-TEST_WITH_SUITE(PipeStream, blockingWrite)
+MORDOR_UNITTEST(PipeStream, blockingWrite)
 {
     Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
@@ -135,34 +138,34 @@ TEST_WITH_SUITE(PipeStream, blockingWrite)
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&blockingWrite, pipe.second,
         boost::ref(sequence)))));
 
-    TEST_ASSERT_EQUAL(pipe.first->write("hello"), 5u);
-    TEST_ASSERT_EQUAL(++sequence, 2);
-    TEST_ASSERT_EQUAL(pipe.first->write("world"), 5u);
-    TEST_ASSERT_EQUAL(++sequence, 4);
+    MORDOR_TEST_ASSERT_EQUAL(pipe.first->write("hello"), 5u);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    MORDOR_TEST_ASSERT_EQUAL(pipe.first->write("world"), 5u);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
     Buffer output;
-    TEST_ASSERT_EQUAL(pipe.second->read(output, 10), 5u);
-    TEST_ASSERT_EQUAL(++sequence, 5);
-    TEST_ASSERT(output == "world");
+    MORDOR_TEST_ASSERT_EQUAL(pipe.second->read(output, 10), 5u);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
+    MORDOR_TEST_ASSERT(output == "world");
 }
 
-TEST_WITH_SUITE(PipeStream, oversizedWrite)
+MORDOR_UNITTEST(PipeStream, oversizedWrite)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
 
-    TEST_ASSERT_EQUAL(pipe.first->write("helloworld"), 5u);
+    MORDOR_TEST_ASSERT_EQUAL(pipe.first->write("helloworld"), 5u);
     Buffer output;
-    TEST_ASSERT_EQUAL(pipe.second->read(output, 10), 5u);
-    TEST_ASSERT(output == "hello");
+    MORDOR_TEST_ASSERT_EQUAL(pipe.second->read(output, 10), 5u);
+    MORDOR_TEST_ASSERT(output == "hello");
 }
 
 static void closeOnBlockingReader(Stream::ptr stream, int &sequence)
 {
-    TEST_ASSERT_EQUAL(++sequence, 2);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
     stream->close();
-    TEST_ASSERT_EQUAL(++sequence, 3);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
 }
 
-TEST_WITH_SUITE(PipeStream, closeOnBlockingReader)
+MORDOR_UNITTEST(PipeStream, closeOnBlockingReader)
 {
     Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
@@ -173,18 +176,18 @@ TEST_WITH_SUITE(PipeStream, closeOnBlockingReader)
         pipe.first, boost::ref(sequence)))));
 
     Buffer output;
-    TEST_ASSERT_EQUAL(pipe.second->read(output, 10), 0u);
-    TEST_ASSERT_EQUAL(++sequence, 4);
+    MORDOR_TEST_ASSERT_EQUAL(pipe.second->read(output, 10), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
 }
 
 static void closeOnBlockingWriter(Stream::ptr stream, int &sequence)
 {
-    TEST_ASSERT_EQUAL(++sequence, 3);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
     stream->close();
-    TEST_ASSERT_EQUAL(++sequence, 4);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
 }
 
-TEST_WITH_SUITE(PipeStream, closeOnBlockingWriter)
+MORDOR_UNITTEST(PipeStream, closeOnBlockingWriter)
 {
     Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
@@ -194,23 +197,23 @@ TEST_WITH_SUITE(PipeStream, closeOnBlockingWriter)
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&closeOnBlockingWriter, pipe.first,
         boost::ref(sequence)))));
 
-    TEST_ASSERT_EQUAL(pipe.second->write("hello"), 5u);
-    TEST_ASSERT_EQUAL(++sequence, 2);
-    TEST_ASSERT_EXCEPTION(pipe.second->write("world"), BrokenPipeException);
-    TEST_ASSERT_EQUAL(++sequence, 5);
+    MORDOR_TEST_ASSERT_EQUAL(pipe.second->write("hello"), 5u);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.second->write("world"), BrokenPipeException);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
 }
 
 static void destructOnBlockingReader(boost::weak_ptr<Stream> weakStream, int &sequence)
 {
     Stream::ptr stream(weakStream);
     Fiber::yield();
-    TEST_ASSERT_EQUAL(++sequence, 2);
-    TEST_ASSERT(stream.unique());
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    MORDOR_TEST_ASSERT(stream.unique());
     stream.reset();
-    TEST_ASSERT_EQUAL(++sequence, 3);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
 }
 
-TEST_WITH_SUITE(PipeStream, destructOnBlockingReader)
+MORDOR_UNITTEST(PipeStream, destructOnBlockingReader)
 {
     Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
@@ -224,21 +227,21 @@ TEST_WITH_SUITE(PipeStream, destructOnBlockingReader)
     pool.schedule(f);
 
     Buffer output;
-    TEST_ASSERT_EXCEPTION(pipe.second->read(output, 10), BrokenPipeException);
-    TEST_ASSERT_EQUAL(++sequence, 4);
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.second->read(output, 10), BrokenPipeException);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
 }
 
 static void destructOnBlockingWriter(boost::weak_ptr<Stream> weakStream, int &sequence)
 {
     Stream::ptr stream(weakStream);
     Fiber::yield();
-    TEST_ASSERT_EQUAL(++sequence, 3);
-    TEST_ASSERT(stream.unique());
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+    MORDOR_TEST_ASSERT(stream.unique());
     stream.reset();
-    TEST_ASSERT_EQUAL(++sequence, 4);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
 }
 
-TEST_WITH_SUITE(PipeStream, destructOnBlockingWriter)
+MORDOR_UNITTEST(PipeStream, destructOnBlockingWriter)
 {
     Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
@@ -251,10 +254,10 @@ TEST_WITH_SUITE(PipeStream, destructOnBlockingWriter)
     pipe.first.reset();
     pool.schedule(f);
 
-    TEST_ASSERT_EQUAL(pipe.second->write("hello"), 5u);
-    TEST_ASSERT_EQUAL(++sequence, 2);
-    TEST_ASSERT_EXCEPTION(pipe.second->write("world"), BrokenPipeException);
-    TEST_ASSERT_EQUAL(++sequence, 5);
+    MORDOR_TEST_ASSERT_EQUAL(pipe.second->write("hello"), 5u);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.second->write("world"), BrokenPipeException);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
 }
 
 void threadStress(Stream::ptr stream)
@@ -267,10 +270,10 @@ void threadStress(Stream::ptr stream)
         if (i % 2) {
             size_t toRead = 64;
             size_t read = stream->read(buffer, toRead * sizeof(size_t));
-            TEST_ASSERT(read % sizeof(size_t) == 0);
+            MORDOR_TEST_ASSERT(read % sizeof(size_t) == 0);
             buffer.copyOut(&buf, read);
             for (size_t j = 0; read > 0; read -= sizeof(size_t), ++j) {
-                TEST_ASSERT_EQUAL(buf[j], ++totalRead);
+                MORDOR_TEST_ASSERT_EQUAL(buf[j], ++totalRead);
             }
             buffer.clear();
         } else {
@@ -290,17 +293,17 @@ void threadStress(Stream::ptr stream)
         size_t read = stream->read(buffer, toRead);
         if (read == 0)
             break;
-        TEST_ASSERT(read % sizeof(size_t) == 0);
+        MORDOR_TEST_ASSERT(read % sizeof(size_t) == 0);
         buffer.copyOut(&buf, read);
         for (size_t i = 0; read > 0; read -= sizeof(size_t), ++i) {
-            TEST_ASSERT_EQUAL(buf[i], ++totalRead);
+            MORDOR_TEST_ASSERT_EQUAL(buf[i], ++totalRead);
         }
         buffer.clear();
     }
     stream->flush();
 }
 
-TEST_WITH_SUITE(PipeStream, threadStress)
+MORDOR_UNITTEST(PipeStream, threadStress)
 {
     Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();

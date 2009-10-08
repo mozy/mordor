@@ -1,5 +1,5 @@
-#ifndef __SEMAPHORE_H__
-#define __SEMAPHORE_H__
+#ifndef __MORDOR_SEMAPHORE_H__
+#define __MORDOR_SEMAPHORE_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "version.h"
@@ -12,6 +12,8 @@
 #else
 #include <semaphore.h>
 #endif
+
+namespace Mordor {
 
 class Semaphore
 {
@@ -35,5 +37,7 @@ private:
     sem_t m_semaphore;
 #endif
 };
+
+}
 
 #endif

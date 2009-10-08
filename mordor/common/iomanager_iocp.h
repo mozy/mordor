@@ -1,5 +1,5 @@
-#ifndef __IOMANAGER_IOCP_H__
-#define __IOMANAGER_IOCP_H__
+#ifndef __MORDOR_IOMANAGER_IOCP_H__
+#define __MORDOR_IOMANAGER_IOCP_H__
 
 #include <map>
 
@@ -15,6 +15,8 @@
 #ifndef WINDOWS
 #error IOManagerIOCP is Windows only
 #endif
+
+namespace Mordor {
 
 struct AsyncEventIOCP
 {
@@ -87,5 +89,7 @@ private:
     boost::mutex m_mutex;
     std::list<WaitBlock::ptr> m_waitBlocks;
 };
+
+}
 
 #endif

@@ -1,5 +1,5 @@
-#ifndef __VERSION_H__
-#define __VERSION_H__
+#ifndef __MORDOR_VERSION_H__
+#define __MORDOR_VERSION_H__
 
 // OS
 #ifdef _WIN32
@@ -50,11 +50,11 @@
 #endif
 
 #ifdef MSVC
-#define USE_PCH
+#define MORDOR_USE_PCH
 #endif
 
 #ifdef GCC
-#define USE_PCH
+#define MORDOR_USE_PCH
 #endif
 
 #endif

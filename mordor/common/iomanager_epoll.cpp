@@ -7,19 +7,21 @@
 #include "assert.h"
 #include "exception.h"
 
+namespace Mordor {
+
 IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_epfd = epoll_create(5000);
     if (m_epfd <= 0) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_create");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_create");
     }
     if (pipe(m_tickleFds)) {
         close(m_epfd);
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
     }
-    ASSERT(m_tickleFds[0] > 0);
-    ASSERT(m_tickleFds[1] > 0);
+    MORDOR_ASSERT(m_tickleFds[0] > 0);
+    MORDOR_ASSERT(m_tickleFds[1] > 0);
     epoll_event event;
     event.events = EPOLLIN;
     event.data.fd = m_tickleFds[0];
@@ -27,7 +29,7 @@ IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
         close(m_epfd);
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
     }
 }
 
@@ -42,12 +44,12 @@ IOManagerEPoll::~IOManagerEPoll()
 void
 IOManagerEPoll::registerEvent(int fd, Event events, boost::function<void ()> dg)
 {
-    ASSERT(fd > 0);
-    ASSERT(Scheduler::getThis());
-    ASSERT(Fiber::getThis());
+    MORDOR_ASSERT(fd > 0);
+    MORDOR_ASSERT(Scheduler::getThis());
+    MORDOR_ASSERT(Fiber::getThis());
 
     int epollevents = (int)events & (EPOLLIN | EPOLLOUT);
-    ASSERT(epollevents != 0);
+    MORDOR_ASSERT(epollevents != 0);
     boost::mutex::scoped_lock lock(m_mutex);
     int op;
     std::map<int, AsyncEvent>::iterator it = 
@@ -62,7 +64,7 @@ m_pendingEvents.find(fd);
         op = EPOLL_CTL_MOD;
         event = &it->second;
         // OR == XOR means that none of the same bits were set
-        ASSERT((event->event.events | epollevents)
+        MORDOR_ASSERT((event->event.events | epollevents)
             == (event->event.events ^ epollevents));
         event->event.events |= epollevents;
     }
@@ -87,7 +89,7 @@ m_pendingEvents.find(fd);
         }
     }
     if (epoll_ctl(m_epfd, op, event->event.data.fd, &event->event)) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
     }
 }
 
@@ -118,7 +120,7 @@ IOManagerEPoll::cancelEvent(int fd, Event events)
     e.event.events &= ~events;
     if (e.event.events == 0) {
         if (epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &e.event)) {
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
         }
         m_pendingEvents.erase(it);
     }
@@ -156,7 +158,7 @@ IOManagerEPoll::idle()
             rc = epoll_wait(m_epfd, events, 64, timeout);
         }
         if (rc < 0) {
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_wait");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_wait");
         }
         processTimers();
 
@@ -165,7 +167,7 @@ IOManagerEPoll::idle()
             if (event.data.fd == m_tickleFds[0]) {
                 unsigned char dummy;
                 int rc2 = read(m_tickleFds[0], &dummy, 1);
-                ASSERT(rc2 == 1);
+                MORDOR_ASSERT(rc2 == 1);
                 continue;
             }
             bool err = event.events & (EPOLLERR | EPOLLHUP);
@@ -196,7 +198,7 @@ m_pendingEvents.find(event.data.fd);
             e.event.events &= ~event.events;
             if (err || e.event.events == 0) {
                 if (epoll_ctl(m_epfd, EPOLL_CTL_DEL, event.data.fd, &e.event)) {
-                    THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
                 }
                 m_pendingEvents.erase(it);
             }
@@ -209,5 +211,7 @@ void
 IOManagerEPoll::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
-    ASSERT(rc == 1);
+    MORDOR_ASSERT(rc == 1);
+}
+
 }

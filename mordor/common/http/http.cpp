@@ -11,6 +11,9 @@
 
 #include "mordor/common/assert.h"
 
+namespace Mordor {
+namespace HTTP {
+
 static boost::posix_time::time_facet rfc1123Facet_out("%a, %d %b %Y %H:%M:%S GMT",
         boost::posix_time::time_facet::period_formatter_type(),
         boost::posix_time::time_facet::special_values_formatter_type(),
@@ -18,7 +21,7 @@ static boost::posix_time::time_facet rfc1123Facet_out("%a, %d %b %Y %H:%M:%S GMT
         1 /* starting refcount, so this never gets deleted */);
 
 std::string
-HTTP::quote(const std::string &str, bool alwaysQuote, bool comment)
+quote(const std::string &str, bool alwaysQuote, bool comment)
 {
     if (comment)
         alwaysQuote = true;
@@ -70,7 +73,7 @@ HTTP::quote(const std::string &str, bool alwaysQuote, bool comment)
         } else {
             // Unmatching right parens
             if (str[nextEscape] == ')') {
-                ASSERT(rightParens > 0);
+                MORDOR_ASSERT(rightParens > 0);
                 --rightParens;
             }
             result.append(str.substr(lastEscape, nextEscape - lastEscape));
@@ -85,9 +88,9 @@ HTTP::quote(const std::string &str, bool alwaysQuote, bool comment)
     return result;
 }
 
-static std::ostream& operator<<(std::ostream& os, const HTTP::StringSet& set)
+static std::ostream& operator<<(std::ostream& os, const StringSet& set)
 {
-    for (HTTP::StringSet::const_iterator it(set.begin());
+    for (StringSet::const_iterator it(set.begin());
         it != set.end();
         ++it) {
         if (it != set.begin())
@@ -109,54 +112,11 @@ static std::ostream& operator<<(std::ostream& os, const std::vector<std::string>
     return os;
 }
 
-struct serializeStringMapWithRequiredValue
+static std::ostream& operator<<(std::ostream& os, const RangeSet& set)
 {
-    serializeStringMapWithRequiredValue(const HTTP::StringMap &m,
-        const char *delim = ";", bool leadingDelimiter = true)
-        : map(m),
-          delimiter(delim),
-          lead(leadingDelimiter)
-    {}
-    const HTTP::StringMap& map;
-    const char *delimiter;
-    bool lead;
-};
-
-struct serializeStringMapWithOptionalValue
-{
-    serializeStringMapWithOptionalValue(const HTTP::StringMap &m) : map(m) {}
-    const HTTP::StringMap& map;
-};
-
-static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithRequiredValue &map)
-{
-    for (HTTP::StringMap::const_iterator it(map.map.begin());
-        it != map.map.end();
-        ++it) {
-        if (map.lead || it != map.map.begin())
-            os << map.delimiter;
-        os << it->first << "=" << HTTP::quote(it->second);
-    }
-    return os;
-}
-
-static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithOptionalValue &map)
-{
-    for (HTTP::StringMap::const_iterator it(map.map.begin());
-        it != map.map.end();
-        ++it) {
-        os << ";" << it->first;
-        if (!it->second.empty())
-            os << "=" << HTTP::quote(it->second);
-    }
-    return os;
-}
-
-static std::ostream& operator<<(std::ostream& os, const HTTP::RangeSet& set)
-{
-    ASSERT(!set.empty());
+    MORDOR_ASSERT(!set.empty());
     os << "bytes=";
-    for (HTTP::RangeSet::const_iterator it(set.begin());
+    for (RangeSet::const_iterator it(set.begin());
         it != set.end();
         ++it) {
         if (it != set.begin())
@@ -170,7 +130,50 @@ static std::ostream& operator<<(std::ostream& os, const HTTP::RangeSet& set)
     return os;
 }
 
-const char *HTTP::methods[] = {
+struct serializeStringMapWithRequiredValue
+{
+    serializeStringMapWithRequiredValue(const StringMap &m,
+        const char *delim = ";", bool leadingDelimiter = true)
+        : map(m),
+          delimiter(delim),
+          lead(leadingDelimiter)
+    {}
+    const StringMap& map;
+    const char *delimiter;
+    bool lead;
+};
+
+struct serializeStringMapWithOptionalValue
+{
+    serializeStringMapWithOptionalValue(const StringMap &m) : map(m) {}
+    const StringMap& map;
+};
+
+static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithRequiredValue &map)
+{
+    for (StringMap::const_iterator it(map.map.begin());
+        it != map.map.end();
+        ++it) {
+        if (map.lead || it != map.map.begin())
+            os << map.delimiter;
+        os << it->first << "=" << quote(it->second);
+    }
+    return os;
+}
+
+static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithOptionalValue &map)
+{
+    for (StringMap::const_iterator it(map.map.begin());
+        it != map.map.end();
+        ++it) {
+        os << ";" << it->first;
+        if (!it->second.empty())
+            os << "=" << quote(it->second);
+    }
+    return os;
+}
+
+const char *methods[] = {
     "GET",
     "HEAD",
     "POST",
@@ -181,7 +184,7 @@ const char *HTTP::methods[] = {
     "TRACE"
 };
 
-const char *HTTP::reason(Status s)
+const char *reason(Status s)
 {
     switch (s) {
         case CONTINUE:
@@ -275,16 +278,16 @@ const char *HTTP::reason(Status s)
 }
 
 bool
-HTTP::AcceptValueWithParameters::operator ==(const AcceptValueWithParameters &rhs) const
+AcceptValueWithParameters::operator ==(const AcceptValueWithParameters &rhs) const
 {
     return stricmp(value.c_str(), rhs.value.c_str()) == 0 &&
         parameters == rhs.parameters;
 }
 
 bool
-HTTP::isAcceptable(const HTTP::ChallengeList &list, const std::string &scheme)
+isAcceptable(const ChallengeList &list, const std::string &scheme)
 {
-    for (HTTP::ChallengeList::const_iterator it = list.begin();
+    for (ChallengeList::const_iterator it = list.begin();
         it != list.end();
         ++it) {
         if (stricmp(it->scheme.c_str(), scheme.c_str()) == 0)
@@ -294,10 +297,10 @@ HTTP::isAcceptable(const HTTP::ChallengeList &list, const std::string &scheme)
 }
 
 bool
-HTTP::isAcceptable(const HTTP::AcceptListWithParameters &list, const AcceptValueWithParameters &value,
+isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithParameters &value,
                    bool defaultMissing)
 {
-    for (HTTP::AcceptListWithParameters::const_iterator it(list.begin());
+    for (AcceptListWithParameters::const_iterator it(list.begin());
         it != list.end();
         ++it) {
         if (*it == value) {
@@ -308,12 +311,12 @@ HTTP::isAcceptable(const HTTP::AcceptListWithParameters &list, const AcceptValue
 }
 
 bool
-HTTP::isPreferred(const HTTP::AcceptListWithParameters &list, const AcceptValueWithParameters &lhs,
+isPreferred(const AcceptListWithParameters &list, const AcceptValueWithParameters &lhs,
                   const AcceptValueWithParameters &rhs)
 {
-    ASSERT(lhs != rhs);
+    MORDOR_ASSERT(lhs != rhs);
     unsigned int lQvalue = ~0u, rQvalue = ~0u;
-    for (HTTP::AcceptListWithParameters::const_iterator it(list.begin());
+    for (AcceptListWithParameters::const_iterator it(list.begin());
         it != list.end();
         ++it) {
         if (*it == lhs) {
@@ -336,25 +339,25 @@ HTTP::isPreferred(const HTTP::AcceptListWithParameters &list, const AcceptValueW
 }
 
 const
-HTTP::AcceptValueWithParameters *
-HTTP::preferred(const HTTP::AcceptListWithParameters &accept, const HTTP::AcceptListWithParameters &available)
+AcceptValueWithParameters *
+preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters &available)
 {
-    ASSERT(!available.empty());
+    MORDOR_ASSERT(!available.empty());
 #ifdef _DEBUG
     // Assert that the available list is ordered
-    for (HTTP::AcceptListWithParameters::const_iterator it(available.begin());
+    for (AcceptListWithParameters::const_iterator it(available.begin());
         it != available.end();
         ++it) {
-        ASSERT(it->qvalue <= 1000);
-        HTTP::AcceptListWithParameters::const_iterator next(it);
+        MORDOR_ASSERT(it->qvalue <= 1000);
+        AcceptListWithParameters::const_iterator next(it);
         ++next;
         if (next != available.end())
-            ASSERT(it->qvalue >= next->qvalue);
+            MORDOR_ASSERT(it->qvalue >= next->qvalue);
     }
 #endif
-    HTTP::AcceptListWithParameters::const_iterator availableIt(available.begin());
+    AcceptListWithParameters::const_iterator availableIt(available.begin());
     while (availableIt != available.end()) {
-        HTTP::AcceptListWithParameters::const_iterator nextIt(availableIt);
+        AcceptListWithParameters::const_iterator nextIt(availableIt);
         ++nextIt;
         while (nextIt != available.end() && nextIt->qvalue == availableIt->qvalue)
             ++nextIt;
@@ -374,61 +377,61 @@ HTTP::preferred(const HTTP::AcceptListWithParameters &accept, const HTTP::Accept
     return NULL;
 }
 
-std::ostream& operator<<(std::ostream& os, HTTP::Method m)
+std::ostream& operator<<(std::ostream& os, Method m)
 {
-    if (m < HTTP::GET || m > HTTP::TRACE)
+    if (m < GET || m > TRACE)
         return os << "INVALID";
-    return os << HTTP::methods[(size_t)m];
+    return os << methods[(size_t)m];
 }
 
-std::ostream& operator<<(std::ostream& os, HTTP::Status s)
+std::ostream& operator<<(std::ostream& os, Status s)
 {
     return os << (int)s;
 }
 
-std::ostream& operator<<(std::ostream& os, HTTP::Version v)
+std::ostream& operator<<(std::ostream& os, Version v)
 {
     if (v.major == (unsigned char)~0 || v.minor == (unsigned char)~0)
         return os << "HTTP/0.0";
     return os << "HTTP/" << (int)v.major << "." << (int)v.minor;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ETag &e)
+std::ostream& operator<<(std::ostream& os, const ETag &e)
 {
     if (e.unspecified)
         return os << "*";
     if (e.weak)
         os << "W/";
-    return os << HTTP::quote(e.value, true);
+    return os << quote(e.value, true);
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ETagSet &v)
+std::ostream& operator<<(std::ostream& os, const ETagSet &v)
 {
-    ASSERT(!v.empty());
-    for (HTTP::ETagSet::const_iterator it = v.begin();
+    MORDOR_ASSERT(!v.empty());
+    for (ETagSet::const_iterator it = v.begin();
         it != v.end();
         ++it) {
         if (it != v.begin())
             os << ", ";
-        ASSERT(!it->unspecified || v.size() == 1);
+        MORDOR_ASSERT(!it->unspecified || v.size() == 1);
         os << *it;
     }
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::Product &p)
+std::ostream& operator<<(std::ostream& os, const Product &p)
 {
-    ASSERT(!p.product.empty());
+    MORDOR_ASSERT(!p.product.empty());
     os << p.product;
     if (!p.version.empty())
         os << "/" << p.version;
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ProductList &l)
+std::ostream& operator<<(std::ostream& os, const ProductList &l)
 {
-    ASSERT(!l.empty());
-    for (HTTP::ProductList::const_iterator it = l.begin();
+    MORDOR_ASSERT(!l.empty());
+    for (ProductList::const_iterator it = l.begin();
         it != l.end();
         ++it) {
         if (it != l.begin())
@@ -438,32 +441,32 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ProductList &l)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ProductAndCommentList &l)
+std::ostream& operator<<(std::ostream& os, const ProductAndCommentList &l)
 {
-    ASSERT(!l.empty());
-    for (HTTP::ProductAndCommentList::const_iterator it = l.begin();
+    MORDOR_ASSERT(!l.empty());
+    for (ProductAndCommentList::const_iterator it = l.begin();
         it != l.end();
         ++it) {
         if (it != l.begin())
             os << " ";
-        const HTTP::Product *product = boost::get<HTTP::Product>(&*it);
+        const Product *product = boost::get<Product>(&*it);
         if (product)
             os << *product;
         else
-            os << HTTP::quote(boost::get<std::string>(*it), true, true);        
+            os << quote(boost::get<std::string>(*it), true, true);        
     }
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ValueWithParameters &v)
+std::ostream& operator<<(std::ostream& os, const ValueWithParameters &v)
 {
-    ASSERT(!v.value.empty());
+    MORDOR_ASSERT(!v.value.empty());
     return os << v.value << serializeStringMapWithRequiredValue(v.parameters);
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l)
+std::ostream& operator<<(std::ostream& os, const ParameterizedList &l)
 {
-    for (HTTP::ParameterizedList::const_iterator it(l.begin());
+    for (ParameterizedList::const_iterator it(l.begin());
         it != l.end();
         ++it) {
         if (it != l.begin())
@@ -473,9 +476,9 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedList &l)
     return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const HTTP::AuthParams &a)
+std::ostream &operator<<(std::ostream &os, const AuthParams &a)
 {
-    ASSERT(a.base64.empty() || a.parameters.empty());
+    MORDOR_ASSERT(a.base64.empty() || a.parameters.empty());
     os << a.scheme;
     if (!a.base64.empty())
         os << ' ' << a.base64;
@@ -484,9 +487,9 @@ std::ostream &operator<<(std::ostream &os, const HTTP::AuthParams &a)
     return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const HTTP::ChallengeList &l)
+std::ostream &operator<<(std::ostream &os, const ChallengeList &l)
 {
-    for (HTTP::ChallengeList::const_iterator it(l.begin());
+    for (ChallengeList::const_iterator it(l.begin());
         it != l.end();
         ++it) {
         if (it != l.begin())
@@ -496,20 +499,20 @@ std::ostream &operator<<(std::ostream &os, const HTTP::ChallengeList &l)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::KeyValueWithParameters &v)
+std::ostream& operator<<(std::ostream& os, const KeyValueWithParameters &v)
 {
-    ASSERT(!v.key.empty());
+    MORDOR_ASSERT(!v.key.empty());
     os << v.key;
     if (!v.value.empty())
-        os << "=" << HTTP::quote(v.value)
+        os << "=" << quote(v.value)
             << serializeStringMapWithOptionalValue(v.parameters);
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedKeyValueList &l)
+std::ostream& operator<<(std::ostream& os, const ParameterizedKeyValueList &l)
 {
-    ASSERT(!l.empty());
-    for (HTTP::ParameterizedKeyValueList::const_iterator it(l.begin());
+    MORDOR_ASSERT(!l.empty());
+    for (ParameterizedKeyValueList::const_iterator it(l.begin());
         it != l.end();
         ++it) {
         if (it != l.begin())
@@ -519,14 +522,14 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ParameterizedKeyValueList
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::MediaType &m)
+std::ostream& operator<<(std::ostream& os, const MediaType &m)
 {
-    ASSERT(!m.type.empty());
-    ASSERT(!m.subtype.empty());
+    MORDOR_ASSERT(!m.type.empty());
+    MORDOR_ASSERT(!m.subtype.empty());
     return os << m.type << "/" << m.subtype << serializeStringMapWithRequiredValue(m.parameters);
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ContentRange &cr)
+std::ostream& operator<<(std::ostream& os, const ContentRange &cr)
 {
     os << "bytes ";
     if (cr.first == ~0ull || cr.last == ~0ull)
@@ -540,14 +543,14 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ContentRange &cr)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValue &v)
+std::ostream& operator<<(std::ostream& os, const AcceptValue &v)
 {
     if (v.value.empty())
         os << '*';
     else
         os << v.value;
     if (v.qvalue != ~0u) {
-        ASSERT(v.qvalue <= 1000);
+        MORDOR_ASSERT(v.qvalue <= 1000);
         unsigned int qvalue = v.qvalue;
         unsigned int curPlace = 100;
         if (qvalue == 1000) {
@@ -558,7 +561,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValue &v)
                 if (curPlace == 100)
                     os << '.';
                 unsigned int cur = qvalue / curPlace;
-                ASSERT(cur < 10);
+                MORDOR_ASSERT(cur < 10);
                 os << cur;
                 qvalue -= cur * curPlace;
                 curPlace /= 10;
@@ -569,10 +572,10 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValue &v)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::AcceptList &l)
+std::ostream& operator<<(std::ostream& os, const AcceptList &l)
 {
-    ASSERT(!l.empty());
-    for (HTTP::AcceptList::const_iterator it(l.begin());
+    MORDOR_ASSERT(!l.empty());
+    for (AcceptList::const_iterator it(l.begin());
         it != l.end();
         ++it) {
         if (it != l.begin())
@@ -582,12 +585,12 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptList &l)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters &v)
+std::ostream& operator<<(std::ostream& os, const AcceptValueWithParameters &v)
 {
-    ASSERT(!v.value.empty());
+    MORDOR_ASSERT(!v.value.empty());
     os << v.value << serializeStringMapWithRequiredValue(v.parameters);
     if (v.qvalue != ~0u) {
-        ASSERT(v.qvalue <= 1000);
+        MORDOR_ASSERT(v.qvalue <= 1000);
         unsigned int qvalue = v.qvalue;
         unsigned int curPlace = 100;
         if (qvalue == 1000) {
@@ -598,7 +601,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters
                 if (curPlace == 100)
                     os << '.';
                 unsigned int cur = qvalue / curPlace;
-                ASSERT(cur < 10);
+                MORDOR_ASSERT(cur < 10);
                 os << cur;
                 qvalue -= cur * curPlace;
                 curPlace /= 10;
@@ -606,16 +609,16 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptValueWithParameters
         }
         os << serializeStringMapWithOptionalValue(v.acceptParams);
     } else {
-        ASSERT(v.acceptParams.empty());
+        MORDOR_ASSERT(v.acceptParams.empty());
     }
 
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::AcceptListWithParameters &l)
+std::ostream& operator<<(std::ostream& os, const AcceptListWithParameters &l)
 {
-    ASSERT(!l.empty());
-    for (HTTP::AcceptListWithParameters::const_iterator it(l.begin());
+    MORDOR_ASSERT(!l.empty());
+    for (AcceptListWithParameters::const_iterator it(l.begin());
         it != l.end();
         ++it) {
         if (it != l.begin())
@@ -625,7 +628,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::AcceptListWithParameters 
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r)
+std::ostream& operator<<(std::ostream& os, const RequestLine &r)
 {
     if (!r.uri.isDefined())
         return os << r.method << " * " << r.ver;
@@ -633,13 +636,13 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestLine &r)
         return os << r.method << " " << r.uri << " " << r.ver;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::StatusLine &s)
+std::ostream& operator<<(std::ostream& os, const StatusLine &s)
 {
-    ASSERT(!s.reason.empty());
+    MORDOR_ASSERT(!s.reason.empty());
     return os << s.ver << " " << s.status << " " << s.reason;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)
+std::ostream& operator<<(std::ostream& os, const GeneralHeaders &g)
 {
     os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
     if (!g.connection.empty())
@@ -657,7 +660,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::GeneralHeaders &g)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
+std::ostream& operator<<(std::ostream& os, const RequestHeaders &r)
 {
     os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
     if (!r.acceptCharset.empty())
@@ -676,7 +679,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
         os << "If-Modified-Since: " << r.ifModifiedSince << "\r\n";
     if (!r.ifNoneMatch.empty())
         os << "If-None-Match: " << r.ifNoneMatch << "\r\n";
-    const HTTP::ETag *ifRangeEtag = boost::get<HTTP::ETag>(&r.ifRange);
+    const ETag *ifRangeEtag = boost::get<ETag>(&r.ifRange);
     if (ifRangeEtag && !ifRangeEtag->unspecified)
         os << "If-Range: " << *ifRangeEtag << "\r\n";
     const boost::posix_time::ptime *ifRangeHttpDate = boost::get<boost::posix_time::ptime>(&r.ifRange);
@@ -697,7 +700,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::RequestHeaders &r)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
+std::ostream& operator<<(std::ostream& os, const ResponseHeaders &r)
 {
     os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
     if (!r.acceptRanges.empty())
@@ -721,7 +724,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::ResponseHeaders &r)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e)
+std::ostream& operator<<(std::ostream& os, const EntityHeaders &e)
 {
     os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
     if (!e.contentEncoding.empty())
@@ -736,7 +739,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e)
         os << "Expires: " << e.expires << "\r\n";
     if (!e.lastModified.is_not_a_date_time())
         os << "Last-Modified: " << e.lastModified << "\r\n";
-    for (HTTP::StringMap::const_iterator it(e.extension.begin());
+    for (StringMap::const_iterator it(e.extension.begin());
         it != e.extension.end();
         ++it) {
         os << it->first << ": " << it->second << "\r\n";
@@ -744,7 +747,7 @@ std::ostream& operator<<(std::ostream& os, const HTTP::EntityHeaders &e)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::Request &r)
+std::ostream& operator<<(std::ostream& os, const Request &r)
 {
     return os << r.requestLine << "\r\n"
         << r.general
@@ -752,10 +755,12 @@ std::ostream& operator<<(std::ostream& os, const HTTP::Request &r)
         << r.entity << "\r\n";
 }
 
-std::ostream& operator<<(std::ostream& os, const HTTP::Response &r)
+std::ostream& operator<<(std::ostream& os, const Response &r)
 {
     return os << r.status << "\r\n"
         << r.general
         << r.response
         << r.entity << "\r\n";
 }
+
+}}

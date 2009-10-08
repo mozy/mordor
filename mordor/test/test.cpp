@@ -18,6 +18,9 @@
 #include <sys/sysctl.h>
 #endif
 
+using namespace Mordor;
+using namespace Mordor::Test;
+
 static TestSuites *g_allTests;
 #ifdef LINUX
 static bool g_traced;
@@ -27,9 +30,10 @@ static ConfigVar<bool>::ptr g_protect = Config::lookup(
     "test.protect", false,
     "Protect test while running under a debugger");
 
-static struct CleanupAllTests {
+namespace {
+static struct Initializer {
 #ifdef LINUX
-    CleanupAllTests()
+    Initializer()
     {
         char buffer[1024];
         snprintf(buffer, 1024, "/proc/%d/status", getpid());
@@ -49,15 +53,16 @@ static struct CleanupAllTests {
         }
     }
 #endif
-    ~CleanupAllTests()
+    ~Initializer()
     {
         if (g_allTests)
             delete g_allTests;
     }
-} g_cleanupAllTests;
+} g_init;
+}
 
 void
-registerTest(const std::string &suite, const std::string &testName,
+Test::registerTest(const std::string &suite, const std::string &testName,
              TestDg test)
 {
     if (!g_allTests)
@@ -66,22 +71,23 @@ registerTest(const std::string &suite, const std::string &testName,
 }
 
 void
-registerSuiteInvariant(const std::string &suite, TestDg invariant)
+Test::registerSuiteInvariant(const std::string &suite, TestDg invariant)
 {
     if (!g_allTests)
         g_allTests = new TestSuites();
-    ASSERT((*g_allTests)[suite].first == NULL);
+    MORDOR_ASSERT((*g_allTests)[suite].first == NULL);
     (*g_allTests)[suite].first = invariant;
 }
 
 void
-assertion(const char *file, int line, const std::string &expr)
+Test::assertion(const char *file, int line, const std::string &expr)
 {
     throw Assertion(expr) << boost::throw_file(file) << boost::throw_line(line)
         << errinfo_backtrace(backtrace());
 }
 
-bool runTest(TestListener *listener, const std::string &suite,
+static bool
+runTest(TestListener *listener, const std::string &suite,
              const std::string &testName, TestDg test)
 {
     if (listener)
@@ -128,7 +134,7 @@ bool runTest(TestListener *listener, const std::string &suite,
     return true;
 }
 
-bool
+static bool
 runTests(const TestSuites *suites, TestListener *listener)
 {
     bool result = true;
@@ -160,7 +166,7 @@ runTests(const TestSuites *suites, TestListener *listener)
 }
 
 const TestSuites &
-allTests()
+Test::allTests()
 {
     if (!g_allTests)
         g_allTests = new TestSuites();
@@ -168,7 +174,7 @@ allTests()
 }
 
 TestSuites
-testsForArguments(int argc, const char **argv)
+Test::testsForArguments(int argc, const char **argv)
 {
     TestSuites tests;
     const TestSuites &all = allTests();
@@ -198,31 +204,31 @@ testsForArguments(int argc, const char **argv)
 }
 
 bool
-runTests()
+Test::runTests()
 {
-    return runTests(g_allTests, NULL);
+    return ::runTests(g_allTests, NULL);
 }
 
 bool
-runTests(const TestSuites &suites)
+Test::runTests(const TestSuites &suites)
 {
-    return runTests(&suites, NULL);
+    return ::runTests(&suites, NULL);
 }
 
 bool
-runTests(TestListener &listener)
+Test::runTests(TestListener &listener)
 {
-    return runTests(g_allTests, &listener);
+    return ::runTests(g_allTests, &listener);
 }
 
 bool
-runTests(const TestSuites &suites, TestListener &listener)
+Test::runTests(const TestSuites &suites, TestListener &listener)
 {
-    return runTests(&suites, &listener);
+    return ::runTests(&suites, &listener);
 }
 
 template <>
-void assertEqual<const char *, const char *>(const char *file,
+void Test::assertEqual<const char *, const char *>(const char *file,
     int line, const char *lhs, const char *rhs, const char *lhsExpr,
     const char *rhsExpr)
 {
@@ -232,7 +238,7 @@ void assertEqual<const char *, const char *>(const char *file,
 }
 
 template <>
-void assertNotEqual<const char *, const char *>(const char *file,
+void Test::assertNotEqual<const char *, const char *>(const char *file,
     int line, const char *lhs, const char *rhs, const char *lhsExpr,
     const char *rhsExpr)
 {
@@ -242,7 +248,7 @@ void assertNotEqual<const char *, const char *>(const char *file,
 }
 
 template <>
-void assertLessThan<const char *, const char *>(const char *file,
+void Test::assertLessThan<const char *, const char *>(const char *file,
     int line, const char *lhs, const char *rhs, const char *lhsExpr,
     const char *rhsExpr)
 {
@@ -252,7 +258,7 @@ void assertLessThan<const char *, const char *>(const char *file,
 }
 
 template <>
-void assertLessThanOrEqual<const char *, const char *>(const char *file,
+void Test::assertLessThanOrEqual<const char *, const char *>(const char *file,
     int line, const char *lhs, const char *rhs, const char *lhsExpr,
     const char *rhsExpr)
 {
@@ -262,7 +268,7 @@ void assertLessThanOrEqual<const char *, const char *>(const char *file,
 }
 
 template <>
-void assertGreaterThan<const char *, const char *>(const char *file,
+void Test::assertGreaterThan<const char *, const char *>(const char *file,
     int line, const char *lhs, const char *rhs, const char *lhsExpr,
     const char *rhsExpr)
 {
@@ -272,7 +278,7 @@ void assertGreaterThan<const char *, const char *>(const char *file,
 }
 
 template <>
-void assertGreaterThanOrEqual<const char *, const char *>(const char *file,
+void Test::assertGreaterThanOrEqual<const char *, const char *>(const char *file,
     int line, const char *lhs, const char *rhs, const char *lhsExpr,
     const char *rhsExpr)
 {

@@ -1,8 +1,10 @@
-#ifndef __SOCKET_STREAM_H__
-#define __SOCKET_STREAM_H__
+#ifndef __MORDOR_SOCKET_STREAM_H__
+#define __MORDOR_SOCKET_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "stream.h"
+
+namespace Mordor {
 
 class Socket;
 
@@ -28,6 +30,8 @@ private:
     boost::shared_ptr<Socket> m_socket;
     bool m_own;
 };
+
+}
 
 #endif
 

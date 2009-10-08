@@ -8,6 +8,9 @@
 
 #include <boost/exception.hpp>
 
+using namespace Mordor;
+using namespace Mordor::Test;
+
 StdoutListener::StdoutListener()
 : m_tests(0),
   m_success(0)

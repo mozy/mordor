@@ -1,8 +1,10 @@
-#ifndef __FILTER_STREAM_H__
-#define __FILTER_STREAM_H__
+#ifndef __MORDOR_FILTER_STREAM_H__
+#define __MORDOR_FILTER_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "stream.h"
+
+namespace Mordor {
 
 // When inheriting from FilterStream, use parent()->xxx to call
 // method xxx on the parent stream.
@@ -15,7 +17,7 @@ public:
     FilterStream(Stream::ptr parent, bool own = true)
         : m_parent(parent), m_own(own)
     {
-        ASSERT(parent);
+        MORDOR_ASSERT(parent);
     }
 
     Stream::ptr parent() { return m_parent; }
@@ -74,12 +76,14 @@ protected:
     bool supportsUnread() { return false; }
 
 public:
-    long long seek(long long offset, Anchor anchor) { NOTREACHED(); }
-    long long size() { NOTREACHED(); }
-    void truncate(long long size) { NOTREACHED(); }
-    ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
-    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
-    void unread(const Buffer &b, size_t len) { NOTREACHED(); }
+    long long seek(long long offset, Anchor anchor) { MORDOR_NOTREACHED(); }
+    long long size() { MORDOR_NOTREACHED(); }
+    void truncate(long long size) { MORDOR_NOTREACHED(); }
+    ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
+    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
+    void unread(const Buffer &b, size_t len) { MORDOR_NOTREACHED(); }
 };
+
+}
 
 #endif

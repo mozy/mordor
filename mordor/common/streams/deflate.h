@@ -1,8 +1,10 @@
-#ifndef __DEFLATE_STREAM_H__
-#define __DEFLATE_STREAM_H__
+#ifndef __MORDOR_DEFLATE_STREAM_H__
+#define __MORDOR_DEFLATE_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "zlib.h"
+
+namespace Mordor {
 
 class DeflateStream : public ZlibStream
 {
@@ -15,5 +17,7 @@ public:
         : ZlibStream(parent, own, DEFLATE)
     {}
 };
+
+}
 
 #endif

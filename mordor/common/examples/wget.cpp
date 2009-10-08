@@ -18,6 +18,8 @@
 #include "mordor/common/streams/std.h"
 #include "mordor/common/streams/transfer.h"
 
+using namespace Mordor;
+
 HTTP::ClientConnection::ptr establishConn(IOManager &ioManager, Address::ptr address,
                                           const std::string &host, bool ssl)
 {
@@ -53,8 +55,8 @@ int main(int argc, const char *argv[])
     IOManager ioManager;
     try {
         URI uri = argv[1];
-        ASSERT(uri.authority.hostDefined());
-        ASSERT(!uri.schemeDefined() || uri.scheme() == "http" || uri.scheme() == "https");
+        MORDOR_ASSERT(uri.authority.hostDefined());
+        MORDOR_ASSERT(!uri.schemeDefined() || uri.scheme() == "http" || uri.scheme() == "https");
 
         std::string username, password, proxy, proxyUsername, proxyPassword;
 
@@ -77,7 +79,7 @@ int main(int argc, const char *argv[])
         Address::lookup(proxy.empty() ? uri.authority.host() : proxy, AF_UNSPEC, SOCK_STREAM);
         if (proxy.empty()) {
             IPAddress *addr = dynamic_cast<IPAddress *>(addresses[0].get());
-            ASSERT(addr);
+            MORDOR_ASSERT(addr);
             if (uri.authority.portDefined()) {
                 addr->port(uri.authority.port());
             } else if (uri.schemeDefined() && uri.scheme() == "https") {

@@ -9,23 +9,26 @@
 
 #include "mordor/common/version.h"
 
-HTTP::InvalidChunkException::InvalidChunkException(const std::string &line,
+namespace Mordor {
+namespace HTTP {
+
+InvalidChunkException::InvalidChunkException(const std::string &line,
                                            Type type)
 : m_line(line),
   m_type(type)
 {}  
 
-HTTP::ChunkedStream::ChunkedStream(Stream::ptr parent, bool own)
+ChunkedStream::ChunkedStream(Stream::ptr parent, bool own)
 : MutatingFilterStream(parent, own),
   m_nextChunk(~0)
 {
     if (parent->supportsRead()) {
-        ASSERT(parent->supportsFind());
+        MORDOR_ASSERT(parent->supportsFind());
     }
 }
 
 void
-HTTP::ChunkedStream::close(Stream::CloseType type)
+ChunkedStream::close(Stream::CloseType type)
 {
     if (supportsWrite() && (type & Stream::WRITE)) {
         parent()->write("0\r\n", 3);
@@ -35,7 +38,7 @@ HTTP::ChunkedStream::close(Stream::CloseType type)
 }
 
 size_t
-HTTP::ChunkedStream::read(Buffer &b, size_t len)
+ChunkedStream::read(Buffer &b, size_t len)
 {
     if (m_nextChunk == ~0ull - 1) {
         std::string chunk = parent()->getDelimited();
@@ -68,7 +71,7 @@ HTTP::ChunkedStream::read(Buffer &b, size_t len)
 }
 
 size_t
-HTTP::ChunkedStream::write(const Buffer &b, size_t len)
+ChunkedStream::write(const Buffer &b, size_t len)
 {
     std::ostringstream os;
     os << std::hex << len << "\r\n";
@@ -83,3 +86,5 @@ HTTP::ChunkedStream::write(const Buffer &b, size_t len)
     parent()->write("\r\n", 2);
     return len;
 }
+
+}}

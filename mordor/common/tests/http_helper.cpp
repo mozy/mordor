@@ -8,7 +8,10 @@
 
 #include "mordor/common/streams/pipe.h"
 
-HTTP::ClientConnection::ptr
+using namespace Mordor;
+using namespace Mordor::HTTP;
+
+ClientConnection::ptr
 HTTPHelper::getConn(const URI &uri)
 {
     ConnectionCache::iterator it = m_conns.find(uri);
@@ -18,13 +21,13 @@ HTTPHelper::getConn(const URI &uri)
     }
     if (it == m_conns.end()) {
         std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
-        HTTP::ClientConnection::ptr client(
-            new HTTP::ClientConnection(pipes.first));
-        HTTP::ServerConnection::ptr server(
-            new HTTP::ServerConnection(pipes.second, boost::bind(m_dg,
+        ClientConnection::ptr client(
+            new ClientConnection(pipes.first));
+        ServerConnection::ptr server(
+            new ServerConnection(pipes.second, boost::bind(m_dg,
                 uri, _1)));
         Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(
-            &HTTP::ServerConnection::processRequests, server))));
+            &ServerConnection::processRequests, server))));
         m_conns[uri] = std::make_pair(client, server);
         return client;
     }

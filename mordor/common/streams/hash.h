@@ -1,5 +1,5 @@
-#ifndef __HASH_STREAM_H__
-#define __HASH_STREAM_H__
+#ifndef __MORDOR_HASH_STREAM_H__
+#define __MORDOR_HASH_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <vector>
@@ -9,6 +9,8 @@
 
 #include "assert.h"
 #include "filter.h"
+
+namespace Mordor {
 
 class HashStream : public FilterStream
 {
@@ -23,7 +25,7 @@ public:
 
     size_t read(Buffer &b, size_t len);
     size_t write(const Buffer &b, size_t len);
-    long long seek(long long offset, Anchor anchor) { NOTREACHED(); }
+    long long seek(long long offset, Anchor anchor) { MORDOR_NOTREACHED(); }
 
     // Returns the hash in *binary*
     virtual std::string hash() const = 0;
@@ -73,5 +75,7 @@ protected:
 private:
     MD5_CTX m_ctx;
 };
+
+}
 
 #endif

@@ -16,6 +16,8 @@
 #include <pthread.h>
 #endif
 
+namespace Mordor {
+
 static void allocStack(void **stack, void **sp, size_t *stacksize);
 static void freeStack(void *stack, size_t stacksize);
 static void initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)());
@@ -29,8 +31,10 @@ void fiber_switchContext(void **oldsp, void *newsp);
 
 static size_t g_pagesize;
 
-struct FiberInitializer {
-    FiberInitializer()
+namespace {
+
+static struct Initializer {
+    Initializer()
     {
 #ifdef WINDOWS
         SYSTEM_INFO info;
@@ -40,9 +44,9 @@ struct FiberInitializer {
         g_pagesize = sysconf(_SC_PAGESIZE);
 #endif
     }
-};
+} g_init;
 
-static FiberInitializer g_init;
+}
 
 static ConfigVar<size_t>::ptr g_defaultStackSize = Config::lookup<size_t>(
     "fiber.defaultstacksize",
@@ -60,7 +64,7 @@ boost::thread_specific_ptr<Fiber> Fiber::t_fiber(&delete_nothing);
 
 Fiber::Fiber()
 {
-    ASSERT(!getThis());
+    MORDOR_ASSERT(!getThis());
     m_state = EXEC;
     m_stack = NULL;
     m_stacksize = 0;
@@ -95,17 +99,17 @@ Fiber::~Fiber()
         m_state = TERM;
     }
     if (!m_stack) {
-        ASSERT(!m_dg);
-        ASSERT(m_state == EXEC);
+        MORDOR_ASSERT(!m_dg);
+        MORDOR_ASSERT(m_state == EXEC);
         Fiber *cur = t_fiber.get();
-        ASSERT(cur);
-        ASSERT(cur == this);
+        MORDOR_ASSERT(cur);
+        MORDOR_ASSERT(cur == this);
         setThis(NULL);
 #ifdef NATIVE_WINDOWS_FIBERS
         ConvertFiberToThread();
 #endif
     } else {
-        ASSERT(m_state == TERM || m_state == INIT);
+        MORDOR_ASSERT(m_state == TERM || m_state == INIT);
         freeStack(m_stack, m_stacksize);
     }
 }
@@ -115,9 +119,9 @@ Fiber::reset()
 {
     if (m_state == EXCEPT)
         call(true);
-    ASSERT(m_stack);
-    ASSERT(m_state == TERM || m_state == INIT);
-    ASSERT(m_dg);
+    MORDOR_ASSERT(m_stack);
+    MORDOR_ASSERT(m_state == TERM || m_state == INIT);
+    MORDOR_ASSERT(m_dg);
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = INIT;
     m_exception = boost::exception_ptr();
@@ -128,8 +132,8 @@ Fiber::reset(boost::function<void ()> dg)
 {
     if (m_state == EXCEPT)
         call(true);
-    ASSERT(m_stack);
-    ASSERT(m_state == TERM || m_state == INIT);
+    MORDOR_ASSERT(m_stack);
+    MORDOR_ASSERT(m_state == TERM || m_state == INIT);
     m_dg = dg;
     initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
     m_state = INIT;
@@ -166,9 +170,9 @@ void
 Fiber::yield()
 {
     ptr cur = getThis();
-    ASSERT(cur);
-    ASSERT(cur->m_state == EXEC);
-    ASSERT(cur->m_outer);
+    MORDOR_ASSERT(cur);
+    MORDOR_ASSERT(cur->m_state == EXEC);
+    MORDOR_ASSERT(cur->m_outer);
     cur->m_outer->m_yielder = cur;
     cur->m_outer->m_yielderNextState = Fiber::HOLD;
     fiber_switchContext(&cur->m_sp, cur->m_outer->m_sp);
@@ -187,39 +191,39 @@ Fiber::state()
 void
 Fiber::call(bool destructor)
 {
-    ASSERT(!m_outer);
+    MORDOR_ASSERT(!m_outer);
     ptr cur = getThis();
     if (destructor) {
-        ASSERT(m_state == EXCEPT);
+        MORDOR_ASSERT(m_state == EXCEPT);
     } else {
-        ASSERT(m_state == HOLD || m_state == INIT);
-        ASSERT(cur);
-        ASSERT(cur.get() != this);
+        MORDOR_ASSERT(m_state == HOLD || m_state == INIT);
+        MORDOR_ASSERT(cur);
+        MORDOR_ASSERT(cur.get() != this);
     }
     setThis(this);
     m_outer = cur;
     m_state = EXEC;
     fiber_switchContext(&cur->m_sp, m_sp);
     setThis(cur.get());
-    ASSERT(cur->m_yielder || destructor);
+    MORDOR_ASSERT(cur->m_yielder || destructor);
     m_outer.reset();
     if (cur->m_yielder) {
-        ASSERT(cur->m_yielder.get() == this);
+        MORDOR_ASSERT(cur->m_yielder.get() == this);
         Fiber::ptr yielder = cur->m_yielder;
         yielder->m_state = cur->m_yielderNextState;
         cur->m_yielder.reset();
         if (yielder->m_state == EXCEPT && yielder->m_exception)
-            ::rethrow_exception(yielder->m_exception);
+            Mordor::rethrow_exception(yielder->m_exception);
     }
 }
 
 Fiber::ptr
 Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
 {
-    ASSERT(m_state == HOLD || m_state == INIT);
-    ASSERT(targetState == HOLD || targetState == TERM || targetState == EXCEPT);
+    MORDOR_ASSERT(m_state == HOLD || m_state == INIT);
+    MORDOR_ASSERT(targetState == HOLD || targetState == TERM || targetState == EXCEPT);
     ptr cur = getThis();
-    ASSERT(cur);
+    MORDOR_ASSERT(cur);
     setThis(this);
     if (yieldToCallerOnTerminate) {
         Fiber::ptr outer = shared_from_this();
@@ -241,15 +245,15 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
     if (targetState == TERM)
         return Fiber::ptr();
 #endif
-    ASSERT(targetState != TERM);
+    MORDOR_ASSERT(targetState != TERM);
     setThis(curp);
-    ASSERT(curp->m_yielder || targetState == EXCEPT);
+    MORDOR_ASSERT(curp->m_yielder || targetState == EXCEPT);
     if (curp->m_yielder) {
         Fiber::ptr yielder = curp->m_yielder;
         yielder->m_state = curp->m_yielderNextState;
         curp->m_yielder.reset();
         if (yielder->m_exception)
-            ::rethrow_exception(yielder->m_exception);
+            Mordor::rethrow_exception(yielder->m_exception);
         return yielder;
     }
     return Fiber::ptr();
@@ -259,13 +263,13 @@ void
 Fiber::entryPoint()
 {
     ptr cur = getThis();
-    ASSERT(cur);
+    MORDOR_ASSERT(cur);
     if (cur->m_yielder) {
         cur->m_yielder->m_state = cur->m_yielderNextState;
         cur->m_yielder.reset();
     }
-    ASSERT(cur->m_dg);
-    ASSERT(cur->m_state == EXEC);
+    MORDOR_ASSERT(cur->m_dg);
+    MORDOR_ASSERT(cur->m_state == EXEC);
     Fiber *curp = cur.get();
     try {
         cur->m_dg();
@@ -288,7 +292,7 @@ Fiber::entryPoint()
 
     exitPoint(cur, curp, TERM);
 #ifndef NATIVE_WINDOWS_FIBERS
-    NOTREACHED();
+    MORDOR_NOTREACHED();
 #endif
 }
 
@@ -304,19 +308,19 @@ Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
         terminateOuter->m_yielderNextState = targetState;
         Fiber* terminateOuterp = terminateOuter.get();
         if (cur) {
-            ASSERT(!cur.unique());
+            MORDOR_ASSERT(!cur.unique());
             cur.reset();
         }
-        ASSERT(!terminateOuter.unique());
+        MORDOR_ASSERT(!terminateOuter.unique());
         terminateOuter.reset();
         terminateOuterp->yieldTo(false, targetState);
         return;
     }
-    ASSERT(curp->m_outer);
+    MORDOR_ASSERT(curp->m_outer);
     curp->m_outer->m_yielder = cur;
     curp->m_outer->m_yielderNextState = targetState;
     if (cur) {
-        ASSERT(!cur.unique());
+        MORDOR_ASSERT(!cur.unique());
         cur.reset();
     }
     fiber_switchContext(&curp->m_sp, curp->m_outer->m_sp);
@@ -347,8 +351,8 @@ static
 void
 allocStack(void **stack, void **sp, size_t *stacksize)
 {
-    ASSERT(stack);
-    ASSERT(sp);
+    MORDOR_ASSERT(stack);
+    MORDOR_ASSERT(sp);
     if (*stacksize == 0)
         *stacksize = g_defaultStackSize->val();
 #ifdef NATIVE_WINDOWS_FIBERS
@@ -356,7 +360,7 @@ allocStack(void **stack, void **sp, size_t *stacksize)
 #elif defined(WINDOWS)
     *stack = VirtualAlloc(NULL, *stacksize + g_pagesize, MEM_RESERVE, PAGE_NOACCESS);
     if (!*stack)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("VirtualAlloc");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("VirtualAlloc");
     VirtualAlloc(*stack, g_pagesize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
     // TODO: don't commit until referenced
     VirtualAlloc((char*)*stack + g_pagesize, *stacksize, MEM_COMMIT, PAGE_READWRITE);
@@ -364,7 +368,7 @@ allocStack(void **stack, void **sp, size_t *stacksize)
 #elif defined(POSIX)
     *stack = mmap(NULL, *stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     if (*stack == MAP_FAILED)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("mmap");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("mmap");
     *sp = (char*)*stack + *stacksize;
 #endif
 }
@@ -400,7 +404,7 @@ static void
 fiber_switchContext(void **oldsp, void *newsp)
 {
     if (swapcontext(*(ucontext_t**)oldsp, (ucontext_t*)newsp))
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("swapcontext");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("swapcontext");
 }
 #elif defined(_MSC_VER) && defined(ASM_X86_WINDOWS_FIBERS)
 static
@@ -450,11 +454,11 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
         return;
     *sp = *stack = CreateFiber(stacksize, &native_fiber_entryPoint, entryPoint);
     if (!*stack)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFiber");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFiber");
 #elif defined(UCONTEXT_FIBERS)
     ucontext_t *ctx = *(ucontext_t**)sp;
     if (getcontext(ctx))
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("getcontext");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getcontext");
     ctx->uc_stack.ss_sp = *stack;
     ctx->uc_stack.ss_size = stacksize;
     makecontext(ctx, entryPoint, 0);
@@ -509,4 +513,6 @@ initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
     push(sp, 0x00000000);             // ESI
     push(sp, 0x00000000);             // EDI
 #endif
+}
+
 }

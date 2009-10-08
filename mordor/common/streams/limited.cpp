@@ -6,12 +6,14 @@
 
 #include <stdexcept>
 
+namespace Mordor {
+
 LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
 : MutatingFilterStream(parent, own),
   m_pos(0),
   m_size(size)
 {
-    ASSERT(size >= 0);
+    MORDOR_ASSERT(size >= 0);
 }
 
 size_t
@@ -50,7 +52,7 @@ LimitedStream::seek(long long offset, Anchor anchor)
     }
     // If the parent doesn't support seek, we only support tell
     if (!parent()->supportsSeek()) {
-        ASSERT(anchor == CURRENT && offset == 0);
+        MORDOR_ASSERT(anchor == CURRENT && offset == 0);
         return m_pos;
     }
     return m_pos = parent()->seek(offset, anchor);
@@ -75,4 +77,6 @@ LimitedStream::unread(const Buffer &b, size_t len)
 {
     parent()->unread(b, len);
     m_pos -= len;
+}
+
 }

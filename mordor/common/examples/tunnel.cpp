@@ -15,6 +15,8 @@
 #include "mordor/common/streams/std.h"
 #include "mordor/common/streams/transfer.h"
 
+using namespace Mordor;
+
 static void shuttleData(Stream::ptr oneEnd, Stream::ptr otherEnd)
 {
     try {

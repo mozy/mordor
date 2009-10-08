@@ -13,6 +13,8 @@
 #include "mordor/common/streams/std.h"
 #include "mordor/common/streams/transfer.h"
 
+using namespace Mordor;
+
 int main(int argc, const char *argv[])
 {
     Config::loadFromEnvironment();

@@ -8,6 +8,8 @@
 #include "log.h"
 #include "mordor/common/string.h"
 
+namespace Mordor {
+
 static Logger::ptr g_log = Log::lookup("mordor:common:ragel");
 
 size_t
@@ -20,7 +22,7 @@ RagelParser::run(const void *buf, size_t len)
 
     exec();
 
-    ASSERT(!(final() && error()));
+    MORDOR_ASSERT(!(final() && error()));
     return len - (pe - p);
 }
 
@@ -47,7 +49,7 @@ RagelParser::run(const Buffer& b)
         size_t consumed = run(bufs[i].iov_base, bufs[i].iov_len, false);
         total += consumed;
         if (consumed < bufs[i].iov_len) {
-            ASSERT(final() || error());
+            MORDOR_ASSERT(final() || error());
             return total;
         }
         if (error() || complete())
@@ -77,7 +79,7 @@ RagelParser::run(Stream &stream)
                 total += consumed;
                 b.consume(consumed);
                 if (consumed < bufs[i].iov_len) {
-                    ASSERT(final() || error());
+                    MORDOR_ASSERT(final() || error());
                     inferredComplete = true;
                     break;
                 }
@@ -102,7 +104,7 @@ RagelParser::init()
 size_t
 RagelParser::run(const void *buf, size_t len, bool isEof)
 {
-    ASSERT(!error());
+    MORDOR_ASSERT(!error());
 
     size_t markSpot = ~0;
 
@@ -128,7 +130,7 @@ RagelParser::run(const void *buf, size_t len, bool isEof)
         eof = NULL;
     }
 
-    LOG_VERBOSE(g_log) << charslice(p, pe - p);
+    MORDOR_LOG_VERBOSE(g_log) << charslice(p, pe - p);
     exec();
 
     if (!mark) {
@@ -161,4 +163,6 @@ RagelParserWithStack::postpop()
 {
     if (top <= stack.size() / 4)
         stack.resize(stack.size() / 2);
+}
+
 }

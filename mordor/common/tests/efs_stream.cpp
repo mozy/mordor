@@ -9,7 +9,10 @@
 #include "mordor/common/streams/efs.h"
 #include "mordor/test/test.h"
 
-TEST_WITH_SUITE(EFSStream, basic)
+using namespace Mordor;
+using namespace Mordor::Test;
+
+MORDOR_UNITTEST(EFSStream, basic)
 {
     Fiber::ptr mainFiber(new Fiber());
     {
@@ -17,14 +20,14 @@ TEST_WITH_SUITE(EFSStream, basic)
         file.write("cody", 4);
     }
     if (!EncryptFileW(L"dummy.efs"))
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("EncryptFileW");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("EncryptFileW");
     Buffer b, b2;
     {
         EFSStream efs("dummy.efs", true);
         efs.read(b, 65536);
-        TEST_ASSERT_EQUAL(efs.read(b, 65536), 0u);
+        MORDOR_TEST_ASSERT_EQUAL(efs.read(b, 65536), 0u);
     }
-    TEST_ASSERT_GREATER_THAN_OR_EQUAL(b.readAvailable(), 4u);
+    MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(b.readAvailable(), 4u);
     {
         EFSStream efs("dummy2.efs", false);
         efs.write(b, b.readAvailable());
@@ -32,8 +35,8 @@ TEST_WITH_SUITE(EFSStream, basic)
     }
     {
         FileStream file("dummy2.efs");
-        TEST_ASSERT_EQUAL(file.read(b2, 65536), 4u);
-        TEST_ASSERT(b2 == "cody");
+        MORDOR_TEST_ASSERT_EQUAL(file.read(b2, 65536), 4u);
+        MORDOR_TEST_ASSERT(b2 == "cody");
     }
     DeleteFileW(L"dummy.efs");
     DeleteFileW(L"dummy2.efs");

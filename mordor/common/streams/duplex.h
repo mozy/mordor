@@ -1,8 +1,10 @@
-#ifndef __SINGLEPLEX_STREAM_H__
-#define __SINGLEPLEX_STREAM_H__
+#ifndef __MORDOR_DUPLEX_STREAM_H__
+#define __MORDOR_DUPLEX_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "stream.h"
+
+namespace Mordor {
 
 // A DuplexStream combines a read and a write stream to form a stream that can
 // be read and written to.  It *disables* seek(), size(), and truncate(),
@@ -17,10 +19,10 @@ public:
           m_writeParent(writeParent),
           m_own(own)
     {
-        ASSERT(readParent);
-        ASSERT(writeParent);
-        ASSERT(readParent->supportsRead());
-        ASSERT(writeParent->supportsWrite());
+        MORDOR_ASSERT(readParent);
+        MORDOR_ASSERT(writeParent);
+        MORDOR_ASSERT(readParent->supportsRead());
+        MORDOR_ASSERT(writeParent->supportsWrite());
     }
 
     Stream::ptr readParent() { return m_readParent; }
@@ -82,5 +84,7 @@ private:
     Stream::ptr m_readParent, m_writeParent;
     bool m_own;
 };
+
+}
 
 #endif

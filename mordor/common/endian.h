@@ -1,8 +1,10 @@
-#ifndef __ENDIAN_H__
-#define __ENDIAN_H__
+#ifndef __MORDOR_ENDIAN_H__
+#define __MORDOR_ENDIAN_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "version.h"
+
+#ifndef ntohll
 
 #ifdef WINDOWS
 
@@ -49,5 +51,6 @@
 
 #endif
 
+#endif
 
 #endif

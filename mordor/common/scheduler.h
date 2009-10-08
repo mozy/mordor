@@ -1,5 +1,5 @@
-#ifndef __SCHEDULER_H__
-#define __SCHEDULER_H__
+#ifndef __MORDOR_SCHEDULER_H__
+#define __MORDOR_SCHEDULER_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #ifdef WIN32
@@ -20,7 +20,9 @@
 #include "fiber.h"
 #include "semaphore.h"
 
-class ThreadPool2
+namespace Mordor {
+
+class ThreadPool
 {
 public:
     void init(boost::function<void ()> proc);
@@ -76,7 +78,7 @@ private:
     std::list<FiberAndThread> m_fibers;
     boost::thread::id m_rootThread;
     Fiber::ptr m_rootFiber;
-    ThreadPool2 m_threads;
+    ThreadPool m_threads;
     size_t m_threadCount;
     bool m_stopping;
     bool m_autoStop;
@@ -224,6 +226,8 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
             return false;
     }
     return true;
+}
+
 }
 
 #endif

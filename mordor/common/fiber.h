@@ -1,5 +1,5 @@
-#ifndef __FIBER_H__
-#define __FIBER_H__
+#ifndef __MORDOR_FIBER_H__
+#define __MORDOR_FIBER_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #ifdef WIN32
@@ -38,6 +38,8 @@
 #ifdef UCONTEXT_FIBERS
 #include <ucontext.h>
 #endif
+
+namespace Mordor {
 
 class Fiber : public boost::enable_shared_from_this<Fiber>
 {
@@ -93,5 +95,7 @@ private:
 
     static boost::thread_specific_ptr<Fiber> t_fiber;
 };
+
+}
 
 #endif // __FIBER_H__

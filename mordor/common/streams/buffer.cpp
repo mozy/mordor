@@ -9,6 +9,8 @@
 
 #include "mordor/common/assert.h"
 
+namespace Mordor {
+
 Buffer::SegmentData::SegmentData()
 {
     start(NULL);
@@ -17,7 +19,7 @@ Buffer::SegmentData::SegmentData()
 
 Buffer::SegmentData::SegmentData(size_t length)
 {
-    ASSERT(length <= 0xffffffff);
+    MORDOR_ASSERT(length <= 0xffffffff);
     m_array.reset(new unsigned char[length]);
     start(m_array.get());
     this->length(length);
@@ -29,8 +31,8 @@ Buffer::SegmentData::slice(size_t start, size_t length)
     if (length == (size_t)~0) {
         length = this->length() - start;
     }
-    ASSERT(start <= this->length());
-    ASSERT(length + start <= this->length());
+    MORDOR_ASSERT(start <= this->length());
+    MORDOR_ASSERT(length + start <= this->length());
     SegmentData result;
     result.m_array = m_array;
     result.start((unsigned char*)this->start() + start);
@@ -44,8 +46,8 @@ Buffer::SegmentData::slice(size_t start, size_t length) const
     if (length == (size_t)~0) {
         length = this->length() - start;
     }
-    ASSERT(start <= this->length());
-    ASSERT(length + start <= this->length());
+    MORDOR_ASSERT(start <= this->length());
+    MORDOR_ASSERT(length + start <= this->length());
     SegmentData result;
     result.m_array = m_array;
     result.start((unsigned char*)this->start() + start);
@@ -96,7 +98,7 @@ Buffer::Segment::length() const
 void
 Buffer::Segment::produce(size_t len)
 {
-    ASSERT(len <= writeAvailable());
+    MORDOR_ASSERT(len <= writeAvailable());
     m_writeIndex += len;
     invariant();
 }
@@ -104,7 +106,7 @@ Buffer::Segment::produce(size_t len)
 void
 Buffer::Segment::consume(size_t len)
 {
-    ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(len <= readAvailable());
     m_writeIndex -= len;
     m_data = m_data.slice(len);
     invariant();
@@ -113,8 +115,8 @@ Buffer::Segment::consume(size_t len)
 void
 Buffer::Segment::truncate(size_t len)
 {
-    ASSERT(len <= readAvailable());
-    ASSERT(m_writeIndex = readAvailable());
+    MORDOR_ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(m_writeIndex = readAvailable());
     m_writeIndex = len;
     m_data = m_data.slice(0, len);
     invariant();
@@ -151,7 +153,7 @@ Buffer::Segment::writeBuf() const
 void
 Buffer::Segment::invariant() const
 {
-    ASSERT(m_writeIndex <= m_data.length());
+    MORDOR_ASSERT(m_writeIndex <= m_data.length());
 }
 
 
@@ -246,7 +248,7 @@ Buffer::compact()
         m_writeIt = m_segments.erase(m_writeIt, m_segments.end());
         m_writeAvailable = 0;
     }
-    ASSERT(writeAvailable() == 0);
+    MORDOR_ASSERT(writeAvailable() == 0);
 }
 
 void
@@ -257,14 +259,14 @@ Buffer::clear()
     m_segments.clear();
     m_writeIt = m_segments.end();
     invariant();
-    ASSERT(m_readAvailable == 0);
-    ASSERT(m_writeAvailable == 0);
+    MORDOR_ASSERT(m_readAvailable == 0);
+    MORDOR_ASSERT(m_writeAvailable == 0);
 }
 
 void
 Buffer::produce(size_t len)
 {
-    ASSERT(len <= writeAvailable());
+    MORDOR_ASSERT(len <= writeAvailable());
     m_readAvailable += len;
     m_writeAvailable -= len;
     while (len > 0) {
@@ -276,14 +278,14 @@ Buffer::produce(size_t len)
             ++m_writeIt;
         }
     }
-    ASSERT(len == 0);
+    MORDOR_ASSERT(len == 0);
     invariant();
 }
 
 void
 Buffer::consume(size_t len)
 {
-    ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(len <= readAvailable());
     m_readAvailable -= len;
     while (len > 0) {
         Segment& buf = *m_segments.begin();
@@ -294,14 +296,14 @@ Buffer::consume(size_t len)
             m_segments.pop_front();
         }
     }
-    ASSERT(len == 0);
+    MORDOR_ASSERT(len == 0);
     invariant();
 }
 
 void
 Buffer::truncate(size_t len)
 {
-    ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(len <= readAvailable());
     if (len == m_readAvailable)
         return;
     // Split any mixed read/write bufs
@@ -322,9 +324,9 @@ Buffer::truncate(size_t len)
             len -= buf.readAvailable();
         }
     }
-    ASSERT(len == 0);
+    MORDOR_ASSERT(len == 0);
     while (it != m_segments.end() && it->readAvailable() > 0) {
-        ASSERT(it->writeAvailable() == 0);
+        MORDOR_ASSERT(it->writeAvailable() == 0);
         it = m_segments.erase(it);
     }
     invariant();
@@ -335,7 +337,7 @@ Buffer::readBufs(size_t len) const
 {
     if (len == (size_t)~0)
         len = readAvailable();
-    ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(len <= readAvailable());
     std::vector<iovec> result;
     result.reserve(m_segments.size());
     size_t remaining = len;
@@ -362,7 +364,7 @@ Buffer::readBufs(size_t len) const
             break;
         }
     }
-    ASSERT(remaining == 0);
+    MORDOR_ASSERT(remaining == 0);
     invariant();
     return result;
 }
@@ -370,7 +372,7 @@ Buffer::readBufs(size_t len) const
 const Buffer::SegmentData
 Buffer::readBuf(size_t len) const
 {
-    ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(len <= readAvailable());
     if (readAvailable() == 0) {
         return SegmentData();
     }
@@ -434,7 +436,7 @@ Buffer::writeBufs(size_t len)
         remaining -= toProduce;
         ++it;
     }
-    ASSERT(remaining == 0);
+    MORDOR_ASSERT(remaining == 0);
     invariant();
     return result;
 }
@@ -445,8 +447,8 @@ Buffer::writeBuf(size_t len)
     // Must allocate just the write buf
     if (writeAvailable() == 0) {
         reserve(len);
-        ASSERT(m_writeIt != m_segments.end());
-        ASSERT(m_writeIt->writeAvailable() >= len);
+        MORDOR_ASSERT(m_writeIt != m_segments.end());
+        MORDOR_ASSERT(m_writeIt->writeAvailable() >= len);
         return m_writeIt->writeBuf().slice(0, len);
     }
     // Can use an existing write buf
@@ -456,8 +458,8 @@ Buffer::writeBuf(size_t len)
     // Existing bufs are insufficient... remove them and reserve anew
     compact();
     reserve(len);
-    ASSERT(m_writeIt != m_segments.end());
-    ASSERT(m_writeIt->writeAvailable() >= len);
+    MORDOR_ASSERT(m_writeIt != m_segments.end());
+    MORDOR_ASSERT(m_writeIt->writeAvailable() >= len);
     return m_writeIt->writeBuf().slice(0, len);
 }
 
@@ -466,7 +468,7 @@ Buffer::copyIn(const Buffer &buf, size_t len)
 {
     if (len == (size_t)~0)
         len = buf.readAvailable();
-    ASSERT(buf.readAvailable() >= len);
+    MORDOR_ASSERT(buf.readAvailable() >= len);
     invariant();
     if (len == 0)
         return;
@@ -487,7 +489,7 @@ Buffer::copyIn(const Buffer &buf, size_t len)
             if ((unsigned char *)previousIt->readBuf().start() +
                 previousIt->readBuf().length() == it->readBuf().start() &&
                 previousIt->m_data.m_array.get() == it->m_data.m_array.get()) {
-                ASSERT(previousIt->writeAvailable() == 0);
+                MORDOR_ASSERT(previousIt->writeAvailable() == 0);
                 previousIt->extend(toConsume);
                 m_readAvailable += toConsume;
                 len -= toConsume;
@@ -503,8 +505,8 @@ Buffer::copyIn(const Buffer &buf, size_t len)
         if (len == 0)
             break;
     }
-    ASSERT(len == 0);
-    ASSERT(readAvailable() >= len);
+    MORDOR_ASSERT(len == 0);
+    MORDOR_ASSERT(readAvailable() >= len);
 }
 
 void
@@ -533,7 +535,7 @@ Buffer::copyIn(const void *data, size_t len)
         m_readAvailable += len;
     }
 
-    ASSERT(readAvailable() >= len);
+    MORDOR_ASSERT(readAvailable() >= len);
 }
 
 void
@@ -545,7 +547,7 @@ Buffer::copyIn(const char *sz)
 void
 Buffer::copyOut(void *buf, size_t len) const
 {
-    ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(len <= readAvailable());
     unsigned char *next = (unsigned char*)buf;
     std::list<Segment>::const_iterator it;
     for (it = m_segments.begin(); it != m_segments.end(); ++it) {
@@ -556,7 +558,7 @@ Buffer::copyOut(void *buf, size_t len) const
         if (len == 0)
             break;
     }
-    ASSERT(len == 0);
+    MORDOR_ASSERT(len == 0);
 }
 
 ptrdiff_t
@@ -564,7 +566,7 @@ Buffer::find(char delim, size_t len) const
 {
     if (len == (size_t)~0)
         len = readAvailable();
-    ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(len <= readAvailable());
 
     size_t totalLength = 0;
     bool success = false;
@@ -595,8 +597,8 @@ Buffer::find(const std::string &str, size_t len) const
 {
     if (len == (size_t)~0)
         len = readAvailable();
-    ASSERT(len <= readAvailable());
-    ASSERT(!str.empty());
+    MORDOR_ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(!str.empty());
 
     size_t totalLength = 0;
     size_t foundSoFar = 0;
@@ -622,7 +624,7 @@ Buffer::find(const std::string &str, size_t len) const
                     continue;
                 }
             }
-            ASSERT(foundSoFar != 0);
+            MORDOR_ASSERT(foundSoFar != 0);
             size_t tocompare = std::min(toscan, str.size() - foundSoFar);
             if (memcmp(start, str.c_str() + foundSoFar, tocompare) == 0) {
                 foundSoFar += tocompare;
@@ -650,16 +652,16 @@ Buffer::visit(boost::function<void (const void *, size_t)> dg, size_t len) const
 {
     if (len == (size_t)~0)
         len = readAvailable();
-    ASSERT(len <= readAvailable());
+    MORDOR_ASSERT(len <= readAvailable());
 
     std::list<Segment>::const_iterator it;
     for (it = m_segments.begin(); it != m_segments.end() && len > 0; ++it) {
         size_t todo = std::min(len, it->readAvailable());
-        ASSERT(todo != 0);
+        MORDOR_ASSERT(todo != 0);
         dg(it->readBuf().start(), todo);
         len -= todo;
     }
-    ASSERT(len == 0);
+    MORDOR_ASSERT(len == 0);
 }
 
 bool
@@ -721,8 +723,8 @@ Buffer::opCmp(const Buffer &rhs) const
     size_t leftOffset = 0, rightOffset = 0;
     while (leftIt != m_segments.end() && rightIt != rhs.m_segments.end())
     {
-        ASSERT(leftOffset <= leftIt->readAvailable());
-        ASSERT(rightOffset <= rightIt->readAvailable());
+        MORDOR_ASSERT(leftOffset <= leftIt->readAvailable());
+        MORDOR_ASSERT(rightOffset <= rightIt->readAvailable());
         size_t tocompare = std::min(leftIt->readAvailable() - leftOffset,
             rightIt->readAvailable() - rightOffset);
         if (tocompare == 0)
@@ -780,12 +782,12 @@ Buffer::invariant() const
     for (it = m_segments.begin(); it != m_segments.end(); ++it) {
         const Segment& segment = *it;
         // Strict ordering
-        ASSERT(!seenWrite || (seenWrite && segment.readAvailable() == 0));
+        MORDOR_ASSERT(!seenWrite || (seenWrite && segment.readAvailable() == 0));
         read += segment.readAvailable();
         write += segment.writeAvailable();
         if (!seenWrite && segment.writeAvailable() != 0) {
             seenWrite = true;
-            ASSERT(m_writeIt == it);
+            MORDOR_ASSERT(m_writeIt == it);
         }
         // We should keep segments optimally merged together
         std::list<Segment>::const_iterator nextIt = it;
@@ -794,19 +796,21 @@ Buffer::invariant() const
             const Segment& next = *nextIt;
             if (segment.writeAvailable() == 0 &&
                 next.readAvailable() != 0) {
-                ASSERT((const unsigned char*)segment.readBuf().start() +
+                MORDOR_ASSERT((const unsigned char*)segment.readBuf().start() +
                     segment.readAvailable() != next.readBuf().start() ||
                     segment.m_data.m_array.get() != next.m_data.m_array.get());
             } else if (segment.writeAvailable() != 0 &&
                 next.readAvailable() == 0) {
-                ASSERT((const unsigned char*)segment.writeBuf().start() +
+                MORDOR_ASSERT((const unsigned char*)segment.writeBuf().start() +
                     segment.writeAvailable() != next.writeBuf().start() ||
                     segment.m_data.m_array.get() != next.m_data.m_array.get());
             }
         }
     }
-    ASSERT(read == m_readAvailable);
-    ASSERT(write == m_writeAvailable);
-    ASSERT(write != 0 || (write == 0 && m_writeIt == m_segments.end()));
+    MORDOR_ASSERT(read == m_readAvailable);
+    MORDOR_ASSERT(write == m_writeAvailable);
+    MORDOR_ASSERT(write != 0 || (write == 0 && m_writeIt == m_segments.end()));
 #endif
+}
+
 }

@@ -6,6 +6,8 @@
 
 #include <stdexcept>
 
+namespace Mordor {
+
 MemoryStream::MemoryStream()
 : m_offset(0)
 {}
@@ -110,7 +112,7 @@ MemoryStream::seek(long long offset, Anchor anchor)
             // seek
             return seek(size + offset - m_offset, CURRENT);
         default:
-            ASSERT(false);
+            MORDOR_ASSERT(false);
             return 0;
     }
 }
@@ -124,7 +126,7 @@ MemoryStream::size()
 void
 MemoryStream::truncate(long long size)
 {
-    ASSERT(size >= 0);
+    MORDOR_ASSERT(size >= 0);
     if ((unsigned long long)size > (size_t)~0) {
         MORDOR_THROW_EXCEPTION(std::invalid_argument(
             "Memory stream size cannot exceed virtual address space."));
@@ -154,7 +156,7 @@ MemoryStream::truncate(long long size)
         m_read.consume(std::min(m_offset, (size_t)size));
     }
 
-    ASSERT(m_original.readAvailable() == (size_t)size);
+    MORDOR_ASSERT(m_original.readAvailable() == (size_t)size);
 }
 
 ptrdiff_t
@@ -177,4 +179,6 @@ MemoryStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFou
     if (throwIfNotFound)
         MORDOR_THROW_EXCEPTION(UnexpectedEofException());
     return -(ptrdiff_t)m_read.readAvailable() - 1;
+}
+
 }

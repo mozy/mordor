@@ -1,8 +1,10 @@
-#ifndef __GZIP_STREAM_H__
-#define __GZIP_STREAM_H__
+#ifndef __MORDOR_GZIP_STREAM_H__
+#define __MORDOR_GZIP_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "zlib.h"
+
+namespace Mordor {
 
 class GzipStream : public ZlibStream
 {
@@ -15,5 +17,7 @@ public:
         : ZlibStream(parent, own, GZIP)
     {}
 };
+
+}
 
 #endif

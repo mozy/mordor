@@ -8,8 +8,11 @@
 
 #pragma comment(lib, "secur32.lib")
 
-HTTP::NegotiateAuth::NegotiateAuth(const std::string &username,
-                                   const std::string &password)
+namespace Mordor {
+namespace HTTP {
+
+NegotiateAuth::NegotiateAuth(const std::string &username,
+                             const std::string &password)
     : m_username(toUtf16(username)),
       m_password(toUtf16(password))
 {
@@ -22,7 +25,7 @@ HTTP::NegotiateAuth::NegotiateAuth(const std::string &username,
     }
 }
 
-HTTP::NegotiateAuth::~NegotiateAuth()
+NegotiateAuth::~NegotiateAuth()
 {
     if (SecIsValidHandle(&m_creds)) {
         FreeCredentialHandle(&m_creds);
@@ -35,9 +38,9 @@ HTTP::NegotiateAuth::~NegotiateAuth()
 }
 
 bool
-HTTP::NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
+NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
 {
-    ASSERT(challenge.status.status == UNAUTHORIZED ||
+    MORDOR_ASSERT(challenge.status.status == UNAUTHORIZED ||
         challenge.status.status == PROXY_AUTHENTICATION_REQUIRED);
     bool proxy = challenge.status.status == PROXY_AUTHENTICATION_REQUIRED;
     const ChallengeList &authenticate = proxy ?
@@ -63,8 +66,8 @@ HTTP::NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
             // Don't break; keep looking for Negotiate; it's preferred
         }
     }
-    ASSERT(param);
-    ASSERT(!package.empty());
+    MORDOR_ASSERT(param);
+    MORDOR_ASSERT(!package.empty());
     std::wstring packageW = toUtf16(package);
 
     std::string outboundBuffer;
@@ -104,7 +107,7 @@ HTTP::NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
             &m_creds,
             &lifetime);
         if (!SUCCEEDED(status)) {
-            THROW_EXCEPTION_FROM_ERROR_API(status, "AcquireCredentialsHandleW");
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(status, "AcquireCredentialsHandleW");
         }
 
         status = InitializeSecurityContextW(
@@ -154,7 +157,7 @@ HTTP::NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
     }
 
     if (!SUCCEEDED(status))
-        THROW_EXCEPTION_FROM_ERROR(status);
+        MORDOR_THROW_EXCEPTION_FROM_ERROR(status);
 
     outboundBuffer.resize(outboundSecBuffer.cbBuffer);
     authorization.scheme = package;
@@ -162,3 +165,5 @@ HTTP::NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
     authorization.parameters.clear();
     return true;
 }
+
+}}

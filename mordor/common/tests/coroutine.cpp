@@ -5,6 +5,9 @@
 #include "mordor/common/coroutine.h"
 #include "mordor/test/test.h"
 
+using namespace Mordor;
+using namespace Mordor::Test;
+
 static int countTo5(Coroutine<int>::ptr self)
 {
     self->yield(1);
@@ -14,16 +17,16 @@ static int countTo5(Coroutine<int>::ptr self)
     return 5;
 }
 
-TEST_WITH_SUITE(Coroutine, basic)
+MORDOR_UNITTEST(Coroutine, basic)
 {
     Fiber::ptr mainFiber(new Fiber());
     Coroutine<int>::ptr coro(new Coroutine<int>(&countTo5));
     int sequence = 0;
-    TEST_ASSERT_EQUAL(coro->state(), Fiber::INIT);
+    MORDOR_TEST_ASSERT_EQUAL(coro->state(), Fiber::INIT);
     while (coro->state() != Fiber::TERM) {
-        TEST_ASSERT_EQUAL(coro->call(), ++sequence);
+        MORDOR_TEST_ASSERT_EQUAL(coro->call(), ++sequence);
     }
-    TEST_ASSERT_EQUAL(sequence, 5);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 5);
 }
 
 static int echo(Coroutine<int, int>::ptr self, int arg)
@@ -34,16 +37,16 @@ static int echo(Coroutine<int, int>::ptr self, int arg)
     return arg;
 }
 
-TEST_WITH_SUITE(Coroutine, basicWithArg)
+MORDOR_UNITTEST(Coroutine, basicWithArg)
 {
     Fiber::ptr mainFiber(new Fiber());
     Coroutine<int, int>::ptr coro(new Coroutine<int, int>(boost::function<int (Coroutine<int, int>::ptr, int)>(&echo)));
-    TEST_ASSERT_EQUAL(coro->state(), Fiber::INIT);
+    MORDOR_TEST_ASSERT_EQUAL(coro->state(), Fiber::INIT);
     for (int i = 0; i <= 5; ++i) {
-        TEST_ASSERT(coro->state() == Fiber::INIT || coro->state() == Fiber::HOLD);
-        TEST_ASSERT_EQUAL(coro->call(i), i);
+        MORDOR_TEST_ASSERT(coro->state() == Fiber::INIT || coro->state() == Fiber::HOLD);
+        MORDOR_TEST_ASSERT_EQUAL(coro->call(i), i);
     }
-    TEST_ASSERT_EQUAL(coro->state(), Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(coro->state(), Fiber::TERM);
 }
 /*
 static int producer(Coroutine<int, int>::ptr self, int arg,
@@ -61,13 +64,13 @@ static int consumer(Coroutine<int, int>::ptr self, int arg,
     Coroutine<int, int>::ptr producer(weak_producer);
     int sequence = 0;
     while (arg > 0) {
-        TEST_ASSERT_EQUAL(sequence++, arg);
+        MORDOR_TEST_ASSERT_EQUAL(sequence++, arg);
         arg = self->yieldTo(producer, 0);
     }
     return 0;
 }
 
-TEST_WITH_SUITE(Coroutine, producerConsumer)
+MORDOR_UNITTEST(Coroutine, producerConsumer)
 {
     Fiber::ptr mainFiber(new Fiber());
     Coroutine<int, int>::ptr producerCoro(new Coroutine<int, int>());

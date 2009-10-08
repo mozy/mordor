@@ -8,6 +8,8 @@
 
 #include "mordor/common/string.h"
 
+namespace Mordor {
+
 EFSStream::EFSStream(void *context, bool read, bool ownContext)
         : m_context(context),
           m_read(read),
@@ -32,7 +34,7 @@ EFSStream::EFSStream(const char *filename, bool read)
     DWORD dwRet = OpenEncryptedFileRawW(toUtf16(filename).c_str(),
         read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
-        THROW_EXCEPTION_FROM_ERROR_API(dwRet, "OpenEncryptedFileRawW");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(dwRet, "OpenEncryptedFileRawW");
     init();
 }
 
@@ -48,7 +50,7 @@ EFSStream::EFSStream(const wchar_t *filename, bool read)
     DWORD dwRet = OpenEncryptedFileRawW(filename,
         read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
-        THROW_EXCEPTION_FROM_ERROR_API(dwRet, "OpenEncryptedFileRawW");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(dwRet, "OpenEncryptedFileRawW");
     init();
 }
 
@@ -64,7 +66,7 @@ EFSStream::EFSStream(const std::string &filename, bool read)
     DWORD dwRet = OpenEncryptedFileRawW(toUtf16(filename).c_str(),
         read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
-        THROW_EXCEPTION_FROM_ERROR_API(dwRet, "OpenEncryptedFileRawW");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(dwRet, "OpenEncryptedFileRawW");
     init();
 }
 
@@ -80,14 +82,14 @@ EFSStream::EFSStream(const std::wstring &filename, bool read)
     DWORD dwRet = OpenEncryptedFileRawW(filename.c_str(),
         read ? 0 : CREATE_FOR_IMPORT, &m_context);
     if (dwRet != ERROR_SUCCESS)
-        THROW_EXCEPTION_FROM_ERROR_API(dwRet, "OpenEncryptedFileRawW");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(dwRet, "OpenEncryptedFileRawW");
     init();
 }
 
 void
 EFSStream::init()
 {
-    ASSERT(m_context);
+    MORDOR_ASSERT(m_context);
     if (m_read)
         m_fiber = Fiber::ptr(new Fiber(boost::bind(&EFSStream::readFiber,
             this)));
@@ -131,7 +133,7 @@ EFSStream::close(Stream::CloseType type)
 size_t
 EFSStream::read(Buffer &b, size_t len)
 {
-    ASSERT(m_read);
+    MORDOR_ASSERT(m_read);
     if (m_fiber->state() == Fiber::TERM)
         return 0;
     b.reserve(len);
@@ -146,8 +148,8 @@ EFSStream::read(Buffer &b, size_t len)
 size_t
 EFSStream::write(const Buffer &b, size_t len)
 {
-    ASSERT(!m_read);
-    ASSERT(m_fiber->state() != Fiber::TERM);
+    MORDOR_ASSERT(!m_read);
+    MORDOR_ASSERT(m_fiber->state() != Fiber::TERM);
     if (len == 0)
         return 0;
     // Deconstifying, but we really do treat it as const
@@ -168,14 +170,14 @@ EFSStream::seek(long long offset, Anchor anchor)
         offset = m_pos + offset;
         anchor = BEGIN;
     }
-    ASSERT(anchor == BEGIN);
+    MORDOR_ASSERT(anchor == BEGIN);
     if (offset < 0)
         MORDOR_THROW_EXCEPTION(std::invalid_argument("negative offset"));
     m_seekTarget = offset;
     if (m_seekTarget < m_pos) {
         m_pos = -2;
         m_fiber->call();
-        ASSERT(m_fiber->state() == Fiber::TERM);
+        MORDOR_ASSERT(m_fiber->state() == Fiber::TERM);
         m_fiber->reset();
     } else if (m_seekTarget == m_pos) {
         return m_pos;
@@ -187,10 +189,10 @@ EFSStream::seek(long long offset, Anchor anchor)
 void
 EFSStream::readFiber()
 {
-    ASSERT(m_read);
+    MORDOR_ASSERT(m_read);
     DWORD dwRet = ReadEncryptedFileRaw(&EFSStream::ExportCallback, this, m_context);
     if (dwRet != ERROR_SUCCESS && dwRet != ERROR_CANCELLED)
-        THROW_EXCEPTION_FROM_ERROR_API(dwRet, "ReadEncryptedFileRaw");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(dwRet, "ReadEncryptedFileRaw");
 }
 
 DWORD WINAPI
@@ -210,7 +212,7 @@ EFSStream::ExportCallback(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLength)
             // though we don't want it.
             return ERROR_SUCCESS;
         } else if (self->m_todo == 0) {
-            ASSERT(self->m_seekTarget <= self->m_pos);
+            MORDOR_ASSERT(self->m_seekTarget <= self->m_pos);
             ULONG toAdvance =
                 (ULONG)std::min<long long>(self->m_seekTarget - self->m_pos, ulLength);
             if (toAdvance == 0) {
@@ -221,7 +223,7 @@ EFSStream::ExportCallback(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLength)
                 self->m_pos += toAdvance;
             }
         } else {
-            ASSERT(self->m_readBuffer);
+            MORDOR_ASSERT(self->m_readBuffer);
             size_t toCopy = std::min<size_t>(self->m_todo, ulLength);
             self->m_readBuffer->copyIn(pbData, toCopy);
             ulLength -= (ULONG)toCopy;
@@ -236,10 +238,10 @@ EFSStream::ExportCallback(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLength)
 void
 EFSStream::writeFiber()
 {
-    ASSERT(!m_read);
+    MORDOR_ASSERT(!m_read);
     DWORD dwRet = WriteEncryptedFileRaw(&EFSStream::ImportCallback, this, m_context);
     if (dwRet != ERROR_SUCCESS && dwRet != ERROR_CANCELLED)
-        THROW_EXCEPTION_FROM_ERROR_API(dwRet, "WriteEncryptedFileRaw");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(dwRet, "WriteEncryptedFileRaw");
 }
 
 DWORD WINAPI
@@ -254,7 +256,7 @@ EFSStream::ImportCallback(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLength
     } else {
         ULONG toCopy = (ULONG)std::min<size_t>(self->m_todo, *ulLength);
         if (toCopy > 0) {
-            ASSERT(self->m_writeBuffer);
+            MORDOR_ASSERT(self->m_writeBuffer);
             self->m_writeBuffer->copyOut(pbData, toCopy);
         }
         *ulLength = toCopy;
@@ -262,4 +264,6 @@ EFSStream::ImportCallback(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLength
         Fiber::yield();
         return ERROR_SUCCESS;
     }
+}
+
 }

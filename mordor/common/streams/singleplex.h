@@ -1,8 +1,10 @@
-#ifndef __SINGLEPLEX_STREAM_H__
-#define __SINGLEPLEX_STREAM_H__
+#ifndef __MORDOR_SINGLEPLEX_STREAM_H__
+#define __MORDOR_SINGLEPLEX_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "filter.h"
+
+namespace Mordor {
 
 class SingleplexStream : public FilterStream
 {
@@ -16,9 +18,9 @@ public:
         : FilterStream(parent, own),
           m_type(type)
     {
-        ASSERT(type == READ || type == WRITE);
-        if (type == READ) ASSERT(parent->supportsRead());
-        if (type == WRITE) ASSERT(parent->supportsWrite());
+        MORDOR_ASSERT(type == READ || type == WRITE);
+        if (type == READ) MORDOR_ASSERT(parent->supportsRead());
+        if (type == WRITE) MORDOR_ASSERT(parent->supportsWrite());
     }
 
     bool supportsRead() { return m_type == READ; }
@@ -40,17 +42,17 @@ public:
 
     size_t read(Buffer &b, size_t len)
     {
-        ASSERT(m_type == READ);
+        MORDOR_ASSERT(m_type == READ);
         return parent()->read(b, len);
     }
     size_t write(const Buffer &b, size_t len)
     {
-        ASSERT(m_type == WRITE);
+        MORDOR_ASSERT(m_type == WRITE);
         return parent()->write(b, len);
     }
     void truncate(long long size)
     {
-        ASSERT(m_type == WRITE);
+        MORDOR_ASSERT(m_type == WRITE);
         return parent()->truncate(size);
     }
     void flush()
@@ -61,22 +63,24 @@ public:
     }
     ptrdiff_t find(char delim)
     {
-        ASSERT(m_type == READ);
+        MORDOR_ASSERT(m_type == READ);
         return parent()->find(delim);
     }
     ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)
     {
-        ASSERT(m_type == READ);
+        MORDOR_ASSERT(m_type == READ);
         return parent()->find(str, sanitySize, throwIfNotFound);
     }
     void unread(const Buffer &b, size_t len)
     {
-        ASSERT(m_type == READ);
+        MORDOR_ASSERT(m_type == READ);
         return parent()->unread(b, len);
     }
 
 private:
     Type m_type;
 };
+
+}
 
 #endif

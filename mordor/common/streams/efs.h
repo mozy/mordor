@@ -1,8 +1,10 @@
-#ifndef __EFS_STREAM__
-#define __EFS_STREAM__
+#ifndef __MORDOR_EFS_STREAM__
+#define __MORDOR_EFS_STREAM__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "stream.h"
+
+namespace Mordor {
 
 class EFSStream : public Stream
 {
@@ -44,5 +46,7 @@ private:
     long long m_pos;
     long long m_seekTarget;
 };
+
+}
 
 #endif

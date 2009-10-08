@@ -1,8 +1,10 @@
-#ifndef __BUFFERED_STREAM_H__
-#define __BUFFERED_STREAM_H__
+#ifndef __MORDOR_BUFFERED_STREAM_H__
+#define __MORDOR_BUFFERED_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "filter.h"
+
+namespace Mordor {
 
 class BufferedStream : public FilterStream
 {
@@ -40,5 +42,7 @@ private:
     bool m_allowPartialReads;
     Buffer m_readBuffer, m_writeBuffer;
 };
+
+}
 
 #endif

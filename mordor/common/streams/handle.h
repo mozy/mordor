@@ -1,11 +1,13 @@
-#ifndef __HANDLE_H__
-#define __HANDLE_H__
+#ifndef __MORDOR_HANDLE_STREAM_H__
+#define __MORDOR_HANDLE_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <windows.h>
 
 #include "mordor/common/iomanager_iocp.h"
 #include "stream.h"
+
+namespace Mordor {
 
 class HandleStream : public Stream
 {
@@ -41,5 +43,7 @@ protected:
     HANDLE m_hFile;
     bool m_own;
 };
+
+}
 
 #endif

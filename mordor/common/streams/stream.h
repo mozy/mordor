@@ -1,5 +1,5 @@
-#ifndef __STREAM_H__
-#define __STREAM_H__
+#ifndef __MORDOR_STREAM_H__
+#define __MORDOR_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <string>
@@ -9,6 +9,8 @@
 
 #include "mordor/common/assert.h"
 #include "buffer.h"
+
+namespace Mordor {
 
 class Stream : boost::noncopyable
 {
@@ -40,19 +42,19 @@ public:
     virtual bool supportsUnread() { return false; }
 
     virtual void close(CloseType type = BOTH) {}
-    virtual size_t read(Buffer &b, size_t len) { NOTREACHED(); }
-    virtual size_t write(const Buffer &b, size_t len) { NOTREACHED(); }
-    virtual long long seek(long long offset, Anchor anchor) { NOTREACHED(); }
-    virtual long long size() { NOTREACHED(); }
-    virtual void truncate(long long size) { NOTREACHED(); }
+    virtual size_t read(Buffer &b, size_t len) { MORDOR_NOTREACHED(); }
+    virtual size_t write(const Buffer &b, size_t len) { MORDOR_NOTREACHED(); }
+    virtual long long seek(long long offset, Anchor anchor) { MORDOR_NOTREACHED(); }
+    virtual long long size() { MORDOR_NOTREACHED(); }
+    virtual void truncate(long long size) { MORDOR_NOTREACHED(); }
     virtual void flush() {}
     // Offset into the stream of the delimiter
     // If throwIfNotFound, instead of throwing an exception on error, it will
     // return a negative number.  Negate and subtract 1 to find out how much
     // buffered data is available before hitting the error
-    virtual ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
-    virtual ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { NOTREACHED(); }
-    virtual void unread(const Buffer &b, size_t len) { NOTREACHED(); }
+    virtual ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
+    virtual ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
+    virtual void unread(const Buffer &b, size_t len) { MORDOR_NOTREACHED(); }
 
     // Convenience functions - do *not* implement in FilterStream, so that
     // filters do not need to implement these
@@ -61,5 +63,7 @@ public:
 
     std::string getDelimited(char delim = '\n', bool eofIsDelimiter = false);
 };
+
+}
 
 #endif

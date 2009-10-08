@@ -5,15 +5,18 @@
 #include "mordor/common/uri.h"
 #include "mordor/test/test.h"
 
+using namespace Mordor;
+using namespace Mordor::Test;
+
 static void serializeAndParse(const char *uri, const char *expected = NULL)
 {
     if (!expected) expected = uri;
-    TEST_ASSERT_EQUAL(URI(uri).toString(), expected);
+    MORDOR_TEST_ASSERT_EQUAL(URI(uri).toString(), expected);
 }
 
-TEST_WITH_SUITE(URI, serializationAndParsing)
+MORDOR_UNITTEST(URI, serializationAndParsing)
 {
-    TEST_ASSERT_EQUAL(URI::Path("/a/b/c/./../../g").toString(),
+    MORDOR_TEST_ASSERT_EQUAL(URI::Path("/a/b/c/./../../g").toString(),
         "/a/b/c/./../../g");
     serializeAndParse("example://a/b/c/%7Bfoo%7D");
     serializeAndParse("eXAMPLE://a/./b/../b/%63/%7bfoo%7d", "eXAMPLE://a/./b/../b/c/%7Bfoo%7D");
@@ -93,14 +96,14 @@ TEST_WITH_SUITE(URI, serializationAndParsing)
     serializeAndParse("http:g");
 }
 
-TEST_WITH_SUITE(URI, pathNormalization)
+MORDOR_UNITTEST(URI, pathNormalization)
 {
     URI::Path p("/a/b/c/./../../g");
     p.removeDotComponents();
-    TEST_ASSERT_EQUAL(p, URI::Path("/a/g"));
+    MORDOR_TEST_ASSERT_EQUAL(p, URI::Path("/a/g"));
 }
 
-TEST_WITH_SUITE(URI, normalization)
+MORDOR_UNITTEST(URI, normalization)
 {
     URI lhs("example://a/b/c/%7Bfoo%7D");
     URI rhs("eXAMPLE://a/./b/../b/%63/%7bfoo%7d");
@@ -108,90 +111,90 @@ TEST_WITH_SUITE(URI, normalization)
     lhs.normalize();
     rhs.normalize();
 
-    TEST_ASSERT(lhs.isDefined());
-    TEST_ASSERT(rhs.isDefined());
-    TEST_ASSERT(lhs.schemeDefined());
-    TEST_ASSERT(rhs.schemeDefined());
-    TEST_ASSERT_EQUAL(lhs.scheme(), rhs.scheme());
-    TEST_ASSERT(!lhs.authority.portDefined());
-    TEST_ASSERT(!rhs.authority.portDefined());
-    TEST_ASSERT(lhs.authority.hostDefined());
-    TEST_ASSERT(rhs.authority.hostDefined());
-    TEST_ASSERT_EQUAL(lhs.authority.host(), rhs.authority.host());
-    TEST_ASSERT(!lhs.authority.userinfoDefined());
-    TEST_ASSERT(!rhs.authority.userinfoDefined());
-    TEST_ASSERT_EQUAL(lhs.authority, rhs.authority);
-    TEST_ASSERT_EQUAL(lhs.path.type, rhs.path.type);
-    TEST_ASSERT_EQUAL(lhs.path.segments, rhs.path.segments);
-    TEST_ASSERT_EQUAL(lhs.path, rhs.path);
-    TEST_ASSERT(!lhs.queryDefined());
-    TEST_ASSERT(!rhs.queryDefined());
-    TEST_ASSERT(!lhs.fragmentDefined());
-    TEST_ASSERT(!rhs.fragmentDefined());
-    TEST_ASSERT_EQUAL(lhs, rhs);
+    MORDOR_TEST_ASSERT(lhs.isDefined());
+    MORDOR_TEST_ASSERT(rhs.isDefined());
+    MORDOR_TEST_ASSERT(lhs.schemeDefined());
+    MORDOR_TEST_ASSERT(rhs.schemeDefined());
+    MORDOR_TEST_ASSERT_EQUAL(lhs.scheme(), rhs.scheme());
+    MORDOR_TEST_ASSERT(!lhs.authority.portDefined());
+    MORDOR_TEST_ASSERT(!rhs.authority.portDefined());
+    MORDOR_TEST_ASSERT(lhs.authority.hostDefined());
+    MORDOR_TEST_ASSERT(rhs.authority.hostDefined());
+    MORDOR_TEST_ASSERT_EQUAL(lhs.authority.host(), rhs.authority.host());
+    MORDOR_TEST_ASSERT(!lhs.authority.userinfoDefined());
+    MORDOR_TEST_ASSERT(!rhs.authority.userinfoDefined());
+    MORDOR_TEST_ASSERT_EQUAL(lhs.authority, rhs.authority);
+    MORDOR_TEST_ASSERT_EQUAL(lhs.path.type, rhs.path.type);
+    MORDOR_TEST_ASSERT_EQUAL(lhs.path.segments, rhs.path.segments);
+    MORDOR_TEST_ASSERT_EQUAL(lhs.path, rhs.path);
+    MORDOR_TEST_ASSERT(!lhs.queryDefined());
+    MORDOR_TEST_ASSERT(!rhs.queryDefined());
+    MORDOR_TEST_ASSERT(!lhs.fragmentDefined());
+    MORDOR_TEST_ASSERT(!rhs.fragmentDefined());
+    MORDOR_TEST_ASSERT_EQUAL(lhs, rhs);
 }
 
-TEST_WITH_SUITE(URI, transform)
+MORDOR_UNITTEST(URI, transform)
 {
     URI base("http://a/b/c/d;p?q");
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g:h")), URI("g:h"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g")), URI("http://a/b/c/g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("./g")), URI("http://a/b/c/g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g/")), URI("http://a/b/c/g/"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("/g")), URI("http://a/g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("//g")), URI("http://g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("?y")), URI("http://a/b/c/d;p?y"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y")), URI("http://a/b/c/g?y"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("#s")), URI("http://a/b/c/d;p?q#s"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g#s")), URI("http://a/b/c/g#s"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y#s")), URI("http://a/b/c/g?y#s"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI(";x")), URI("http://a/b/c/;x"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x")), URI("http://a/b/c/g;x"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x?y#s")), URI("http://a/b/c/g;x?y#s"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("")), URI("http://a/b/c/d;p?q"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI(".")), URI("http://a/b/c/"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("./")), URI("http://a/b/c/"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("..")), URI("http://a/b/"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("../")), URI("http://a/b/"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("../g")), URI("http://a/b/g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("../..")), URI("http://a/"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("../../")), URI("http://a/"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("../../g")), URI("http://a/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g:h")), URI("g:h"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g")), URI("http://a/b/c/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("./g")), URI("http://a/b/c/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g/")), URI("http://a/b/c/g/"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("/g")), URI("http://a/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("//g")), URI("http://g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("?y")), URI("http://a/b/c/d;p?y"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y")), URI("http://a/b/c/g?y"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("#s")), URI("http://a/b/c/d;p?q#s"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g#s")), URI("http://a/b/c/g#s"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y#s")), URI("http://a/b/c/g?y#s"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI(";x")), URI("http://a/b/c/;x"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x")), URI("http://a/b/c/g;x"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x?y#s")), URI("http://a/b/c/g;x?y#s"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("")), URI("http://a/b/c/d;p?q"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI(".")), URI("http://a/b/c/"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("./")), URI("http://a/b/c/"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("..")), URI("http://a/b/"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../")), URI("http://a/b/"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../g")), URI("http://a/b/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../..")), URI("http://a/"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../../")), URI("http://a/"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../../g")), URI("http://a/g"));
     
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("../../../g")), URI("http://a/g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("../../../../g")), URI("http://a/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../../../g")), URI("http://a/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../../../../g")), URI("http://a/g"));
     
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("/./g")), URI("http://a/g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("/../g")), URI("http://a/g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g.")), URI("http://a/b/c/g."));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI(".g")), URI("http://a/b/c/.g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g..")), URI("http://a/b/c/g.."));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("..g")), URI("http://a/b/c/..g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("/./g")), URI("http://a/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("/../g")), URI("http://a/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g.")), URI("http://a/b/c/g."));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI(".g")), URI("http://a/b/c/.g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g..")), URI("http://a/b/c/g.."));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("..g")), URI("http://a/b/c/..g"));
     
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("./../g")), URI("http://a/b/g"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("./g/.")), URI("http://a/b/c/g/"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g/./h")), URI("http://a/b/c/g/h"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g/../h")), URI("http://a/b/c/h"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x=1/./y")), URI("http://a/b/c/g;x=1/y"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x=1/../y")), URI("http://a/b/c/y"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("./../g")), URI("http://a/b/g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("./g/.")), URI("http://a/b/c/g/"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g/./h")), URI("http://a/b/c/g/h"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g/../h")), URI("http://a/b/c/h"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x=1/./y")), URI("http://a/b/c/g;x=1/y"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x=1/../y")), URI("http://a/b/c/y"));
     
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y/./x")), URI("http://a/b/c/g?y/./x"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y/../x")), URI("http://a/b/c/g?y/../x"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g#s/./x")), URI("http://a/b/c/g#s/./x"));
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("g#s/../x")), URI("http://a/b/c/g#s/../x"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y/./x")), URI("http://a/b/c/g?y/./x"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y/../x")), URI("http://a/b/c/g?y/../x"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g#s/./x")), URI("http://a/b/c/g#s/./x"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g#s/../x")), URI("http://a/b/c/g#s/../x"));
     
-    TEST_ASSERT_EQUAL(URI::transform(base, URI("http:g")), URI("http:g"));
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("http:g")), URI("http:g"));
 }
 
-TEST_WITH_SUITE(URI, serializeCompleteOnBlockBoundary)
+MORDOR_UNITTEST(URI, serializeCompleteOnBlockBoundary)
 {
     Buffer b("http://abc/");
     b.copyIn("more");
     URI uri(b);
-    TEST_ASSERT_EQUAL(URI(b), "http://abc/more");
+    MORDOR_TEST_ASSERT_EQUAL(URI(b), "http://abc/more");
 }
 
-TEST_WITH_SUITE(URI, bigBase64URI)
+MORDOR_UNITTEST(URI, bigBase64URI)
 {
     serializeAndParse("/partialObjects/"
         "49ZtbkNPlEEi8T+sQLb5mh9zm1DcyaaRoyHUOC9sEfaKIgLh+eKZNUrqR+j3Iybhx321iz"
@@ -210,31 +213,31 @@ TEST_WITH_SUITE(URI, bigBase64URI)
         "hzQ8bhEBzFBy6sYV6FbRY5v48No3N72yRSA9JiYPhS/YTYcUFz");
 }
 
-TEST_WITH_SUITE(URI, queryString)
+MORDOR_UNITTEST(URI, queryString)
 {
     URI uri("http://a/b?a&b");
-    TEST_ASSERT(uri.queryDefined());
-    TEST_ASSERT_EQUAL(uri.query(), "a&b");
+    MORDOR_TEST_ASSERT(uri.queryDefined());
+    MORDOR_TEST_ASSERT_EQUAL(uri.query(), "a&b");
     uri = "http://a/b?a%20b";
-    TEST_ASSERT(uri.queryDefined());
-    TEST_ASSERT_EQUAL(uri.query(), "a b");
+    MORDOR_TEST_ASSERT(uri.queryDefined());
+    MORDOR_TEST_ASSERT_EQUAL(uri.query(), "a b");
     URI::QueryString qs = uri.queryString();
 
-    TEST_ASSERT_EQUAL(qs.size(), 1u);
-    TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
-    TEST_ASSERT_EQUAL(qs.toString(), "a+b");
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a+b");
 
     qs = "a&b;c";
-    TEST_ASSERT_EQUAL(qs.size(), 3u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 3u);
     URI::QueryString::iterator it = qs.begin();
-    TEST_ASSERT_EQUAL(it->first, "a");
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "a");
     ++it;
-    TEST_ASSERT_EQUAL(it->first, "b");
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "b");
     ++it;
-    TEST_ASSERT_EQUAL(it->first, "c");
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "c");
 
     qs = "a+b";
-    TEST_ASSERT_EQUAL(qs.size(), 1u);
-    TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
-    TEST_ASSERT_EQUAL(qs.toString(), "a+b");
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a+b");
 }

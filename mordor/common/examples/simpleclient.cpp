@@ -9,6 +9,8 @@
 #include "mordor/common/iomanager.h"
 #include "mordor/common/socket.h"
 
+using namespace Mordor;
+
 int main(int argc, const char *argv[])
 {
     Config::loadFromEnvironment();

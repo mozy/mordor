@@ -1,3 +1,5 @@
+#ifndef __MORDOR_PCH_H__
+#define __MORDOR_PCH_H__
 
 #include "version.h"
 
@@ -18,7 +20,7 @@
 
 #endif
 
-#ifdef USE_PCH
+#ifdef MORDOR_USE_PCH
 
 // OS Headers
 #include <errno.h>
@@ -130,5 +132,7 @@ enum {
 #include <openssl/sha.h>
 #include <openssl/ssl.h>
 #include <zlib.h>
+
+#endif
 
 #endif

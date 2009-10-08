@@ -16,17 +16,21 @@
 #pragma comment(lib, "ssleay32")
 #endif
 
+namespace Mordor {
+
 static Logger::ptr g_log = Log::lookup("mordor:common:streams:ssl");
 
-struct SSLInitializer {
-    SSLInitializer()
+namespace {
+
+static struct Initializer {
+    Initializer()
     {
         SSL_library_init();
         SSL_load_error_strings();
     }
-};
+} g_init;
 
-static SSLInitializer g_init;
+}
 
 static bool hasOpenSSLError()
 {
@@ -57,7 +61,7 @@ static std::string getOpenSSLErrorMessage()
             os << "\n";
         os << ERR_error_string(err, buf);
     }
-    ASSERT(!os.str().empty());
+    MORDOR_ASSERT(!os.str().empty());
     return os.str();
 }
 
@@ -72,7 +76,7 @@ static void delete_nothing(SSL_CTX *) {}
 SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
 : MutatingFilterStream(parent, own)
 {
-    ASSERT(parent);
+    MORDOR_ASSERT(parent);
     ERR_clear_error();
     if (ctx)
         m_ctx.reset(ctx, &delete_nothing);
@@ -80,14 +84,14 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
         m_ctx.reset(SSL_CTX_new(client ? SSLv23_client_method() :
             SSLv23_server_method()), &SSL_CTX_free);
     if (!m_ctx) {
-        VERIFY(hasOpenSSLError());
+        MORDOR_VERIFY(hasOpenSSLError());
         MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
             << boost::errinfo_api_function("SSL_CTX_new");
     }
     SSL_CTX_set_mode(m_ctx.get(), SSL_MODE_ENABLE_PARTIAL_WRITE);
     m_ssl.reset(SSL_new(m_ctx.get()), &SSL_free);
     if (!m_ssl) {
-        VERIFY(hasOpenSSLError());
+        MORDOR_VERIFY(hasOpenSSLError());
         MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
             << boost::errinfo_api_function("SSL_CTX_new");
     }
@@ -96,7 +100,7 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
     if (!m_readBio || !m_writeBio) {
         if (m_readBio) BIO_free(m_readBio);
         if (m_writeBio) BIO_free(m_writeBio);
-        VERIFY(hasOpenSSLError());
+        MORDOR_VERIFY(hasOpenSSLError());
         MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
             << boost::errinfo_api_function("BIO_new");
     }
@@ -118,7 +122,7 @@ SSLStream::close(CloseType type)
             ERR_clear_error();
             int result = SSL_shutdown(m_ssl.get());
             int error = SSL_get_error(m_ssl.get(), result);
-            LOG_VERBOSE(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+            MORDOR_LOG_VERBOSE(g_log) << this << " SSL_shutdown(" << m_ssl.get()
                 << "): " << result << " (" << error << ")";
             switch (error) {
                 case SSL_ERROR_NONE:
@@ -129,11 +133,11 @@ SSLStream::close(CloseType type)
                 case SSL_ERROR_WANT_CONNECT:
                 case SSL_ERROR_WANT_ACCEPT:
                 case SSL_ERROR_WANT_X509_LOOKUP:
-                    NOTREACHED();
+                    MORDOR_NOTREACHED();
                 case SSL_ERROR_SYSCALL:
                     if (hasOpenSSLError()) {
                         std::string message = getOpenSSLErrorMessage();
-                        LOG_ERROR(g_log) << this << " SSL_shutdown("
+                        MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown("
                             << m_ssl.get() << "): " << result << " (" << error
                             << ", " << message << ")";
                         MORDOR_THROW_EXCEPTION(OpenSSLException(message))
@@ -141,19 +145,19 @@ SSLStream::close(CloseType type)
                     }
                     if (result == 0)
                         break;
-                    NOTREACHED();
+                    MORDOR_NOTREACHED();
                 case SSL_ERROR_SSL:
                     {
-                        VERIFY(hasOpenSSLError());
+                        MORDOR_VERIFY(hasOpenSSLError());
                         std::string message = getOpenSSLErrorMessage();
-                        LOG_ERROR(g_log) << this << " SSL_shutdown("
+                        MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown("
                             << m_ssl.get() << "): " << result << " (" << error
                             << ", " << message << ")";
                         MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                             << boost::errinfo_api_function("SSL_shutdown");
                     }
                 default:
-                    NOTREACHED();
+                    MORDOR_NOTREACHED();
             }                
             flushBuffer();
         }
@@ -170,7 +174,7 @@ SSLStream::read(Buffer &b, size_t len)
     while (true) {
         int result = SSL_read(m_ssl.get(), bufs[0].iov_base, toRead);
         int error = SSL_get_error(m_ssl.get(), result);
-        LOG_VERBOSE(g_log) << this << " SSL_read(" << m_ssl.get() << ", "
+        MORDOR_LOG_VERBOSE(g_log) << this << " SSL_read(" << m_ssl.get() << ", "
             << toRead << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -178,7 +182,7 @@ SSLStream::read(Buffer &b, size_t len)
                 return result;
             case SSL_ERROR_ZERO_RETURN:
                 // Received close_notify message
-                ASSERT(result == 0);
+                MORDOR_ASSERT(result == 0);
                 return 0;
             case SSL_ERROR_WANT_READ:
                 wantRead();
@@ -187,35 +191,35 @@ SSLStream::read(Buffer &b, size_t len)
             case SSL_ERROR_WANT_CONNECT:
             case SSL_ERROR_WANT_ACCEPT:
             case SSL_ERROR_WANT_X509_LOOKUP:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
             case SSL_ERROR_SYSCALL:
                 if (hasOpenSSLError()) {
                     std::string message = getOpenSSLErrorMessage();
-                    LOG_ERROR(g_log) << this << " SSL_read("
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_read("
                         << m_ssl.get() << ", " << toRead << "): " << result
                         << " (" << error << ", " << message << ")";
                     MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                         << boost::errinfo_api_function("SSL_read");
                 }
                 if (result == 0) {
-                    LOG_ERROR(g_log) << this << " SSL_read(" << m_ssl.get()
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_read(" << m_ssl.get()
                         << ", " << toRead << "): " << result << " ("
                         << error << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
-                NOTREACHED();
+                MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    VERIFY(hasOpenSSLError());
+                    MORDOR_VERIFY(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
-                    LOG_ERROR(g_log) << this << " SSL_read("
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_read("
                         << m_ssl.get() << ", " << toRead << "): " << result
                         << " (" << error << ", " << message << ")";
                     MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                         << boost::errinfo_api_function("SSL_read");
                 }
             default:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
         }
     }
 }
@@ -231,7 +235,7 @@ SSLStream::write(const Buffer &b, size_t len)
     while (true) {
         int result = SSL_write(m_ssl.get(), bufs[0].iov_base, toWrite);
         int error = SSL_get_error(m_ssl.get(), result);
-        LOG_VERBOSE(g_log) << this << " SSL_write(" << m_ssl.get() << ", "
+        MORDOR_LOG_VERBOSE(g_log) << this << " SSL_write(" << m_ssl.get() << ", "
             << toWrite << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -240,7 +244,7 @@ SSLStream::write(const Buffer &b, size_t len)
                 return result;
             case SSL_ERROR_ZERO_RETURN:
                 // Received close_notify message
-                ASSERT(result != 0);
+                MORDOR_ASSERT(result != 0);
                 return result;
             case SSL_ERROR_WANT_READ:
                 wantRead();
@@ -249,11 +253,11 @@ SSLStream::write(const Buffer &b, size_t len)
             case SSL_ERROR_WANT_CONNECT:
             case SSL_ERROR_WANT_ACCEPT:
             case SSL_ERROR_WANT_X509_LOOKUP:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
             case SSL_ERROR_SYSCALL:
                 if (hasOpenSSLError()) {
                         std::string message = getOpenSSLErrorMessage();
-                        LOG_ERROR(g_log) << this << " SSL_write("
+                        MORDOR_LOG_ERROR(g_log) << this << " SSL_write("
                             << m_ssl.get() << ", " << toWrite << "): "
                             << result << " (" << error << ", " << message
                             << ")";
@@ -261,24 +265,24 @@ SSLStream::write(const Buffer &b, size_t len)
                             << boost::errinfo_api_function("SSL_write");
                     }
                 if (result == 0) {
-                    LOG_ERROR(g_log) << this << " SSL_write(" << m_ssl.get()
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_write(" << m_ssl.get()
                         << ", " << toWrite << "): " << result << " ("
                         << error << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
-                NOTREACHED();
+                MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    VERIFY(hasOpenSSLError());
+                    MORDOR_VERIFY(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
-                    LOG_ERROR(g_log) << this << " SSL_write("
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_write("
                         << m_ssl.get() << ", " << toWrite << "): " << result
                         << " (" << error << ", " << message << ")";
                     MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                         << boost::errinfo_api_function("SSL_write");
                 }
             default:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
         }
     }
 }
@@ -291,7 +295,7 @@ SSLStream::flush()
         while (true) {
             int result = SSL_shutdown(m_ssl.get());
             int error = SSL_get_error(m_ssl.get(), result);
-            LOG_VERBOSE(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+            MORDOR_LOG_VERBOSE(g_log) << this << " SSL_shutdown(" << m_ssl.get()
                 << "): " << result << " (" << error << ")";
             switch (error) {
                 case SSL_ERROR_NONE:
@@ -304,34 +308,34 @@ SSLStream::flush()
                 case SSL_ERROR_WANT_CONNECT:
                 case SSL_ERROR_WANT_ACCEPT:
                 case SSL_ERROR_WANT_X509_LOOKUP:
-                    NOTREACHED();
+                    MORDOR_NOTREACHED();
                 case SSL_ERROR_SYSCALL:
                     if (hasOpenSSLError()) {
                         std::string message = getOpenSSLErrorMessage();
-                        LOG_ERROR(g_log) << this << " SSL_shutdown("
+                        MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown("
                             << m_ssl.get() << "): " << result << " (" << error
                             << ", " << message << ")";
                         MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                             << boost::errinfo_api_function("SSL_shutdown");
                     }
                     if (result == 0) {
-                        LOG_ERROR(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+                        MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown(" << m_ssl.get()
                             << "): " << result << " (" << error << ")";
                         MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                     }
-                    NOTREACHED();
+                    MORDOR_NOTREACHED();
                 case SSL_ERROR_SSL:
                     {
-                        VERIFY(hasOpenSSLError());
+                        MORDOR_VERIFY(hasOpenSSLError());
                         std::string message = getOpenSSLErrorMessage();
-                        LOG_ERROR(g_log) << this << " SSL_shutdown("
+                        MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown("
                             << m_ssl.get() << "): " << result << " (" << error
                             << ", " << message << ")";
                         MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                             << boost::errinfo_api_function("SSL_shutdown");
                     }
                 default:
-                    NOTREACHED();
+                    MORDOR_NOTREACHED();
             }
         }
     }
@@ -345,7 +349,7 @@ SSLStream::accept()
     while (true) {
         int result = SSL_accept(m_ssl.get());
         int error = SSL_get_error(m_ssl.get(), result);
-        LOG_VERBOSE(g_log) << this << " SSL_accept(" << m_ssl.get() << "): "
+        MORDOR_LOG_VERBOSE(g_log) << this << " SSL_accept(" << m_ssl.get() << "): "
             << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -360,34 +364,34 @@ SSLStream::accept()
             case SSL_ERROR_WANT_CONNECT:
             case SSL_ERROR_WANT_ACCEPT:
             case SSL_ERROR_WANT_X509_LOOKUP:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
             case SSL_ERROR_SYSCALL:
                 if (hasOpenSSLError()) {
                     std::string message = getOpenSSLErrorMessage();
-                    LOG_ERROR(g_log) << this << " SSL_accept("
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_accept("
                         << m_ssl.get() << "): " << result << " (" << error
                         << ", " << message << ")";
                     MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                         << boost::errinfo_api_function("SSL_accept");
                 }
                 if (result == 0) {
-                    LOG_ERROR(g_log) << this << " SSL_accept(" << m_ssl.get()
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_accept(" << m_ssl.get()
                         << "): " << result << " (" << error << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
-                NOTREACHED();
+                MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    VERIFY(hasOpenSSLError());
+                    MORDOR_VERIFY(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
-                    LOG_ERROR(g_log) << this << " SSL_accept("
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_accept("
                         << m_ssl.get() << "): " << result << " (" << error
                         << ", " << message << ")";
                     MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                         << boost::errinfo_api_function("SSL_accept");
                 }
             default:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
         }
     }
 }
@@ -399,7 +403,7 @@ SSLStream::connect()
     while (true) {
         int result = SSL_connect(m_ssl.get());
         int error = SSL_get_error(m_ssl.get(), result);
-        LOG_VERBOSE(g_log) << this << " SSL_connect(" << m_ssl.get() << "): "
+        MORDOR_LOG_VERBOSE(g_log) << this << " SSL_connect(" << m_ssl.get() << "): "
             << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -414,34 +418,34 @@ SSLStream::connect()
             case SSL_ERROR_WANT_CONNECT:
             case SSL_ERROR_WANT_ACCEPT:
             case SSL_ERROR_WANT_X509_LOOKUP:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
             case SSL_ERROR_SYSCALL:
                 if (hasOpenSSLError()) {
                     std::string message = getOpenSSLErrorMessage();
-                    LOG_ERROR(g_log) << this << " SSL_connect("
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_connect("
                         << m_ssl.get() << "): " << result << " (" << error
                         << ", " << message << ")";
                     MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                         << boost::errinfo_api_function("SSL_connect");
                 }
                 if (result == 0) {
-                    LOG_ERROR(g_log) << this << " SSL_connect(" << m_ssl.get()
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_connect(" << m_ssl.get()
                         << "): " << result << " (" << error << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
-                NOTREACHED();
+                MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    VERIFY(hasOpenSSLError());
+                    MORDOR_VERIFY(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
-                    LOG_ERROR(g_log) << this << " SSL_connect("
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_connect("
                         << m_ssl.get() << "): " << result << " (" << error
                         << ", " << message << ")";
                     MORDOR_THROW_EXCEPTION(OpenSSLException(message))
                         << boost::errinfo_api_function("SSL_connect");
                 }
             default:
-                NOTREACHED();
+                MORDOR_NOTREACHED();
         }
     }
 }
@@ -450,7 +454,7 @@ void
 SSLStream::verifyPeerCertificate()
 {
     long verifyResult = SSL_get_verify_result(m_ssl.get());
-    LOG_LEVEL(g_log, verifyResult ? Log::WARNING : Log::VERBOSE) << this
+    MORDOR_LOG_LEVEL(g_log, verifyResult ? Log::WARNING : Log::VERBOSE) << this
         << " SSL_get_verify_result(" << m_ssl.get() << "): "
         << verifyResult;
     if (verifyResult != X509_V_OK)
@@ -524,9 +528,9 @@ SSLStream::flushBuffer()
     char *writeBuf;
     size_t toWrite = BIO_get_mem_data(m_writeBio, &writeBuf);
     while (toWrite) {
-        LOG_VERBOSE(g_log) << this << " parent()->write(" << toWrite << ")";
+        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->write(" << toWrite << ")";
         size_t written = parent()->write(writeBuf, toWrite);
-        LOG_VERBOSE(g_log) << this << " parent()->write(" << toWrite << "): "
+        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->write(" << toWrite << "): "
             << written;
         writeBuf += written;
         toWrite -= written;
@@ -540,22 +544,24 @@ SSLStream::wantRead()
     flushBuffer();
     BUF_MEM *bm;
     BIO_get_mem_ptr(m_readBio, &bm);
-    ASSERT(bm->length == 0);
+    MORDOR_ASSERT(bm->length == 0);
     m_readBuffer.consume(bm->max);
     if (m_readBuffer.readAvailable() == 0) {
         // Maximum SSL record size
-        LOG_VERBOSE(g_log) << this << " parent()->read(16389)";
+        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(16389)";
         size_t result = parent()->read(m_readBuffer, 16384 + 5);
-        LOG_VERBOSE(g_log) << this << " parent()->read(16389): " << result;
+        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(16389): " << result;
         if (result == 0) {
             BIO_set_mem_eof_return(m_readBio, 0);
             return;
         }
     }
-    ASSERT(m_readBuffer.readAvailable());
+    MORDOR_ASSERT(m_readBuffer.readAvailable());
     std::vector<iovec> bufs = m_readBuffer.readBufs();
     bm->data = (char *)bufs[0].iov_base;
     bm->length = bm->max =
         (long)std::min<size_t>(0x7fffffff, bufs[0].iov_len);
-    LOG_VERBOSE(g_log) << this << " wantRead(): " << bm->length;
+    MORDOR_LOG_VERBOSE(g_log) << this << " wantRead(): " << bm->length;
+}
+
 }

@@ -10,6 +10,8 @@
 
 #include "mordor/common/exception.h"
 
+namespace Mordor {
+
 FDStream::FDStream()
 : m_ioManager(NULL),
   m_fd(-1),
@@ -19,7 +21,7 @@ FDStream::FDStream()
 void
 FDStream::init(int fd, bool own)
 {
-    ASSERT(fd >= 0);
+    MORDOR_ASSERT(fd >= 0);
     m_fd = fd;
     m_own = own;
 }
@@ -34,16 +36,16 @@ FDStream::init(IOManager *ioManager, int fd, bool own)
 FDStream::FDStream(int fd, bool own)
 : m_ioManager(NULL), m_fd(fd), m_own(own)
 {
-    ASSERT(m_fd >= 0);
+    MORDOR_ASSERT(m_fd >= 0);
 }
 
 FDStream::FDStream(IOManager &ioManager, int fd, bool own)
 : m_ioManager(&ioManager), m_fd(fd), m_own(own)
 {
-    ASSERT(m_fd >= 0);
+    MORDOR_ASSERT(m_fd >= 0);
     try {
         if (fcntl(m_fd, F_SETFL, O_NONBLOCK))
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
     } catch(...) {
         if (own) {
             ::close(m_fd);
@@ -64,7 +66,7 @@ FDStream::close(CloseType type)
 {
     if (type == BOTH && m_fd > 0) {
         if (::close(m_fd)) {
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("close");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("close");
         }
         m_fd = -1;
     }
@@ -73,7 +75,7 @@ FDStream::close(CloseType type)
 size_t
 FDStream::read(Buffer &b, size_t len)
 {
-    ASSERT(m_fd >= 0);
+    MORDOR_ASSERT(m_fd >= 0);
     if (len > 0xfffffffe)
         len = 0xfffffffe;
     std::vector<iovec> bufs = b.writeBufs(len);
@@ -84,7 +86,7 @@ FDStream::read(Buffer &b, size_t len)
         rc = readv(m_fd, &bufs[0], bufs.size());
     }
     if (rc < 0)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("readv");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("readv");
     b.produce(rc);
     return rc;
 }
@@ -92,7 +94,7 @@ FDStream::read(Buffer &b, size_t len)
 size_t
 FDStream::write(const Buffer &b, size_t len)
 {
-    ASSERT(m_fd >= 0);
+    MORDOR_ASSERT(m_fd >= 0);
     if (len > 0xfffffffe)
         len = 0xfffffffe;
     const std::vector<iovec> bufs = b.readBufs(len);
@@ -106,42 +108,44 @@ FDStream::write(const Buffer &b, size_t len)
         MORDOR_THROW_EXCEPTION(std::runtime_error("Zero length write"));
     }
     if (rc < 0)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("writev");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("writev");
     return rc;    
 }
 
 long long
 FDStream::seek(long long offset, Anchor anchor)
 {
-    ASSERT(m_fd >= 0);
+    MORDOR_ASSERT(m_fd >= 0);
     long long pos = lseek(m_fd, offset, (int)anchor);
     if (pos < 0)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("lseek");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("lseek");
     return pos;
 }
 
 long long
 FDStream::size()
 {
-    ASSERT(m_fd >= 0);
+    MORDOR_ASSERT(m_fd >= 0);
     struct stat statbuf;
     if (fstat(m_fd, &statbuf))
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("fstat");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fstat");
     return statbuf.st_size;
 }
 
 void
 FDStream::truncate(long long size)
 {
-    ASSERT(m_fd >= 0);
+    MORDOR_ASSERT(m_fd >= 0);
     if (ftruncate(m_fd, size))
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("ftruncate");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ftruncate");
 }
 
 void
 FDStream::flush()
 {
-    ASSERT(m_fd >= 0);
+    MORDOR_ASSERT(m_fd >= 0);
     if (fsync(m_fd))
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("fsync");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fsync");
+}
+
 }

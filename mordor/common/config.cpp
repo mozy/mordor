@@ -8,6 +8,8 @@
 
 #include "mordor/common/string.h"
 
+namespace Mordor {
+
 #ifndef WINDOWS
 extern char **environ;
 #endif
@@ -71,7 +73,9 @@ bool
 ConfigVarBase::Comparator::operator()(const ConfigVarBase::ptr &lhs,
                                       const ConfigVarBase::ptr &rhs) const
 {
-    ASSERT(lhs);
-    ASSERT(rhs);
+    MORDOR_ASSERT(lhs);
+    MORDOR_ASSERT(rhs);
     return lhs->m_name < rhs->m_name;
+}
+
 }

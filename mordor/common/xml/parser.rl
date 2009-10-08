@@ -4,6 +4,8 @@
 
 #include "mordor/common/xml/parser.h"
 
+using namespace Mordor;
+
 %%{    
     machine xml_parser;
 

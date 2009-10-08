@@ -1,10 +1,12 @@
-#ifndef __TEST_STREAM_H__
-#define __TEST_STREAM_H__
+#ifndef __MORDOR_TEST_STREAM_H__
+#define __MORDOR_TEST_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <boost/function.hpp>
 
 #include "filter.h"
+
+namespace Mordor {
 
 // This stream is for use in unit tests to force
 class TestStream : public FilterStream
@@ -47,5 +49,7 @@ private:
     boost::function<void ()> m_onRead, m_onWrite, m_onFlush;
     long long m_onReadBytes, m_onWriteBytes;
 };
+
+}
 
 #endif

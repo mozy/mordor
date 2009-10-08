@@ -6,6 +6,8 @@
 
 #include "mordor/common/exception.h"
 
+namespace Mordor {
+
 HandleStream::HandleStream()
 : m_ioManager(NULL),
   m_pos(0),
@@ -16,8 +18,8 @@ HandleStream::HandleStream()
 void
 HandleStream::init(HANDLE hFile, bool own)
 {
-    ASSERT(hFile != NULL);
-    ASSERT(hFile != INVALID_HANDLE_VALUE);
+    MORDOR_ASSERT(hFile != NULL);
+    MORDOR_ASSERT(hFile != INVALID_HANDLE_VALUE);
     m_hFile = hFile;
     m_own = own;
 }
@@ -32,15 +34,15 @@ HandleStream::init(IOManagerIOCP *ioManager, HANDLE hFile, bool own)
 HandleStream::HandleStream(HANDLE hFile, bool own)
 : m_ioManager(NULL), m_hFile(hFile), m_own(own)
 {
-    ASSERT(m_hFile != NULL);
-    ASSERT(m_hFile != INVALID_HANDLE_VALUE);
+    MORDOR_ASSERT(m_hFile != NULL);
+    MORDOR_ASSERT(m_hFile != INVALID_HANDLE_VALUE);
 }
 
 HandleStream::HandleStream(IOManagerIOCP &ioManager, HANDLE hFile, bool own)
 : m_ioManager(&ioManager), m_pos(0), m_hFile(hFile), m_own(own)
 {
-    ASSERT(m_hFile != NULL);
-    ASSERT(m_hFile != INVALID_HANDLE_VALUE);
+    MORDOR_ASSERT(m_hFile != NULL);
+    MORDOR_ASSERT(m_hFile != INVALID_HANDLE_VALUE);
     try {
         m_ioManager->registerFile(m_hFile);
     } catch(...) {
@@ -61,10 +63,10 @@ HandleStream::~HandleStream()
 void
 HandleStream::close(CloseType type)
 {
-    ASSERT(type == BOTH);
+    MORDOR_ASSERT(type == BOTH);
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
         if (!CloseHandle(m_hFile)) {
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("CloseHandle");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CloseHandle");
         }
         m_hFile = INVALID_HANDLE_VALUE;
     }
@@ -76,7 +78,7 @@ HandleStream::read(Buffer &b, size_t len)
     DWORD read;
     OVERLAPPED *overlapped = NULL;
     if (m_ioManager) {
-        ASSERT(Scheduler::getThis());
+        MORDOR_ASSERT(Scheduler::getThis());
         m_ioManager->registerEvent(&m_readEvent);
         overlapped = &m_readEvent.overlapped;
         if (supportsSeek()) {
@@ -95,14 +97,14 @@ HandleStream::read(Buffer &b, size_t len)
         }
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_readEvent);
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
         }
         Scheduler::getThis()->yieldTo();
         if (!m_readEvent.ret && m_readEvent.lastError == ERROR_HANDLE_EOF) {
             return 0;
         }
         if (!m_readEvent.ret) {
-            THROW_EXCEPTION_FROM_ERROR_API(m_readEvent.lastError, "ReadFile");
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_readEvent.lastError, "ReadFile");
         }
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
@@ -112,7 +114,7 @@ HandleStream::read(Buffer &b, size_t len)
         return m_readEvent.numberOfBytes;
     }
     if (!ret) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
     }
     b.produce(read);
     return read;
@@ -124,7 +126,7 @@ HandleStream::write(const Buffer &b, size_t len)
     DWORD written;
     OVERLAPPED *overlapped = NULL;
     if (m_ioManager) {
-        ASSERT(Scheduler::getThis());
+        MORDOR_ASSERT(Scheduler::getThis());
         m_ioManager->registerEvent(&m_writeEvent);
         overlapped = &m_writeEvent.overlapped;
         if (supportsSeek()) {
@@ -139,11 +141,11 @@ HandleStream::write(const Buffer &b, size_t len)
     if (m_ioManager) {
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_writeEvent);
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
         }
         Scheduler::getThis()->yieldTo();
         if (!m_writeEvent.ret) {
-            THROW_EXCEPTION_FROM_ERROR_API(m_writeEvent.lastError, "WriteFile");
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_writeEvent.lastError, "WriteFile");
         }
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
@@ -152,7 +154,7 @@ HandleStream::write(const Buffer &b, size_t len)
         return m_writeEvent.numberOfBytes;
     }
     if (!ret) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
     }
     return written;
 }
@@ -182,17 +184,17 @@ HandleStream::seek(long long offset, Anchor anchor)
                         return m_pos = end + offset;
                     }
                 default:
-                    ASSERT(false);
+                    MORDOR_ASSERT(false);
             }
         } else {
-            ASSERT(false);
+            MORDOR_ASSERT(false);
         }
     }
 
     long long pos;
     if (!SetFilePointerEx(m_hFile, *(LARGE_INTEGER*)&offset,
         (LARGE_INTEGER*)&pos, (DWORD)anchor)) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("SetFilePointerEx");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetFilePointerEx");
     }
     return pos;
 }
@@ -202,7 +204,7 @@ HandleStream::size()
 {
     long long size;
     if (!GetFileSizeEx(m_hFile, (LARGE_INTEGER*)&size)) {
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("GetFileSizeEx");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetFileSizeEx");
     }
     return size;
 }
@@ -216,6 +218,8 @@ HandleStream::truncate(long long size)
     DWORD lastError = GetLastError();
     seek(pos, BEGIN);
     if (!ret) {
-        THROW_EXCEPTION_FROM_ERROR_API(lastError, "SetEndOfFile");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(lastError, "SetEndOfFile");
     }
+}
+
 }

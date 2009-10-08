@@ -1,10 +1,12 @@
-#ifndef __NOTIFY_STREAM_H__
-#define __NOTIFY_STREAM_H__
+#ifndef __MORDOR_NOTIFY_STREAM_H__
+#define __MORDOR_NOTIFY_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <boost/function.hpp>
 
 #include "filter.h"
+
+namespace Mordor {
 
 class NotifyStream : public FilterStream
 {
@@ -59,5 +61,7 @@ public:
         }
     }
 };
+
+}
 
 #endif

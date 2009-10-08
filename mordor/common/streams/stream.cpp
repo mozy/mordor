@@ -6,6 +6,8 @@
 
 #include <string.h>
 
+namespace Mordor {
+
 size_t
 Stream::write(const char *sz)
 {
@@ -29,10 +31,12 @@ Stream::getDelimited(char delim, bool eofIsDelimiter)
         offset = -offset - 1;
     Buffer buf;
     size_t readResult = read(buf, offset + (eofIsDelimiter ? 0 : 1));
-    ASSERT((ptrdiff_t)readResult == offset + (eofIsDelimiter ? 0 : 1));
+    MORDOR_ASSERT((ptrdiff_t)readResult == offset + (eofIsDelimiter ? 0 : 1));
     // Don't copyOut the delimiter itself
     std::string result;
     result.resize(offset);
     buf.copyOut(const_cast<char*>(result.data()), offset);
     return result;
+}
+
 }

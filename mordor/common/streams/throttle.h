@@ -1,10 +1,12 @@
-#ifndef __THROTTLE_STREAM_H__
-#define __THROTTLE_STREAM_H__
+#ifndef __MORDOR_THROTTLE_STREAM_H__
+#define __MORDOR_THROTTLE_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <boost/function.hpp>
 
 #include "filter.h"
+
+namespace Mordor {
 
 class TimerManager;
 
@@ -40,5 +42,7 @@ private:
     unsigned long long m_read, m_written, m_readTimestamp, m_writeTimestamp;
     TimerManager *m_timerManager;
 };
+
+}
 
 #endif

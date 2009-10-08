@@ -1,11 +1,13 @@
-#ifndef __ASSERT_H__
-#define __ASSERT_H__
+#ifndef __MORDOR_ASSERT_H__
+#define __MORDOR_ASSERT_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "exception.h"
 #include "version.h"
 
-struct Assertion : virtual ExceptionBase
+namespace Mordor {
+
+struct Assertion : virtual Exception
 {
     Assertion(const std::string &expr) : m_expr(expr) {}
     ~Assertion() throw() {}
@@ -15,15 +17,17 @@ private:
     std::string m_expr;
 };
 
-#define VERIFY(x)                                                               \
-    if (!(x)) MORDOR_THROW_EXCEPTION(Assertion(# x));
+#define MORDOR_VERIFY(x)                                                               \
+    if (!(x)) MORDOR_THROW_EXCEPTION(::Mordor::Assertion(# x));
 
-#define NOTREACHED() MORDOR_THROW_EXCEPTION(Assertion("Not Reached"))
+#define MORDOR_NOTREACHED() MORDOR_THROW_EXCEPTION(::Mordor::Assertion("Not Reached"))
 
 #ifdef DEBUG
-#define ASSERT VERIFY
+#define MORDOR_ASSERT MORDOR_VERIFY
 #else
-#define ASSERT(x) {}
+#define MORDOR_ASSERT(x) {}
 #endif
+
+}
 
 #endif

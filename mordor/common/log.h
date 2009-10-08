@@ -1,5 +1,5 @@
-#ifndef __LOG_H__
-#define __LOG_H__
+#ifndef __MORDOR_LOG_H__
+#define __MORDOR_LOG_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <list>
@@ -18,6 +18,8 @@
 #ifdef WINDOWS
 #include <windows.h>
 #endif
+
+namespace Mordor {
 
 class Logger;
 class LogSink;
@@ -181,14 +183,16 @@ private:
     bool m_inheritSinks;
 };
 
-#define LOG_VERBOSE(log) (log)->verbose(__FILE__, __LINE__).os()
-#define LOG_TRACE(log) (log)->trace(__FILE__, __LINE__).os()
-#define LOG_INFO(log) (log)->info(__FILE__, __LINE__).os()
-#define LOG_WARNING(log) (log)->warning(__FILE__, __LINE__).os()
-#define LOG_ERROR(log) (log)->error(__FILE__, __LINE__).os()
-#define LOG_FATAL(log) (log)->fatal(__FILE__, __LINE__).os()
-#define LOG_LEVEL(lg, level) (lg)->log(level, __FILE__, __LINE__).os()
+#define MORDOR_LOG_VERBOSE(log) (log)->verbose(__FILE__, __LINE__).os()
+#define MORDOR_LOG_TRACE(log) (log)->trace(__FILE__, __LINE__).os()
+#define MORDOR_LOG_INFO(log) (log)->info(__FILE__, __LINE__).os()
+#define MORDOR_LOG_WARNING(log) (log)->warning(__FILE__, __LINE__).os()
+#define MORDOR_LOG_ERROR(log) (log)->error(__FILE__, __LINE__).os()
+#define MORDOR_LOG_FATAL(log) (log)->fatal(__FILE__, __LINE__).os()
+#define MORDOR_LOG_LEVEL(lg, level) (lg)->log(level, __FILE__, __LINE__).os()
 
-std::ostream &operator <<(std::ostream &os, Log::Level level);
+}
+
+std::ostream &operator <<(std::ostream &os, Mordor::Log::Level level);
 
 #endif

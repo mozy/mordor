@@ -3,6 +3,9 @@
 
 #include "test.h"
 
+namespace Mordor {
+namespace Test {
+
 class StdoutListener : public TestListener
 {
 public:
@@ -22,5 +25,7 @@ private:
     size_t m_tests;
     size_t m_success;
 };
+
+}}
 
 #endif

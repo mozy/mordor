@@ -12,6 +12,8 @@
 
 #include "assert.h"
 
+namespace Mordor {
+
 class ConfigVarBase
 {
 public:
@@ -113,10 +115,10 @@ public:
         const std::string &description = "", bool dynamic = true,
         bool automatic = false)
     {
-        ASSERT(name.find_first_not_of("abcdefghijklmnopqrstuvwxyz.") == std::string::npos);
+        MORDOR_ASSERT(name.find_first_not_of("abcdefghijklmnopqrstuvwxyz.") == std::string::npos);
 
         typename ConfigVar<T>::ptr v(new ConfigVar<T>(name, defaultValue, description, dynamic, automatic));
-        ASSERT(vars().find(v) == vars().end());
+        MORDOR_ASSERT(vars().find(v) == vars().end());
         vars().insert(v);
         return v;
     }
@@ -133,5 +135,6 @@ private:
     }
 };
 
+}
 
 #endif

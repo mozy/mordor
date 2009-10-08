@@ -4,5 +4,10 @@
 
 #include "null.h"
 
+namespace Mordor {
+
 NullStream NullStream::s_nullStream;
+
+}
+
 

@@ -18,11 +18,15 @@
 
 #include <boost/thread/mutex.hpp>
 
+namespace Mordor {
+
 #ifdef WINDOWS
 static BOOL g_useSymbols;
 
-struct SymInitializer {
-    SymInitializer()
+namespace {
+
+static struct Initializer {
+    Initializer()
     {
         SymSetOptions(SYMOPT_DEFERRED_LOADS |
             SYMOPT_FAIL_CRITICAL_ERRORS |
@@ -31,14 +35,14 @@ struct SymInitializer {
         g_useSymbols = SymInitialize(GetCurrentProcess(), NULL, TRUE);
     }
 
-    ~SymInitializer()
+    ~Initializer()
     {
         if (g_useSymbols)
             SymCleanup(GetCurrentProcess());
     }
-};
+} g_init;
 
-static SymInitializer g_init;
+}
 #endif
 
 std::string to_string( errinfo_backtrace const &bt )
@@ -300,3 +304,5 @@ void throwExceptionFromLastError(error_t error)
     }
 }
 #endif
+
+}

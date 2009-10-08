@@ -1,11 +1,13 @@
-#ifndef __RAGEL_H__
-#define __RAGEL_H__
+#ifndef __MORDOR_RAGEL_H__
+#define __MORDOR_RAGEL_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <stdexcept>
 #include <string>
 
 #include "mordor/common/streams/stream.h"
+
+namespace Mordor {
 
 class RagelParser
 {
@@ -49,5 +51,7 @@ protected:
     std::vector<int> stack;
     size_t top;
 };
+
+}
 
 #endif

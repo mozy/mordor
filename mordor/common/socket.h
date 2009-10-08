@@ -1,5 +1,5 @@
-#ifndef __SOCKET_H__
-#define __SOCKET_H__
+#ifndef __MORDOR_SOCKET_H__
+#define __MORDOR_SOCKET_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <vector>
@@ -9,6 +9,8 @@
 
 #include "iomanager.h"
 #include "version.h"
+
+namespace Mordor {
 
 #ifdef WINDOWS
 #include <ws2tcpip.h>
@@ -205,6 +207,8 @@ private:
     sockaddr sa;
 };
 
-std::ostream &operator <<(std::ostream &os, const Address &addr);
+std::ostream &operator <<(std::ostream &os, const Mordor::Address &addr);
+
+}
 
 #endif

@@ -1,10 +1,14 @@
-#ifndef __SLEEP_H__
-#define __SLEEP_H__
+#ifndef __MORDOR_SLEEP_H__
+#define __MORDOR_SLEEP_H__
 // Copyright (c) 2009 - Decho Corp.
+
+namespace Mordor {
 
 class TimerManager;
 
 void sleep(TimerManager &timerManager, unsigned long long us);
 void sleep(unsigned long long us);
+
+}
 
 #endif

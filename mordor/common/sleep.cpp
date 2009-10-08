@@ -10,6 +10,8 @@
 #include "scheduler.h"
 #include "timer.h"
 
+namespace Mordor {
+
 static void scheduleMe(Scheduler *scheduler, Fiber::ptr fiber)
 {
     scheduler->schedule(fiber);
@@ -18,8 +20,8 @@ static void scheduleMe(Scheduler *scheduler, Fiber::ptr fiber)
 void
 sleep(TimerManager &timerManager, unsigned long long us)
 {
-    ASSERT(Scheduler::getThis());
-    ASSERT(Fiber::getThis());
+    MORDOR_ASSERT(Scheduler::getThis());
+    MORDOR_ASSERT(Fiber::getThis());
     timerManager.registerTimer(us,
         boost::bind(&scheduleMe, Scheduler::getThis(), Fiber::getThis()));
     Scheduler::getThis()->yieldTo();
@@ -38,9 +40,11 @@ sleep(unsigned long long us)
         if (nanosleep(&ts, &ts) == -1) {
             if (errno == EINTR)
                 continue;
-            THROW_EXCEPTION_FROM_LAST_ERROR_API("nanosleep");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("nanosleep");
         }
         break;
     }
 #endif
+}
+
 }

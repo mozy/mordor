@@ -18,6 +18,8 @@
 #pragma comment(lib, "libeay32")
 #endif
 
+namespace Mordor {
+
 std::string
 base64decode(const std::string &src)
 {
@@ -56,11 +58,11 @@ base64decode(const std::string &src)
             packed = (packed << 6) | val;
         }
         if (i != 4)
-            ASSERT(false);
+            MORDOR_ASSERT(false);
         if (padding > 0 && ptr != end)
-            ASSERT(false);
+            MORDOR_ASSERT(false);
         if (padding > 2)
-            ASSERT(false);
+            MORDOR_ASSERT(false);
 
         *writeBuf++ = (char)((packed >> 16) & 0xff);
         if(padding != 2)
@@ -222,9 +224,10 @@ hmacSha1(const std::string &text, std::string key)
 }
 
 void
-hexstringFromData(const void *data, size_t len, char *hex)
+hexstringFromData(const void *data, size_t len, void *output)
 {
     const unsigned char *buf = (const unsigned char *)data;
+    char *hex = (char *)output;
     size_t i, j;
     for (i = j = 0; i < len; ++i) {
         char c;
@@ -241,9 +244,11 @@ hexstringFromData(const void *data, size_t len, char *hex)
 std::string
 hexstringFromData(const void *data, size_t len)
 {
+    if (len == 0)
+        return "";
     std::string result;
     result.resize(len * 2);
-    hexstringFromData(data, len, (char *)result.data());
+    hexstringFromData(data, len, &result[0]);
     return result;
 }
 
@@ -260,7 +265,7 @@ replace(std::string &str, char find, char replaceWith)
 std::vector<std::string>
 split(const std::string &str, char delim, size_t max)
 {
-    ASSERT(max > 1);
+    MORDOR_ASSERT(max > 1);
 	std::vector<std::string> result;
 
 	size_t last = 0;
@@ -279,7 +284,7 @@ split(const std::string &str, char delim, size_t max)
 std::vector<std::string>
 split(const std::string &str, const char *delims, size_t max)
 {
-    ASSERT(max > 1);
+    MORDOR_ASSERT(max > 1);
 	std::vector<std::string> result;
 
 	size_t last = 0;
@@ -296,55 +301,59 @@ split(const std::string &str, const char *delims, size_t max)
 }
 
 #ifdef WINDOWS
-std::string toUtf8(const wchar_t *str, size_t len)
+std::string
+toUtf8(const wchar_t *str, size_t len)
 {
     if (len == (size_t)~0)
         len = wcslen(str);
-    ASSERT(len < 0x80000000u);
+    MORDOR_ASSERT(len < 0x80000000u);
     std::string result;
     if (len == 0)
         return result;
     int ret = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str, (int)len, NULL, 0, NULL, NULL);
     if (ret == 0)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("WideCharToMultiByte");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WideCharToMultiByte");
     result.resize(ret);
     ret = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str, (int)len, &result[0], ret, NULL, NULL);
     if (ret == 0)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("WideCharToMultiByte");
-    ASSERT(ret == result.size());
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WideCharToMultiByte");
+    MORDOR_ASSERT(ret == result.size());
 
     return result;
 }
 
-std::string toUtf8(const std::wstring &str)
+std::string
+toUtf8(const std::wstring &str)
 {
-    ASSERT(str.size() < 0x80000000u);
+    MORDOR_ASSERT(str.size() < 0x80000000u);
     return toUtf8(str.c_str(), str.size());
 }
 
-std::wstring toUtf16(const char *str, size_t len)
+std::wstring
+toUtf16(const char *str, size_t len)
 {
     if (len == (size_t)~0)
         len = strlen(str);
-    ASSERT(len < 0x80000000u);
+    MORDOR_ASSERT(len < 0x80000000u);
     std::wstring result;
     if (len == 0)
         return result;
     int ret = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str, (int)len, NULL, 0);
     if (ret == 0)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("MultiByteToWideChar");
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("MultiByteToWideChar");
     result.resize(ret);
     ret = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str, (int)len, &result[0], ret);
     if (ret == 0)
-        THROW_EXCEPTION_FROM_LAST_ERROR_API("MultiByteToWideChar");
-    ASSERT(ret == result.size());
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("MultiByteToWideChar");
+    MORDOR_ASSERT(ret == result.size());
 
     return result;
 }
 
-std::wstring toUtf16(const std::string &str)
+std::wstring
+toUtf16(const std::string &str)
 {
-    ASSERT(str.size() < 0x80000000u);
+    MORDOR_ASSERT(str.size() < 0x80000000u);
     return toUtf16(str.c_str(), str.size());
 }
 #endif
@@ -361,4 +370,6 @@ std::ostream &operator <<(std::ostream &os, const charslice &slice)
         os.put(slice.m_slice[i]);
     }
     return os;
+}
+
 }

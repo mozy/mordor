@@ -1,10 +1,12 @@
-#ifndef __XML_PARSER_H__
-#define __XML_PARSER_H__
+#ifndef __MORDOR_XML_PARSER_H__
+#define __MORDOR_XML_PARSER_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <boost/function.hpp>
 
 #include "mordor/common/ragel.h"
+
+namespace Mordor {
 
 class XMLParser : public RagelParserWithStack
 {
@@ -33,5 +35,7 @@ private:
     boost::function<void (const std::string &)> m_startTag, m_endTag,
         m_attribName, m_attribValue, m_innerText;
 };
+
+}
 
 #endif

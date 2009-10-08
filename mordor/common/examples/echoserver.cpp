@@ -11,6 +11,8 @@
 #include "mordor/common/streams/socket.h"
 #include "mordor/common/streams/transfer.h"
 
+using namespace Mordor;
+
 void socketConnection(Socket::ptr s)
 {
     unsigned char buf[4096];

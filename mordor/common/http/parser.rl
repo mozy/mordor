@@ -10,26 +10,30 @@
 
 #include "mordor/common/version.h"
 
+namespace Mordor {
+
 // From uri.rl
 std::string unescape(const std::string& str, bool spaceAsPlus = false);
 
+namespace HTTP {
+
 static
-HTTP::Version
+Version
 parseVersion(const char *str)
 {
-    HTTP::Version ver;
+    Version ver;
     ver.major = atoi(str + 5);
     ver.minor = atoi(strchr(str + 5, '.') + 1);
     return ver;
 }
 
 static
-HTTP::Method
+Method
 parseMethod(const char *str, const char *end)
 {
     for(size_t i = 0; i < 8; ++i) {
-        if (strnicmp(str, HTTP::methods[i], end - str) == 0) {
-            return (HTTP::Method)i;
+        if (strnicmp(str, methods[i], end - str) == 0) {
+            return (Method)i;
         }
     }
     throw std::invalid_argument("Unrecognized method");
@@ -61,7 +65,7 @@ parseHttpDate(const char *str, size_t size)
     ATTEMPT_WITH_FACET(&rfc1123Facet_in);
     ATTEMPT_WITH_FACET(&rfc850Facet_in);
     ATTEMPT_WITH_FACET(&ansiFacet_in);
-    NOTREACHED();
+    MORDOR_NOTREACHED();
 }
 
 static
@@ -94,11 +98,11 @@ unfold(char *p, char *pe)
 }
 
 std::string
-HTTP::unquote(const char *str, size_t size)
+unquote(const char *str, size_t size)
 {
     if (size == 0 || (str[0] != '"' && str[0] != '('))
         return std::string(str, size);
-    ASSERT((str[size - 1] == '"' && str[0] == '"') ||
+    MORDOR_ASSERT((str[size - 1] == '"' && str[0] == '"') ||
            (str[size - 1] == ')' && str[0] == '('));
     std::string result(str + 1, size - 2);
     char *p = const_cast<char *>(result.c_str());
@@ -124,7 +128,7 @@ HTTP::unquote(const char *str, size_t size)
 }
 
 std::string
-HTTP::unquote(const std::string &str)
+unquote(const std::string &str)
 {
     if (str.empty() || (str[0] != '"' && str[0] != '('))
         return str;
@@ -174,7 +178,7 @@ HTTP::unquote(const std::string &str)
     base64 = (base64char{4})+ ( (base64char{3} '=') | (base64char{2} '==') )?;
 
     action parse_HTTP_Version {
-        ASSERT(m_ver);
+        MORDOR_ASSERT(m_ver);
         *m_ver = parseVersion(mark);
         mark = NULL;
     }
@@ -182,7 +186,7 @@ HTTP::unquote(const std::string &str)
     HTTP_Version = ("HTTP/" DIGIT+ "." DIGIT+) >mark %parse_HTTP_Version;
 
     action save_date {
-        ASSERT(m_date);
+        MORDOR_ASSERT(m_date);
         *m_date = parseHttpDate(mark, fpc - mark);
         mark = NULL;                
     }
@@ -210,13 +214,13 @@ HTTP::unquote(const std::string &str)
         mark = NULL;
     }
     action save_product {
-        ASSERT(m_productAndCommentList);
+        MORDOR_ASSERT(m_productAndCommentList);
         m_productAndCommentList->push_back(m_product);
         m_product = Product();
     }
     action save_comment {
-		ASSERT(m_productAndCommentList);
-        m_productAndCommentList->push_back(HTTP::unquote(mark, fpc - mark));
+		MORDOR_ASSERT(m_productAndCommentList);
+        m_productAndCommentList->push_back(unquote(mark, fpc - mark));
         mark = NULL;
     }
 
@@ -232,16 +236,16 @@ HTTP::unquote(const std::string &str)
     language_tag = primary_tag ("-" subtag);
 
     action start_etag {
-        ASSERT(m_eTag);
+        MORDOR_ASSERT(m_eTag);
         m_eTag->weak = false;
     }
     action save_weak {
-        ASSERT(m_eTag);
+        MORDOR_ASSERT(m_eTag);
         m_eTag->unspecified = false;
         m_eTag->weak = true;
     }
     action save_etag {
-        ASSERT(m_eTag);
+        MORDOR_ASSERT(m_eTag);
         m_eTag->unspecified = false;
         m_eTag->value = unquote(mark, fpc - mark);
     }
@@ -249,12 +253,12 @@ HTTP::unquote(const std::string &str)
         m_eTag = &m_tempETag;
     }
     action save_unspecified {
-        ASSERT(m_eTagSet);
+        MORDOR_ASSERT(m_eTagSet);
         m_eTagSet->insert(ETag());
     }
     action save_etag_element {
-        ASSERT(m_eTagSet);
-        ASSERT(m_eTag == & m_tempETag);
+        MORDOR_ASSERT(m_eTagSet);
+        MORDOR_ASSERT(m_eTag == & m_tempETag);
         m_eTagSet->insert(m_tempETag);
     }
     
@@ -300,7 +304,7 @@ HTTP::unquote(const std::string &str)
     }
     
     action save_element {
-        ASSERT(m_list || m_set);
+        MORDOR_ASSERT(m_list || m_set);
         if (m_list)
             m_list->push_back(std::string(mark, fpc - mark));
         else
@@ -491,7 +495,7 @@ HTTP::unquote(const std::string &str)
             m_acceptList->push_back(av);
             mark = NULL;
         } else {
-            ASSERT(m_acceptListWithParams);
+            MORDOR_ASSERT(m_acceptListWithParams);
 		    AcceptValueWithParameters avp;
 		    avp.value = std::string(mark, fpc - mark);
 		    m_acceptListWithParams->push_back(avp);
@@ -505,7 +509,7 @@ HTTP::unquote(const std::string &str)
         if (m_acceptList) {
             qvalue = &m_acceptList->back().qvalue;
         } else {
-            ASSERT(m_acceptListWithParams);
+            MORDOR_ASSERT(m_acceptListWithParams);
             qvalue = &m_acceptListWithParams->back().qvalue;
         }
         *qvalue = 0;
@@ -688,7 +692,7 @@ HTTP::unquote(const std::string &str)
 }%%
 
 void
-HTTP::HTTPParser::init()
+Parser::init()
 {
     m_string = NULL;
     m_set = NULL;
@@ -706,7 +710,7 @@ HTTP::HTTPParser::init()
     RagelParser::init();
 }
 
-HTTP::RequestParser::RequestParser(Request& request)
+RequestParser::RequestParser(Request& request)
 : m_request(&request),
   m_ver(&request.requestLine.ver),
   m_path(&request.requestLine.uri.path),
@@ -715,26 +719,26 @@ HTTP::RequestParser::RequestParser(Request& request)
 {}
 
 void
-HTTP::RequestParser::init()
+RequestParser::init()
 {
-    HTTPParser::init();
+    Parser::init();
     %% write init;
 }
 
 bool
-HTTP::RequestParser::final() const
+RequestParser::final() const
 {
     return cs >= http_request_parser_first_final;
 }
 
 bool
-HTTP::RequestParser::error() const
+RequestParser::error() const
 {
     return cs == http_request_parser_error;
 }
 
 void
-HTTP::RequestParser::exec()
+RequestParser::exec()
 {
 #ifdef MSVC
 #pragma warning(push)
@@ -752,7 +756,7 @@ HTTP::RequestParser::exec()
     include uri_parser "../uri.rl";
     
     action parse_Status_Code {
-        m_response->status.status = (HTTP::Status)atoi(mark);
+        m_response->status.status = (Status)atoi(mark);
         mark = NULL;
     }
 
@@ -813,7 +817,7 @@ HTTP::RequestParser::exec()
     write data;
 }%%
 
-HTTP::ResponseParser::ResponseParser(Response& response)
+ResponseParser::ResponseParser(Response& response)
 : m_response(&response),
   m_ver(&response.status.ver),
   m_uri(&response.response.location),
@@ -823,26 +827,26 @@ HTTP::ResponseParser::ResponseParser(Response& response)
 {}
 
 void
-HTTP::ResponseParser::init()
+ResponseParser::init()
 {
-    HTTPParser::init();
+    Parser::init();
     %% write init;
 }
 
 bool
-HTTP::ResponseParser::final() const
+ResponseParser::final() const
 {
     return cs >= http_response_parser_first_final;
 }
 
 bool
-HTTP::ResponseParser::error() const
+ResponseParser::error() const
 {
     return cs == http_response_parser_error;
 }
 
 void
-HTTP::ResponseParser::exec()
+ResponseParser::exec()
 {
 #ifdef MSVC
 #pragma warning(push)
@@ -867,31 +871,31 @@ HTTP::ResponseParser::exec()
     write data;
 }%%
 
-HTTP::TrailerParser::TrailerParser(EntityHeaders& entity)
+TrailerParser::TrailerParser(EntityHeaders& entity)
 : m_entity(&entity)
 {}
 
 void
-HTTP::TrailerParser::init()
+TrailerParser::init()
 {
-    HTTPParser::init();
+    Parser::init();
     %% write init;
 }
 
 bool
-HTTP::TrailerParser::final() const
+TrailerParser::final() const
 {
     return cs >= http_trailer_parser_first_final;
 }
 
 bool
-HTTP::TrailerParser::error() const
+TrailerParser::error() const
 {
     return cs == http_trailer_parser_error;
 }
 
 void
-HTTP::TrailerParser::exec()
+TrailerParser::exec()
 {
 #ifdef MSVC
 #pragma warning(push)
@@ -913,32 +917,32 @@ HTTP::TrailerParser::exec()
     write data;
 }%%
 
-HTTP::ListParser::ListParser(StringSet& stringSet)
+ListParser::ListParser(StringSet& stringSet)
 : m_set(&stringSet),
   m_list(NULL)
 {}
 
 void
-HTTP::ListParser::init()
+ListParser::init()
 {
     RagelParser::init();
     %% write init;
 }
 
 bool
-HTTP::ListParser::final() const
+ListParser::final() const
 {
     return cs >= http_list_parser_first_final;
 }
 
 bool
-HTTP::ListParser::error() const
+ListParser::error() const
 {
     return cs == http_list_parser_error;
 }
 
 void
-HTTP::ListParser::exec()
+ListParser::exec()
 {
 #ifdef MSVC
 #pragma warning(push)
@@ -949,3 +953,5 @@ HTTP::ListParser::exec()
 #pragma warning(pop)
 #endif
 }
+
+}}

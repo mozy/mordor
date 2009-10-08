@@ -9,6 +9,9 @@
 #include "mordor/test/test.h"
 #include "mordor/test/stdoutlistener.h"
 
+using namespace Mordor;
+using namespace Mordor::Test;
+
 #ifdef WINDOWS
 #include <direct.h>
 #define chdir _chdir

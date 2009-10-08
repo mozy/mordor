@@ -1,5 +1,5 @@
-#ifndef __IOMANAGER_EPOLL_H__
-#define __IOMANAGER_EPOLL_H__
+#ifndef __MORDOR_IOMANAGER_EPOLL_H__
+#define __MORDOR_IOMANAGER_EPOLL_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include <sys/epoll.h>
@@ -11,6 +11,8 @@
 #ifndef LINUX
 #error IOManagerEPoll is Linux only
 #endif
+
+namespace Mordor {
 
 class IOManagerEPoll : public Scheduler, public TimerManager
 {
@@ -50,5 +52,7 @@ private:
     std::map<int, AsyncEvent> m_pendingEvents;
     boost::mutex m_mutex;
 };
+
+}
 
 #endif

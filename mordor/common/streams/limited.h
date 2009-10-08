@@ -1,8 +1,10 @@
-#ifndef __LIMITED_STREAM_H__
-#define __LIMITED_STREAM_H__
+#ifndef __MORDOR_LIMITED_STREAM_H__
+#define __MORDOR_LIMITED_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
 #include "filter.h"
+
+namespace Mordor {
 
 class LimitedStream : public MutatingFilterStream
 {
@@ -16,11 +18,13 @@ public:
     size_t write(const Buffer &b, size_t len);
     long long seek(long long offset, Anchor anchor);
     long long size();
-    void truncate(long long size) { NOTREACHED(); }
+    void truncate(long long size) { MORDOR_NOTREACHED(); }
     void unread(const Buffer &b, size_t len);
 
 private:
     long long m_pos, m_size;
 };
+
+}
 
 #endif

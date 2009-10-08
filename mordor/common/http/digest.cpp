@@ -8,12 +8,15 @@
 #include "mordor/common/timer.h"
 #include "parser.h"
 
+namespace Mordor {
+namespace HTTP {
+
 void
-HTTP::DigestAuth::authorize(const Response &challenge, Request &nextRequest,
-                            const std::string &username,
-                            const std::string &password)
+DigestAuth::authorize(const Response &challenge, Request &nextRequest,
+                      const std::string &username,
+                      const std::string &password)
 {
-    ASSERT(challenge.status.status == UNAUTHORIZED ||
+    MORDOR_ASSERT(challenge.status.status == UNAUTHORIZED ||
         challenge.status.status == PROXY_AUTHENTICATION_REQUIRED);
     bool proxy = challenge.status.status == PROXY_AUTHENTICATION_REQUIRED;
     const ChallengeList &authenticate = proxy ?
@@ -31,7 +34,7 @@ HTTP::DigestAuth::authorize(const Response &challenge, Request &nextRequest,
             break;
         }
     }
-    ASSERT(params);
+    MORDOR_ASSERT(params);
 
     std::string realm, qop, nonce, opaque, algorithm;
     StringMap::const_iterator it;
@@ -99,3 +102,5 @@ HTTP::DigestAuth::authorize(const Response &challenge, Request &nextRequest,
     if (!opaque.empty())
         authorization.parameters["opaque"] = opaque;
 }
+
+}}

@@ -9,18 +9,21 @@
 #include "mordor/common/socket.h"
 #include "mordor/test/test.h"
 
-SUITE_INVARIANT(Socket)
+using namespace Mordor;
+using namespace Mordor::Test;
+
+MORDOR_SUITE_INVARIANT(Socket)
 {
-    TEST_ASSERT(!Fiber::getThis());
-    TEST_ASSERT(!Scheduler::getThis());
+    MORDOR_TEST_ASSERT(!Fiber::getThis());
+    MORDOR_TEST_ASSERT(!Scheduler::getThis());
 }
 
-TEST_WITH_SUITE(Socket, acceptTimeout)
+MORDOR_UNITTEST(Socket, acceptTimeout)
 {
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
-    TEST_ASSERT(!addresses.empty());
+    MORDOR_TEST_ASSERT(!addresses.empty());
     // TODO: random port
     Socket::ptr listen = addresses.front()->createSocket(ioManager);
     listen->receiveTimeout(1000000);
@@ -29,16 +32,16 @@ TEST_WITH_SUITE(Socket, acceptTimeout)
     listen->bind(addresses.front());
     listen->listen();
     unsigned long long start = TimerManager::now();
-    TEST_ASSERT_EXCEPTION(listen->accept(), TimedOutException);
-    TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
+    MORDOR_TEST_ASSERT_EXCEPTION(listen->accept(), TimedOutException);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
 }
 
-TEST_WITH_SUITE(Socket, receiveTimeout)
+MORDOR_UNITTEST(Socket, receiveTimeout)
 {
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
-    TEST_ASSERT(!addresses.empty());
+    MORDOR_TEST_ASSERT(!addresses.empty());
     // TODO: random port
     Socket::ptr listen = addresses.front()->createSocket(ioManager);
     unsigned int opt = 1;
@@ -50,8 +53,8 @@ TEST_WITH_SUITE(Socket, receiveTimeout)
     connect->connect(addresses.front());
     char buf;
     unsigned long long start = TimerManager::now();
-    TEST_ASSERT_EXCEPTION(connect->receive(&buf, 1), TimedOutException);
-    TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
+    MORDOR_TEST_ASSERT_EXCEPTION(connect->receive(&buf, 1), TimedOutException);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
 }
 
 class DummyException
@@ -63,7 +66,7 @@ static void testShutdownException(bool send, bool shutdown, bool otherEnd)
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
-    TEST_ASSERT(!addresses.empty());
+    MORDOR_TEST_ASSERT(!addresses.empty());
     // TODO: random port
     Socket::ptr listen = addresses.front()->createSocket(ioManager);
     unsigned int opt = 1;
@@ -85,52 +88,52 @@ static void testShutdownException(bool send, bool shutdown, bool otherEnd)
             try {
                 connect->sendTimeout(100);
                 while (true) {
-                    TEST_ASSERT_EQUAL(connect->send("abc", 3), 3u);
+                    MORDOR_TEST_ASSERT_EQUAL(connect->send("abc", 3), 3u);
                 }
             } catch (Exception) {
             }
         } else {
-            TEST_ASSERT_EXCEPTION(connect->send("abc", 3), Exception);
+            MORDOR_TEST_ASSERT_EXCEPTION(connect->send("abc", 3), Exception);
         }
     } else {
         unsigned char readBuf[3];
         if (otherEnd) {
-            TEST_ASSERT_EQUAL(connect->receive(readBuf, 3), 0u);
+            MORDOR_TEST_ASSERT_EQUAL(connect->receive(readBuf, 3), 0u);
         } else {
 #ifndef WINDOWS
             // Silly non-Windows letting you receive after you told it no more
             if (shutdown) {
-                TEST_ASSERT_EQUAL(connect->receive(readBuf, 3), 0u);
+                MORDOR_TEST_ASSERT_EQUAL(connect->receive(readBuf, 3), 0u);
             } else
 #endif
             {
-                TEST_ASSERT_EXCEPTION(connect->receive(readBuf, 3), Exception);
+                MORDOR_TEST_ASSERT_EXCEPTION(connect->receive(readBuf, 3), Exception);
             }
         }
     }
 }
 
-TEST_WITH_SUITE(Socket, sendAfterClose)
+MORDOR_UNITTEST(Socket, sendAfterClose)
 {
     testShutdownException<BadHandleException>(true, false, false);
 }
 
-TEST_WITH_SUITE(Socket, receiveAfterClose)
+MORDOR_UNITTEST(Socket, receiveAfterClose)
 {
     testShutdownException<BadHandleException>(false, false, false);
 }
 
-TEST_WITH_SUITE(Socket, sendAfterShutdown)
+MORDOR_UNITTEST(Socket, sendAfterShutdown)
 {
     testShutdownException<BrokenPipeException>(true, true, false);
 }
 
-TEST_WITH_SUITE(Socket, receiveAfterShutdown)
+MORDOR_UNITTEST(Socket, receiveAfterShutdown)
 {
     testShutdownException<BrokenPipeException>(false, true, false);
 }
 
-TEST_WITH_SUITE(Socket, sendAfterCloseOtherEnd)
+MORDOR_UNITTEST(Socket, sendAfterCloseOtherEnd)
 {
 #ifdef WINDOWS
     testShutdownException<ConnectionAbortedException>(true, false, true);
@@ -143,13 +146,13 @@ TEST_WITH_SUITE(Socket, sendAfterCloseOtherEnd)
 #endif
 }
 
-TEST_WITH_SUITE(Socket, receiveAfterCloseOtherEnd)
+MORDOR_UNITTEST(Socket, receiveAfterCloseOtherEnd)
 {
     // Exception is not used; this is special cased in testShutdownException
     testShutdownException<DummyException>(false, false, true);
 }
 
-TEST_WITH_SUITE(Socket, sendAfterShutdownOtherEnd)
+MORDOR_UNITTEST(Socket, sendAfterShutdownOtherEnd)
 {
 #ifdef WINDOWS
     testShutdownException<ConnectionAbortedException>(true, false, true);
@@ -162,7 +165,7 @@ TEST_WITH_SUITE(Socket, sendAfterShutdownOtherEnd)
 #endif
 }
 
-TEST_WITH_SUITE(Socket, receiveAfterShutdownOtherEnd)
+MORDOR_UNITTEST(Socket, receiveAfterShutdownOtherEnd)
 {
     // Exception is not used; this is special cased in testShutdownException
     testShutdownException<DummyException>(false, true, true);
@@ -175,10 +178,10 @@ static void testAddress(const char *addr, const char *expected = NULL)
     std::ostringstream os;
     std::vector<Address::ptr> address = Address::lookup(addr);
     os << *address.front();
-    TEST_ASSERT_EQUAL(os.str(), expected);
+    MORDOR_TEST_ASSERT_EQUAL(os.str(), expected);
 }
 
-TEST_WITH_SUITE(Address, formatAddresses)
+MORDOR_UNITTEST(Address, formatAddresses)
 {
     testAddress("127.0.0.1", "127.0.0.1:0");
     testAddress("127.0.0.1:80");
@@ -195,12 +198,12 @@ static void cancelMe(Socket::ptr sock)
     sock->cancelAccept();
 }
 
-TEST_WITH_SUITE(Socket, cancelAccept)
+MORDOR_UNITTEST(Socket, cancelAccept)
 {
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
-    TEST_ASSERT(!addresses.empty());
+    MORDOR_TEST_ASSERT(!addresses.empty());
     // TODO: random port
     Socket::ptr listen = addresses.front()->createSocket(ioManager);
     unsigned int opt = 1;
@@ -210,5 +213,5 @@ TEST_WITH_SUITE(Socket, cancelAccept)
 
     // cancelMe will get run when this fiber yields because it would block
     ioManager.schedule(Fiber::ptr(new Fiber(boost::bind(&cancelMe, listen))));
-    TEST_ASSERT_EXCEPTION(listen->accept(), OperationAbortedException);
+    MORDOR_TEST_ASSERT_EXCEPTION(listen->accept(), OperationAbortedException);
 }

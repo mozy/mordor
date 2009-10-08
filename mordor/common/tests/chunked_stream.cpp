@@ -6,90 +6,93 @@
 #include "mordor/common/streams/memory.h"
 #include "mordor/test/test.h"
 
-TEST_WITH_SUITE(ChunkedStream, readEmpty)
+using namespace Mordor;
+using namespace Mordor::Test;
+
+MORDOR_UNITTEST(ChunkedStream, readEmpty)
 {
     Stream::ptr baseStream(new MemoryStream(Buffer("0\r\n")));
     Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
 
-    TEST_ASSERT(chunkedStream->supportsRead());
-    TEST_ASSERT(chunkedStream->supportsWrite());
-    TEST_ASSERT(!chunkedStream->supportsSeek());
-    TEST_ASSERT(!chunkedStream->supportsSize());
-    TEST_ASSERT(!chunkedStream->supportsTruncate());
-    TEST_ASSERT(!chunkedStream->supportsFind());
-    TEST_ASSERT(!chunkedStream->supportsUnread());
+    MORDOR_TEST_ASSERT(chunkedStream->supportsRead());
+    MORDOR_TEST_ASSERT(chunkedStream->supportsWrite());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsSeek());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsSize());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsTruncate());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsFind());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsUnread());
 
     Buffer output;
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 10), 0u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 3);
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 10), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 3);
 }
 
-TEST_WITH_SUITE(ChunkedStream, readSome)
+MORDOR_UNITTEST(ChunkedStream, readSome)
 {
     Stream::ptr baseStream(new MemoryStream(Buffer("a\r\nhelloworld\r\n0\r\n")));
     Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
 
     Buffer output;
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
-    TEST_ASSERT(output == "helloworld");
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
+    MORDOR_TEST_ASSERT(output == "helloworld");
 
     output.clear();
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
 
     output.clear();
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
 }
 
-TEST_WITH_SUITE(ChunkedStream, readUppercaseHex)
+MORDOR_UNITTEST(ChunkedStream, readUppercaseHex)
 {
     Stream::ptr baseStream(new MemoryStream(Buffer("A\r\nhelloworld\r\n0\r\n")));
     Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
 
     Buffer output;
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
-    TEST_ASSERT(output == "helloworld");
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
+    MORDOR_TEST_ASSERT(output == "helloworld");
 }
 
-TEST_WITH_SUITE(ChunkedStream, ignoreExtensions)
+MORDOR_UNITTEST(ChunkedStream, ignoreExtensions)
 {
     Stream::ptr baseStream(new MemoryStream(Buffer("a;mordor=rules\r\nhelloworld\r\n0\r\n")));
     Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
 
     Buffer output;
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 26);
-    TEST_ASSERT(output == "helloworld");
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 26);
+    MORDOR_TEST_ASSERT(output == "helloworld");
 }
 
-TEST_WITH_SUITE(ChunkedStream, dontReadPastEnd)
+MORDOR_UNITTEST(ChunkedStream, dontReadPastEnd)
 {
     Stream::ptr baseStream(new MemoryStream(Buffer("a\r\nhelloworld\r\n0\r\nmore stuff")));
     Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
 
     Buffer output;
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
-    TEST_ASSERT(output == "helloworld");
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
+    MORDOR_TEST_ASSERT(output == "helloworld");
 
     output.clear();
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
 
     output.clear();
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
 
     output.clear();
-    TEST_ASSERT_EQUAL(baseStream->read(output, 15), 10u);
-    TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 28);
-    TEST_ASSERT(output == "more stuff");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->read(output, 15), 10u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 28);
+    MORDOR_TEST_ASSERT(output == "more stuff");
 }
 
-TEST_WITH_SUITE(ChunkedStream, invalidChunkSize)
+MORDOR_UNITTEST(ChunkedStream, invalidChunkSize)
 {
     Stream::ptr baseStream(new MemoryStream(Buffer("hello\r\n0\r\n")));
     Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
@@ -97,66 +100,66 @@ TEST_WITH_SUITE(ChunkedStream, invalidChunkSize)
     try {
         Buffer output;
         chunkedStream->read(output, 15);
-        NOTREACHED();
+        MORDOR_NOTREACHED();
     } catch (const HTTP::InvalidChunkException &ex) {
-        TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkException::HEADER);
-        TEST_ASSERT_EQUAL(ex.line(), "hello");
+        MORDOR_TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkException::HEADER);
+        MORDOR_TEST_ASSERT_EQUAL(ex.line(), "hello");
     }
 }
 
-TEST_WITH_SUITE(ChunkedStream, invalidChunkData)
+MORDOR_UNITTEST(ChunkedStream, invalidChunkData)
 {
     Stream::ptr baseStream(new MemoryStream(Buffer("3\r\nhello\r\n0\r\n")));
     Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
 
     Buffer output;
-    TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 3u);
-    TEST_ASSERT(output == "hel");
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 3u);
+    MORDOR_TEST_ASSERT(output == "hel");
     try {
         chunkedStream->read(output, 15);        
-        NOTREACHED();
+        MORDOR_NOTREACHED();
     } catch (const HTTP::InvalidChunkException &ex) {
-        TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkException::FOOTER);
-        TEST_ASSERT_EQUAL(ex.line(), "lo");
+        MORDOR_TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkException::FOOTER);
+        MORDOR_TEST_ASSERT_EQUAL(ex.line(), "lo");
     }
 }
 
-TEST_WITH_SUITE(ChunkedStream, writeEmpty)
+MORDOR_UNITTEST(ChunkedStream, writeEmpty)
 {
     MemoryStream::ptr baseStream(new MemoryStream());
     Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
 
-    TEST_ASSERT(chunkedStream->supportsRead());
-    TEST_ASSERT(chunkedStream->supportsWrite());
-    TEST_ASSERT(!chunkedStream->supportsSeek());
-    TEST_ASSERT(!chunkedStream->supportsSize());
-    TEST_ASSERT(!chunkedStream->supportsTruncate());
-    TEST_ASSERT(!chunkedStream->supportsFind());
-    TEST_ASSERT(!chunkedStream->supportsUnread());
+    MORDOR_TEST_ASSERT(chunkedStream->supportsRead());
+    MORDOR_TEST_ASSERT(chunkedStream->supportsWrite());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsSeek());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsSize());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsTruncate());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsFind());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsUnread());
 
     chunkedStream->close();
-    TEST_ASSERT(baseStream->buffer() == "0\r\n");
+    MORDOR_TEST_ASSERT(baseStream->buffer() == "0\r\n");
 }
 
-TEST_WITH_SUITE(ChunkedStream, write)
+MORDOR_UNITTEST(ChunkedStream, write)
 {
     MemoryStream::ptr baseStream(new MemoryStream());
     Stream::ptr chunkedStream(new HTTP::ChunkedStream(baseStream));
 
-    TEST_ASSERT(chunkedStream->supportsRead());
-    TEST_ASSERT(chunkedStream->supportsWrite());
-    TEST_ASSERT(!chunkedStream->supportsSeek());
-    TEST_ASSERT(!chunkedStream->supportsSize());
-    TEST_ASSERT(!chunkedStream->supportsTruncate());
-    TEST_ASSERT(!chunkedStream->supportsFind());
-    TEST_ASSERT(!chunkedStream->supportsUnread());
+    MORDOR_TEST_ASSERT(chunkedStream->supportsRead());
+    MORDOR_TEST_ASSERT(chunkedStream->supportsWrite());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsSeek());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsSize());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsTruncate());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsFind());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsUnread());
 
-    TEST_ASSERT_EQUAL(chunkedStream->write("hello"), 5u);
-    TEST_ASSERT(baseStream->buffer() == "5\r\nhello\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->write("hello"), 5u);
+    MORDOR_TEST_ASSERT(baseStream->buffer() == "5\r\nhello\r\n");
 
-    TEST_ASSERT_EQUAL(chunkedStream->write("helloworld"), 10u);
-    TEST_ASSERT(baseStream->buffer() == "5\r\nhello\r\na\r\nhelloworld\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(chunkedStream->write("helloworld"), 10u);
+    MORDOR_TEST_ASSERT(baseStream->buffer() == "5\r\nhello\r\na\r\nhelloworld\r\n");
 
     chunkedStream->close();
-    TEST_ASSERT(baseStream->buffer() == "5\r\nhello\r\na\r\nhelloworld\r\n0\r\n");
+    MORDOR_TEST_ASSERT(baseStream->buffer() == "5\r\nhello\r\na\r\nhelloworld\r\n0\r\n");
 }

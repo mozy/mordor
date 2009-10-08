@@ -9,42 +9,39 @@
 
 #include "mordor/common/assert.h"
 
+namespace Mordor {
+namespace Test {
+
 class TestInstance;
 
 typedef void (*TestDg)();
 typedef std::pair<TestDg, std::map<std::string, TestDg> > TestSuite;
 typedef std::map<std::string, TestSuite> TestSuites;
 
-
 // Test definitions
-#define TEST(TestName)                                                          \
-    static void TestName();                                                     \
-    static struct register_ ## TestName ## _struct {                            \
-        register_ ## TestName ## _struct() {                                    \
-            registerTest("", #TestName, & ## TestName );                        \
-        }                                                                       \
-} g_ ## TestName ## _registration;                                              \
-    static void TestName()
-
-
-#define SUITE_INVARIANT(TestSuite)                                              \
+#define MORDOR_SUITE_INVARIANT(TestSuite)                                       \
     static void _ ## TestSuite ## _invariant();                                 \
+    namespace {                                                                 \
     static struct register__ ## TestSuite ## _invariant_struct {                \
         register__ ## TestSuite ## _invariant_struct() {                        \
-            registerSuiteInvariant(#TestSuite,                                  \
+            ::Mordor::Test::registerSuiteInvariant(#TestSuite,                  \
                 &_ ## TestSuite ## _invariant);                                 \
         }                                                                       \
 } g__ ## TestSuite ## _invariant_registration;                                  \
+    }                                                                           \
     static void _ ## TestSuite ## _invariant()
 
 
-#define TEST_WITH_SUITE(TestSuite, TestName)                                    \
+#define MORDOR_UNITTEST(TestSuite, TestName)                                    \
     static void TestSuite ## _ ## TestName();                                   \
+    namespace {                                                                 \
     static struct register_ ## TestSuite ## _ ## TestName ## _struct {          \
         register_ ## TestSuite ## _ ## TestName ## _struct() {                  \
-            registerTest(#TestSuite, #TestName, & TestSuite ## _ ## TestName ); \
+            ::Mordor::Test::registerTest(#TestSuite, #TestName,                 \
+                & TestSuite ## _ ## TestName );                                 \
         }                                                                       \
 } g_ ## TestSuite ## _ ## TestName ## _registration;                            \
+    }                                                                           \
     static void TestSuite ## _ ## TestName()
 
 
@@ -108,60 +105,61 @@ struct type_serializer
     }
 };
 
-#define NO_SERIALIZE_BARE(type)                                                 \
-struct serializer<type > : public type_serializer<type >                        \
+#define MORDOR_NO_SERIALIZE_BARE(type)                                          \
+struct serializer<type> : public ::Mordor::Test::type_serializer<type>          \
 {                                                                               \
     serializer(const type &t) {}                                                \
 };
 
-#define NO_SERIALIZE(type)                                                      \
+#define MORDOR_NO_SERIALIZE(type)                                               \
 template <>                                                                     \
-NO_SERIALIZE_BARE(type)
+MORDOR_NO_SERIALIZE_BARE(type)
 
 template <class T>
-NO_SERIALIZE_BARE(std::vector<T>)
+MORDOR_NO_SERIALIZE_BARE(std::vector<T>)
 
 // Assertion macros
-#define TEST_ASSERT(expr)                                                       \
-    if (!(expr)) assertion(__FILE__, __LINE__, #expr)
+#define MORDOR_TEST_ASSERT(expr)                                                \
+    if (!(expr)) ::Mordor::Test::assertion(__FILE__, __LINE__, #expr)
 
-#define TEST_ASSERT_EQUAL(lhs, rhs)                                             \
-    assertEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+#define MORDOR_TEST_ASSERT_EQUAL(lhs, rhs)                                      \
+    ::Mordor::Test::assertEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
-#define TEST_ASSERT_NOT_EQUAL(lhs, rhs)                                         \
-    assertNotEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+#define MORDOR_TEST_ASSERT_NOT_EQUAL(lhs, rhs)                                  \
+    ::Mordor::Test::assertNotEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
-#define TEST_ASSERT_LESS_THAN(lhs, rhs)                                         \
-    assertLessThan(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+#define MORDOR_TEST_ASSERT_LESS_THAN(lhs, rhs)                                  \
+    ::Mordor::Test::assertLessThan(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
-#define TEST_ASSERT_LESS_THAN_OR_EQUAL(lhs, rhs)                                \
-    assertLessThanOrEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+#define MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(lhs, rhs)                         \
+    ::Mordor::Test::assertLessThanOrEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
-#define TEST_ASSERT_GREATER_THAN(lhs, rhs)                                      \
-    assertGreaterThan(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+#define MORDOR_TEST_ASSERT_GREATER_THAN(lhs, rhs)                               \
+    ::Mordor::Test::assertGreaterThan(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
-#define TEST_ASSERT_GREATER_THAN_OR_EQUAL(lhs, rhs)                             \
-    assertGreaterThanOrEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+#define MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(lhs, rhs)                      \
+    ::Mordor::Test::assertGreaterThanOrEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
 
-#define TEST_ASSERT_ABOUT_EQUAL(lhs, rhs, variance)                             \
-    assertAboutEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs, variance)
+#define MORDOR_TEST_ASSERT_ABOUT_EQUAL(lhs, rhs, variance)                      \
+    ::Mordor::Test::assertAboutEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs, variance)
 
-#define TEST_ASSERT_EXCEPTION(code, exception)                                  \
+#define MORDOR_TEST_ASSERT_EXCEPTION(code, exception)                           \
     try {                                                                       \
         code;                                                                   \
-        assertion(__FILE__, __LINE__, "Expected " +                             \
+        ::Mordor::Test::assertion(__FILE__, __LINE__, "Expected " +             \
             std::string(typeid(exception).name()) + " from " #code);            \
-    } catch (exception) {                                                       \
+    } catch (exception &) {                                                     \
     }
 
-#define TEST_ASSERT_ASSERTED(code)                                              \
+#define MORDOR_TEST_ASSERT_ASSERTED(code)                                       \
     {                                                                           \
         bool __selfAsserted = false;                                            \
         try {                                                                   \
             code;                                                               \
             __selfAsserted = true;                                              \
-            assertion(__FILE__, __LINE__, "Expected Assertion from " #code);    \
-        } catch (Assertion) {                                                   \
+            ::Mordor::Test::assertion(__FILE__, __LINE__,                       \
+                "Expected Assertion from " #code);                              \
+    } catch (::Mordor::Assertion &) {                                           \
             if (__selfAsserted)                                                 \
                 throw;                                                          \
         }                                                                       \
@@ -275,5 +273,7 @@ void assertAboutEqual(const char *file, int line,
         assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "~==");
     }
 }
+
+}}
 
 #endif

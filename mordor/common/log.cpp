@@ -14,6 +14,8 @@
 #include "fiber.h"
 #include "mordor/common/streams/file.h"
 
+namespace Mordor {
+
 static void enableLoggers();
 static void enableStdoutLogging();
 static void enableFileLogging();
@@ -36,9 +38,11 @@ static ConfigVar<bool>::ptr g_logStdout =
 static ConfigVar<std::string>::ptr g_logFile =
     Config::lookup("log.file", std::string(""), "Log to file");
 
-struct LogInitializer
+namespace {
+
+static struct Initializer
 {
-    LogInitializer()
+    Initializer()
     {
         g_logFatal->monitor(&enableLoggers);
         g_logError->monitor(&enableLoggers);
@@ -50,8 +54,9 @@ struct LogInitializer
         g_logFile->monitor(&enableFileLogging);
         g_logStdout->monitor(&enableStdoutLogging);
     }
-};
-static LogInitializer g_init;
+} g_init;
+
+}
 
 static void enableLogger(Logger::ptr logger, const boost::regex &fatalRegex,
     const boost::regex &errorRegex, const boost::regex &warnRegex,
@@ -342,6 +347,8 @@ static const char *levelStrs[] = {
 
 std::ostream &operator <<(std::ostream &os, Log::Level level)
 {
-    ASSERT(level >= Log::FATAL && level <= Log::VERBOSE);
+    MORDOR_ASSERT(level >= Log::FATAL && level <= Log::VERBOSE);
     return os << levelStrs[level];
+}
+
 }
