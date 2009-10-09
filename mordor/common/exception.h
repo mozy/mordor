@@ -12,7 +12,17 @@
 
 #ifdef WINDOWS
 #include <windows.h>
+#include <winerror.h>
+#else
+#include <errno.h>
+#include <netdb.h>
+
+#if defined(FREEBSD) && !defined(EAI_NODATA)
+#define EAI_ADDRFAMILY 1
+#define EAI_NODATA 7
 #endif
+#endif
+
 
 namespace Mordor {
 
@@ -52,17 +62,8 @@ struct BufferOverflowException : virtual StreamException {};
 struct NativeException : virtual Exception {};
 
 #ifdef WINDOWS
-#include <winerror.h>
 typedef DWORD error_t;
 #else
-#include <errno.h>
-#include <netdb.h>
-
-#if defined(FREEBSD) && !defined(EAI_NODATA)
-#define EAI_ADDRFAMILY 1
-#define EAI_NODATA 7
-#endif
-
 typedef int error_t;
 #endif
 
