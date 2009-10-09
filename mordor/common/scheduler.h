@@ -217,7 +217,7 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
         it2 != exceptions.end();
         ++it2) {
         if (*it2)
-            ::rethrow_exception(*it2);
+            Mordor::rethrow_exception(*it2);
     }
     for(std::vector<int>::iterator it2 = result.begin();
         it2 != result.end();

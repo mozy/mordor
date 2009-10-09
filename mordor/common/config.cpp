@@ -8,11 +8,11 @@
 
 #include "mordor/common/string.h"
 
-namespace Mordor {
-
 #ifndef WINDOWS
 extern char **environ;
 #endif
+
+namespace Mordor {
 
 static void delete_nothing(ConfigVarBase *) {}
 

@@ -129,7 +129,7 @@ std::vector<void *> backtrace(int framesToSkip)
     result.resize(count);
 #else
     result.resize(64);
-    int count = backtrace(&result[0], 64);
+    int count = ::backtrace(&result[0], 64);
     result.resize(count);
     framesToSkip = std::min(count, framesToSkip + 1);
     result.erase(result.begin(), result.begin() + framesToSkip);
