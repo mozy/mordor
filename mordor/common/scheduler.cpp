@@ -308,7 +308,7 @@ Scheduler::run()
             if (!dgFiber)
                 dgFiber.reset(new Fiber(dg));
             dgFiber->reset(dg);
-            MORDOR_LOG_VERBOSE(g_log) << this << " running " << f;
+            MORDOR_LOG_VERBOSE(g_log) << this << " running " << dg;
             dgFiber->yieldTo();
             if (dgFiber->state() != Fiber::TERM)
                 dgFiber.reset();
