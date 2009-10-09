@@ -118,7 +118,7 @@ private:
     {}
 public:
     ~LogEvent();
-    std::ostream &os() { return m_os; }
+    std::ostream &os();
 
 private:
     boost::shared_ptr<Logger> m_logger;
