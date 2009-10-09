@@ -42,7 +42,7 @@ bool
 ClientConnection::newRequestsAllowed()
 {
     boost::mutex::scoped_lock lock(m_mutex);
-    return !m_allowNewRequests && !m_priorResponseClosed &&
+    return m_allowNewRequests && !m_priorResponseClosed &&
         !m_priorRequestFailed && !m_priorResponseFailed;
 }
 
