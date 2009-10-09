@@ -51,8 +51,7 @@ public:
     static void removeSink(boost::shared_ptr<LogSink> sink);
 
 private:
-    static Logger *m_root;
-    static boost::shared_ptr<Logger> m_rootRef;
+    static boost::shared_ptr<Logger> root();
 };
 
 #ifdef WINDOWS
@@ -176,7 +175,7 @@ public:
 
 private:
     std::string m_name;
-    Logger::ptr m_parent;
+    boost::weak_ptr<Logger> m_parent;
     std::set<Logger::ptr, LoggerLess> m_children;
     Log::Level m_level;
     std::list<LogSink::ptr> m_sinks;
@@ -192,8 +191,9 @@ private:
 #define MORDOR_LOG_ERROR(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::ERROR)
 #define MORDOR_LOG_FATAL(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::FATAL)
 
+std::ostream &operator <<(std::ostream &os, Mordor::Log::Level level);
+
 }
 
-std::ostream &operator <<(std::ostream &os, Mordor::Log::Level level);
 
 #endif

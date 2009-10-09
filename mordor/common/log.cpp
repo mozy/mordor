@@ -171,16 +171,17 @@ FileLogSink::log(const std::string &logger, tid_t thread,
 static void deleteNothing(Logger *l)
 {}
 
-Logger *Log::m_root;
-Logger::ptr Log::m_rootRef(m_root);
+Logger::ptr Log::root()
+{
+    static Logger::ptr _root(new Logger());
+    return _root;
+}
 
 Logger::ptr Log::lookup(const std::string &name)
 {
-    if (!m_rootRef)
-        m_rootRef.reset(m_root = new Logger());
-    Logger::ptr log = m_rootRef;
+    Logger::ptr log = root();
     std::set<Logger::ptr, LoggerLess>::iterator it;
-    Logger dummy(name, m_rootRef);
+    Logger dummy(name, log);
     Logger::ptr dummyPtr(&dummy, &deleteNothing);
     while (true) {
         it = log->m_children.lower_bound(dummyPtr);
@@ -222,7 +223,7 @@ void
 Log::visit(boost::function<void (boost::shared_ptr<Logger>)> dg)
 {
     std::list<Logger::ptr> toVisit;
-    toVisit.push_back(m_rootRef);
+    toVisit.push_back(root());
     while (!toVisit.empty())
     {
         Logger::ptr cur = toVisit.front();
@@ -239,25 +240,19 @@ Log::visit(boost::function<void (boost::shared_ptr<Logger>)> dg)
 void
 Log::addSink(LogSink::ptr sink)
 {
-    if (!m_rootRef)
-        m_rootRef.reset(m_root = new Logger());
-    m_root->addSink(sink);
+    root()->addSink(sink);
 }
 
 void
 Log::removeSink(LogSink::ptr sink)
 {
-    if (!m_rootRef)
-        m_rootRef.reset(m_root = new Logger());
-    m_root->removeSink(sink);
+    root()->removeSink(sink);
 }
 
 void
 Log::clearSinks()
 {
-    if (!m_rootRef)
-        m_rootRef.reset(m_root = new Logger());
-    m_root->clearSinks();
+    root()->clearSinks();
 }
 
 bool
@@ -324,7 +319,7 @@ Logger::log(Log::Level level, const std::string &str,
         }
         if (!_this->m_inheritSinks)
             break;
-        _this = m_parent;
+        _this = m_parent.lock();
     }
     if (level == Log::FATAL)
         MORDOR_THROW_EXCEPTION(Assertion("Fatal error: " + str));
