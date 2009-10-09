@@ -335,14 +335,6 @@ LogEvent::~LogEvent()
     m_logger->log(m_level, m_os.str(), m_file, m_line);
 }
 
-std::ostream &
-LogEvent::os()
-{
-    if (!m_logger->enabled(m_level))
-        m_os.setstate(std::ios::badbit);
-    return m_os;
-}
-
 static const char *levelStrs[] = {
     "NONE",
     "FATAL",

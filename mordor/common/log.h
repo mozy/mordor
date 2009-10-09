@@ -118,7 +118,7 @@ private:
     {}
 public:
     ~LogEvent();
-    std::ostream &os();
+    std::ostream &os() { return m_os; }
 
 private:
     boost::shared_ptr<Logger> m_logger;
@@ -183,13 +183,14 @@ private:
     bool m_inheritSinks;
 };
 
-#define MORDOR_LOG_VERBOSE(log) (log)->verbose(__FILE__, __LINE__).os()
-#define MORDOR_LOG_TRACE(log) (log)->trace(__FILE__, __LINE__).os()
-#define MORDOR_LOG_INFO(log) (log)->info(__FILE__, __LINE__).os()
-#define MORDOR_LOG_WARNING(log) (log)->warning(__FILE__, __LINE__).os()
-#define MORDOR_LOG_ERROR(log) (log)->error(__FILE__, __LINE__).os()
-#define MORDOR_LOG_FATAL(log) (log)->fatal(__FILE__, __LINE__).os()
-#define MORDOR_LOG_LEVEL(lg, level) (lg)->log(level, __FILE__, __LINE__).os()
+#define MORDOR_LOG_LEVEL(lg, level) if ((lg)->enabled(level))                   \
+    (lg)->log(level, __FILE__, __LINE__).os()
+#define MORDOR_LOG_VERBOSE(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::VERBOSE)
+#define MORDOR_LOG_TRACE(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::TRACE)
+#define MORDOR_LOG_INFO(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::INFO)
+#define MORDOR_LOG_WARNING(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::WARNING)
+#define MORDOR_LOG_ERROR(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::ERROR)
+#define MORDOR_LOG_FATAL(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::FATAL)
 
 }
 
