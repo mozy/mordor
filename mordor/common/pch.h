@@ -133,6 +133,10 @@ enum {
 #include <openssl/ssl.h>
 #include <zlib.h>
 
+#ifdef LINUX
+#include <valgrind/valgrind.h>
+#endif
+
 #endif
 
 #endif

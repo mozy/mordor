@@ -83,6 +83,8 @@ private:
     static void entryPoint();
     static void exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState);
 
+    void allocStack();
+    void freeStack();
     void initStack();
 
 private:
@@ -94,6 +96,9 @@ private:
 #ifdef OSX
     char m_mctx[sizeof(*(mcontext_t)0)];
 #endif
+#endif
+#ifdef LINUX
+    int m_valgrindStackId;
 #endif
     State m_state, m_yielderNextState;
     ptr m_outer, m_yielder;

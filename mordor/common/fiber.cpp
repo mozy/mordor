@@ -18,8 +18,6 @@
 
 namespace Mordor {
 
-static void allocStack(void **stack, void **sp, size_t *stacksize);
-static void freeStack(void *stack, size_t stacksize);
 #if defined(NATIVE_WINDOWS_FIBERS) || defined(UCONTEXT_FIBERS)
 static
 #else
@@ -84,7 +82,7 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
     m_state = INIT;
     m_stack = NULL;
     m_stacksize = stacksize;
-    allocStack(&m_stack, &m_sp, &m_stacksize);
+    allocStack();
 #ifdef UCONTEXT_FIBERS
     m_sp = &m_ctx;
 #endif
@@ -111,7 +109,7 @@ Fiber::~Fiber()
 #endif
     } else {
         MORDOR_ASSERT(m_state == TERM || m_state == INIT);
-        freeStack(m_stack, m_stacksize);
+        freeStack();
     }
 }
 
@@ -348,42 +346,44 @@ static VOID CALLBACK native_fiber_entryPoint(PVOID lpParameter)
 }
 #endif
 
-static
 void
-allocStack(void **stack, void **sp, size_t *stacksize)
+Fiber::allocStack()
 {
-    MORDOR_ASSERT(stack);
-    MORDOR_ASSERT(sp);
-    if (*stacksize == 0)
-        *stacksize = g_defaultStackSize->val();
+    if (m_stacksize == 0)
+        m_stacksize = g_defaultStackSize->val();
 #ifdef NATIVE_WINDOWS_FIBERS
     // Fibers are allocated in initStack
 #elif defined(WINDOWS)
-    *stack = VirtualAlloc(NULL, *stacksize + g_pagesize, MEM_RESERVE, PAGE_NOACCESS);
-    if (!*stack)
+    m_stack = VirtualAlloc(NULL, m_stacksize + g_pagesize, MEM_RESERVE, PAGE_NOACCESS);
+    if (!m_stack)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("VirtualAlloc");
-    VirtualAlloc(*stack, g_pagesize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
+    VirtualAlloc(m_stack, g_pagesize, MEM_COMMIT, PAGE_READWRITE | PAGE_GUARD);
     // TODO: don't commit until referenced
-    VirtualAlloc((char*)*stack + g_pagesize, *stacksize, MEM_COMMIT, PAGE_READWRITE);
-    *sp = (char*)*stack + *stacksize + g_pagesize;
+    VirtualAlloc((char*)m_stack + g_pagesize, m_stacksize, MEM_COMMIT, PAGE_READWRITE);
+    m_sp = (char*)m_stack + m_stacksize + g_pagesize;
 #elif defined(POSIX)
-    *stack = mmap(NULL, *stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-    if (*stack == MAP_FAILED)
+    m_stack = mmap(NULL, m_stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    if (m_stack == MAP_FAILED)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("mmap");
-    *sp = (char*)*stack + *stacksize;
+#ifdef LINUX
+    m_valgrindStackId = VALGRIND_STACK_REGISTER(m_stack, (char *)m_stack + m_stacksize);
+#endif
+    m_sp = (char*)m_stack + m_stacksize;
 #endif
 }
 
-static
 void
-freeStack(void *stack, size_t stacksize)
+Fiber::freeStack()
 {
 #ifdef NATIVE_WINDOWS_FIBERS
-    DeleteFiber(stack);
+    DeleteFiber(m_stack);
 #elif defined(WINDOWS)
-    VirtualFree(stack, 0, MEM_RELEASE);
+    VirtualFree(m_stack, 0, MEM_RELEASE);
 #elif defined(POSIX)
-    munmap(stack, stacksize);
+#ifdef LINUX
+    VALGRIND_STACK_DEREGISTER(m_valgrindStackId);
+#endif
+    munmap(m_stack, m_stacksize);
 #endif
 }
 
@@ -460,6 +460,7 @@ Fiber::initStack()
     if (getcontext(&m_ctx))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getcontext");
     m_ctx.uc_link = NULL;
+    m_ctx.uc_flags = 0;
     m_ctx.uc_stack.ss_sp = m_stack;
     m_ctx.uc_stack.ss_size = m_stacksize;
 #ifdef OSX
