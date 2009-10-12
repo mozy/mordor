@@ -536,6 +536,7 @@ SSLStream::flushBuffer()
         toWrite -= written;
     }
     int dummy = BIO_reset(m_writeBio);
+    dummy = 0;
 }
 
 void

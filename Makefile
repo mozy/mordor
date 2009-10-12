@@ -104,9 +104,8 @@ else
     else
         ifdef OPT
             OPT_FLAGS += -O$(OPT)
-            RLCODEGEN_FLAGS += -G2
         else
-            OPT_FLAGS += -O
+            OPT_FLAGS += -O0
         endif
     endif
 endif
@@ -117,8 +116,8 @@ endif
 
 # example: 'make NDEBUG=1' will prevent -g (add debugging symbols) to the
 # compilation options and not define DEBUG
+DBG_FLAGS += -g
 ifndef NDEBUG
-    DBG_FLAGS += -g
     DBG_FLAGS += -DDEBUG -fno-inline
 endif
 
@@ -139,12 +138,8 @@ endif
 BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 
 # Compiler options for c++ go here
-#
-# remove the no-unused-variable.  this was added when moving to gcc4 since
-# it started complaining about our logger variables.  Same with
-# no-strict-aliasing
-CXXFLAGS += -Wall -Werror -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET)
-CFLAGS += -Wall -Wno-unused-variable -fno-strict-aliasing -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET)
+CXXFLAGS += -Wall -Werror -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET)
+CFLAGS += -Wall -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET)
 
 RLCODEGEN	:= $(shell which rlcodegen rlgen-cd 2>/dev/null)
 RAGEL   	:= ragel

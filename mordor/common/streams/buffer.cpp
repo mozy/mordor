@@ -758,7 +758,6 @@ Buffer::opCmp(const char *str, size_t len) const
     if (lengthResult > 0)
         len = readAvailable();
     for (it = m_segments.begin(); it != m_segments.end(); ++it) {
-        const void *start = it->readBuf().start();
         size_t tocompare = std::min(it->readAvailable(), len);
         int result = memcmp(it->readBuf().start(), str + offset, tocompare);
         if (result != 0)

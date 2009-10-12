@@ -105,7 +105,6 @@ Connection::getStream(const GeneralHeaders &general,
         stream.reset(new SingleplexStream(m_stream, SingleplexStream::WRITE, false));
     }
     Stream::ptr baseStream(stream);
-    bool notifyOnClose = false;
     for (ParameterizedList::const_reverse_iterator it(general.transferEncoding.rbegin());
         it != general.transferEncoding.rend();
         ++it) {
