@@ -20,11 +20,10 @@ namespace Mordor {
 
 static void allocStack(void **stack, void **sp, size_t *stacksize);
 static void freeStack(void *stack, size_t stacksize);
-static void initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)());
 #if defined(NATIVE_WINDOWS_FIBERS) || defined(UCONTEXT_FIBERS)
 static
 #else
-static void push(void **sp, size_t v);
+static void push(void * &sp, size_t v);
 extern "C"
 #endif
 void fiber_switchContext(void **oldsp, void *newsp);
@@ -89,7 +88,7 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
 #ifdef UCONTEXT_FIBERS
     m_sp = &m_ctx;
 #endif
-    initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
+    initStack();
 }
 
 Fiber::~Fiber()
@@ -124,7 +123,7 @@ Fiber::reset()
     MORDOR_ASSERT(m_stack);
     MORDOR_ASSERT(m_state == TERM || m_state == INIT);
     MORDOR_ASSERT(m_dg);
-    initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
+    initStack();
     m_state = INIT;
     m_exception = boost::exception_ptr();
 }
@@ -137,7 +136,7 @@ Fiber::reset(boost::function<void ()> dg)
     MORDOR_ASSERT(m_stack);
     MORDOR_ASSERT(m_state == TERM || m_state == INIT);
     m_dg = dg;
-    initStack(&m_stack, &m_sp, m_stacksize, &Fiber::entryPoint);
+    initStack();
     m_state = INIT;
     m_exception = boost::exception_ptr();
 }
@@ -331,11 +330,11 @@ Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
 #if !defined(NATIVE_WINDOWS_FIBERS) && !defined(UCONTEXT_FIBERS)
 static
 void
-push(void **sp, size_t v)
+push(void *&sp, size_t v)
 {
-    size_t* ssp = (size_t*)*sp;
+    size_t *ssp = (size_t *)sp;
     *--ssp = v;
-    *(size_t**)sp = ssp;
+    sp = (void *)ssp;
 }
 #endif
 
@@ -447,73 +446,77 @@ fiber_switchContext(void **oldsp, void *newsp)
 }
 #endif
 
-static
+
 void
-initStack(void **stack, void **sp, size_t stacksize, void (*entryPoint)())
+Fiber::initStack()
 {
 #ifdef NATIVE_WINDOWS_FIBERS
-    if (*stack)
+    if (m_stack)
         return;
-    *sp = *stack = CreateFiber(stacksize, &native_fiber_entryPoint, entryPoint);
-    if (!*stack)
+    m_sp = m_stack = CreateFiber(m_stacksize, &native_fiber_entryPoint, &Fiber::entryPoint);
+    if (!m_stack)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFiber");
 #elif defined(UCONTEXT_FIBERS)
-    ucontext_t *ctx = *(ucontext_t**)sp;
-    if (getcontext(ctx))
+    if (getcontext(&m_ctx))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getcontext");
-    ctx->uc_stack.ss_sp = *stack;
-    ctx->uc_stack.ss_size = stacksize;
-    makecontext(ctx, entryPoint, 0);
+    m_ctx.uc_link = NULL;
+    m_ctx.uc_stack.ss_sp = m_stack;
+    m_ctx.uc_stack.ss_size = m_stacksize;
+#ifdef OSX
+    m_ctx.uc_mcsize = sizeof(m_mctx);
+    m_ctx.uc_mcontext = (mcontext_t)m_mctx;
+#endif
+    makecontext(&m_ctx, &Fiber::entryPoint, 0);
 #elif defined(ASM_X86_64_WINDOWS_FIBERS)
     // Shadow space (4 registers + return address)
     for (int i = 0; i < 5; ++i)
-        push(sp, 0x0000000000000000ull);
-    push(sp, (size_t)entryPoint);     // RIP
-    push(sp, 0xffffffffffffffffull);  // RBP
-    push(sp, (size_t)*stack + stacksize);// Stack base
-    push(sp, (size_t)*stack);          // Stack top
-    push(sp, 0x0000000000000000ull);  // RBX
-    push(sp, 0x0000000000000000ull);  // RSI
-    push(sp, 0x0000000000000000ull);  // RDI
-    push(sp, 0x0000000000000000ull);  // R12
-    push(sp, 0x0000000000000000ull);  // R13
-    push(sp, 0x0000000000000000ull);  // R14
-    push(sp, 0x0000000000000000ull);  // R15
-    push(sp, 0x00001f8001df0000ull);  // MXCSR (32 bits), x87 control (16 bits), (unused)
+        push(m_sp, 0x0000000000000000ull);
+    push(m_sp, (size_t)&Fiber::entryPoint);     // RIP
+    push(m_sp, 0xffffffffffffffffull);  // RBP
+    push(m_sp, (size_t)m_stack + m_stacksize); // Stack base
+    push(m_sp, (size_t)m_stack);        // Stack top
+    push(m_sp, 0x0000000000000000ull);  // RBX
+    push(m_sp, 0x0000000000000000ull);  // RSI
+    push(m_sp, 0x0000000000000000ull);  // RDI
+    push(m_sp, 0x0000000000000000ull);  // R12
+    push(m_sp, 0x0000000000000000ull);  // R13
+    push(m_sp, 0x0000000000000000ull);  // R14
+    push(m_sp, 0x0000000000000000ull);  // R15
+    push(m_sp, 0x00001f8001df0000ull);  // MXCSR (32 bits), x87 control (16 bits), (unused)
     // XMM6:15
     for (int i = 6; i <= 15; ++i) {
-        push(sp, 0x0000000000000000ull);
-        push(sp, 0x0000000000000000ull);
+        push(m_sp, 0x0000000000000000ull);
+        push(m_sp, 0x0000000000000000ull);
     };
 #elif defined(ASM_X86_WINDOWS_FIBERS)
-    push(sp, (size_t)entryPoint);     // EIP
-    push(sp, 0xffffffff);             // EBP
-    push(sp, 0xffffffff);             // Exception handler
-    push(sp, (size_t)*stack + stacksize);// Stack base
-    push(sp, (size_t)*stack);          // Stack top
-    push(sp, 0x00000000);             // EBX
-    push(sp, 0x00000000);             // ESI
-    push(sp, 0x00000000);             // EDI
+    push(m_sp, (size_t)&Fiber::entryPoint); // EIP
+    push(m_sp, 0xffffffff);             // EBP
+    push(m_sp, 0xffffffff);             // Exception handler
+    push(m_sp, (size_t)m_stack + m_stacksize); // Stack base
+    push(m_sp, (size_t)m_stack);        // Stack top
+    push(m_sp, 0x00000000);             // EBX
+    push(m_sp, 0x00000000);             // ESI
+    push(m_sp, 0x00000000);             // EDI
 #elif defined(ASM_X86_64_POSIX_FIBERS)
-    push(sp, 0x0000000000000000ull);             // empty space to align to 16 bytes
-    push(sp, (size_t)entryPoint);     // RIP
-    push(sp, (size_t)*sp + 8);        // RBP
-    push(sp, 0x0000000000000000ull);  // RBX
-    push(sp, 0x0000000000000000ull);  // R12
-    push(sp, 0x0000000000000000ull);  // R13
-    push(sp, 0x0000000000000000ull);  // R14
-    push(sp, 0x0000000000000000ull);  // R15
-    push(sp, 0x00001f8001df0000ull);  // MXCSR (32 bits), x87 control (16 bits), (unused)
-    push(sp, 0x0000000000000000ull);  // empty space to align to 16 bytes
+    push(m_sp, 0x0000000000000000ull);  // empty space to align to 16 bytes
+    push(m_sp, (size_t)&Fiber::entryPoint); // RIP
+    push(m_sp, (size_t)m_sp + 8);       // RBP
+    push(m_sp, 0x0000000000000000ull);  // RBX
+    push(m_sp, 0x0000000000000000ull);  // R12
+    push(m_sp, 0x0000000000000000ull);  // R13
+    push(m_sp, 0x0000000000000000ull);  // R14
+    push(m_sp, 0x0000000000000000ull);  // R15
+    push(m_sp, 0x00001f8001df0000ull);  // MXCSR (32 bits), x87 control (16 bits), (unused)
+    push(m_sp, 0x0000000000000000ull);  // empty space to align to 16 bytes
 #elif defined(ASM_X86_POSIX_FIBERS)
-    push(sp, 0x00000000);             // empty space to align to 16 bytes
-    push(sp, (size_t)entryPoint);     // EIP
-    push(sp, (size_t)*sp + 8);        // EBP
-    push(sp, 0x00000000);             // EAX
-    push(sp, getEbx());               // EBX used for PIC code
-    push(sp, 0x00000000);             // ECX (for alignment)
-    push(sp, 0x00000000);             // ESI
-    push(sp, 0x00000000);             // EDI
+    push(m_sp, 0x00000000);             // empty space to align to 16 bytes
+    push(m_sp, (size_t)&Fiber::entryPoint); // EIP
+    push(m_sp, (size_t)m_sp + 8);       // EBP
+    push(m_sp, 0x00000000);             // EAX
+    push(m_sp, getEbx());               // EBX used for PIC code
+    push(m_sp, 0x00000000);             // ECX (for alignment)
+    push(m_sp, 0x00000000);             // ESI
+    push(m_sp, 0x00000000);             // EDI
 #endif
 }
 

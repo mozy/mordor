@@ -22,14 +22,14 @@
 #ifdef X86_64
 #   ifdef WINDOWS
 #       define NATIVE_WINDOWS_FIBERS
-#   elif defined(LINUX)
-#       define UCONTEXT_FIBERS
 #   elif defined(POSIX)
 #       define ASM_X86_64_POSIX_FIBERS
 #   endif
 #elif defined(X86)
 #   ifdef WINDOWS
 #       define NATIVE_WINDOWS_FIBERS
+#   elif defined(OSX)
+#       define UCONTEXT_FIBERS
 #   elif defined(POSIX)
 #       define ASM_X86_POSIX_FIBERS
 #   endif
@@ -83,12 +83,17 @@ private:
     static void entryPoint();
     static void exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState);
 
+    void initStack();
+
 private:
     boost::function<void ()> m_dg;
     void *m_stack, *m_sp;
     size_t m_stacksize;
 #ifdef UCONTEXT_FIBERS
     ucontext_t m_ctx;
+#ifdef OSX
+    char m_mctx[sizeof(*(mcontext_t)0)];
+#endif
 #endif
     State m_state, m_yielderNextState;
     ptr m_outer, m_yielder;
