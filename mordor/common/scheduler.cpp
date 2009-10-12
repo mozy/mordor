@@ -164,8 +164,9 @@ Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
     MORDOR_ASSERT(f);
     boost::mutex::scoped_lock lock(m_mutex);
     FiberAndThread ft = {f, NULL, thread };
+    bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);
-    if (m_fibers.size() == 1)
+    if (tickleMe)
         tickle();
 }
 
@@ -177,8 +178,9 @@ Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
     MORDOR_ASSERT(dg);
     boost::mutex::scoped_lock lock(m_mutex);
     FiberAndThread ft = {Fiber::ptr(), dg, thread };
+    bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);
-    if (m_fibers.size() == 1)
+    if (tickleMe)
         tickle();
 }
 
