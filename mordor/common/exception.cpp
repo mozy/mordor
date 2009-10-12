@@ -152,7 +152,6 @@ void removeTopFrames(boost::exception &ex, int framesToSkip)
         }
         count -= framesToSkip;
         newbt.resize(std::min<int>(0, newbt.size() - count));
-        newbt.erase(newbt.end() - count, newbt.end());
         ex << errinfo_backtrace(newbt);
     }
 }
