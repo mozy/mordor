@@ -218,7 +218,7 @@ endif
 # phase (note that since the .d is generated during the compile, editing
 # the .cpp will cause it to be regenerated for the next build.)
 #
-DEPS := $(shell find $(CURDIR) -name "*.d")
+DEPS := $(shell find $(CURDIR) -name '*.d')
 -include $(DEPS)
 
 ALLBINS = mordor/common/examples/cat						\
@@ -239,11 +239,11 @@ ALLBINS = mordor/common/examples/cat						\
 #
 .PHONY: clean
 clean:
-	$(Q)find -name '*.gcno' | xargs rm -f
-	$(Q)find -name '*.gcda' | xargs rm -f
-	$(Q)find -name '*.d' | xargs rm -f
-	$(Q)find -name '*.o' | xargs rm -f
-	$(Q)find -name '*.a' | xargs rm -f
+	$(Q)find . -name '*.gcno' | xargs rm -f
+	$(Q)find . -name '*.gcda' | xargs rm -f
+	$(Q)find . -name '*.d' | xargs rm -f
+	$(Q)find . -name '*.o' | xargs rm -f
+	$(Q)find . -name '*.a' | xargs rm -f
 	$(Q)rm -f mordor/common/pch.h.gch
 	$(Q)rm -f mordor/common/uri.cpp mordor/common/http/parser.cpp mordor/common/xml/parser.cpp
 	$(Q)rm -f $(ALLBINS) mordor/common/tests/run_tests mordor/kalypso/tests/run_tests
