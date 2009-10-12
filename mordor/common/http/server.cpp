@@ -532,7 +532,10 @@ ServerRequest::commit()
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
         ServerRequest::ptr request = m_conn->m_pendingRequests.front();
         if (request.get() != this) {
-            bool inserted = m_conn->m_waitingResponses.insert(shared_from_this()).second;
+#ifdef DEBUG
+            bool inserted = 
+#endif
+            m_conn->m_waitingResponses.insert(shared_from_this()).second;
             MORDOR_ASSERT(inserted);
             wait = true;
         } else {

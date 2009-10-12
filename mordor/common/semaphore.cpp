@@ -56,16 +56,16 @@ Semaphore::~Semaphore()
 {
 #ifdef WINDOWS
     BOOL bRet = CloseHandle(m_semaphore);
-    MORDOR_ASSERT(bRet);
+    MORDOR_VERIFY(bRet);
 #elif defined(OSX)
     int rc = semaphore_destroy(m_task, m_semaphore);
-    MORDOR_ASSERT(!rc);
+    MORDOR_VERIFY(!rc);
 #elif defined(FREEBSD)
     int rc = semctl(m_semaphore, 0, IPC_RMID);
-    MORDOR_ASSERT(rc >= 0);
+    MORDOR_VERIFY(rc >= 0);
 #else
     int rc = sem_destroy(&m_semaphore);
-    MORDOR_ASSERT(!rc);
+    MORDOR_VERIFY(!rc);
 #endif
 }
 

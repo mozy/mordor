@@ -167,7 +167,7 @@ IOManagerEPoll::idle()
             if (event.data.fd == m_tickleFds[0]) {
                 unsigned char dummy;
                 int rc2 = read(m_tickleFds[0], &dummy, 1);
-                MORDOR_ASSERT(rc2 == 1);
+                MORDOR_VERIFY(rc2 == 1);
                 continue;
             }
             bool err = event.events & (EPOLLERR | EPOLLHUP);
@@ -211,7 +211,7 @@ void
 IOManagerEPoll::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
-    MORDOR_ASSERT(rc == 1);
+    MORDOR_VERIFY(rc == 1);
 }
 
 }

@@ -101,9 +101,11 @@ Fiber::~Fiber()
     if (!m_stack) {
         MORDOR_ASSERT(!m_dg);
         MORDOR_ASSERT(m_state == EXEC);
+#ifdef DEBUG
         Fiber *cur = t_fiber.get();
         MORDOR_ASSERT(cur);
         MORDOR_ASSERT(cur == this);
+#endif
         setThis(NULL);
 #ifdef NATIVE_WINDOWS_FIBERS
         ConvertFiberToThread();

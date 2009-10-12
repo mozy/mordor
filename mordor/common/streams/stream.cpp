@@ -30,7 +30,10 @@ Stream::getDelimited(char delim, bool eofIsDelimiter)
     if (offset < 0)
         offset = -offset - 1;
     Buffer buf;
-    size_t readResult = read(buf, offset + (eofIsDelimiter ? 0 : 1));
+#ifdef DEBUG
+    size_t readResult = 
+#endif
+    read(buf, offset + (eofIsDelimiter ? 0 : 1));
     MORDOR_ASSERT((ptrdiff_t)readResult == offset + (eofIsDelimiter ? 0 : 1));
     // Don't copyOut the delimiter itself
     std::string result;
