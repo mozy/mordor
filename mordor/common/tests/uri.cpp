@@ -241,3 +241,26 @@ MORDOR_UNITTEST(URI, queryString)
     MORDOR_TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
     MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a+b");
 }
+
+MORDOR_UNITTEST(URI, encoding)
+{
+    URI uri;
+    uri.path.type = URI::Path::ABSOLUTE;
+    uri.path.segments.push_back("WiX Tutorial \xe2\x80\x94 Introduction to the Windows Installer XML Toolset.URL");
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(),
+        "/WiX%20Tutorial%20%E2%80%94%20Introduction%20to%20the%20Windows%20Installer%20XML%20Toolset.URL");
+
+    uri.path.segments[0] = "\xe5\xa4\x9a\xe8\xa8\x80\xe8\xaa\x9e\xe5\xaf\xbe\xe5\xbf\x9c\xe3\x82"
+        "\xb5\xe3\x83\xbc\xe3\x83\x81\xe3\x82\xa8\xe3\x83\xb3\xe3\x82\xb8\xe3"
+        "\x83\xb3\xe3\x81\xae\xe6\x97\xa5\xe6\x9c\xac\xe7\x89\x88\xe3\x80\x82"
+        "\xe3\x82\xa6\xe3\x82\xa7\xe3\x83\x96\xe3\x80\x81\xe3\x82\xa4\xe3\x83"
+        "\xa1\xe3\x83\xbc\xe3\x82\xb8\xe3\x81\x8a\xe3\x82\x88\xe3\x81\xb3\xe3"
+        "\x83\x8b\xe3\x83\xa5\xe3\x83\xbc\xe3\x82\xb9\xe6\xa4\x9c\xe7\xb4\xa2.txt";
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(),
+        "/%E5%A4%9A%E8%A8%80%E8%AA%9E%E5%AF%BE%E5%BF%9C%E3%82"
+        "%B5%E3%83%BC%E3%83%81%E3%82%A8%E3%83%B3%E3%82%B8%E3"
+        "%83%B3%E3%81%AE%E6%97%A5%E6%9C%AC%E7%89%88%E3%80%82"
+        "%E3%82%A6%E3%82%A7%E3%83%96%E3%80%81%E3%82%A4%E3%83"
+        "%A1%E3%83%BC%E3%82%B8%E3%81%8A%E3%82%88%E3%81%B3%E3"
+        "%83%8B%E3%83%A5%E3%83%BC%E3%82%B9%E6%A4%9C%E7%B4%A2.txt");
+}

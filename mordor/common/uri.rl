@@ -45,7 +45,7 @@ static std::string escape(const std::string& str, const std::string& allowedChar
                 result.append(1, '+');
             } else {
 				result.append(1, '%');
-				result.append(1, hexdigits[*c >> 4]);
+				result.append(1, hexdigits[(unsigned char)*c >> 4]);
 				result.append(1, hexdigits[*c & 0xf]);
 	        }
         } else {
