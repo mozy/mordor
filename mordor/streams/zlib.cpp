@@ -213,7 +213,7 @@ ZlibStream::write(const Buffer &b, size_t len)
                 result = inbuf.iov_len - m_strm.avail_in;
                 if (result == 0)
                     continue;
-                m_outBuffer.produce(result);
+                m_outBuffer.produce(outbuf.iov_len - m_strm.avail_out);
                 try {
                     flushBuffer();
                 } catch (std::runtime_error) {
