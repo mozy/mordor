@@ -8,6 +8,7 @@
 #include "assert.h"
 #include "mordor/streams/buffer.h"
 #include "mordor/string.h"
+#include "predef.h"
 
 namespace Mordor {
 

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "version.h"
+
 namespace Mordor {
 
 std::string base64decode(const std::string &src);

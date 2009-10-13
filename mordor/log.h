@@ -13,6 +13,7 @@
 #include <boost/thread/thread.hpp>
 
 #include "mordor/streams/stream.h"
+#include "predef.h"
 #include "version.h"
 
 #ifdef WINDOWS

@@ -11,14 +11,10 @@
 #include <boost/variant.hpp>
 #include <boost/date_time.hpp>
 
+#include "mordor/predef.h"
 #include "mordor/string.h"
 #include "mordor/uri.h"
 #include "mordor/version.h"
-
-#ifdef major
-#undef major
-#undef minor
-#endif
 
 namespace Mordor {
 namespace HTTP {

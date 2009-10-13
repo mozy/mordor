@@ -8,6 +8,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include "mordor/assert.h"
+#include "mordor/predef.h"
 #include "buffer.h"
 
 namespace Mordor {
