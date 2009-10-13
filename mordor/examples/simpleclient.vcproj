@@ -51,6 +51,7 @@
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="mordor/pch.h"
+				ObjectFile="$(IntDir)\$(InputName)-$(TargetName).obj"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
 				WarnAsError="true"
@@ -126,6 +127,7 @@
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="mordor/pch.h"
+				ObjectFile="$(IntDir)\$(InputName)-$(TargetName).obj"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
 				WarnAsError="true"
@@ -201,6 +203,7 @@
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="mordor/pch.h"
+				ObjectFile="$(IntDir)\$(InputName)-$(TargetName).obj"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
 				WarnAsError="true"
@@ -279,6 +282,7 @@
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="mordor/pch.h"
+				ObjectFile="$(IntDir)\$(InputName)-$(TargetName).obj"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
 				WarnAsError="true"
@@ -340,6 +344,7 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						UsePrecompiledHeader="1"
+						ObjectFile="$(IntDir)\$(InputName)-$(ProjectName).obj"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -348,6 +353,7 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						UsePrecompiledHeader="1"
+						ObjectFile="$(IntDir)\$(InputName)-$(ProjectName).obj"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -356,6 +362,7 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						UsePrecompiledHeader="1"
+						ObjectFile="$(IntDir)\$(InputName)-$(ProjectName).obj"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -364,6 +371,7 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						UsePrecompiledHeader="1"
+						ObjectFile="$(IntDir)\$(InputName)-$(ProjectName).obj"
 					/>
 				</FileConfiguration>
 			</File>
