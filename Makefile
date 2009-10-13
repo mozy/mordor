@@ -221,12 +221,12 @@ endif
 DEPS := $(shell find $(CURDIR) -name '*.d')
 -include $(DEPS)
 
-ALLBINS = mordor/common/examples/cat						\
-	mordor/common/examples/echoserver					\
-	mordor/common/examples/simpleclient					\
-	mordor/common/examples/tunnel						\
-	mordor/common/examples/wget						\
-	mordor/common/tests/run_tests
+ALLBINS = mordor/examples/cat						\
+	mordor/examples/echoserver					\
+	mordor/examples/simpleclient					\
+	mordor/examples/tunnel						\
+	mordor/examples/wget						\
+	mordor/tests/run_tests
 
 
 # clean current build
@@ -238,16 +238,16 @@ clean:
 	$(Q)find . -name '*.d' | xargs rm -f
 	$(Q)find . -name '*.o' | xargs rm -f
 	$(Q)find . -name '*.a' | xargs rm -f
-	$(Q)rm -f mordor/common/pch.h.gch
-	$(Q)rm -f mordor/common/uri.cpp mordor/common/http/parser.cpp mordor/common/xml/parser.cpp
-	$(Q)rm -f $(ALLBINS) mordor/common/tests/run_tests
+	$(Q)rm -f mordor/pch.h.gch
+	$(Q)rm -f mordor/uri.cpp mordor/http/parser.cpp mordor/xml/parser.cpp
+	$(Q)rm -f $(ALLBINS) mordor/tests/run_tests
 	$(Q)rm -rf lcov*
 
 all: $(ALLBINS)
 
 .PHONY: check
 check: all
-	$(Q)mordor/common/tests/run_tests
+	$(Q)mordor/tests/run_tests
 
 .PHONY: lcov
 lcov:
@@ -258,95 +258,95 @@ lcov:
 	$(Q)lcov -b $(SRCDIR) -d $(CURDIR) -c -o lcov.info >/dev/null 2>&1
 	$(Q)lcov -a lcov.info -a lcov_base.info -o lcov.info >/dev/null
 	$(Q)lcov -r lcov.info '/usr/*' -o lcov.info >/dev/null 2>&1
-	$(Q)lcov -r lcov.info mordor/common/uri.cpp -o lcov.info >/dev/null 2>&1
-	$(Q)lcov -r lcov.info mordor/common/http/parser.cpp -o lcov.info >/dev/null 2>&1
-	$(Q)lcov -r lcov.info mordor/common/xml/parser.cpp -o lcov.info >/dev/null 2>&1
-	$(Q)lcov -r lcov.info 'mordor/common/examples/*' -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info mordor/uri.cpp -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info mordor/http/parser.cpp -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info mordor/xml/parser.cpp -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info 'mordor/examples/*' -o lcov.info >/dev/null 2>&1
 	$(Q)lcov -r lcov.info './*' -o lcov.info >/dev/null 2>&1
 	$(Q)mkdir -p lcov && cd lcov && genhtml ../lcov.info >/dev/null && tar -czf lcov.tgz *
 
-TESTDATA_COMMON := $(patsubst $(SRCDIR)/%,$(CURDIR)/%,$(wildcard $(SRCDIR)/mordor/common/tests/data/*))
+TESTDATA := $(patsubst $(SRCDIR)/%,$(CURDIR)/%,$(wildcard $(SRCDIR)/mordor/tests/data/*))
 
-COMMONTESTSOBJECTS := $(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/common/tests/*.cpp))
+TESTSOBJECTS := $(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/tests/*.cpp))
 
-$(TESTDATA_COMMON): $(CURDIR)/%: $(SRCDIR)/%
+$(TESTDATA): $(CURDIR)/%: $(SRCDIR)/%
 	$(Q)mkdir -p $(@D)
 	$(Q)cp -f $< $@
 
-$(COMMONTESTSOBJECTS): mordor/common/pch.h.gch
+$(TESTSOBJECTS): mordor/pch.h.gch
 
-mordor/common/tests/run_tests:							\
-	$(COMMONTESTSOBJECTS)							\
-	mordor/test/libmordortest.a						\
-        mordor/common/libmordor.a						\
-	$(TESTDATA_COMMON)							\
-	mordor/common/pch.h.gch
+mordor/tests/run_tests:							\
+	$(TESTSOBJECTS)							\
+	mordor/test/libmordortest.a					\
+        mordor/libmordor.a						\
+	$(TESTDATA)							\
+	mordor/pch.h.gch
 ifeq ($(Q),@)
 	@echo ld $@
 endif
 	$(COMPLINK)
 
 
-EXAMPLEOBJECTS :=								\
-	mordor/common/examples/cat.o						\
-	mordor/common/examples/echoserver.o					\
-	mordor/common/examples/simpleclient.o					\
-	mordor/common/examples/tunnel.o						\
-	mordor/common/examples/wget.o
+EXAMPLEOBJECTS :=							\
+	mordor/examples/cat.o						\
+	mordor/examples/echoserver.o					\
+	mordor/examples/simpleclient.o					\
+	mordor/examples/tunnel.o					\
+	mordor/examples/wget.o
 
-$(EXAMPLEOBJECTS): mordor/common/pch.h.gch
+$(EXAMPLEOBJECTS): mordor/pch.h.gch
 
-mordor/common/examples/cat: mordor/common/examples/cat.o			\
-	mordor/common/libmordor.a
+mordor/examples/cat: mordor/examples/cat.o				\
+	mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
 	$(COMPLINK)
 
 
-mordor/common/examples/echoserver: mordor/common/examples/echoserver.o		\
-	mordor/common/libmordor.a
+mordor/examples/echoserver: mordor/examples/echoserver.o		\
+	mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
 	$(COMPLINK)
 
-mordor/common/examples/simpleclient: mordor/common/examples/simpleclient.o	\
-	mordor/common/libmordor.a
+mordor/examples/simpleclient: mordor/examples/simpleclient.o		\
+	mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@ 
 endif
 	$(COMPLINK)
 
-mordor/common/examples/tunnel: mordor/common/examples/tunnel.o			\
-	mordor/common/libmordor.a
+mordor/examples/tunnel: mordor/examples/tunnel.o			\
+	mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@ 
 endif
 	$(COMPLINK)
 
-mordor/common/examples/wget: mordor/common/examples/wget.o			\
-	mordor/common/libmordor.a
+mordor/examples/wget: mordor/examples/wget.o				\
+	mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
 	$(COMPLINK)
 
-mordor/common/http/http_parser.o: mordor/common/http/parser.cpp
+mordor/http/http_parser.o: mordor/http/parser.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
    
-mordor/common/streams/socket_stream.o: mordor/common/streams/socket.cpp
+mordor/streams/socket_stream.o: mordor/streams/socket.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
    
-mordor/common/xml/xml_parser.o: mordor/common/xml/parser.cpp
+mordor/xml/xml_parser.o: mordor/xml/parser.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
@@ -354,70 +354,70 @@ endif
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 
-LIBMORDOROBJECTS := 								\
-	mordor/common/config.o							\
-	mordor/common/exception.o						\
-	mordor/common/fiber.o							\
-	mordor/common/fiber_$(ARCH)$(UNDERSCORE).o				\
-	mordor/common/http/auth.o						\
-	mordor/common/http/basic.o						\
-	mordor/common/http/chunked.o						\
-	mordor/common/http/client.o						\
-	mordor/common/http/connection.o						\
-	mordor/common/http/digest.o						\
-	mordor/common/http/http.o						\
-	mordor/common/http/multipart.o						\
-	mordor/common/http/oauth.o						\
-	mordor/common/http/http_parser.o					\
-	mordor/common/http/server.o						\
-	mordor/common/iomanager_$(IOMANAGER).o					\
-	mordor/common/log.o							\
-	mordor/common/ragel.o							\
-	mordor/common/scheduler.o						\
-	mordor/common/semaphore.o						\
-	mordor/common/sleep.o							\
-	mordor/common/socket.o							\
-	mordor/common/streams/buffer.o						\
-	mordor/common/streams/buffered.o					\
-	mordor/common/streams/crypto.o						\
-	mordor/common/streams/fd.o						\
-	mordor/common/streams/file.o						\
-	mordor/common/streams/hash.o						\
-	mordor/common/streams/limited.o						\
-	mordor/common/streams/memory.o						\
-	mordor/common/streams/null.o						\
-	mordor/common/streams/pipe.o						\
-	mordor/common/streams/socket_stream.o					\
-	mordor/common/streams/ssl.o						\
-	mordor/common/streams/std.o						\
-	mordor/common/streams/stream.o						\
-	mordor/common/streams/test.o						\
-	mordor/common/streams/throttle.o					\
-	mordor/common/streams/transfer.o					\
-	mordor/common/streams/zlib.o						\
-	mordor/common/string.o							\
-	mordor/common/timer.o							\
-	mordor/common/uri.o							\
-	mordor/common/xml/xml_parser.o
+LIBMORDOROBJECTS := 							\
+	mordor/config.o							\
+	mordor/exception.o						\
+	mordor/fiber.o							\
+	mordor/fiber_$(ARCH)$(UNDERSCORE).o				\
+	mordor/http/auth.o						\
+	mordor/http/basic.o						\
+	mordor/http/chunked.o						\
+	mordor/http/client.o						\
+	mordor/http/connection.o					\
+	mordor/http/digest.o						\
+	mordor/http/http.o						\
+	mordor/http/multipart.o						\
+	mordor/http/oauth.o						\
+	mordor/http/http_parser.o					\
+	mordor/http/server.o						\
+	mordor/iomanager_$(IOMANAGER).o					\
+	mordor/log.o							\
+	mordor/ragel.o							\
+	mordor/scheduler.o						\
+	mordor/semaphore.o						\
+	mordor/sleep.o							\
+	mordor/socket.o							\
+	mordor/streams/buffer.o						\
+	mordor/streams/buffered.o					\
+	mordor/streams/crypto.o						\
+	mordor/streams/fd.o						\
+	mordor/streams/file.o						\
+	mordor/streams/hash.o						\
+	mordor/streams/limited.o					\
+	mordor/streams/memory.o						\
+	mordor/streams/null.o						\
+	mordor/streams/pipe.o						\
+	mordor/streams/socket_stream.o					\
+	mordor/streams/ssl.o						\
+	mordor/streams/std.o						\
+	mordor/streams/stream.o						\
+	mordor/streams/test.o						\
+	mordor/streams/throttle.o					\
+	mordor/streams/transfer.o					\
+	mordor/streams/zlib.o						\
+	mordor/string.o							\
+	mordor/timer.o							\
+	mordor/uri.o							\
+	mordor/xml/xml_parser.o
 
-$(LIBMORDOROBJECTS): mordor/common/pch.h.gch
+$(LIBMORDOROBJECTS): mordor/pch.h.gch
 
 ARFLAGS := ruc
 ifdef DARWIN
 	ARFLAGS := -rucs
 endif
 
-mordor/common/libmordor.a: $(LIBMORDOROBJECTS)
+mordor/libmordor.a: $(LIBMORDOROBJECTS)
 ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
 
-LIBMORDORTESTOBJECTS :=								\
- 	mordor/test/test.o							\
+LIBMORDORTESTOBJECTS :=							\
+ 	mordor/test/test.o						\
 	mordor/test/stdoutlistener.o
 
-$(LIBMORDORTESTOBJECTS): mordor/common/pch.h.gch
+$(LIBMORDORTESTOBJECTS): mordor/pch.h.gch
 
 mordor/test/libmordortest.a: $(LIBMORDORTESTOBJECTS)
 ifeq ($(Q),@)

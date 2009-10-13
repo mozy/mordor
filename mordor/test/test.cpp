@@ -1,12 +1,12 @@
 // Copyright (c) 2009 - Decho Corp.
 
-#include "mordor/common/pch.h"
+#include "mordor/pch.h"
 
 #include "test.h"
 
 #include <iostream>
 
-#include "mordor/common/config.h"
+#include "mordor/config.h"
 
 #ifdef WINDOWS
 #include <windows.h>

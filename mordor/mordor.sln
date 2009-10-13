@@ -1,37 +1,37 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common", "common\common.vcproj", "{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordor", "mordor.vcproj", "{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cat", "common\examples\cat.vcproj", "{05A7ECD4-456F-43FE-9CEA-68213832E9AD}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cat", "examples\cat.vcproj", "{05A7ECD4-456F-43FE-9CEA-68213832E9AD}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simpleclient", "common\examples\simpleclient.vcproj", "{EAD0A645-D849-44FA-82B5-74A1055AE3AA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simpleclient", "examples\simpleclient.vcproj", "{EAD0A645-D849-44FA-82B5-74A1055AE3AA}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wget", "common\examples\wget.vcproj", "{6CC00BFB-5A32-4033-BF7E-64D524B2A247}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wget", "examples\wget.vcproj", "{6CC00BFB-5A32-4033-BF7E-64D524B2A247}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echoserver", "common\examples\echoserver.vcproj", "{35655735-9C38-4255-81E8-F8CDABEB358E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echoserver", "examples\echoserver.vcproj", "{35655735-9C38-4255-81E8-F8CDABEB358E}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcproj", "{CD888334-383F-4DB6-BE16-153BA25D98FB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordortest", "test\mordortest.vcproj", "{CD888334-383F-4DB6-BE16-153BA25D98FB}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common_tests", "common\tests\common_tests.vcproj", "{5C6B7FB7-B009-423F-BC44-89E70163AFCB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcproj", "{5C6B7FB7-B009-423F-BC44-89E70163AFCB}"
 	ProjectSection(ProjectDependencies) = postProject
 		{CD888334-383F-4DB6-BE16-153BA25D98FB} = {CD888334-383F-4DB6-BE16-153BA25D98FB}
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tunnel", "common\examples\tunnel.vcproj", "{41B0154E-EBCA-4518-8957-47623868F2FA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tunnel", "examples\tunnel.vcproj", "{41B0154E-EBCA-4518-8957-47623868F2FA}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
 	EndProjectSection
