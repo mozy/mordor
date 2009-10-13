@@ -22,6 +22,8 @@
 #ifdef X86_64
 #   ifdef WINDOWS
 #       define NATIVE_WINDOWS_FIBERS
+#   elif defined(LINUX)
+#       define UCONTEXT_FIBERS
 #   elif defined(POSIX)
 #       define ASM_X86_64_POSIX_FIBERS
 #   endif
