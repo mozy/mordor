@@ -444,6 +444,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\uri.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\zlib.cpp"
 				>
 			</File>
