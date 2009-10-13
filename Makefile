@@ -226,13 +226,7 @@ ALLBINS = mordor/common/examples/cat						\
 	mordor/common/examples/simpleclient					\
 	mordor/common/examples/tunnel						\
 	mordor/common/examples/wget						\
-	mordor/common/tests/run_tests						\
-	mordor/kalypso/vfs/triton/libtritonvfs.a				\
-	mordor/kalypso/tests/run_tests						\
-        mordor/triton/client/get						\
-	mordor/triton/client/list						\
-	mordor/triton/client/manifest						\
-	mordor/triton/client/put
+	mordor/common/tests/run_tests
 
 
 # clean current build
@@ -246,7 +240,7 @@ clean:
 	$(Q)find . -name '*.a' | xargs rm -f
 	$(Q)rm -f mordor/common/pch.h.gch
 	$(Q)rm -f mordor/common/uri.cpp mordor/common/http/parser.cpp mordor/common/xml/parser.cpp
-	$(Q)rm -f $(ALLBINS) mordor/common/tests/run_tests mordor/kalypso/tests/run_tests
+	$(Q)rm -f $(ALLBINS) mordor/common/tests/run_tests
 	$(Q)rm -rf lcov*
 
 all: $(ALLBINS)
@@ -254,7 +248,6 @@ all: $(ALLBINS)
 .PHONY: check
 check: all
 	$(Q)mordor/common/tests/run_tests
-	$(Q)mordor/kalypso/tests/run_tests
 
 .PHONY: lcov
 lcov:
@@ -293,32 +286,13 @@ ifeq ($(Q),@)
 endif
 	$(COMPLINK)
 
-KALYPSOTESTSOBJECTS := $(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/kalypso/tests/*.cpp))
-
-$(KALYPSOTESTSOBJECTS): mordor/common/pch.h.gch
-
-mordor/kalypso/tests/run_tests:							\
-	$(KALYPSOTESTSOBJECTS)							\
-        mordor/kalypso/libkalypso.a						\
-	mordor/test/libmordortest.a						\
-        mordor/common/libmordor.a						\
-	mordor/common/pch.h.gch
-ifeq ($(Q),@)
-	@echo ld $@
-endif
-	$(COMPLINK)
-
 
 EXAMPLEOBJECTS :=								\
 	mordor/common/examples/cat.o						\
 	mordor/common/examples/echoserver.o					\
 	mordor/common/examples/simpleclient.o					\
 	mordor/common/examples/tunnel.o						\
-	mordor/common/examples/wget.o						\
-	mordor/triton/client/get_main.o						\
-	mordor/triton/client/list_main.o					\
-	mordor/triton/client/manifest_main.o					\
-	mordor/triton/client/put_main.o
+	mordor/common/examples/wget.o
 
 $(EXAMPLEOBJECTS): mordor/common/pch.h.gch
 
@@ -357,39 +331,6 @@ ifeq ($(Q),@)
 	@echo ld $@
 endif
 	$(COMPLINK)
-
-mordor/triton/client/get: mordor/triton/client/get_main.o			\
-	mordor/triton/client/libtritonclient.a 					\
-	mordor/common/libmordor.a
-ifeq ($(Q),@)
-	@echo ld $@
-endif
-	$(COMPLINK)
-
-mordor/triton/client/list: mordor/triton/client/list_main.o			\
-	mordor/triton/client/libtritonclient.a 					\
-	mordor/common/libmordor.a
-ifeq ($(Q),@)
-	@echo ld $@
-endif
-	$(COMPLINK)
-
-mordor/triton/client/manifest: mordor/triton/client/manifest_main.o		\
-	mordor/triton/client/libtritonclient.a 					\
-	mordor/common/libmordor.a
-ifeq ($(Q),@)
-	@echo ld $@
-endif
-	$(COMPLINK)
-
-mordor/triton/client/put: mordor/triton/client/put_main.o			\
-	mordor/triton/client/libtritonclient.a 					\
-	mordor/common/libmordor.a
-ifeq ($(Q),@)
-	@echo ld $@
-endif
-	$(COMPLINK)
-
 
 mordor/common/http/http_parser.o: mordor/common/http/parser.cpp
 ifeq ($(Q),@)
@@ -472,35 +413,6 @@ ifeq ($(Q),@)
 endif
 	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
 
-LIBTRITONCLIENTOBJECTS :=							\
-	mordor/triton/client/client.o						\
-	mordor/triton/client/get.o						\
-	mordor/triton/client/list.o						\
-	mordor/triton/client/manifest.o						\
-	mordor/triton/client/put.o
-
-
-$(LIBTRITONCLIENTOBJECTS): mordor/common/pch.h.gch
-
-mordor/triton/client/libtritonclient.a:	$(LIBTRITONCLIENTOBJECTS)
-ifeq ($(Q),@)
-	@echo ar $@
-endif
-	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
-
-LIBKALYPSOOBJECTS := 								\
-	mordor/kalypso/vfs/helpers.o						\
-	mordor/kalypso/vfs/manager.o						\
-	mordor/kalypso/vfs/vfs.o
-
-$(LIBKALYPSOOBJECTS): mordor/common/pch.h.gch
-
-mordor/kalypso/libkalypso.a: $(LIBKALYPSOOBJECTS)
-ifeq ($(Q),@)
-	@echo ar $@
-endif
-	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
-
 LIBMORDORTESTOBJECTS :=								\
  	mordor/test/test.o							\
 	mordor/test/stdoutlistener.o
@@ -512,18 +424,3 @@ ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
-
-LIBTRITONVFSOBJECTS :=								\
-	mordor/kalypso/vfs/triton/container.o					\
-	mordor/kalypso/vfs/triton/transfer.o					\
-	mordor/kalypso/vfs/triton/vfs.o						\
-	mordor/kalypso/vfs/triton/user.o
-
-$(LIBTRITONVFSOBJECTS): mordor/common/pch.h.gch
-
-mordor/kalypso/vfs/triton/libtritonvfs.a: $(LIBTRITONVFSOBJECTS)
-ifeq ($(Q),@)
-	@echo ar $@
-endif
-	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
-
