@@ -117,10 +117,25 @@ public:
     void dispatch();
 
 protected:
+    /// Derived classes should call start() in their constructor.
     void start();
+    /// Derived classes can query stopping() to see if the Scheduler is trying
+    /// to stop, and should return from the idle Fiber as soon as possible.
+    ///
+    /// Also, this function should be implemented if the derived class has
+    /// any additional work to do in the idle Fiber that the Scheduler is not
+    /// aware of.
     virtual bool stopping();
 
+    /// The function called (in its own Fiber) when there is no work scheduled
+    /// on the Scheduler.  The Scheduler is not considered stopped until the
+    /// idle Fiber has terminated.
+    ///
+    /// Implementors should Fiber::yield() when it believes there is work
+    /// scheduled on the Scheduler.
     virtual void idle() = 0;
+    /// The Scheduler wants to force the idle fiber to Fiber::yield(), because
+    /// new work has been scheduled.
     virtual void tickle() = 0;
 
 private:
@@ -156,7 +171,11 @@ public:
     ~WorkerPool() { stop(); }
 
 protected:
+    /// The idle Fiber for a WorkerPool simply loops waiting on a Semaphore,
+    /// and yields whenever that Semaphore is signalled, returning if
+    /// stopping() is true.
     void idle();
+    /// Signals the semaphore so that the idle Fiber will yield.
     void tickle();
 
 private:
