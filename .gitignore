@@ -12,3 +12,4 @@ x64
 *.swp
 lcov*
 obj*
+html

@@ -241,7 +241,7 @@ clean:
 	$(Q)rm -f mordor/pch.h.gch
 	$(Q)rm -f mordor/uri.cpp mordor/http/parser.cpp mordor/xml/parser.cpp
 	$(Q)rm -f $(ALLBINS) mordor/tests/run_tests
-	$(Q)rm -rf lcov*
+	$(Q)rm -rf lcov* html
 
 all: $(ALLBINS)
 
