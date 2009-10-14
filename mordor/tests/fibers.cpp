@@ -467,7 +467,7 @@ MORDOR_UNITTEST(Fibers, forceThrowExceptionNewFiberCall)
     } catch (...) {
         exception = boost::current_exception();
     }
-    MORDOR_TEST_ASSERT_EXCEPTION(f->callAndThrow(exception), DummyException);
+    MORDOR_TEST_ASSERT_EXCEPTION(f->inject(exception), DummyException);
 }
 
 static void catchAndThrowDummy()
@@ -492,7 +492,7 @@ MORDOR_UNITTEST(Fibers, forceThrowExceptionFiberYield)
         exception = boost::current_exception();
     }
     f->call();
-    MORDOR_TEST_ASSERT_EXCEPTION(f->callAndThrow(exception), DummyException);
+    MORDOR_TEST_ASSERT_EXCEPTION(f->inject(exception), DummyException);
 }
 
 static void catchAndThrowDummyYieldTo(Fiber::ptr caller)
@@ -518,6 +518,6 @@ MORDOR_UNITTEST(Fibers, forceThrowExceptionFiberYieldTo)
         exception = boost::current_exception();
     }
     f->yieldTo();
-    MORDOR_TEST_ASSERT_EXCEPTION(f->callAndThrow(exception), DummyException);
+    MORDOR_TEST_ASSERT_EXCEPTION(f->inject(exception), DummyException);
     f->reset(NULL);
 }

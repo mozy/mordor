@@ -161,7 +161,7 @@ Fiber::call()
 }
 
 void
-Fiber::callAndThrow(boost::exception_ptr exception)
+Fiber::inject(boost::exception_ptr exception)
 {
     MORDOR_ASSERT(exception);
     m_exception = exception;
