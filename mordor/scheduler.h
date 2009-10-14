@@ -37,22 +37,83 @@ private:
     std::list<boost::shared_ptr<boost::thread> > m_threads;
 };
 
+/// Cooperative user-mode thread (Fiber) Scheduler
+
+/// A Scheduler is used to cooperatively schedule fibers on threads,
+/// implementing an M-on-N threading model. A Scheduler can either "hijack"
+/// the thread it was created on (by passing useCaller = true in the
+/// constructor), spawn multiple threads of its own, or a hybrid of the two.
+///
+/// Hijacking and Schedulers begin processing fibers when either
+/// yieldTo() or dispatch() is called. The Scheduler will stop itself when
+/// there are no more Fibers scheduled, and return from yieldTo() or
+/// dispatch(). Hybrid and spawned Schedulers must be explicitly stopped via
+/// stop(). stop() will return only after there are no more Fibers scheduled.
 class Scheduler : public boost::noncopyable
 {
 public:
+    /// Default constructor
+
+    /// By default, a single-threaded hijacking Scheduler is constructed.
+    /// If threads > 1 && useCaller == true, a hybrid Scheduler is constructed.
+    /// If useCaller == false, this Scheduler will not be associated with
+    /// the currently executing thread.
+    /// @param threads How many threads this Scheduler should be comprised of
+    /// @param useCaller If this Scheduler should "hijack" the currently
+    /// executing thread
+    /// @pre if (useCaller == true) Scheduler::getThis() == NULL
     Scheduler(int threads = 1, bool useCaller = true);
+    /// Destroys the scheduler, implicitly calling stop()
     virtual ~Scheduler();
 
+    /// @return The Scheduler controlling the currently executing thread
     static Scheduler* getThis();
 
+    /// Explicitly stop the scheduler
+    
+    /// This must be called for hybrid and spawned Schedulers.  It can be
+    /// called multiple times.
     void stop();
 
+    /// Schedule a Fiber to be executed on the Scheduler
+
+    /// @param f The Fiber to schedule
+    /// @param thread Optionally provide a specific thread for the Fiber to run
+    /// on
     void schedule(Fiber::ptr f, boost::thread::id thread = boost::thread::id());
+    /// Schedule a generic functor to be executed on the Scheduler
+
+    /// The functor will be executed on a new Fiber.
+    /// @param dg The functor to schedule
+    /// @param thread Optionally provide a specific thread for the functor to
+    /// run on
     void schedule(boost::function<void ()> dg, boost::thread::id thread = boost::thread::id());
+
+    /// Change the currently executing Fiber to be running on this Scheduler
+    
+    /// This function can be used to change which Scheduler/thread the
+    /// currently executing Fiber is executing on.  This switch is done by
+    /// rescheduling this Fiber on this Scheduler, and yielding to the current
+    /// Scheduler.
+    /// @param thread Optionally provide a specific thread for this Fiber to
+    /// run on
+    /// @post Scheduler::getThis() == this
     void switchTo(boost::thread::id thread = boost::thread::id());
+
+    /// Yield to the Scheduler to allow other Fibers to execute on this thread
+
+    /// The Scheduler will not re-schedule this Fiber automatically.
+    ///
+    /// In a hijacking Scheduler, any scheduled work will begin running if
+    /// someone yields to the Scheduler.
+    /// @pre Scheduler::getThis() == this
     void yieldTo();
-    // Useful for single thread hijacking scheduler only
-    // Calls yieldTo(), and yields back when there is no more work to be done
+
+    /// Force a hijacking Scheduler to process scheduled work
+
+    /// Calls yieldTo(), and yields back to the currently executing Fiber
+    /// when there is no more work to be done
+    /// @pre this is a hijacking Scheduler
     void dispatch();
 
 protected:
@@ -84,6 +145,10 @@ private:
     bool m_autoStop;
 };
 
+/// Generic Scheduler
+
+/// A WorkerPool is a generic Scheduler that does nothing when there is no work
+/// to be done.
 class WorkerPool : public Scheduler
 {
 public:
@@ -98,17 +163,44 @@ private:
     Semaphore m_semaphore;
 };
 
+/// @defgroup parallel_do
+/// @brief Execute multiple functors in parallel
+///
+/// Execute multiple functors in parallel by scheduling them all on the current
+/// Scheduler.  Concurrency is achieved either because the Scheduler is running
+/// on multiple threads, or because the functors will yield to the Scheduler
+/// during execution, instead of blocking.
+///
+/// If there is no Scheduler associated with the current thread, the functors
+/// are simply executed sequentially.
+///
+/// If any of the functors throw an uncaught exception, the first uncaught
+/// exception is rethrown to the caller.
+
+/// @ingroup parallel_do
+/// @param dgs The functors to execute
 void
 parallel_do(const std::vector<boost::function<void ()> > &dgs);
+/// @ingroup parallel_do
+/// @param dgs The functors to execute
+/// @param fibers The Fibers to use to execute the functors
+/// @pre dgs.size() <= fibers.size()
 void
 parallel_do(const std::vector<boost::function<void ()> > &dgs,
             std::vector<Fiber::ptr> &fibers);
 
-// Automatically returns to calling scheduler when goes out of scope
+/// Automatic Scheduler switcher
+
+/// Automatically returns to Scheduler::getThis() when goes out of scope
+/// (by calling Scheduler::switchTo())
 struct SchedulerSwitcher : public boost::noncopyable
 {
 public:
+    /// Captures Scheduler::getThis(), and optionally calls target->switchTo()
+    /// if target != NULL
     SchedulerSwitcher(Scheduler *target = NULL);
+    /// Calls switchTo() on the Scheduler captured in the constructor
+    /// @post Scheduler::getThis() == the Scheduler captured in the constructor
     ~SchedulerSwitcher();
 
 private:
@@ -136,6 +228,20 @@ parallel_foreach_impl(boost::function<bool (T&)> dg, T *&t,
     scheduler->schedule(caller);
 }
 
+/// Execute a functor for multiple objects in parallel
+
+/// @ingroup parallel_do
+/// Execute a functor for multiple objects in parallel by scheduling up to
+/// parallelism at a time on the current Scheduler.  Concurrency is achived
+/// either because the Scheduler is running on multiple threads, or because the
+/// the functor yields to the Scheduler during execution, instead of blocking.
+/// @tparam Iterator The type of the iterator for the collection
+/// @tparam T The type returned by dereferencing the Iterator, and then passed
+/// to the functor
+/// @param begin The beginning of the collection
+/// @param end The end of the collection
+/// @param dg The functor to be passed each object in the collection
+/// @param parallelism How many objects to Schedule in parallel
 template<class Iterator, class T>
 bool
 parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,

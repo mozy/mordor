@@ -91,7 +91,7 @@ public:
     /// @post state() == INIT
     void reset(boost::function<void ()> dg);
 
-    /// The currently executing Fiber
+    /// @return The currently executing Fiber
     static ptr getThis();
 
     /// Call a Fiber
