@@ -6,6 +6,7 @@
 #include <set>
 #include <sstream>
 
+#include "predef.h"
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
@@ -13,7 +14,6 @@
 #include <boost/thread/thread.hpp>
 
 #include "mordor/streams/stream.h"
-#include "predef.h"
 #include "version.h"
 
 #ifdef WINDOWS
