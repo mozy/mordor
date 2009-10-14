@@ -80,9 +80,12 @@ Test::registerSuiteInvariant(const std::string &suite, TestDg invariant)
 }
 
 void
-Test::assertion(const char *file, int line, const std::string &expr)
+Test::assertion(const char *file, int line, const char *function,
+                const std::string &expr)
 {
-    throw Assertion(expr) << boost::throw_file(file) << boost::throw_line(line)
+    throw boost::enable_current_exception(Assertion(expr))
+        << boost::throw_file(file) << boost::throw_line(line)
+        << boost::throw_function(function)
         << errinfo_backtrace(backtrace());
 }
 
@@ -229,60 +232,66 @@ Test::runTests(const TestSuites &suites, TestListener &listener)
 
 template <>
 void Test::assertEqual<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr)
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr)
 {
     if (!(strcmp(lhs, rhs) == 0)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "==");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "==");
     }
 }
 
 template <>
 void Test::assertNotEqual<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr)
+    int line, const char *lhs, const char *function, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr)
 {
     if (!(strcmp(lhs, rhs) != 0)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "!=");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "!=");
     }
 }
 
 template <>
 void Test::assertLessThan<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr)
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr)
 {
     if (!(strcmp(lhs, rhs) < 0)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "<");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "<");
     }
 }
 
 template <>
 void Test::assertLessThanOrEqual<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr)
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr)
 {
     if (!(strcmp(lhs, rhs) <= 0)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "<=");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "<=");
     }
 }
 
 template <>
 void Test::assertGreaterThan<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr)
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr)
 {
     if (!(strcmp(lhs, rhs) > 0)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            ">");
     }
 }
 
 template <>
 void Test::assertGreaterThanOrEqual<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr)
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr)
 {
     if (!(strcmp(lhs, rhs) == 0)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">=");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            ">=");
     }
 }

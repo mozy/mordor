@@ -120,34 +120,43 @@ MORDOR_NO_SERIALIZE_BARE(std::vector<T>)
 
 // Assertion macros
 #define MORDOR_TEST_ASSERT(expr)                                                \
-    if (!(expr)) ::Mordor::Test::assertion(__FILE__, __LINE__, #expr)
+    if (!(expr)) ::Mordor::Test::assertion(__FILE__, __LINE__,                  \
+        BOOST_CURRENT_FUNCTION, #expr)
 
 #define MORDOR_TEST_ASSERT_EQUAL(lhs, rhs)                                      \
-    ::Mordor::Test::assertEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+    ::Mordor::Test::assertEqual(__FILE__, __LINE__, BOOST_CURRENT_FUNCTION,     \
+        lhs, rhs, #lhs, #rhs)
 
 #define MORDOR_TEST_ASSERT_NOT_EQUAL(lhs, rhs)                                  \
-    ::Mordor::Test::assertNotEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+    ::Mordor::Test::assertNotEqual(__FILE__, __LINE__, BOOST_CURRENT_FUNCTION,  \
+        lhs, rhs, #lhs, #rhs)
 
 #define MORDOR_TEST_ASSERT_LESS_THAN(lhs, rhs)                                  \
-    ::Mordor::Test::assertLessThan(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+    ::Mordor::Test::assertLessThan(__FILE__, __LINE__, BOOST_CURRENT_FUNCTION,  \
+        lhs, rhs, #lhs, #rhs)
 
 #define MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(lhs, rhs)                         \
-    ::Mordor::Test::assertLessThanOrEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+    ::Mordor::Test::assertLessThanOrEqual(__FILE__, __LINE__,                   \
+        BOOST_CURRENT_FUNCTION, lhs, rhs, #lhs, #rhs)
 
 #define MORDOR_TEST_ASSERT_GREATER_THAN(lhs, rhs)                               \
-    ::Mordor::Test::assertGreaterThan(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+    ::Mordor::Test::assertGreaterThan(__FILE__, __LINE__,                       \
+        BOOST_CURRENT_FUNCTION, lhs, rhs, #lhs, #rhs)
 
 #define MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(lhs, rhs)                      \
-    ::Mordor::Test::assertGreaterThanOrEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs)
+    ::Mordor::Test::assertGreaterThanOrEqual(__FILE__, __LINE__,                \
+        BOOST_CURRENT_FUNCTION, lhs, rhs, #lhs, #rhs)
 
 #define MORDOR_TEST_ASSERT_ABOUT_EQUAL(lhs, rhs, variance)                      \
-    ::Mordor::Test::assertAboutEqual(__FILE__, __LINE__, lhs, rhs, #lhs, #rhs, variance)
+    ::Mordor::Test::assertAboutEqual(__FILE__, __LINE__, BOOST_CURRENT_FUNCTION,\
+        lhs, rhs, #lhs, #rhs, variance)
 
 #define MORDOR_TEST_ASSERT_EXCEPTION(code, exception)                           \
     try {                                                                       \
         code;                                                                   \
-        ::Mordor::Test::assertion(__FILE__, __LINE__, "Expected " +             \
-            std::string(typeid(exception).name()) + " from " #code);            \
+        ::Mordor::Test::assertion(__FILE__, __LINE__, BOOST_CURRENT_FUNCTION,   \
+            "Expected " + std::string(typeid(exception).name()) +               \
+            " from " #code);                                                    \
     } catch (exception &) {                                                     \
     }
 
@@ -158,7 +167,7 @@ MORDOR_NO_SERIALIZE_BARE(std::vector<T>)
             code;                                                               \
             __selfAsserted = true;                                              \
             ::Mordor::Test::assertion(__FILE__, __LINE__,                       \
-                "Expected Assertion from " #code);                              \
+                BOOST_CURRENT_FUNCTION, "Expected Assertion from " #code);      \
     } catch (::Mordor::Assertion &) {                                           \
             if (__selfAsserted)                                                 \
                 throw;                                                          \
@@ -166,10 +175,11 @@ MORDOR_NO_SERIALIZE_BARE(std::vector<T>)
     }
 
 // Assertion internal functions
-void assertion(const char *file, int line, const std::string &expr);
+void assertion(const char *file, int line, const char *function,
+               const std::string &expr);
 
 template <class T, class U>
-void assertComparison(const char *file, int line,
+void assertComparison(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr,
     const char *op)
 {
@@ -178,99 +188,106 @@ void assertComparison(const char *file, int line,
     serializer<U> u(rhs);
     os << lhsExpr << " " << op << " " << rhsExpr
         << "\n" << t << " " << op << " " << u;
-    assertion(file, line, os.str());
+    assertion(file, line, function, os.str());
 }
 
 template <class T, class U>
-void assertEqual(const char *file, int line,
+void assertEqual(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
 {
     if (!(lhs == rhs)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "==");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "==");
     }
 }
 
 template <>
 void assertEqual<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr);
+    int line,  const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr);
 
 template <class T, class U>
-void assertNotEqual(const char *file, int line,
+void assertNotEqual(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
 {
     if (!(lhs != rhs)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "!=");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "!=");
     }
 }
 
 template <>
 void assertNotEqual<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr);
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr);
 
 template <class T, class U>
-void assertLessThan(const char *file, int line,
+void assertLessThan(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
 {
     if (!(lhs < rhs)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "<");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "<");
     }
 }
 
 template <>
 void assertLessThan<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr);
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr);
 
 template <class T, class U>
-void assertLessThanOrEqual(const char *file, int line,
+void assertLessThanOrEqual(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
 {
     if (!(lhs <= rhs)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "<=");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "<=");
     }
 }
 
 template <>
 void assertLessThanOrEqual<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr);
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr);
 
 template <class T, class U>
-void assertGreaterThan(const char *file, int line,
+void assertGreaterThan(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
 {
     if (!(lhs > rhs)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            ">");
     }
 }
 
 template <>
 void assertGreaterThan<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr);
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr);
 
 template <class T, class U>
-void assertGreaterThanOrEqual(const char *file, int line,
+void assertGreaterThanOrEqual(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr)
 {
     if (!(lhs >= rhs)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, ">=");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            ">=");
     }
 }
 
 template <>
 void assertGreaterThanOrEqual<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *rhs, const char *lhsExpr,
-    const char *rhsExpr);
+    int line, const char *function, const char *lhs, const char *rhs,
+    const char *lhsExpr, const char *rhsExpr);
 
 template <class T, class U, class V>
-void assertAboutEqual(const char *file, int line,
+void assertAboutEqual(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr, V variance)
 {
     if (!(lhs - variance < rhs && lhs + variance > rhs)) {
-        assertComparison(file, line, lhs, rhs, lhsExpr, rhsExpr, "~==");
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "~==");
     }
 }
 
