@@ -483,7 +483,6 @@ Fiber::initStack()
     if (getcontext(&m_ctx))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getcontext");
     m_ctx.uc_link = NULL;
-    m_ctx.uc_flags = 0;
     m_ctx.uc_stack.ss_sp = m_stack;
     m_ctx.uc_stack.ss_size = m_stacksize;
 #ifdef OSX
