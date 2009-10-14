@@ -92,6 +92,7 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
 Fiber::~Fiber()
 {
     if (m_state == EXCEPT) {
+        m_exception = boost::exception_ptr();
         call(true);
         m_state = TERM;
     }
@@ -116,6 +117,7 @@ Fiber::~Fiber()
 void
 Fiber::reset()
 {
+    m_exception = boost::exception_ptr();
     if (m_state == EXCEPT)
         call(true);
     MORDOR_ASSERT(m_stack);
@@ -123,12 +125,12 @@ Fiber::reset()
     MORDOR_ASSERT(m_dg);
     initStack();
     m_state = INIT;
-    m_exception = boost::exception_ptr();
 }
 
 void
 Fiber::reset(boost::function<void ()> dg)
 {
+    m_exception = boost::exception_ptr();
     if (m_state == EXCEPT)
         call(true);
     MORDOR_ASSERT(m_stack);
@@ -136,7 +138,6 @@ Fiber::reset(boost::function<void ()> dg)
     m_dg = dg;
     initStack();
     m_state = INIT;
-    m_exception = boost::exception_ptr();
 }
 
 Fiber::ptr
@@ -156,6 +157,14 @@ Fiber::setThis(Fiber* f)
 void
 Fiber::call()
 {
+    call(false);
+}
+
+void
+Fiber::callAndThrow(boost::exception_ptr exception)
+{
+    MORDOR_ASSERT(exception);
+    m_exception = exception;
     call(false);
 }
 
@@ -179,6 +188,11 @@ Fiber::yield()
         cur->m_yielder->m_state = cur->m_yielderNextState;
         cur->m_yielder.reset();
     }
+    if (cur->m_state == EXCEPT) {
+        MORDOR_ASSERT(cur->m_exception);
+        Mordor::rethrow_exception(cur->m_exception);
+    }
+    MORDOR_ASSERT(cur->m_state == EXEC);
 }
 
 Fiber::State
@@ -201,7 +215,7 @@ Fiber::call(bool destructor)
     }
     setThis(this);
     m_outer = cur;
-    m_state = EXEC;
+    m_state = m_exception ? EXCEPT : EXEC;
     fiber_switchContext(&cur->m_sp, m_sp);
     setThis(cur.get());
     MORDOR_ASSERT(cur->m_yielder || destructor);
@@ -214,6 +228,7 @@ Fiber::call(bool destructor)
         if (yielder->m_state == EXCEPT && yielder->m_exception)
             Mordor::rethrow_exception(yielder->m_exception);
     }
+    MORDOR_ASSERT(cur->m_state == EXEC);
 }
 
 Fiber::ptr
@@ -246,7 +261,6 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
 #endif
     MORDOR_ASSERT(targetState != TERM);
     setThis(curp);
-    MORDOR_ASSERT(curp->m_yielder || targetState == EXCEPT);
     if (curp->m_yielder) {
         Fiber::ptr yielder = curp->m_yielder;
         yielder->m_state = curp->m_yielderNextState;
@@ -255,6 +269,11 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
             Mordor::rethrow_exception(yielder->m_exception);
         return yielder;
     }
+    if (curp->m_state == EXCEPT) {
+        MORDOR_ASSERT(curp->m_exception);
+        Mordor::rethrow_exception(curp->m_exception);
+    }
+    MORDOR_ASSERT(curp->m_state == EXEC);
     return Fiber::ptr();
 }
 
@@ -268,9 +287,13 @@ Fiber::entryPoint()
         cur->m_yielder.reset();
     }
     MORDOR_ASSERT(cur->m_dg);
-    MORDOR_ASSERT(cur->m_state == EXEC);
     Fiber *curp = cur.get();
     try {
+        if (cur->m_state == EXCEPT) {
+            MORDOR_ASSERT(cur->m_exception);
+            Mordor::rethrow_exception(cur->m_exception);
+        }
+        MORDOR_ASSERT(cur->m_state == EXEC);
         cur->m_dg();
     } catch (boost::exception &ex) {
         Fiber::weak_ptr dummy = cur;

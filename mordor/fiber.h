@@ -72,6 +72,7 @@ public:
     static ptr getThis();
 
     void call();
+    void callAndThrow(boost::exception_ptr exception);
     // Returns whoever yielded back to us
     Fiber::ptr yieldTo(bool yieldToCallerOnTerminate = true);
     static void yield();

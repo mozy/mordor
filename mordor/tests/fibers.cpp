@@ -272,6 +272,48 @@ MORDOR_UNITTEST(Fibers, yieldTo)
     MORDOR_TEST_ASSERT(d->state() == Fiber::TERM);
 }
 
+static void fiberProcYieldBack(int &sequence, Fiber::ptr caller,
+                               Fiber::weak_ptr weakself)
+{
+    Fiber::ptr self(weakself);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == self);
+    MORDOR_TEST_ASSERT(caller != self);
+    MORDOR_TEST_ASSERT(caller->state() == Fiber::HOLD);
+    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);
+    caller->yieldTo();
+    MORDOR_TEST_ASSERT(Fiber::getThis() == self);
+    MORDOR_TEST_ASSERT(caller != self);
+    MORDOR_TEST_ASSERT(caller->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);    
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+}
+
+MORDOR_UNITTEST(Fibers, yieldBackThenCall)
+{
+    int sequence = 0;
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr a(new Fiber(NULL));
+    a->reset(boost::bind(&fiberProcYieldBack, boost::ref(sequence),
+        mainFiber, Fiber::weak_ptr(a)));
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber != a);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
+    a->yieldTo();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber != a);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::HOLD);
+    a->call();
+    MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
+    MORDOR_TEST_ASSERT(mainFiber != a);
+    MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
+    MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
+}
+
 static void
 fiberProc4(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence, bool exception)
 {
@@ -339,7 +381,7 @@ MORDOR_UNITTEST(Fibers, reset)
 
 static void throwBadAlloc()
 {
-    throw std::bad_alloc();
+    MORDOR_THROW_EXCEPTION(std::bad_alloc());
 }
 
 MORDOR_UNITTEST(Fibers, badAlloc)
@@ -414,3 +456,68 @@ MORDOR_UNITTEST(Fibers, assertNeedCallingFiber)
     MORDOR_TEST_ASSERT_ASSERTED(fiber->call());
 }
 #endif
+
+MORDOR_UNITTEST(Fibers, forceThrowExceptionNewFiberCall)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr f(new Fiber(&throwRuntimeError));
+    boost::exception_ptr exception;
+    try {
+        throw boost::enable_current_exception(DummyException());
+    } catch (...) {
+        exception = boost::current_exception();
+    }
+    MORDOR_TEST_ASSERT_EXCEPTION(f->callAndThrow(exception), DummyException);
+}
+
+static void catchAndThrowDummy()
+{
+    try {
+        Fiber::yield();
+        MORDOR_NOTREACHED();
+    } catch (DummyException &) {
+        throw;
+    }
+    MORDOR_NOTREACHED();
+}
+
+MORDOR_UNITTEST(Fibers, forceThrowExceptionFiberYield)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr f(new Fiber(&catchAndThrowDummy));
+    boost::exception_ptr exception;
+    try {
+        throw boost::enable_current_exception(DummyException());
+    } catch (...) {
+        exception = boost::current_exception();
+    }
+    f->call();
+    MORDOR_TEST_ASSERT_EXCEPTION(f->callAndThrow(exception), DummyException);
+}
+
+static void catchAndThrowDummyYieldTo(Fiber::ptr caller)
+{
+    try {
+        caller->yieldTo();
+        MORDOR_NOTREACHED();
+    } catch (DummyException &) {
+        throw;
+    }
+    MORDOR_NOTREACHED();
+}
+
+MORDOR_UNITTEST(Fibers, forceThrowExceptionFiberYieldTo)
+{
+    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr f(new Fiber(boost::bind(&catchAndThrowDummyYieldTo,
+        mainFiber)));
+    boost::exception_ptr exception;
+    try {
+        throw boost::enable_current_exception(DummyException());
+    } catch (...) {
+        exception = boost::current_exception();
+    }
+    f->yieldTo();
+    MORDOR_TEST_ASSERT_EXCEPTION(f->callAndThrow(exception), DummyException);
+    f->reset(NULL);
+}
