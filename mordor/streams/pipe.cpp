@@ -57,7 +57,9 @@ std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t bufferSize)
 PipeStream::PipeStream(size_t bufferSize)
 : m_bufferSize(bufferSize),
   m_closed(NONE),
-  m_otherClosed(NONE)
+  m_otherClosed(NONE),
+  m_pendingWriterScheduler(NULL),
+  m_pendingReaderScheduler(NULL)
 {}
 
 PipeStream::~PipeStream()
@@ -66,15 +68,21 @@ PipeStream::~PipeStream()
     if (!m_otherStream.expired()) {
         PipeStream::ptr otherStream(m_otherStream);
         MORDOR_ASSERT(!otherStream->m_pendingReader);
+        MORDOR_ASSERT(!otherStream->m_pendingReaderScheduler);
         MORDOR_ASSERT(!otherStream->m_pendingWriter);
+        MORDOR_ASSERT(!otherStream->m_pendingWriterScheduler);
     }
     if (m_pendingReader) {
+        MORDOR_ASSERT(m_pendingReaderScheduler);
         m_pendingReaderScheduler->schedule(m_pendingReader);
         m_pendingReader.reset();
+        m_pendingReaderScheduler = NULL;
     }
     if (m_pendingWriter) {
+        MORDOR_ASSERT(m_pendingWriterScheduler);
         m_pendingWriterScheduler->schedule(m_pendingWriter);
         m_pendingWriter.reset();
+        m_pendingWriterScheduler = NULL;
     }
 }
 
@@ -88,50 +96,68 @@ PipeStream::close(CloseType type)
         otherStream->m_otherClosed = m_closed;
     }
     if (m_pendingReader && (m_closed & WRITE)) {
+        MORDOR_ASSERT(m_pendingReaderScheduler);
         m_pendingReaderScheduler->schedule(m_pendingReader);
-        m_pendingReader.reset();        
+        m_pendingReader.reset();
+        m_pendingReaderScheduler = NULL;
     }
     if (m_pendingWriter && (m_closed & READ)) {
+        MORDOR_ASSERT(m_pendingWriterScheduler);
         m_pendingWriterScheduler->schedule(m_pendingWriter);
         m_pendingWriter.reset();
+        m_pendingWriterScheduler = NULL;
     }
 }
 
 size_t
 PipeStream::read(Buffer &b, size_t len)
 {
-    {
-        boost::mutex::scoped_lock lock(*m_mutex);
-        if (m_closed & READ)
-            MORDOR_THROW_EXCEPTION(BadHandleException());
-        if (m_otherStream.expired() && !(m_otherClosed & WRITE)) {
-            MORDOR_THROW_EXCEPTION(BrokenPipeException());
-        }
-        size_t avail = m_readBuffer.readAvailable();
-        if (avail > 0) {
-            size_t todo = std::min(len, avail);
-            b.copyIn(m_readBuffer, todo);
-            m_readBuffer.consume(todo);
-            if (m_pendingWriter) {
-                m_pendingWriterScheduler->schedule(m_pendingWriter);
-                m_pendingWriter.reset();
+    while (true) {
+        {
+            boost::mutex::scoped_lock lock(*m_mutex);
+            if (m_closed & READ)
+                MORDOR_THROW_EXCEPTION(BadHandleException());
+            if (m_otherStream.expired() && !(m_otherClosed & WRITE))
+                MORDOR_THROW_EXCEPTION(BrokenPipeException());
+            size_t avail = m_readBuffer.readAvailable();
+            if (avail > 0) {
+                size_t todo = std::min(len, avail);
+                b.copyIn(m_readBuffer, todo);
+                m_readBuffer.consume(todo);
+                if (m_pendingWriter) {
+                    MORDOR_ASSERT(m_pendingWriterScheduler);
+                    m_pendingWriterScheduler->schedule(m_pendingWriter);
+                    m_pendingWriter.reset();
+                    m_pendingWriterScheduler = NULL;
+                }
+                return todo;
             }
-            return todo;
-        }
 
-        if (m_otherClosed & WRITE) {
-            return 0;
-        }
-        PipeStream::ptr otherStream(m_otherStream);
+            if (m_otherClosed & WRITE)
+                return 0;
+            PipeStream::ptr otherStream(m_otherStream);
 
-        // Wait for the other stream to schedule us
-        MORDOR_ASSERT(!otherStream->m_pendingReader);
-        otherStream->m_pendingReader = Fiber::getThis();
-        otherStream->m_pendingReaderScheduler = Scheduler::getThis();
+            // Wait for the other stream to schedule us
+            MORDOR_ASSERT(!otherStream->m_pendingReader);
+            MORDOR_ASSERT(!otherStream->m_pendingReaderScheduler);
+            otherStream->m_pendingReader = Fiber::getThis();
+            otherStream->m_pendingReaderScheduler = Scheduler::getThis();
+        }
+        try {
+            Scheduler::getThis()->yieldTo();
+        } catch (...) {
+            boost::mutex::scoped_lock lock(*m_mutex);
+            if (!m_otherStream.expired()) {
+                PipeStream::ptr otherStream(m_otherStream);
+                if (otherStream->m_pendingReader == Fiber::getThis()) {
+                    MORDOR_ASSERT(otherStream->m_pendingReaderScheduler == Scheduler::getThis());
+                    otherStream->m_pendingReader.reset();
+                    otherStream->m_pendingReaderScheduler = NULL;
+                }
+            }
+            throw;
+        }
     }
-    Scheduler::getThis()->yieldTo();
-    // And recurse
-    return read(b, len);
 }
 
 size_t
@@ -144,28 +170,42 @@ PipeStream::write(const Buffer &b, size_t len)
             boost::mutex::scoped_lock lock(*m_mutex);
             if (m_closed & WRITE)
                 MORDOR_THROW_EXCEPTION(BadHandleException());
-            if (m_otherStream.expired()) {
+            if (m_otherStream.expired())
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
-            }
             PipeStream::ptr otherStream(m_otherStream);
-            if (otherStream->m_closed & READ) {
+            if (otherStream->m_closed & READ)
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
-            }
 
             if (otherStream->m_readBuffer.readAvailable() + len <= m_bufferSize) {
                 otherStream->m_readBuffer.copyIn(b, len);
                 if (m_pendingReader) {
+                    MORDOR_ASSERT(m_pendingReaderScheduler);
                     m_pendingReaderScheduler->schedule(m_pendingReader);
                     m_pendingReader.reset();
+                    m_pendingReaderScheduler = NULL;
                 }            
                 return len;
             }
             // Wait for the other stream to schedule us
             MORDOR_ASSERT(!otherStream->m_pendingWriter);
+            MORDOR_ASSERT(!otherStream->m_pendingWriterScheduler);
             otherStream->m_pendingWriter = Fiber::getThis();
             otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }
-        Scheduler::getThis()->yieldTo();
+        try {
+            Scheduler::getThis()->yieldTo();
+        } catch (...) {
+            boost::mutex::scoped_lock lock(*m_mutex);
+            if (!m_otherStream.expired()) {
+                PipeStream::ptr otherStream(m_otherStream);
+                if (otherStream->m_pendingWriter == Fiber::getThis()) {
+                    MORDOR_ASSERT(otherStream->m_pendingWriterScheduler == Scheduler::getThis());
+                    otherStream->m_pendingWriter.reset();
+                    otherStream->m_pendingWriterScheduler = NULL;
+                }
+            }
+            throw;
+        }
     }
 }
 
@@ -175,23 +215,34 @@ PipeStream::flush()
     while (true) {
         {
             boost::mutex::scoped_lock lock(*m_mutex);
-            if (m_otherStream.expired()) {
+            if (m_otherStream.expired())
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
-            }
             PipeStream::ptr otherStream(m_otherStream);
-            if (otherStream->m_closed & READ) {
+            if (otherStream->m_closed & READ)
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
-            }
 
-            if (otherStream->m_readBuffer.readAvailable() == 0) {
+            if (otherStream->m_readBuffer.readAvailable() == 0)
                 return;
-            }
             // Wait for the other stream to schedule us
             MORDOR_ASSERT(!otherStream->m_pendingWriter);
+            MORDOR_ASSERT(!otherStream->m_pendingWriterScheduler);
             otherStream->m_pendingWriter = Fiber::getThis();
             otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }
-        Scheduler::getThis()->yieldTo();
+        try {
+            Scheduler::getThis()->yieldTo();
+        } catch (...) {
+            boost::mutex::scoped_lock lock(*m_mutex);
+            if (!m_otherStream.expired()) {
+                PipeStream::ptr otherStream(m_otherStream);
+                if (otherStream->m_pendingWriter == Fiber::getThis()) {
+                    MORDOR_ASSERT(otherStream->m_pendingWriterScheduler == Scheduler::getThis());
+                    otherStream->m_pendingWriter.reset();
+                    otherStream->m_pendingWriterScheduler = NULL;
+                }
+            }
+            throw;
+        }
     }
 }
 
