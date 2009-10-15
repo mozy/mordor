@@ -59,9 +59,10 @@ static void delete_nothing(Fiber* f) {}
 boost::thread_specific_ptr<Scheduler> Scheduler::t_scheduler(&delete_nothing_scheduler);
 boost::thread_specific_ptr<Fiber> Scheduler::t_fiber(&delete_nothing);
 
-Scheduler::Scheduler(int threads, bool useCaller)
+Scheduler::Scheduler(int threads, bool useCaller, size_t batchSize)
     : m_stopping(true),
-      m_autoStop(false)
+      m_autoStop(false),
+      m_batchSize(batchSize)
 {
     m_threads.init(boost::bind(&Scheduler::run, this));
     if (useCaller)
@@ -267,67 +268,68 @@ Scheduler::run()
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this)));
     MORDOR_LOG_TRACE(g_log) << this << " starting thread with idle fiber " << idleFiber;
     Fiber::ptr dgFiber;
+    // use a vector for O(1) .size()
+    std::vector<FiberAndThread> batch(m_batchSize);
     while (true) {
-        Fiber::ptr f;
-        boost::function<void ()> dg;
-        bool loop = false;
+        batch.clear();
+        bool dontIdle = false;
         {
             boost::mutex::scoped_lock lock(m_mutex);
-            while (!f && !dg) {
-                if (m_fibers.empty())
-                    break;
-                std::list<FiberAndThread>::iterator it;
-                for (it = m_fibers.begin(); it != m_fibers.end(); ++it) {
-                    if (it->thread != boost::thread::id() &&
-                        it->thread != boost::this_thread::get_id()) {
-                        MORDOR_LOG_VERBOSE(g_log) << this
-                            << " skipping item scheduled for thread "
-                            << it->thread;
-                        // Wake up another thread to hopefully service this
-                        tickle();
-                        loop = true;
-                        break;
-                    }
-                    MORDOR_ASSERT(it->fiber || it->dg);
-                    if (it->fiber) {
-                        f = it->fiber;
-                        if (f->state() == Fiber::EXEC) {
-                            f.reset();
-                            continue;
-                        }
-                    } else {
-                        dg = it->dg;
-                    }
-                    m_fibers.erase(it);
-                    break;
+            for (std::list<FiberAndThread>::iterator it(m_fibers.begin());
+                 it != m_fibers.end() && batch.size() < m_batchSize; ) {
+                if (it->thread != boost::thread::id() &&
+                    it->thread != boost::this_thread::get_id()) {
+                    MORDOR_LOG_VERBOSE(g_log) << this
+                        << " skipping item scheduled for thread "
+                        << it->thread;
+
+                    // Wake up another thread to hopefully service this
+                    tickle();
+                    dontIdle = true;
+                    ++it;
+                    continue;
                 }
-                if (loop) {
-                    break;
+                MORDOR_ASSERT(it->fiber || it->dg);
+                if (it->fiber && it->fiber->state() == Fiber::EXEC) {
+                    ++it;
+                    MORDOR_LOG_VERBOSE(g_log) << this
+                        << " skipping executing fiber " << it->fiber;
+                    dontIdle = true;
+                    continue;
                 }
+                batch.push_back(*it);
+                it = m_fibers.erase(it);
             }
         }
-        // We're looping because we're not allowed to go back to idle until
-        // the correct thread services a thread-targetted fiber request;
-        // but we need to break out of the above loop to release the lock
-        if (loop) {
-            continue;
-        }
-        if (f) {
-            if (f->state() != Fiber::TERM) {
-                MORDOR_LOG_VERBOSE(g_log) << this << " running " << f;
-                f->yieldTo();
+        MORDOR_LOG_VERBOSE(g_log) << this
+            << " got " << batch.size() << " fiber/dgs to process (max: "
+            << m_batchSize << ")";
+        if (!batch.empty()) {
+            std::vector<FiberAndThread>::iterator it;
+            for (it = batch.begin(); it != batch.end(); ++it) {
+                Fiber::ptr f = it->fiber;
+                boost::function<void ()> dg = it->dg;
+
+                if (f) {
+                    if (f->state() != Fiber::TERM) {
+                        MORDOR_LOG_VERBOSE(g_log) << this << " running " << f;
+                        f->yieldTo();
+                    }
+                } else if (dg) {
+                    if (!dgFiber)
+                        dgFiber.reset(new Fiber(dg));
+                    dgFiber->reset(dg);
+                    MORDOR_LOG_VERBOSE(g_log) << this << " running " << dg;
+                    dgFiber->yieldTo();
+                    if (dgFiber->state() != Fiber::TERM)
+                        dgFiber.reset();
+                }
             }
             continue;
-        } else if (dg) {
-            if (!dgFiber)
-                dgFiber.reset(new Fiber(dg));
-            dgFiber->reset(dg);
-            MORDOR_LOG_VERBOSE(g_log) << this << " running " << dg;
-            dgFiber->yieldTo();
-            if (dgFiber->state() != Fiber::TERM)
-                dgFiber.reset();
-            continue;
         }
+        if (dontIdle)
+            continue;
+
         if (idleFiber->state() == Fiber::TERM) {
             MORDOR_LOG_VERBOSE(g_log) << this << " idle fiber terminated";
             return;
@@ -337,8 +339,8 @@ Scheduler::run()
     }
 }
 
-WorkerPool::WorkerPool(int threads, bool useCaller)
-    : Scheduler(threads, useCaller)
+WorkerPool::WorkerPool(int threads, bool useCaller, size_t batchSize)
+    : Scheduler(threads, useCaller, batchSize)
 {
     start();
 }

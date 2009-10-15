@@ -61,8 +61,10 @@ public:
     /// @param threads How many threads this Scheduler should be comprised of
     /// @param useCaller If this Scheduler should "hijack" the currently
     /// executing thread
+    /// @param batchSize Number of operations to pull off the scheduler queue
+    /// on every iteration
     /// @pre if (useCaller == true) Scheduler::getThis() == NULL
-    Scheduler(int threads = 1, bool useCaller = true);
+    Scheduler(int threads = 1, bool useCaller = true, size_t batchSize = 1);
     /// Destroys the scheduler, implicitly calling stop()
     virtual ~Scheduler();
 
@@ -158,6 +160,7 @@ private:
     size_t m_threadCount;
     bool m_stopping;
     bool m_autoStop;
+    size_t m_batchSize;
 };
 
 /// Generic Scheduler
@@ -167,7 +170,7 @@ private:
 class WorkerPool : public Scheduler
 {
 public:
-    WorkerPool(int threads = 1, bool useCaller = true);
+    WorkerPool(int threads = 1, bool useCaller = true, size_t batchSize = 1);
     ~WorkerPool() { stop(); }
 
 protected:
