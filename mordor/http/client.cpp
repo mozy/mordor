@@ -69,6 +69,8 @@ ClientConnection::scheduleNextRequest(ClientRequest::ptr request)
             if (m_currentRequest != m_pendingRequests.end()) {
                 request = *m_currentRequest;
                 request->m_requestInFlight = true;
+                MORDOR_ASSERT(request->m_scheduler);
+                MORDOR_ASSERT(request->m_fiber);
                 request->m_scheduler->schedule(request->m_fiber);
             }
         }
@@ -78,13 +80,15 @@ ClientConnection::scheduleNextRequest(ClientRequest::ptr request)
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
         ClientRequest::ptr request = *m_currentRequest;
-        MORDOR_ASSERT(request->m_fiber == Fiber::getThis());
         request->m_requestInFlight = false;
         request->m_requestDone = true;
         ++m_currentRequest;
         // Someone else may have queued up while we were flushing
         if (m_currentRequest != m_pendingRequests.end()) {
-            (*m_currentRequest)->m_scheduler->schedule((*m_currentRequest)->m_fiber);
+            request = *m_currentRequest;
+            MORDOR_ASSERT(request->m_scheduler);
+            MORDOR_ASSERT(request->m_fiber);
+            request->m_scheduler->schedule(request->m_fiber);
         }
     }
 }
@@ -117,6 +121,8 @@ ClientConnection::scheduleNextResponse(ClientRequest::ptr request)
             } else if (it != m_waitingResponses.end()) {
                 m_waitingResponses.erase(it);                
                 request->m_responseInFlight = true;
+                MORDOR_ASSERT(request->m_scheduler);
+                MORDOR_ASSERT(request->m_fiber);
                 request->m_scheduler->schedule(request->m_fiber);
                 request.reset();
             } else {
@@ -145,6 +151,8 @@ ClientConnection::scheduleAllWaitingRequests()
         ) {
         MORDOR_ASSERT(!(*it)->m_requestDone);
         if (!(*it)->m_requestInFlight) {
+            MORDOR_ASSERT((*it)->m_scheduler);
+            MORDOR_ASSERT((*it)->m_fiber);
             (*it)->m_scheduler->schedule((*it)->m_fiber);
             if (m_currentRequest == it) {
                 m_currentRequest = it = m_pendingRequests.erase(it);
@@ -166,6 +174,8 @@ ClientConnection::scheduleAllWaitingResponses()
         it != m_currentRequest;) {
         std::set<ClientRequest::ptr>::iterator waiting = m_waitingResponses.find(*it);
         if (waiting != m_waitingResponses.end()) {
+            MORDOR_ASSERT((*it)->m_scheduler);
+            MORDOR_ASSERT((*it)->m_fiber);
             (*it)->m_scheduler->schedule((*it)->m_fiber);            
             it = m_pendingRequests.erase(it);
             m_waitingResponses.erase(waiting);
@@ -221,6 +231,7 @@ ClientConnection::invariant() const
 
 ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &request)
 : m_conn(conn),
+  m_scheduler(NULL),
   m_request(request),
   m_requestDone(false),
   m_requestInFlight(false),
@@ -231,10 +242,7 @@ ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &request)
   m_aborted(false),
   m_badTrailer(false),
   m_incompleteTrailer(false)
-{
-    m_scheduler = Scheduler::getThis();
-    m_fiber = Fiber::getThis();
-}
+{}
 
 const Request &
 ClientRequest::request()
@@ -533,6 +541,11 @@ ClientRequest::doRequest()
             m_conn->m_currentRequest = m_conn->m_pendingRequests.end();
             --m_conn->m_currentRequest;
             m_requestInFlight = true;
+        } else {
+            m_scheduler = Scheduler::getThis();
+            m_fiber = Fiber::getThis();
+            MORDOR_ASSERT(m_scheduler);
+            MORDOR_ASSERT(m_fiber);
         }
         if (close) {
             m_conn->m_allowNewRequests = false;
@@ -541,7 +554,9 @@ ClientRequest::doRequest()
     // If we weren't the first request in the queue, we have to wait for
     // another request to schedule us
     if (!firstRequest) {
-        Scheduler::getThis()->yieldTo();
+        m_scheduler->yieldTo();
+        m_scheduler = NULL;
+        m_fiber.reset();
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
@@ -615,6 +630,10 @@ ClientRequest::ensureResponse()
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
         ClientRequest::ptr request = m_conn->m_pendingRequests.front();
         if (request.get() != this) {
+            m_scheduler = Scheduler::getThis();
+            m_fiber = Fiber::getThis();
+            MORDOR_ASSERT(m_scheduler);
+            MORDOR_ASSERT(m_fiber);
 #ifdef DEBUG
             bool inserted = 
 #endif
@@ -628,8 +647,9 @@ ClientRequest::ensureResponse()
     // If we weren't the first response in the queue, wait for someone
     // else to schedule us
     if (wait) {
-        MORDOR_ASSERT(Scheduler::getThis());
-        Scheduler::getThis()->yieldTo();
+        m_scheduler->yieldTo();
+        m_scheduler = NULL;
+        m_fiber.reset();
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
