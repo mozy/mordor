@@ -246,7 +246,7 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
             previous = outer;
             outer = outer->m_outer;
         }
-        previous->m_terminateOuter = cur->shared_from_this();
+        previous->m_terminateOuter = cur;
     }
     m_state = EXEC;
     m_yielder = cur;

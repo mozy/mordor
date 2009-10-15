@@ -136,9 +136,21 @@ Scheduler::stop()
     if (m_rootFiber)
         tickle();
     if (Scheduler::getThis() == this) {
-        // Give this thread's run fiber a chance to kill itself off
-        MORDOR_LOG_VERBOSE(g_log) << this << " yielding to this thread to stop";
-        yieldTo(true);
+        bool moreWork = t_fiber->state() == Fiber::HOLD || !stopping();
+        if (!moreWork) {
+            boost::mutex::scoped_lock lock(m_mutex);
+            moreWork = !m_fibers.empty();
+        }
+        while (moreWork) {                
+            // Give this thread's run fiber a chance to kill itself off
+            MORDOR_LOG_VERBOSE(g_log) << this << " yielding to this thread to stop";
+            yieldTo(true);
+            moreWork = t_fiber->state() == Fiber::HOLD || !stopping();
+            if (!moreWork) {
+                boost::mutex::scoped_lock lock(m_mutex);
+                moreWork = !m_fibers.empty();
+            }
+        }
     }
     if (m_rootThread == boost::this_thread::get_id() ||
         Scheduler::getThis() != this) {
