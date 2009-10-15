@@ -158,7 +158,7 @@ unquote(const std::string &str)
 
     # almost-basic character types
     # note that we allow a single LF for a CR LF
-    CRLF = CR LF;
+    CRLF = CR LF | LF;
     LWS = CRLF? ( SP | HT )+;
     TEXT = LWS | (OCTET -- CTL);
     HEX = xdigit;
