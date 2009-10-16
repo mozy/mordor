@@ -307,6 +307,8 @@ Logger::log(Log::Level level, const std::string &str,
     Logger::ptr _this = shared_from_this();
 #ifdef WINDOWS
     DWORD thread = GetCurrentThreadId();
+#elif defined(LINUX)
+    pid_t thread = syscall(__NR_gettid);
 #else
     pid_t thread = getpid();
 #endif

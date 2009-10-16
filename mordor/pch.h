@@ -53,6 +53,7 @@
 #include <byteswap.h>
 #include <semaphore.h>
 #include <sys/epoll.h>
+#include <syscall.h>
 #elif defined(OSX)
 #include <mach/mach_init.h>
 #include <mach/mach_time.h>
