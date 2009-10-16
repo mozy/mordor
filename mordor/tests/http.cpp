@@ -942,19 +942,25 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseBody)
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     // Verify response characteristics
     MORDOR_TEST_ASSERT(request->hasResponseBody());
-    MORDOR_TEST_ASSERT(request->responseStream()->supportsRead());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsWrite());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsSeek());
-    MORDOR_TEST_ASSERT(request->responseStream()->supportsSize());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsTruncate());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsFind());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsUnread());
-    MORDOR_TEST_ASSERT_EQUAL(request->responseStream()->size(), 5);
+    Stream::ptr response = request->responseStream();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsWrite());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
+    MORDOR_TEST_ASSERT_EQUAL(response->size(), 5);
 
     // Verify response itself
     MemoryStream responseBody;
-    transferStream(request->responseStream(), responseBody);
+    transferStream(response, responseBody);
     MORDOR_TEST_ASSERT(responseBody.buffer() == "hello");
+
+    response.reset();
+#ifdef DEBUG
+    MORDOR_TEST_ASSERT_ASSERTED(request->responseStream());
+#endif
 }
 
 MORDOR_UNITTEST(HTTPClient, readPastEof)
@@ -984,13 +990,14 @@ MORDOR_UNITTEST(HTTPClient, readPastEof)
 
     // Verify response itself
     MemoryStream responseBody;
-    transferStream(request->responseStream(), responseBody);
+    Stream::ptr response = request->responseStream();
+    transferStream(response, responseBody);
     MORDOR_TEST_ASSERT(responseBody.buffer() == "hello");
     Buffer buf;
     // Read EOF a few times just to be sure nothing asplodes
-    MORDOR_TEST_ASSERT_EQUAL(request->responseStream()->read(buf, 10), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(request->responseStream()->read(buf, 10), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(request->responseStream()->read(buf, 10), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(response->read(buf, 10), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(response->read(buf, 10), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(response->read(buf, 10), 0u);
 }
 
 MORDOR_UNITTEST(HTTPClient, chunkedResponseBody)
@@ -1021,17 +1028,18 @@ MORDOR_UNITTEST(HTTPClient, chunkedResponseBody)
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     // Verify response characteristics
     MORDOR_TEST_ASSERT(request->hasResponseBody());
-    MORDOR_TEST_ASSERT(request->responseStream()->supportsRead());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsWrite());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsSeek());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsSize());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsTruncate());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsFind());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsUnread());
+    Stream::ptr response = request->responseStream();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsWrite());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(!response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
 
     // Verify response itself
     MemoryStream responseBody;
-    transferStream(request->responseStream(), responseBody);
+    transferStream(response, responseBody);
     MORDOR_TEST_ASSERT(responseBody.buffer() == "hello");
 }
 
@@ -1061,17 +1069,18 @@ MORDOR_UNITTEST(HTTPClient, trailerResponse)
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     // Verify response characteristics
     MORDOR_TEST_ASSERT(request->hasResponseBody());
-    MORDOR_TEST_ASSERT(request->responseStream()->supportsRead());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsWrite());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsSeek());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsSize());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsTruncate());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsFind());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsUnread());
+    Stream::ptr response = request->responseStream();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsWrite());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(!response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
 
     // Verify response itself
     MemoryStream responseBody;
-    transferStream(request->responseStream(), responseBody);
+    transferStream(response, responseBody);
     MORDOR_TEST_ASSERT(responseBody.buffer() == "");
 
     // Trailer!
@@ -1419,13 +1428,14 @@ MORDOR_UNITTEST(HTTPClient, missingTrailerResponse)
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     // Verify response characteristics
     MORDOR_TEST_ASSERT(request->hasResponseBody());
-    MORDOR_TEST_ASSERT(request->responseStream()->supportsRead());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsWrite());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsSeek());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsSize());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsTruncate());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsFind());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsUnread());
+    Stream::ptr response = request->responseStream();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsWrite());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(!response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
 
     // Trailer hasn't been read yet
 #ifdef DEBUG
@@ -1434,7 +1444,7 @@ MORDOR_UNITTEST(HTTPClient, missingTrailerResponse)
 
     // Verify response itself
     MemoryStream responseBody;
-    transferStream(request->responseStream(), responseBody);
+    transferStream(response, responseBody);
     MORDOR_TEST_ASSERT(responseBody.buffer() == "");
 
     // Missing trailer
@@ -1467,13 +1477,14 @@ MORDOR_UNITTEST(HTTPClient, badTrailerResponse)
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     // Verify response characteristics
     MORDOR_TEST_ASSERT(request->hasResponseBody());
-    MORDOR_TEST_ASSERT(request->responseStream()->supportsRead());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsWrite());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsSeek());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsSize());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsTruncate());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsFind());
-    MORDOR_TEST_ASSERT(!request->responseStream()->supportsUnread());
+    Stream::ptr response = request->responseStream();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsWrite());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(!response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
 
     // Trailer hasn't been read yet
 #ifdef DEBUG
@@ -1482,7 +1493,7 @@ MORDOR_UNITTEST(HTTPClient, badTrailerResponse)
 
     // Verify response itself
     MemoryStream responseBody;
-    transferStream(request->responseStream(), responseBody);
+    transferStream(response, responseBody);
     MORDOR_TEST_ASSERT(responseBody.buffer() == "");
 
     // Missing trailer
@@ -1552,4 +1563,48 @@ MORDOR_UNITTEST(HTTPClient, cancelResponseSingle)
         BrokenPipeException);
 
     MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), PriorRequestFailedException);
+}
+
+MORDOR_UNITTEST(HTTPClient, simpleRequestAbandoned)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.method = PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+    requestHeaders.entity.contentLength = 5;
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    // Nothing has been flushed yet
+    MORDOR_TEST_ASSERT_EQUAL(requestStream->size(), 0);
+    Stream::ptr requestBody = request->requestStream();
+    // Verify stream characteristics
+    MORDOR_TEST_ASSERT(!requestBody->supportsRead());
+    MORDOR_TEST_ASSERT(requestBody->supportsWrite());
+    MORDOR_TEST_ASSERT(!requestBody->supportsSeek());
+    MORDOR_TEST_ASSERT(requestBody->supportsSize());
+    MORDOR_TEST_ASSERT(!requestBody->supportsTruncate());
+    MORDOR_TEST_ASSERT(!requestBody->supportsFind());
+    MORDOR_TEST_ASSERT(!requestBody->supportsUnread());
+    MORDOR_TEST_ASSERT_EQUAL(requestBody->size(), 5);
+
+    // Force a flush (of the headers)
+    requestBody->flush();
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "PUT / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "Content-Length: 5\r\n"
+        "\r\n");
+
+    request.reset();
+    // Write the body - not allowed because we abandoned the request
+    MORDOR_TEST_ASSERT_ASSERTED(requestBody->write("hello"));
 }

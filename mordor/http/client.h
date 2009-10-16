@@ -27,11 +27,14 @@ private:
     friend class ClientConnection;
 public:
     typedef boost::shared_ptr<ClientRequest> ptr;
+    typedef boost::weak_ptr<ClientRequest> weak_ptr;
 
 private:
     ClientRequest(boost::shared_ptr<ClientConnection> conn, const Request &request);
 
 public:
+    ~ClientRequest();
+
     const Request &request();
     Stream::ptr requestStream();
     Multipart::ptr requestMultipart();
@@ -63,9 +66,11 @@ private:
     Response m_response;
     EntityHeaders m_requestTrailer, m_responseTrailer;
     bool m_requestDone, m_requestInFlight, m_responseHeadersDone, m_responseDone, m_responseInFlight, m_cancelled, m_aborted;
-    bool m_badTrailer, m_incompleteTrailer;
-    Stream::ptr m_requestStream, m_responseStream;
-    Multipart::ptr m_requestMultipart, m_responseMultipart;
+    bool m_badTrailer, m_incompleteTrailer, m_hasResponseBody;
+    Stream::ptr m_requestStream;
+    boost::weak_ptr<Stream> m_responseStream;
+    Multipart::ptr m_requestMultipart;
+    boost::weak_ptr<Multipart> m_responseMultipart;
 };
 
 class ClientConnection : public Connection, public boost::enable_shared_from_this<ClientConnection>, boost::noncopyable
@@ -81,16 +86,16 @@ public:
 
     bool newRequestsAllowed();
 private:
-    void scheduleNextRequest(ClientRequest::ptr currentRequest);
-    void scheduleNextResponse(ClientRequest::ptr currentRequest);
+    void scheduleNextRequest(ClientRequest *currentRequest);
+    void scheduleNextResponse(ClientRequest *currentRequest);
     void scheduleAllWaitingRequests();
     void scheduleAllWaitingResponses();
 
 private:
     boost::mutex m_mutex;
-    std::list<ClientRequest::ptr> m_pendingRequests;
-    std::list<ClientRequest::ptr>::iterator m_currentRequest;
-    std::set<ClientRequest::ptr> m_waitingResponses;
+    std::list<ClientRequest *> m_pendingRequests;
+    std::list<ClientRequest *>::iterator m_currentRequest;
+    std::set<ClientRequest *> m_waitingResponses;
     bool m_allowNewRequests;
     bool m_priorRequestFailed, m_priorResponseFailed, m_priorResponseClosed;
 

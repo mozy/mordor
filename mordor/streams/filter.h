@@ -21,7 +21,9 @@ public:
     }
 
     Stream::ptr parent() { return m_parent; }
+    void parent(Stream::ptr parent) { m_parent = parent; }
     bool ownsParent() { return m_own; }
+    void ownsParent(bool own) { m_own = own; }
 
     bool supportsRead() { return m_parent->supportsRead(); }
     bool supportsWrite() { return m_parent->supportsWrite(); }
@@ -48,10 +50,6 @@ public:
     ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)
     { return m_parent->find(str, sanitySize, throwIfNotFound); }
     void unread(const Buffer &b, size_t len) { return m_parent->unread(b, len); }
-
-protected:
-    void parent(Stream::ptr parent) { m_parent = parent; }
-    void ownsParent(bool own) { m_own = own; }
 
 private:
     Stream::ptr m_parent;
