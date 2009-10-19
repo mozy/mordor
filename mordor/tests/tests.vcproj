@@ -368,14 +368,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http_helper.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\http_helper.h"
-				>
-			</File>
-			<File
 				RelativePath=".\iomanager_iocp.cpp"
 				>
 			</File>

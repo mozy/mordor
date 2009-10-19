@@ -2,7 +2,7 @@
 
 #include "mordor/pch.h"
 
-#include "http_helper.h"
+#include "mordor/http/mockserver.h"
 #include "mordor/http/oauth.h"
 #include "mordor/http/server.h"
 #include "mordor/scheduler.h"
@@ -11,12 +11,13 @@
 #include "mordor/test/test.h"
 
 using namespace Mordor;
+using namespace Mordor::HTTP;
 using namespace Mordor::Test;
 
 static void
-oauthExampleServer(const URI &uri, HTTP::ServerRequest::ptr request)
+oauthExampleServer(const URI &uri, ServerRequest::ptr request)
 {
-    MORDOR_TEST_ASSERT_EQUAL(request->request().requestLine.method, HTTP::POST);        
+    MORDOR_TEST_ASSERT_EQUAL(request->request().requestLine.method, POST);        
     MORDOR_TEST_ASSERT_EQUAL(request->request().entity.contentType.type, "application");
     MORDOR_TEST_ASSERT_EQUAL(request->request().entity.contentType.subtype, "x-www-form-urlencoded");
     MemoryStream requestBody;
@@ -93,7 +94,7 @@ oauthExampleServer(const URI &uri, HTTP::ServerRequest::ptr request)
     }
     std::string response = qs.toString();
     request->response().entity.contentLength = response.size();
-    request->response().status.status = HTTP::OK;
+    request->response().status.status = OK;
     request->responseStream()->write(response.c_str(), response.size());
     request->responseStream()->close();
 }
@@ -131,25 +132,25 @@ MORDOR_UNITTEST(OAuth, oauthExample)
 {
     Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
-    HTTPHelper helper(&oauthExampleServer);
+    MockServer server(&oauthExampleServer);
 
-    HTTP::OAuth oauth(boost::bind(&HTTPHelper::getConn, &helper, _1),
+    OAuth oauth(boost::bind(&MockServer::getConnection, &server, _1),
         &oauthExampleAuth,
-        "https://photos.example.net/request_token", HTTP::POST, "PLAINTEXT",
-        "https://photos.example.net/access_token", HTTP::POST, "PLAINTEXT",
+        "https://photos.example.net/request_token", POST, "PLAINTEXT",
+        "https://photos.example.net/access_token", POST, "PLAINTEXT",
         "dpf43f3p2l4k3l03",
         "kd94hf93k423kf44",
         "http://printer.example.com/request_token_ready");
     oauth.selfNonce(&getTimestampAndNonce);
 
-    HTTP::Request requestHeaders;
+    Request requestHeaders;
     requestHeaders.requestLine.uri =
         "http://photos.example.net/photos?file=vacation.jpg&size=original";
     oauth.authorize(requestHeaders, "HMAC-SHA1", "http://photos.example.net/");
     MORDOR_TEST_ASSERT_EQUAL(requestHeaders.request.authorization.scheme, "OAuth");
-    HTTP::StringMap &params = requestHeaders.request.authorization.parameters;
+    StringMap &params = requestHeaders.request.authorization.parameters;
     MORDOR_TEST_ASSERT_EQUAL(params.size(), 8u);
-    HTTP::StringMap::iterator it = params.find("realm");
+    StringMap::iterator it = params.find("realm");
     MORDOR_TEST_ASSERT(it != params.end());
     MORDOR_TEST_ASSERT_EQUAL(it->second, "http://photos.example.net/");
     it = params.find("oauth_consumer_key");

@@ -2,17 +2,17 @@
 
 #include "mordor/pch.h"
 
-#include "http_helper.h"
+#include "mockserver.h"
 
 #include <boost/bind.hpp>
 
 #include "mordor/streams/pipe.h"
 
-using namespace Mordor;
-using namespace Mordor::HTTP;
+namespace Mordor {
+namespace HTTP {
 
 ClientConnection::ptr
-HTTPHelper::getConn(const URI &uri)
+MockServer::getConnection(const URI &uri)
 {
     ConnectionCache::iterator it = m_conns.find(uri);
     if (it != m_conns.end() && !it->second.first->newRequestsAllowed()) {
@@ -33,3 +33,5 @@ HTTPHelper::getConn(const URI &uri)
     }
     return it->second.first;
 }
+
+}}
