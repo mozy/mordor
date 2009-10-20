@@ -24,6 +24,8 @@
 #       define NATIVE_WINDOWS_FIBERS
 #   elif defined(LINUX)
 #       define UCONTEXT_FIBERS
+#   elif defined(OSX)
+#       define SETJMP_FIBERS
 #   elif defined(POSIX)
 #       define ASM_X86_64_POSIX_FIBERS
 #   endif
@@ -31,7 +33,7 @@
 #   ifdef WINDOWS
 #       define NATIVE_WINDOWS_FIBERS
 #   elif defined(OSX)
-#       define UCONTEXT_FIBERS
+#       define SETJMP_FIBERS
 #   elif defined(POSIX)
 #       define ASM_X86_POSIX_FIBERS
 #   endif
@@ -165,6 +167,8 @@ private:
 #ifdef OSX
     char m_mctx[sizeof(*(mcontext_t)0)];
 #endif
+#elif defined(SETJMP_FIBERS)
+    jmp_buf m_env;
 #endif
 #ifdef LINUX
     int m_valgrindStackId;

@@ -18,13 +18,20 @@
 
 namespace Mordor {
 
-#if defined(NATIVE_WINDOWS_FIBERS) || defined(UCONTEXT_FIBERS)
+#if defined(NATIVE_WINDOWS_FIBERS) || defined(UCONTEXT_FIBERS) || defined(SETJMP_FIBERS)
 static
 #else
 static void push(void * &sp, size_t v);
 extern "C"
 #endif
 void fiber_switchContext(void **oldsp, void *newsp);
+
+#ifdef SETJMP_FIBERS
+#ifdef OSX
+#define setjmp _setjmp
+#define longjmp _longjmp
+#endif
+#endif
 
 static size_t g_pagesize;
 
@@ -71,6 +78,8 @@ Fiber::Fiber()
     m_sp = ConvertThreadToFiber(NULL);
 #elif defined(UCONTEXT_FIBERS)
     m_sp = &m_ctx;
+#elif defined(SETJMP_FIBERS)
+    m_sp = &m_env;
 #endif
 }
 
@@ -85,6 +94,8 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
     allocStack();
 #ifdef UCONTEXT_FIBERS
     m_sp = &m_ctx;
+#else
+    m_sp = &m_env;
 #endif
     initStack();
 }
@@ -348,7 +359,7 @@ Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
     fiber_switchContext(&curp->m_sp, curp->m_outer->m_sp);
 }
 
-#if !defined(NATIVE_WINDOWS_FIBERS) && !defined(UCONTEXT_FIBERS)
+#if !defined(NATIVE_WINDOWS_FIBERS) && !defined(UCONTEXT_FIBERS) && !defined(SETJMP_FIBERS)
 static
 void
 push(void *&sp, size_t v)
@@ -430,6 +441,13 @@ fiber_switchContext(void **oldsp, void *newsp)
     if (swapcontext(*(ucontext_t**)oldsp, (ucontext_t*)newsp))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("swapcontext");
 }
+#elif defined(SETJMP_FIBERS)
+static void
+fiber_switchContext(void **oldsp, void *newsp)
+{
+    if (!setjmp(**(jmp_buf**)oldsp))
+         longjmp(*(jmp_buf*)newsp, 1);
+}
 #elif defined(_MSC_VER) && defined(ASM_X86_WINDOWS_FIBERS)
 static
 void
@@ -490,6 +508,23 @@ Fiber::initStack()
     m_ctx.uc_mcontext = (mcontext_t)m_mctx;
 #endif
     makecontext(&m_ctx, &Fiber::entryPoint, 0);
+#elif defined(SETJMP_FIBERS)
+    if (setjmp(m_env)) {
+        Fiber::entryPoint();
+        MORDOR_NOTREACHED();
+    }
+#ifdef OSX
+#ifdef X86
+    m_env[8] = 0xffffffff; // EBP
+    m_env[9] = (int)m_stack + m_stacksize; // ESP
+#else
+    long long *env = (long long *)m_env;
+    env[1] = 0xffffffffffffffffll; // RBP
+    env[2] = (long long)m_stack + m_stacksize; // RSP
+#endif
+#else
+#error Platform not supported
+#endif
 #elif defined(ASM_X86_64_WINDOWS_FIBERS)
     // Shadow space (4 registers + return address)
     for (int i = 0; i < 5; ++i)

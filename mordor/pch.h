@@ -19,6 +19,8 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <pthread.h>
+#include <setjmp.h>
+#include <signal.h>
 #include <stddef.h>
 #include <sys/fcntl.h>
 #include <sys/mman.h>
@@ -26,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/uio.h>
+#include <ucontext.h>
 
 #undef major
 #undef minor
