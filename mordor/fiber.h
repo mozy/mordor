@@ -44,6 +44,9 @@
 #ifdef UCONTEXT_FIBERS
 #include <ucontext.h>
 #endif
+#ifdef SETJMP_FIBERS
+#include <setjmp.h>
+#endif
 
 namespace Mordor {
 
