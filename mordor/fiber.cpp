@@ -94,7 +94,7 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
     allocStack();
 #ifdef UCONTEXT_FIBERS
     m_sp = &m_ctx;
-#else
+#elif defined(SETJMP_FIBERS)
     m_sp = &m_env;
 #endif
     initStack();
