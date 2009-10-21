@@ -63,7 +63,7 @@ private:
 
 public:
     IOManagerIOCP(int threads = 1, bool useCaller = true);
-    ~IOManagerIOCP() { stop(); }
+    ~IOManagerIOCP();
 
     bool stopping();
 

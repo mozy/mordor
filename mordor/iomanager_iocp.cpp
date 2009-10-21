@@ -181,6 +181,12 @@ IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
 }
 
+IOManagerIOCP::~IOManagerIOCP()
+{
+    stop();
+    CloseHandle(m_hCompletionPort);
+}
+
 bool
 IOManagerIOCP::stopping()
 {
