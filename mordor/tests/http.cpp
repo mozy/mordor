@@ -1608,3 +1608,89 @@ MORDOR_UNITTEST(HTTPClient, simpleRequestAbandoned)
     // Write the body - not allowed because we abandoned the request
     MORDOR_TEST_ASSERT_ASSERTED(requestBody->write("hello"));
 }
+
+MORDOR_UNITTEST(HTTPClient, simpleResponseAbandoned)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 5\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "hello")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    // Verify response characteristics
+    MORDOR_TEST_ASSERT(request->hasResponseBody());
+    Stream::ptr response = request->responseStream();
+    // Response stream has a ref to the request
+    request.reset();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsWrite());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
+    MORDOR_TEST_ASSERT_EQUAL(response->size(), 5);
+
+    Buffer buf;
+    MORDOR_TEST_ASSERT_EQUAL(response->read(buf, 3), 3u);
+    MORDOR_TEST_ASSERT(buf == "hel");
+    // This should be okay, but will kill the connection
+    response.reset();
+    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders),
+        PriorRequestFailedException);
+}
+
+MORDOR_UNITTEST(HTTPClient, simpleResponseAbandonRequest)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 5\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "hello")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    // Verify response characteristics
+    MORDOR_TEST_ASSERT(request->hasResponseBody());
+    Stream::ptr response = request->responseStream();
+    request.reset();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsWrite());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
+    MORDOR_TEST_ASSERT_EQUAL(response->size(), 5);
+
+    // Verify response itself
+    MemoryStream responseBody;
+    transferStream(response, responseBody);
+    MORDOR_TEST_ASSERT(responseBody.buffer() == "hello");
+}

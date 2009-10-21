@@ -891,6 +891,14 @@ ClientRequest::responseDone()
 {
     if (m_responseDone)
         return;
+    // Keep an extra ref to ourself around so we don't destruct if the only ref
+    // is in the response stream
+    ClientRequest::ptr self;
+    try {
+        self = shared_from_this();
+    } catch (boost::bad_weak_ptr &) {
+        // means we're in the destructor
+    }
     Stream::ptr stream = m_responseStream.lock();
     MORDOR_ASSERT(stream);
     NotifyStream::ptr notify =
