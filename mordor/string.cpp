@@ -301,6 +301,9 @@ split(const std::string &str, const char *delims, size_t max)
 }
 
 #ifdef WINDOWS
+static DWORD g_wcFlags = WC_ERR_INVALID_CHARS;
+static DWORD g_mbFlags = MB_ERR_INVALID_CHARS;
+
 std::string
 toUtf8(const wchar_t *str, size_t len)
 {
@@ -310,11 +313,20 @@ toUtf8(const wchar_t *str, size_t len)
     std::string result;
     if (len == 0)
         return result;
-    int ret = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str, (int)len, NULL, 0, NULL, NULL);
-    if (ret == 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WideCharToMultiByte");
+    int ret = WideCharToMultiByte(CP_UTF8, g_wcFlags, str, (int)len, NULL, 0, NULL, NULL);
+    MORDOR_ASSERT(ret >= 0);
+    if (ret == 0) {
+        if (GetLastError() == ERROR_INVALID_FLAGS) {
+            g_wcFlags = 0;
+            ret = WideCharToMultiByte(CP_UTF8, g_wcFlags, str, (int)len, NULL, 0, NULL, NULL);
+            MORDOR_ASSERT(ret >= 0);
+        }
+        if (ret == 0)
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WideCharToMultiByte");
+    }
     result.resize(ret);
-    ret = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str, (int)len, &result[0], ret, NULL, NULL);
+    ret = WideCharToMultiByte(CP_UTF8, g_wcFlags, str, (int)len, &result[0], ret, NULL, NULL);
+    MORDOR_ASSERT(ret >= 0);
     if (ret == 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WideCharToMultiByte");
     MORDOR_ASSERT(ret == result.size());
@@ -338,11 +350,19 @@ toUtf16(const char *str, size_t len)
     std::wstring result;
     if (len == 0)
         return result;
-    int ret = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str, (int)len, NULL, 0);
-    if (ret == 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("MultiByteToWideChar");
+    int ret = MultiByteToWideChar(CP_UTF8, g_mbFlags, str, (int)len, NULL, 0);
+    MORDOR_ASSERT(ret >= 0);
+    if (ret == 0) {
+        if (GetLastError() == ERROR_INVALID_FLAGS) {
+            g_mbFlags = 0;
+            ret = MultiByteToWideChar(CP_UTF8, g_mbFlags, str, (int)len, NULL, 0);
+            MORDOR_ASSERT(ret >= 0);
+        }
+        if (ret == 0)
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("MultiByteToWideChar");
+    }
     result.resize(ret);
-    ret = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str, (int)len, &result[0], ret);
+    ret = MultiByteToWideChar(CP_UTF8, g_mbFlags, str, (int)len, &result[0], ret);
     if (ret == 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("MultiByteToWideChar");
     MORDOR_ASSERT(ret == result.size());
