@@ -399,7 +399,7 @@ Fiber::allocStack()
     m_stack = mmap(NULL, m_stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     if (m_stack == MAP_FAILED)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("mmap");
-#ifdef LINUX
+#if defined(LINUX) || defined(OSX)
     m_valgrindStackId = VALGRIND_STACK_REGISTER(m_stack, (char *)m_stack + m_stacksize);
 #endif
     m_sp = (char*)m_stack + m_stacksize;
@@ -414,7 +414,7 @@ Fiber::freeStack()
 #elif defined(WINDOWS)
     VirtualFree(m_stack, 0, MEM_RELEASE);
 #elif defined(POSIX)
-#ifdef LINUX
+#if defined(LINUX) || defined(OSX)
     VALGRIND_STACK_DEREGISTER(m_valgrindStackId);
 #endif
     munmap(m_stack, m_stacksize);

@@ -1,0 +1,192 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN5boost6detail25get_once_per_thread_epochEv
+   fun:_ZN5boost9call_onceIPFvvEEEvRNS_9once_flagET_
+   fun:_ZN5boost6detail12get_tss_dataEPKv
+}
+{
+   strftime on mac
+   Memcheck:Cond
+   fun:strftime_l$UNIX2003
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_nc_table_new
+   fun:token_table_add
+   fun:notify_register_check
+   fun:notify_register_tz
+   fun:tzsetwall_basic
+   fun:tzset
+   fun:strftime_l$UNIX2003
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:_nc_table_insert_n
+   fun:token_table_add
+   fun:notify_register_check
+   fun:notify_register_tz
+   fun:tzsetwall_basic
+   fun:tzset
+   fun:strftime_l$UNIX2003
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:calloc
+   fun:token_table_add
+   fun:notify_register_check
+   fun:notify_register_tz
+   fun:tzsetwall_basic
+   fun:tzset
+   fun:strftime_l$UNIX2003
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:calloc
+   fun:_nc_table_new
+   fun:token_table_add
+   fun:notify_register_check
+   fun:notify_register_tz
+   fun:tzsetwall_basic
+   fun:tzset
+   fun:strftime_l$UNIX2003
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:tzsetwall_basic
+   fun:tzset
+   fun:strftime_l$UNIX2003
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:tzload
+   fun:tzsetwall_basic
+   fun:tzset
+   fun:strftime_l$UNIX2003
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:calloc
+   fun:_Unwind_Find_FDE
+   fun:_Unwind_GetIPInfo
+   fun:_Unwind_GetIPInfo
+   fun:_Unwind_RaiseException
+   fun:__cxa_throw
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:get_or_create_key_element
+   fun:_keymgr_get_and_lock_processwide_ptr_2
+   fun:_keymgr_get_and_lock_processwide_ptr
+   fun:_Unwind_Find_FDE
+   fun:_Unwind_GetIPInfo
+   fun:_Unwind_GetIPInfo
+   fun:_Unwind_RaiseException
+   fun:__cxa_throw
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__register_frame
+   fun:_Unwind_Find_FDE
+   fun:_Unwind_GetIPInfo
+   fun:_Unwind_GetIPInfo
+   fun:_Unwind_RaiseException
+   fun:__cxa_throw
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:calloc
+   fun:_Unwind_Find_FDE
+   fun:_Unwind_GetIPInfo
+   fun:_Unwind_RaiseException
+   fun:__cxa_throw
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__register_frame
+   fun:_Unwind_Find_FDE
+   fun:_Unwind_GetIPInfo
+   fun:_Unwind_RaiseException
+   fun:__cxa_throw
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:atexit_register
+   fun:__cxa_atexit
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__cxa_get_globals
+   fun:__cxa_allocate_exception
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:__smakebuf
+   fun:__swsetup
+   fun:__sfvwrite
+   fun:fwrite$UNIX2003
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN5boost63_GLOBAL__N_libs_thread_src_pthread_thread.cpp_00000000_B329391125make_external_thread_dataEv
+   fun:_ZN5boost6detail12set_tss_dataEPKvNS_10shared_ptrINS0_20tss_cleanup_functionEEEPvb
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN5boost6detail12shared_countC2IPNS_19thread_specific_ptr*run_custom_cleanup_functionENS0_14do_heap_deleteIS7_EEEET_T0_
+   fun:_ZN5boost6detail12shared_countC1IPNS_19thread_specific_ptr*run_custom_cleanup_functionENS0_14do_heap_deleteIS7_EEEET_T0_
+   fun:_ZN5boost10shared_ptrINS_6detail20tss_cleanup_functionEEC2INS_19thread_specific_ptr*run_custom_cleanup_functionENS1_14do_heap_deleteIS9_EEEEPT_T0_
+   fun:_ZN5boost10shared_ptrINS_6detail20tss_cleanup_functionEEC1INS_19thread_specific_ptr*run_custom_cleanup_functionENS1_14do_heap_deleteIS9_EEEEPT_T0_
+   fun:_ZN5boost10shared_ptrINS_6detail20tss_cleanup_functionEE5resetINS_19thread_specific_ptr*run_custom_cleanup_functionENS1_14do_heap_deleteIS9_EEEEvPT_T0_
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN5boost6detail13heap_new_implINS_19thread_specific_ptr*run_custom_cleanup_functionERPFvPS4_EEEPT_T0_
+   fun:_ZN5boost6detail8heap_newINS_19thread_specific_ptr*run_custom_cleanup_functionEPFvPS4_EEEPT_RT0_
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN5boost6detail12set_tss_dataEPKvNS_10shared_ptrINS0_20tss_cleanup_functionEEEPvb
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   fun:malloc
+   fun:realloc
+   fun:new_sem_from_pool
+   fun:_pthread_cond_wait
+   fun:pthread_cond_wait$UNIX2003
+}
