@@ -128,7 +128,7 @@ MORDOR_UNITTEST(Scheduler, switchToStress)
 
     // Ensure we return to poolA
     SchedulerSwitcher switcher;
-    for (int i = 0; i < 10000; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         if (i % 2) {
             poolA.switchTo();
             MORDOR_TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);
