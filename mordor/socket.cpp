@@ -15,6 +15,8 @@
 #ifdef WINDOWS
 #include <mswsock.h>
 
+#include "runtime_linking.h"
+
 #pragma comment(lib, "ws2_32")
 #else
 #include <fcntl.h>
@@ -1578,13 +1580,11 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
         serviceWStorage = toUtf16(service);
         serviceW = serviceWStorage.c_str();
     }
-    if (GetAddrInfoW(toUtf16(node).c_str(), serviceW, &hints, &results)) {
+    if (pGetAddrInfoW(toUtf16(node).c_str(), serviceW, &hints, &results))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetAddrInfoW");
-    }
 #else
-    if (getaddrinfo(node.c_str(), service, &hints, &results)) {
+    if (getaddrinfo(node.c_str(), service, &hints, &results))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getaddrinfo");
-    }
 #endif
     std::vector<Address::ptr> result;
     next = results;
@@ -1611,7 +1611,7 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
         next = next->ai_next;
     }
 #ifdef WINDOWS
-    FreeAddrInfoW(results);
+    pFreeAddrInfoW(results);
 #else
     freeaddrinfo(results);
 #endif

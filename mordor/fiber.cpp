@@ -11,6 +11,8 @@
 
 #ifdef WINDOWS
 #include <windows.h>
+
+#include "runtime_linking.h"
 #else
 #include <sys/mman.h>
 #include <pthread.h>
@@ -75,7 +77,9 @@ Fiber::Fiber()
     m_sp = NULL;
     setThis(this);
 #ifdef NATIVE_WINDOWS_FIBERS
-    m_sp = ConvertThreadToFiber(NULL);
+    if (!pIsThreadAFiber())
+        m_stack = ConvertThreadToFiber(NULL);
+    m_sp = GetCurrentFiber();
 #elif defined(UCONTEXT_FIBERS)
     m_sp = &m_ctx;
 #elif defined(SETJMP_FIBERS)
@@ -107,7 +111,7 @@ Fiber::~Fiber()
         call(true);
         m_state = TERM;
     }
-    if (!m_stack) {
+    if (!m_stack || m_stack == m_sp) {
         MORDOR_ASSERT(!m_dg);
         MORDOR_ASSERT(m_state == EXEC);
 #ifdef DEBUG
@@ -117,7 +121,11 @@ Fiber::~Fiber()
 #endif
         setThis(NULL);
 #ifdef NATIVE_WINDOWS_FIBERS
-        ConvertFiberToThread();
+        if (m_stack) {
+            MORDOR_ASSERT(m_stack == m_sp);
+            MORDOR_ASSERT(m_stack == GetCurrentFiber());
+            pConvertFiberToThread();
+        }
 #endif
     } else {
         MORDOR_ASSERT(m_state == TERM || m_state == INIT);
@@ -410,7 +418,8 @@ void
 Fiber::freeStack()
 {
 #ifdef NATIVE_WINDOWS_FIBERS
-    DeleteFiber(m_stack);
+    MORDOR_ASSERT(m_stack == &m_sp);
+    DeleteFiber(m_sp);
 #elif defined(WINDOWS)
     VirtualFree(m_stack, 0, MEM_RELEASE);
 #elif defined(POSIX)
@@ -497,6 +506,8 @@ Fiber::initStack()
     m_sp = m_stack = CreateFiber(m_stacksize, &native_fiber_entryPoint, &Fiber::entryPoint);
     if (!m_stack)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFiber");
+    // This is so we can distinguish from a created fiber vs. the "root" fiber
+    m_stack = &m_sp;
 #elif defined(UCONTEXT_FIBERS)
     if (getcontext(&m_ctx))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getcontext");

@@ -68,14 +68,14 @@ std::string to_string( errinfo_backtrace const &bt )
             symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
             symbol->MaxNameLen = MAX_SYM_NAME;
             DWORD64 displacement64 = 0;
-            if (SymFromAddr(GetCurrentProcess(), (DWORD64)backtrace[i],
+            if (pSymFromAddr(GetCurrentProcess(), (DWORD64)backtrace[i],
                 &displacement64, symbol)) {
                 os << ": " << symbol->Name << "+" << displacement64;
             }
             IMAGEHLP_LINE64 line;
             line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
             DWORD displacement = 0;
-            if (SymGetLineFromAddr64(GetCurrentProcess(),
+            if (pSymGetLineFromAddr64(GetCurrentProcess(),
                 (DWORD64)backtrace[i], &displacement, &line)) {
                 os << ": " << line.FileName << "(" << line.LineNumber << ")+"
                     << displacement;
