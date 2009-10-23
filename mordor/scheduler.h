@@ -19,6 +19,7 @@
 
 #include "fiber.h"
 #include "semaphore.h"
+#include "thread_local_storage.h"
 
 namespace Mordor {
 
@@ -150,8 +151,8 @@ private:
         boost::function<void ()> dg;
         boost::thread::id thread;
     };
-    static boost::thread_specific_ptr<Scheduler> t_scheduler;
-    static boost::thread_specific_ptr<Fiber> t_fiber;
+    static ThreadLocalStorage<Scheduler> t_scheduler;
+    static ThreadLocalStorage<Fiber> t_fiber;
     boost::mutex m_mutex;
     std::list<FiberAndThread> m_fibers;
     boost::thread::id m_rootThread;

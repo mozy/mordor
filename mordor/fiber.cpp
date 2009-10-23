@@ -64,9 +64,7 @@ static ConfigVar<size_t>::ptr g_defaultStackSize = Config::lookup<size_t>(
     "Default stack size for new fibers.  This is the virtual size; physical "
     "memory isn't consumed until it is actually referenced.");
 
-static void delete_nothing(Fiber* f) {}
-
-boost::thread_specific_ptr<Fiber> Fiber::t_fiber(&delete_nothing);
+ThreadLocalStorage<Fiber> Fiber::t_fiber;
 
 Fiber::Fiber()
 {

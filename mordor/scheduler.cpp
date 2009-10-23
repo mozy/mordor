@@ -53,11 +53,8 @@ ThreadPool::join_all()
     m_threads.clear();
 }
 
-static void delete_nothing_scheduler(Scheduler* f) {}
-static void delete_nothing(Fiber* f) {}
-
-boost::thread_specific_ptr<Scheduler> Scheduler::t_scheduler(&delete_nothing_scheduler);
-boost::thread_specific_ptr<Fiber> Scheduler::t_fiber(&delete_nothing);
+ThreadLocalStorage<Scheduler> Scheduler::t_scheduler;
+ThreadLocalStorage<Fiber> Scheduler::t_fiber;
 
 Scheduler::Scheduler(int threads, bool useCaller, size_t batchSize)
     : m_stopping(true),
