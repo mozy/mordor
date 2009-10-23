@@ -620,7 +620,7 @@ Socket::send(const void *buf, size_t len, int flags)
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
             timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
+                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
@@ -709,7 +709,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
             timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
+                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
@@ -811,7 +811,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
             timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
+                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();
@@ -896,7 +896,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         Timer::ptr timeout;
         if (m_sendTimeout != ~0ull)
             timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
+                &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
         Scheduler::getThis()->yieldTo();
         if (timeout)
             timeout->cancel();

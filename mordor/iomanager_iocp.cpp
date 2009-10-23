@@ -278,24 +278,31 @@ IOManagerIOCP::unregisterEvent(HANDLE handle)
     return false;
 }
 
-static void CancelIoShim(HANDLE hFile)
-{
-    CancelIo(hFile);
-}
-
 void
 IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
 {
+    MORDOR_ASSERT(hFile);
+    MORDOR_ASSERT(e);
     MORDOR_LOG_VERBOSE(g_log) << this << " cancelEvent(" << hFile << ", "
         << &e->overlapped << ")";
-    if (!pCancelIoEx(hFile, &e->overlapped) &&
-        GetLastError() == ERROR_CALL_NOT_IMPLEMENTED) {
-        if (e->m_thread == boost::this_thread::get_id()) {
-            CancelIo(hFile);
+
+    if (!pCancelIoEx(hFile, &e->overlapped)) {
+        if (GetLastError() == ERROR_CALL_NOT_IMPLEMENTED) {
+            if (e->m_thread == boost::this_thread::get_id()) {
+                if (!CancelIo(hFile))
+                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIo");
+            } else {
+                MORDOR_ASSERT(e->m_scheduler);
+                // Have to marshal to the original thread
+                SchedulerSwitcher switcher;
+                e->m_scheduler->switchTo(e->m_thread);
+                if (!CancelIo(hFile))
+                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIo");
+            }
+        } else if (GetLastError() == ERROR_NOT_FOUND) {
+            // Nothing to cancel
         } else {
-            // Have to marshal to the original thread
-            e->m_scheduler->schedule(boost::bind(&CancelIoShim, hFile),
-                e->m_thread);
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIoEx");
         }
     }
 }
