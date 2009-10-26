@@ -1530,6 +1530,12 @@ Address::Address(int type, int protocol)
   m_protocol(protocol)
 {}
 
+#ifdef WINDOWS
+#define NATIVE_ERROR(win32error, errnoerror) win32error
+#else
+#define NATIVE_ERROR(win32error, errnoerror) errnoerror
+#endif
+
 std::vector<Address::ptr>
 Address::lookup(const std::string &host, int family, int type, int protocol)
 {
@@ -1573,6 +1579,7 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     }
     if (node.empty())
         node = host;
+    int error;
 #ifdef WINDOWS
     std::wstring serviceWStorage;
     const wchar_t *serviceW = NULL;
@@ -1580,12 +1587,47 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
         serviceWStorage = toUtf16(service);
         serviceW = serviceWStorage.c_str();
     }
-    if (pGetAddrInfoW(toUtf16(node).c_str(), serviceW, &hints, &results))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetAddrInfoW");
+    error = pGetAddrInfoW(toUtf16(node).c_str(), serviceW, &hints, &results);
 #else
-    if (getaddrinfo(node.c_str(), service, &hints, &results))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getaddrinfo");
+    error = getaddrinfo(node.c_str(), service, &hints, &results);
 #endif
+    switch (error) {
+        case 0:
+            break;
+        case EAI_AGAIN:
+            MORDOR_THROW_EXCEPTION(TemporaryNameServerFailureException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+        case EAI_FAIL:
+            MORDOR_THROW_EXCEPTION(PermanentNameServerFailureException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+#if defined(WSANO_DATA) || defined(EAI_NODATA)
+        case NATIVE_ERROR(WSANO_DATA, EAI_NODATA):
+            MORDOR_THROW_EXCEPTION(NoNameServerDataException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+#endif
+        case EAI_NONAME:
+            MORDOR_THROW_EXCEPTION(HostNotFoundException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+#ifdef EAI_ADDRFAMILY
+        case EAI_ADDRFAMILY:
+#endif
+        case EAI_BADFLAGS:
+        case EAI_FAMILY:
+        case EAI_MEMORY:
+        case EAI_SERVICE:
+        case EAI_SOCKTYPE:
+#ifdef EAI_SYSTEM
+        case EAI_SYSTEM:
+#endif
+        default:
+            MORDOR_THROW_EXCEPTION(NameLookupException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+    }
     std::vector<Address::ptr> result;
     next = results;
     while (next) {

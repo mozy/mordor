@@ -15,14 +15,7 @@
 #include <winerror.h>
 #else
 #include <errno.h>
-#include <netdb.h>
-
-#if defined(FREEBSD) && !defined(EAI_NODATA)
-#define EAI_ADDRFAMILY 1
-#define EAI_NODATA 7
 #endif
-#endif
-
 
 namespace Mordor {
 
@@ -31,10 +24,7 @@ typedef boost::error_info<struct tag_backtrace, std::vector<void *> > errinfo_ba
 typedef boost::error_info<struct tag_lasterror, DWORD> errinfo_lasterror;
 std::string to_string( errinfo_lasterror const & e );
 typedef errinfo_lasterror errinfo_nativeerror;
-typedef errinfo_lasterror errinfo_gaierror;
 #else
-typedef boost::error_info<struct tag_gaierror, int> errinfo_gaierror;
-std::string to_string( errinfo_gaierror const & e );
 typedef boost::errinfo_errno errinfo_nativeerror;
 #endif
 
@@ -71,23 +61,6 @@ struct FileNotFoundException : virtual NativeException {};
 struct BadHandleException : virtual NativeException {};
 struct OperationAbortedException : virtual NativeException {};
 struct BrokenPipeException : virtual NativeException {};
-
-struct SocketException : virtual NativeException {};
-
-struct ConnectionAbortedException : virtual SocketException {};
-struct ConnectionResetException : virtual SocketException {};
-struct ConnectionRefusedException : virtual SocketException {};
-struct HostDownException : virtual SocketException {};
-struct HostUnreachableException : virtual SocketException {};
-struct NetworkDownException : virtual SocketException {};
-struct NetworkResetException : virtual SocketException {};
-struct NetworkUnreachableException : virtual SocketException {};
-struct TimedOutException : virtual SocketException {};
-struct NameLookupException : virtual SocketException {};
-struct TemporaryNameServerFailureException : virtual NameLookupException {};
-struct PermanentNameServerFailureException : virtual NameLookupException {};
-struct NoNameServerDataException : virtual NameLookupException {};
-struct HostNotFoundException : virtual NameLookupException {};
 
 error_t lastError();
 

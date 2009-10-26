@@ -7,6 +7,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "exception.h"
 #include "iomanager.h"
 #include "version.h"
 
@@ -36,6 +37,18 @@ typedef SOCKET socket_t;
 #include <netinet/ip.h>
 typedef int socket_t;
 #endif
+
+struct SocketException : virtual NativeException {};
+
+struct ConnectionAbortedException : virtual SocketException {};
+struct ConnectionResetException : virtual SocketException {};
+struct ConnectionRefusedException : virtual SocketException {};
+struct HostDownException : virtual SocketException {};
+struct HostUnreachableException : virtual SocketException {};
+struct NetworkDownException : virtual SocketException {};
+struct NetworkResetException : virtual SocketException {};
+struct NetworkUnreachableException : virtual SocketException {};
+struct TimedOutException : virtual SocketException {};
 
 struct Address;
 
@@ -119,6 +132,19 @@ private:
     AsyncEvent m_sendEvent, m_receiveEvent;
 #endif
 };
+
+#ifdef WINDOWS
+typedef errinfo_lasterror errinfo_gaierror;
+#else
+typedef boost::error_info<struct tag_gaierror, int> errinfo_gaierror;
+std::string to_string( errinfo_gaierror const & e );
+#endif
+
+struct NameLookupException : virtual SocketException {};
+struct TemporaryNameServerFailureException : virtual NameLookupException {};
+struct PermanentNameServerFailureException : virtual NameLookupException {};
+struct NoNameServerDataException : virtual NameLookupException {};
+struct HostNotFoundException : virtual NameLookupException {};
 
 struct Address
 {

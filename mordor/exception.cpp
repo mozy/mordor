@@ -18,6 +18,8 @@
 
 #include <boost/thread/mutex.hpp>
 
+#include "socket.h"
+
 namespace Mordor {
 
 #ifdef WINDOWS
@@ -179,12 +181,6 @@ void rethrow_exception(boost::exception_ptr const & ep)
 #define WSA(error) error
 #endif
 
-#ifdef WINDOWS
-#define NATIVE_ERROR(win32error, errnoerror) win32error
-#else
-#define NATIVE_ERROR(win32error, errnoerror) errnoerror
-#endif
-
 static void throwSocketException(error_t error)
 {
     switch (error) {
@@ -215,33 +211,6 @@ static void throwSocketException(error_t error)
         case WSA(ETIMEDOUT):
             throw boost::enable_current_exception(TimedOutException())
                 << errinfo_nativeerror(error);
-        case EAI_AGAIN:
-            throw boost::enable_current_exception(TemporaryNameServerFailureException())
-                << errinfo_gaierror(error);
-        case EAI_FAIL:
-            throw boost::enable_current_exception(PermanentNameServerFailureException())
-                << errinfo_gaierror(error);
-#if defined(WSANO_DATA) || defined(WAI_NODATA)
-        case NATIVE_ERROR(WSANO_DATA, EAI_NODATA):
-            throw boost::enable_current_exception(NoNameServerDataException())
-                << errinfo_gaierror(error);
-#endif
-        case EAI_NONAME:
-            throw boost::enable_current_exception(HostNotFoundException())
-                << errinfo_gaierror(error);
-#ifdef EAI_ADDRFAMILY
-        case EAI_ADDRFAMILY:
-#endif
-        case EAI_BADFLAGS:
-        case EAI_FAMILY:
-        case EAI_MEMORY:
-        case EAI_SERVICE:
-        case EAI_SOCKTYPE:
-#ifdef EAI_SYSTEM
-        case EAI_SYSTEM:
-#endif
-            throw boost::enable_current_exception(NameLookupException())
-                << errinfo_gaierror(error);
         default:
             break;
     }
