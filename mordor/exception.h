@@ -2,6 +2,8 @@
 #define __MORDOR_EXCEPTION_H__
 // Copyright (c) 2009 - Decho Corp.
 
+#include "predef.h"
+
 #include <stdexcept>
 #include <string>
 #include <vector>

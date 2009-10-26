@@ -48,8 +48,6 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
-				UsePrecompiledHeader="2"
-				PrecompiledHeaderThrough="mordor/pch.h"
 				ObjectFile="$(IntDir)\$(InputName)-$(TargetName).obj"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
@@ -123,8 +121,6 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
-				UsePrecompiledHeader="2"
-				PrecompiledHeaderThrough="mordor/pch.h"
 				ObjectFile="$(IntDir)\$(InputName)-$(TargetName).obj"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
@@ -198,8 +194,6 @@
 				AdditionalIncludeDirectories="../.."
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				UsePrecompiledHeader="2"
-				PrecompiledHeaderThrough="mordor/pch.h"
 				ObjectFile="$(IntDir)\$(InputName)-$(TargetName).obj"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
@@ -276,8 +270,6 @@
 				AdditionalIncludeDirectories="../.."
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				UsePrecompiledHeader="2"
-				PrecompiledHeaderThrough="mordor/pch.h"
 				ObjectFile="$(IntDir)\$(InputName)-$(TargetName).obj"
 				ProgramDataBaseFileName="$(IntDir)\$(TargetName)-vc90.pdb"
 				WarningLevel="3"
@@ -334,42 +326,6 @@
 			<File
 				RelativePath=".\cat.cpp"
 				>
-			</File>
-			<File
-				RelativePath=".\pch.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter

@@ -28,10 +28,13 @@ enum {
 };
 
 #else
+#ifdef LINUX
+#include <sys/sysmacros.h>
 
 #ifdef major
 #undef major
 #undef minor
+#endif
 #endif
 
 #define stricmp strcasecmp

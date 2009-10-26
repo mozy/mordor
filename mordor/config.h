@@ -2,6 +2,8 @@
 #define __CONFIG_H__
 // Copyright (c) 2009 - Decho Corp.
 
+#include "predef.h"
+
 #include <set>
 #include <sstream>
 #include <string>
