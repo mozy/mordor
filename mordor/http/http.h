@@ -200,6 +200,13 @@ typedef std::set<ETag> ETagSet;
 
 struct Product
 {
+    Product() {}
+    Product(const std::string &_product, const std::string &_version)
+        : product(_product), version(_version)
+    {}
+    Product(const char *_product, const char *_version)
+        : product(_product), version(_version)
+    {}
     std::string product;
     std::string version;
 };
