@@ -6,6 +6,7 @@
 
 #include "mordor/config.h"
 #include "mordor/version.h"
+#include "mordor/statistics.h"
 #include "mordor/test/test.h"
 #include "mordor/test/stdoutlistener.h"
 
@@ -29,10 +30,12 @@ int main(int argc, const char **argv)
     chdir(newDirectory.c_str());
 
     StdoutListener listener;
+    bool result;
     if (argc > 1) {
-        return runTests(testsForArguments(argc - 1, argv + 1), listener)
-            ? 0 : 1;
+        result = runTests(testsForArguments(argc - 1, argv + 1), listener);
     } else {
-        return runTests(listener) ? 0 : 1;
+        result = runTests(listener);
     }
+    Statistics::dump(std::cout);
+    return result ? 0 : 1;
 }

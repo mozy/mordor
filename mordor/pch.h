@@ -72,6 +72,7 @@
 // C++ Headers
 #include <algorithm>
 #include <iostream>
+#include <limits>
 #include <list>
 #include <map>
 #include <set>

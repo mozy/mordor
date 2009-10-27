@@ -15,17 +15,29 @@
 
 #include <windows.h>
 
+#ifdef min
 #undef min
+#endif
+#ifdef max
 #undef max
+#endif
+#ifdef ABSOLUTE
 #undef ABSOLUTE
+#endif
+#ifdef RELATIVE
 #undef RELATIVE
+#endif
+#ifdef ERROR
 #undef ERROR
+#endif
 
 // Take things out of the preprocessor, and put into the global namespace
+#ifdef DELETE
 #undef DELETE
 enum {
     DELETE = (0x00010000L)
 };
+#endif
 
 #else
 #ifdef LINUX
@@ -33,6 +45,8 @@ enum {
 
 #ifdef major
 #undef major
+#endif
+#ifdef minor
 #undef minor
 #endif
 #endif

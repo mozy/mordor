@@ -622,6 +622,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\statistics.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\std.cpp"
 				>
 			</File>
@@ -844,6 +848,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\scheduler.h"
+				>
+			</File>
+			<File
 				RelativePath=".\semaphore.h"
 				>
 			</File>
@@ -869,6 +877,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\ssl.h"
+				>
+			</File>
+			<File
+				RelativePath=".\statistics.h"
 				>
 			</File>
 			<File

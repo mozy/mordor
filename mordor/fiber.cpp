@@ -7,6 +7,7 @@
 #include "assert.h"
 #include "config.h"
 #include "exception.h"
+#include "statistics.h"
 #include "version.h"
 
 #ifdef WINDOWS
@@ -19,6 +20,13 @@
 #endif
 
 namespace Mordor {
+
+static AverageMinMaxStatistic<unsigned int> &g_statAlloc =
+    Statistics::registerStatistic("fiber.allocstack",
+    AverageMinMaxStatistic<unsigned int>("us"));
+static AverageMinMaxStatistic<unsigned int> &g_statFree=
+    Statistics::registerStatistic("fiber.freestack",
+    AverageMinMaxStatistic<unsigned int>("us"));
 
 #if defined(NATIVE_WINDOWS_FIBERS) || defined(UCONTEXT_FIBERS) || defined(SETJMP_FIBERS)
 static
@@ -391,6 +399,9 @@ Fiber::allocStack()
 {
     if (m_stacksize == 0)
         m_stacksize = g_defaultStackSize->val();
+#ifndef NATIVE_WINDOWS_FIBERS
+    TimeStatistic<AverageMinMaxStatistic<unsigned int> > time(g_statAlloc);
+#endif
 #ifdef NATIVE_WINDOWS_FIBERS
     // Fibers are allocated in initStack
 #elif defined(WINDOWS)
@@ -415,6 +426,7 @@ Fiber::allocStack()
 void
 Fiber::freeStack()
 {
+    TimeStatistic<AverageMinMaxStatistic<unsigned int> > time(g_statFree);
 #ifdef NATIVE_WINDOWS_FIBERS
     MORDOR_ASSERT(m_stack == &m_sp);
     DeleteFiber(m_sp);
@@ -501,7 +513,9 @@ Fiber::initStack()
 #ifdef NATIVE_WINDOWS_FIBERS
     if (m_stack)
         return;
+    TimeStatistic<AverageMinMaxStatistic<unsigned int> > stat(g_statAlloc);
     m_sp = m_stack = CreateFiber(m_stacksize, &native_fiber_entryPoint, &Fiber::entryPoint);
+    stat.finish();
     if (!m_stack)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFiber");
     // This is so we can distinguish from a created fiber vs. the "root" fiber
