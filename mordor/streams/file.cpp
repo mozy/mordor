@@ -9,7 +9,10 @@
 
 namespace Mordor {
 
-FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlags)
+void
+FileStream::init(IOManager *ioManager, Scheduler *scheduler,
+                 const std::string &filename, Flags flags,
+                 CreateFlags createFlags)
 {
     NativeHandle handle;
 #ifdef WINDOWS
@@ -51,14 +54,17 @@ FileStream::FileStream(std::string filename, Flags flags, CreateFlags createFlag
 #endif
     if (handle == (NativeHandle)-1)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR();
-    init(handle);
+    NativeStream::init(ioManager, scheduler, handle);
     m_supportsRead = flags == READ || flags == READWRITE;
     m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;
     m_supportsSeek = flags != APPEND;
 }
 
 #ifdef WINDOWS
-FileStream::FileStream(std::wstring filename, Flags flags, CreateFlags createFlags)
+void
+FileStream::init(IOManager *ioManager, Scheduler *scheduler,
+                 const std::wstring &filename, Flags flags,
+                 CreateFlags createFlags)
 {
     NativeHandle handle;
     DWORD access = 0;
@@ -77,7 +83,7 @@ FileStream::FileStream(std::wstring filename, Flags flags, CreateFlags createFla
         NULL);
     if (handle == (NativeHandle)-1)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
-    init(handle);
+    NativeStream::init(ioManager, scheduler, handle);
     m_supportsRead = flags == READ || flags == READWRITE;
     m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;
     m_supportsSeek = flags != APPEND;

@@ -14,49 +14,56 @@ namespace Mordor {
 
 FDStream::FDStream()
 : m_ioManager(NULL),
+  m_scheduler(NULL),
   m_fd(-1),
   m_own(false)
 {}
 
 void
-FDStream::init(int fd, bool own)
+FDStream::init(IOManager *ioManager, Scheduler *scheduler, int fd, bool own)
 {
     MORDOR_ASSERT(fd >= 0);
+    m_ioManager = ioManager;
+    m_scheduler = scheduler;
     m_fd = fd;
     m_own = own;
-}
-
-void
-FDStream::init(IOManager *ioManager, int fd, bool own)
-{
-    init(fd, own);
-    m_ioManager = ioManager;
+    if (m_ioManager) {
+        try {
+        if (fcntl(m_fd, F_SETFL, O_NONBLOCK))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
+        } catch(...) {
+            if (own) {
+                ::close(m_fd);
+            }
+            throw;
+        }
+    }
 }
 
 FDStream::FDStream(int fd, bool own)
-: m_ioManager(NULL), m_fd(fd), m_own(own)
 {
-    MORDOR_ASSERT(m_fd >= 0);
+    init(NULL, NULL, fd, own);
 }
 
 FDStream::FDStream(IOManager &ioManager, int fd, bool own)
-: m_ioManager(&ioManager), m_fd(fd), m_own(own)
 {
-    MORDOR_ASSERT(m_fd >= 0);
-    try {
-        if (fcntl(m_fd, F_SETFL, O_NONBLOCK))
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
-    } catch(...) {
-        if (own) {
-            ::close(m_fd);
-        }
-        throw;
-    }
+    init(&ioManager, NULL, fd, own);
+}
+
+FDStream::FDStream(Scheduler &scheduler, int fd, bool own)
+{
+    init(NULL, &scheduler, fd, own);
+}
+
+FDStream::FDStream(IOManager &ioManager, Scheduler &scheduler, int fd, bool own)
+{
+    init(&ioManager, &scheduler, fd, own);
 }
 
 FDStream::~FDStream()
 {
     if (m_own && m_fd >= 0) {
+        SchedulerSwitcher switcher(m_scheduler);
         ::close(m_fd);
     }
 }
@@ -65,9 +72,9 @@ void
 FDStream::close(CloseType type)
 {
     if (type == BOTH && m_fd > 0) {
-        if (::close(m_fd)) {
+        SchedulerSwitcher switcher(m_scheduler);
+        if (::close(m_fd))
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("close");
-        }
         m_fd = -1;
     }
 }
@@ -75,6 +82,7 @@ FDStream::close(CloseType type)
 size_t
 FDStream::read(Buffer &b, size_t len)
 {
+    SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     if (len > 0xfffffffe)
         len = 0xfffffffe;
@@ -94,6 +102,7 @@ FDStream::read(Buffer &b, size_t len)
 size_t
 FDStream::write(const Buffer &b, size_t len)
 {
+    SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     if (len > 0xfffffffe)
         len = 0xfffffffe;
@@ -115,6 +124,7 @@ FDStream::write(const Buffer &b, size_t len)
 long long
 FDStream::seek(long long offset, Anchor anchor)
 {
+    SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     long long pos = lseek(m_fd, offset, (int)anchor);
     if (pos < 0)
@@ -125,6 +135,7 @@ FDStream::seek(long long offset, Anchor anchor)
 long long
 FDStream::size()
 {
+    SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     struct stat statbuf;
     if (fstat(m_fd, &statbuf))
@@ -135,6 +146,7 @@ FDStream::size()
 void
 FDStream::truncate(long long size)
 {
+    SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     if (ftruncate(m_fd, size))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ftruncate");
@@ -143,6 +155,7 @@ FDStream::truncate(long long size)
 void
 FDStream::flush()
 {
+    SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     if (fsync(m_fd))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fsync");

@@ -197,8 +197,8 @@ Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
 void
 Scheduler::switchTo(boost::thread::id thread)
 {
-    MORDOR_LOG_VERBOSE(g_log) << this << " switching to thread " << thread;
     MORDOR_ASSERT(Scheduler::getThis() != NULL);
+    MORDOR_LOG_VERBOSE(g_log) << this << " switching to thread " << thread;
     if (Scheduler::getThis() == this) {
         if (thread == boost::thread::id() ||
             thread == boost::this_thread::get_id()) {
@@ -364,7 +364,6 @@ WorkerPool::tickle()
 
 SchedulerSwitcher::SchedulerSwitcher(Scheduler *target)
 {
-    MORDOR_ASSERT(Scheduler::getThis());
     m_caller = Scheduler::getThis();
     if (target)
         target->switchTo();
@@ -372,7 +371,8 @@ SchedulerSwitcher::SchedulerSwitcher(Scheduler *target)
 
 SchedulerSwitcher::~SchedulerSwitcher()
 {
-    m_caller->switchTo();
+    if (m_caller)
+        m_caller->switchTo();
 }
 
 static

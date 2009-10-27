@@ -1530,12 +1530,6 @@ Address::Address(int type, int protocol)
   m_protocol(protocol)
 {}
 
-#ifdef WINDOWS
-#define NATIVE_ERROR(win32error, errnoerror) win32error
-#else
-#define NATIVE_ERROR(win32error, errnoerror) errnoerror
-#endif
-
 std::vector<Address::ptr>
 Address::lookup(const std::string &host, int family, int type, int protocol)
 {
@@ -1603,7 +1597,7 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
                 << errinfo_gaierror(error)
                 << boost::errinfo_api_function("getaddrinfo"));
 #if defined(WSANO_DATA) || defined(EAI_NODATA)
-        case NATIVE_ERROR(WSANO_DATA, EAI_NODATA):
+        case MORDOR_NATIVE(WSANO_DATA, EAI_NODATA):
             MORDOR_THROW_EXCEPTION(NoNameServerDataException()
                 << errinfo_gaierror(error)
                 << boost::errinfo_api_function("getaddrinfo"));

@@ -2,7 +2,6 @@
 #define __MORDOR_STD_STREAM_H__
 // Copyright (c) 2009 - Decho Corp.
 
-#include "mordor/iomanager.h"
 #include "mordor/version.h"
 
 #ifdef WINDOWS
@@ -13,35 +12,65 @@
 
 namespace Mordor {
 
-#ifdef WINDOWS
-typedef HandleStream NativeStream;
-#else
-typedef FDStream NativeStream;
-#endif
+class StdStream : public NativeStream
+{
+protected:
+    StdStream(IOManager *ioManager, Scheduler *scheduler, int stream);
+};
 
-class StdinStream : public NativeStream
+class StdinStream : public StdStream
 {
 public:
-    StdinStream();
-    StdinStream(IOManager &ioManager);
+    StdinStream()
+        : StdStream(NULL, NULL, MORDOR_NATIVE(STD_INPUT_HANDLE, STDIN_FILENO))
+    {}
+    StdinStream(IOManager &ioManager)
+        : StdStream(&ioManager, NULL, MORDOR_NATIVE(STD_INPUT_HANDLE, STDIN_FILENO))
+    {}
+    StdinStream(Scheduler &scheduler)
+        : StdStream(NULL, &scheduler, MORDOR_NATIVE(STD_INPUT_HANDLE, STDIN_FILENO))
+    {}
+    StdinStream(IOManager &ioManager, Scheduler &scheduler)
+        : StdStream(&ioManager, &scheduler, MORDOR_NATIVE(STD_INPUT_HANDLE, STDIN_FILENO))
+    {}
 
     bool supportsWrite() { return false; }
 };
 
-class StdoutStream : public NativeStream
+class StdoutStream : public StdStream
 {
 public:
-    StdoutStream();
-    StdoutStream(IOManager &ioManager);
+    StdoutStream()
+        : StdStream(NULL, NULL, MORDOR_NATIVE(STD_OUTPUT_HANDLE, STDOUT_FILENO))
+    {}
+    StdoutStream(IOManager &ioManager)
+        : StdStream(&ioManager, NULL, MORDOR_NATIVE(STD_OUTPUT_HANDLE, STDOUT_FILENO))
+    {}
+    StdoutStream(Scheduler &scheduler)
+        : StdStream(NULL, &scheduler, MORDOR_NATIVE(STD_OUTPUT_HANDLE, STDOUT_FILENO))
+    {}
+    StdoutStream(IOManager &ioManager, Scheduler &scheduler)
+        : StdStream(&ioManager, &scheduler, MORDOR_NATIVE(STD_OUTPUT_HANDLE, STDOUT_FILENO))
+    {}
 
     bool supportsRead() { return false; }
 };
 
-class StderrStream : public NativeStream
+class StderrStream : public StdStream
 {
 public:
-    StderrStream();
-    StderrStream(IOManager &ioManager);
+    StderrStream()
+        : StdStream(NULL, NULL, MORDOR_NATIVE(STD_ERROR_HANDLE, STDERR_FILENO))
+    {}
+    StderrStream(IOManager &ioManager)
+        : StdStream(&ioManager, NULL, MORDOR_NATIVE(STD_ERROR_HANDLE, STDERR_FILENO))
+    {}
+    StderrStream(Scheduler &scheduler)
+        : StdStream(NULL, &scheduler, MORDOR_NATIVE(STD_ERROR_HANDLE, STDERR_FILENO))
+    {}
+    StderrStream(IOManager &ioManager, Scheduler &scheduler)
+        : StdStream(&ioManager, &scheduler, MORDOR_NATIVE(STD_ERROR_HANDLE, STDERR_FILENO))
+    {}
 
     bool supportsRead() { return false; }
 };

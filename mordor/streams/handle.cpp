@@ -10,52 +10,37 @@ namespace Mordor {
 
 HandleStream::HandleStream()
 : m_ioManager(NULL),
+  m_scheduler(NULL),
   m_pos(0),
   m_hFile(INVALID_HANDLE_VALUE),
   m_own(false)
 {}
 
 void
-HandleStream::init(HANDLE hFile, bool own)
+HandleStream::init(IOManagerIOCP *ioManager, Scheduler *scheduler, HANDLE hFile, bool own)
 {
     MORDOR_ASSERT(hFile != NULL);
     MORDOR_ASSERT(hFile != INVALID_HANDLE_VALUE);
     m_hFile = hFile;
     m_own = own;
-}
-
-void
-HandleStream::init(IOManagerIOCP *ioManager, HANDLE hFile, bool own)
-{
-    init(hFile, own);
     m_ioManager = ioManager;
-}
-
-HandleStream::HandleStream(HANDLE hFile, bool own)
-: m_ioManager(NULL), m_hFile(hFile), m_own(own)
-{
-    MORDOR_ASSERT(m_hFile != NULL);
-    MORDOR_ASSERT(m_hFile != INVALID_HANDLE_VALUE);
-}
-
-HandleStream::HandleStream(IOManagerIOCP &ioManager, HANDLE hFile, bool own)
-: m_ioManager(&ioManager), m_pos(0), m_hFile(hFile), m_own(own)
-{
-    MORDOR_ASSERT(m_hFile != NULL);
-    MORDOR_ASSERT(m_hFile != INVALID_HANDLE_VALUE);
-    try {
-        m_ioManager->registerFile(m_hFile);
-    } catch(...) {
-        if (own) {
-            CloseHandle(m_hFile);
+    m_scheduler = scheduler;
+    if (m_ioManager) {
+        try {
+            m_ioManager->registerFile(m_hFile);
+        } catch(...) {
+            if (own) {
+                CloseHandle(m_hFile);
+            }
+            throw;
         }
-        throw;
     }
 }
 
 HandleStream::~HandleStream()
 {
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
+        SchedulerSwitcher switcher(m_scheduler);
         CloseHandle(m_hFile);
     }
 }
@@ -65,9 +50,9 @@ HandleStream::close(CloseType type)
 {
     MORDOR_ASSERT(type == BOTH);
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
-        if (!CloseHandle(m_hFile)) {
+        SchedulerSwitcher switcher(m_scheduler);
+        if (!CloseHandle(m_hFile))
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CloseHandle");
-        }
         m_hFile = INVALID_HANDLE_VALUE;
     }
 }
@@ -75,6 +60,7 @@ HandleStream::close(CloseType type)
 size_t
 HandleStream::read(Buffer &b, size_t len)
 {
+    SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     DWORD read;
     OVERLAPPED *overlapped = NULL;
     if (m_ioManager) {
@@ -123,6 +109,7 @@ HandleStream::read(Buffer &b, size_t len)
 size_t
 HandleStream::write(const Buffer &b, size_t len)
 {
+    SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     DWORD written;
     OVERLAPPED *overlapped = NULL;
     if (m_ioManager) {
@@ -162,6 +149,7 @@ HandleStream::write(const Buffer &b, size_t len)
 long long
 HandleStream::seek(long long offset, Anchor anchor)
 {
+    SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     if (m_ioManager) {
         if (supportsSeek()) {
             switch (anchor) {
@@ -202,6 +190,7 @@ HandleStream::seek(long long offset, Anchor anchor)
 long long
 HandleStream::size()
 {
+    SchedulerSwitcher switcher(m_scheduler);
     long long size;
     if (!GetFileSizeEx(m_hFile, (LARGE_INTEGER*)&size)) {
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetFileSizeEx");
@@ -212,6 +201,7 @@ HandleStream::size()
 void
 HandleStream::truncate(long long size)
 {
+    SchedulerSwitcher switcher(m_scheduler);
     long long pos = seek(0, CURRENT);
     seek(size, BEGIN);
     BOOL ret = SetEndOfFile(m_hFile);

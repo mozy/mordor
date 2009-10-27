@@ -9,7 +9,8 @@
 
 namespace Mordor {
 
-NamedPipeStream::NamedPipeStream(const std::string &name, Flags flags)
+void
+NamedPipeStream::init(IOManager *ioManager, Scheduler *scheduler, const std::string &name, Flags flags)
 {
     HANDLE hPipe = CreateNamedPipeW(toUtf16(name).c_str(),
         (DWORD)flags,
@@ -18,27 +19,13 @@ NamedPipeStream::NamedPipeStream(const std::string &name, Flags flags)
         0, 0, 0, NULL);
     if (hPipe == INVALID_HANDLE_VALUE)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateNamedPipeW");
-    init(hPipe);
+    HandleStream::init(ioManager, scheduler, hPipe);
     m_supportsRead = !!(flags & READ);
     m_supportsWrite = !!(flags & WRITE);
 }
 
-NamedPipeStream::NamedPipeStream(IOManagerIOCP &ioManager,
-                                 const std::string &name, Flags flags)
-{
-    HANDLE hPipe = CreateNamedPipeW(toUtf16(name).c_str(),
-        (DWORD)flags | FILE_FLAG_OVERLAPPED,
-        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-        PIPE_UNLIMITED_INSTANCES,
-        0, 0, 0, NULL);
-    if (hPipe == INVALID_HANDLE_VALUE)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateNamedPipeW");
-    init(&ioManager, hPipe);
-    m_supportsRead = !!(flags & READ);
-    m_supportsWrite = !!(flags & WRITE);
-}
-
-NamedPipeStream::NamedPipeStream(const std::wstring &name, Flags flags)
+void
+NamedPipeStream::init(IOManager *ioManager, Scheduler *scheduler, const std::wstring &name, Flags flags)
 {
     HANDLE hPipe = CreateNamedPipeW(name.c_str(),
         (DWORD)flags,
@@ -47,22 +34,7 @@ NamedPipeStream::NamedPipeStream(const std::wstring &name, Flags flags)
         0, 0, 0, NULL);
     if (hPipe == INVALID_HANDLE_VALUE)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateNamedPipeW");
-    init(hPipe);
-    m_supportsRead = !!(flags & READ);
-    m_supportsWrite = !!(flags & WRITE);
-}
-
-NamedPipeStream::NamedPipeStream(IOManagerIOCP &ioManager,
-                                 const std::wstring &name, Flags flags)
-{
-    HANDLE hPipe = CreateNamedPipeW(name.c_str(),
-        (DWORD)flags | FILE_FLAG_OVERLAPPED,
-        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-        PIPE_UNLIMITED_INSTANCES,
-        0, 0, 0, NULL);
-    if (hPipe == INVALID_HANDLE_VALUE)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateNamedPipeW");
-    init(&ioManager, hPipe);
+    HandleStream::init(ioManager, scheduler, hPipe);
     m_supportsRead = !!(flags & READ);
     m_supportsWrite = !!(flags & WRITE);
 }
@@ -70,13 +42,18 @@ NamedPipeStream::NamedPipeStream(IOManagerIOCP &ioManager,
 void
 NamedPipeStream::close(CloseType type)
 {
-    if (!DisconnectNamedPipe(m_hFile))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("DisconnectNamedPipe");
+    if (m_hFile != INVALID_HANDLE_VALUE) {
+        SchedulerSwitcher switcher(m_scheduler);
+        if (!DisconnectNamedPipe(m_hFile))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("DisconnectNamedPipe");
+    }
+    HandleStream::close(type);
 }
 
 void
 NamedPipeStream::accept()
 {
+    SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     OVERLAPPED *overlapped = NULL;
     if (m_ioManager) {
         MORDOR_ASSERT(Scheduler::getThis());

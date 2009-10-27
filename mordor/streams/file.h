@@ -14,14 +14,6 @@
 
 namespace Mordor {
 
-#ifdef WINDOWS
-typedef HandleStream NativeStream;
-typedef HANDLE NativeHandle;
-#else
-typedef FDStream NativeStream;
-typedef int NativeHandle;
-#endif
-
 class FileStream : public NativeStream
 {
 public:
@@ -50,9 +42,42 @@ public:
     };
 #endif
 
-    FileStream(std::string filename, Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING);
+private:
+    void init(IOManager *ioManager, Scheduler *scheduler,
+        const std::string &filename, Flags flags, CreateFlags createFlags);
 #ifdef WINDOWS
-    FileStream(std::wstring filename, Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING);
+    void init(IOManager *ioManager, Scheduler *scheduler,
+        const std::wstring &filename, Flags flags, CreateFlags createFlags);
+#endif
+
+public:
+    FileStream(const std::string &filename, Flags flags = READWRITE,
+        CreateFlags createFlags = OPEN_EXISTING)
+    { init(NULL, NULL, filename, flags, createFlags); }
+    FileStream(IOManager &ioManager, const std::string &filename,
+        Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING)
+    { init(&ioManager, NULL, filename, flags, createFlags); }
+    FileStream(Scheduler &scheduler, const std::string &filename,
+        Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING)
+    { init(NULL, &scheduler, filename, flags, createFlags); }
+    FileStream(IOManager &ioManager, Scheduler &scheduler,
+        const std::string &filename, Flags flags = READWRITE,
+        CreateFlags createFlags = OPEN_EXISTING)
+    { init(&ioManager, &scheduler, filename, flags, createFlags); }
+#ifdef WINDOWS
+    FileStream(const std::wstring &filename, Flags flags = READWRITE,
+        CreateFlags createFlags = OPEN_EXISTING)
+    { init(NULL, NULL, filename, flags, createFlags); }
+    FileStream(IOManager &ioManager, const std::wstring &filename,
+        Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING)
+    { init(&ioManager, NULL, filename, flags, createFlags); }
+    FileStream(Scheduler &scheduler, const std::wstring &filename,
+        Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING)
+    { init(NULL, &scheduler, filename, flags, createFlags); }
+    FileStream(IOManager &ioManager, Scheduler &scheduler,
+        const std::wstring &filename, Flags flags = READWRITE,
+        CreateFlags createFlags = OPEN_EXISTING)
+    { init(&ioManager, &scheduler, filename, flags, createFlags); }
 #endif
 
     bool supportsRead() { return m_supportsRead && NativeStream::supportsRead(); }

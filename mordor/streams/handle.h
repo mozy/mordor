@@ -13,11 +13,16 @@ class HandleStream : public Stream
 {
 protected:
     HandleStream();
-    void init(HANDLE hFile, bool own = true);
-    void init(IOManagerIOCP *ioManager, HANDLE hFile, bool own = true);
+    void init(IOManagerIOCP *ioManager, Scheduler *scheduler, HANDLE hFile, bool own = true);
 public:
-    HandleStream(HANDLE hFile, bool ownHandle = true);
-    HandleStream(IOManagerIOCP &ioManager, HANDLE hFile, bool own = true);
+    HandleStream(HANDLE hFile, bool own= true)
+    { init(NULL, NULL, hFile, own); }
+    HandleStream(IOManagerIOCP &ioManager, HANDLE hFile, bool own = true)
+    { init(&ioManager, NULL, hFile, own); }
+    HandleStream(Scheduler &scheduler, HANDLE hFile, bool own = true)
+    { init(NULL, &scheduler, hFile, own); }
+    HandleStream(IOManagerIOCP &ioManager, Scheduler &scheduler, HANDLE hFile, bool own = true)
+    { init(&ioManager, &scheduler, hFile, own); }
     ~HandleStream();
 
     bool supportsRead() { return true; }
@@ -37,12 +42,16 @@ public:
 
 protected:
     IOManagerIOCP *m_ioManager;
+    Scheduler *m_scheduler;
     AsyncEventIOCP m_readEvent;
     AsyncEventIOCP m_writeEvent;
     long long m_pos;
     HANDLE m_hFile;
     bool m_own;
 };
+
+typedef HandleStream NativeStream;
+typedef HANDLE NativeHandle;
 
 }
 

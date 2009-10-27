@@ -26,6 +26,12 @@
 #   define BSD
 #endif
 
+#ifdef WINDOWS
+#define MORDOR_NATIVE(win32, posix) win32
+#else
+#define MORDOR_NATIVE(win32, posix) posix
+#endif
+
 // Architecture
 #ifdef _MSC_VER
 #   define MSVC
