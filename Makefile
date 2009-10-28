@@ -229,6 +229,7 @@ ALLBINS = mordor/examples/cat						\
 	mordor/examples/echoserver					\
 	mordor/examples/simpleclient					\
 	mordor/examples/tunnel						\
+	mordor/examples/udpstats					\
 	mordor/examples/wget						\
 	mordor/tests/run_tests
 
@@ -296,6 +297,7 @@ EXAMPLEOBJECTS :=							\
 	mordor/examples/echoserver.o					\
 	mordor/examples/simpleclient.o					\
 	mordor/examples/tunnel.o					\
+	mordor/examples/udpstats.o					\
 	mordor/examples/wget.o
 
 $(EXAMPLEOBJECTS): mordor/pch.h.gch
@@ -306,7 +308,6 @@ ifeq ($(Q),@)
 	@echo ld $@
 endif
 	$(COMPLINK)
-
 
 mordor/examples/echoserver: mordor/examples/echoserver.o		\
 	mordor/libmordor.a
@@ -326,6 +327,13 @@ mordor/examples/tunnel: mordor/examples/tunnel.o			\
 	mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@ 
+endif
+	$(COMPLINK)
+
+mordor/examples/udpstats: mordor/examples/udpstats.o			\
+	mordor/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
 endif
 	$(COMPLINK)
 
