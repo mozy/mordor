@@ -352,6 +352,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\fibermutex.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\fibers.cpp"
 				>
 			</File>

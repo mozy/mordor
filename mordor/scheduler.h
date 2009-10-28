@@ -357,6 +357,60 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
     return true;
 }
 
+/// Scheduler based Mutex for Fibers
+
+/// Mutex for use by Fibers that yields to a Scheduler instead of blocking
+/// if the mutex cannot be immediately acquired.  It also provides the
+/// additional guarantee that it is strictly FIFO, instead of random which
+/// Fiber will acquire the mutex next after it is released.
+struct FiberMutex
+{
+public:
+    /// Type that will lock the mutex on construction, and unlock on
+    /// destruction
+    struct ScopedLock
+    {
+    public:
+        ScopedLock(FiberMutex &mutex)
+            : m_mutex(&mutex)
+        {
+            m_mutex->lock();
+        }
+        ~ScopedLock()
+        { release(); }
+
+        void release()
+        {
+            if (m_mutex) {
+                m_mutex->release();
+                m_mutex = NULL;
+            }
+        }
+
+    private:
+        FiberMutex *m_mutex;
+    };
+
+public:
+    ~FiberMutex();
+
+    /// @brief Locks the mutex
+    /// Note that it is possible for this Fiber to switch threads after this
+    /// method, though it is guaranteed to still be on the same Scheduler
+    /// @pre Scheduler::getThis() != NULL
+    /// @pre Fiber::getThis() does not own this mutex
+    /// @post Fiber::getThis() owns this mutex
+    void lock();
+    /// @brief Releases the mutex
+    /// @pre Fiber::getThis() owns this mutex
+    void release();
+
+private:
+    boost::mutex m_mutex;
+    Fiber::ptr m_owner;
+    std::list<std::pair<Scheduler *, Fiber::ptr> > m_waiters;
+};
+
 }
 
 #endif

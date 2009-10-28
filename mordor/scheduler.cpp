@@ -465,4 +465,52 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs,
     }
 }
 
+FiberMutex::~FiberMutex()
+{
+#ifdef DEBUG
+    boost::mutex::scoped_lock scopeLock(m_mutex);
+    MORDOR_ASSERT(!m_owner);
+#endif
+}
+
+void
+FiberMutex::lock()
+{
+    MORDOR_ASSERT(Scheduler::getThis());
+    {
+        boost::mutex::scoped_lock scopeLock(m_mutex);
+        MORDOR_ASSERT(m_owner != Fiber::getThis());
+        MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
+            std::make_pair(Scheduler::getThis(), Fiber::getThis()))
+            == m_waiters.end());
+        if (!m_owner) {
+            m_owner = Fiber::getThis();
+            return;
+        }
+        m_waiters.push_back(std::make_pair(Scheduler::getThis(), Fiber::getThis()));
+    }
+    Scheduler::getThis()->yieldTo();
+#ifdef DEBUG
+    boost::mutex::scoped_lock scopeLock(m_mutex);
+    MORDOR_ASSERT(m_owner == Fiber::getThis());
+    MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
+            std::make_pair(Scheduler::getThis(), Fiber::getThis()))
+            == m_waiters.end());
+#endif
+}
+
+void
+FiberMutex::release()
+{
+    boost::mutex::scoped_lock scopeLock(m_mutex);
+    MORDOR_ASSERT(m_owner == Fiber::getThis());
+    m_owner.reset();
+    if (!m_waiters.empty()) {
+        std::pair<Scheduler *, Fiber::ptr> next = m_waiters.front();
+        m_waiters.pop_front();
+        m_owner = next.second;
+        next.first->schedule(next.second);
+    }
+}
+
 }
