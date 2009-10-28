@@ -112,7 +112,7 @@
 #include <openssl/ssl.h>
 #include <zlib.h>
 
-#if defined(LINUX) || defined (OSX)
+#if defined(VALGRIND) && (defined(LINUX) || defined (OSX))
 #include <valgrind/valgrind.h>
 #endif
 

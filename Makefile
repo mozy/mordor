@@ -110,6 +110,10 @@ else
     endif
 endif
 
+ifdef ENABLE_VALGRIND
+	DBG_FLAGS += -DVALGRIND
+endif
+
 ifdef ENABLE_STACKTRACE
 	DBG_FLAGS += -DENABLE_STACKTRACE -rdynamic
 endif
