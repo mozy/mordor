@@ -64,7 +64,7 @@ ifeq ($(PLATFORM), Darwin)
     DARWIN := 1
     IOMANAGER := kqueue
     UNDERSCORE := _underscore
-    GCC_ARCH := $(shell file `which gcc` | grep x86_64 -o | uniq)
+    GCC_ARCH := $(shell file -L `which gcc` | grep x86_64 -o | uniq)
     ifndef GCC_ARCH
         GCC_ARCH := i386
     endif
