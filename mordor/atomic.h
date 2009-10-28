@@ -61,7 +61,7 @@ template <class T> T atomicDecrement(volatile T& t) { return __sync_sub_and_fetc
 template <class T> T atomicIncrement(volatile T& t) { return __sync_add_and_fetch(&t, 1); }
 template <class T> T atomicAdd(volatile T& t, T v) { return __sync_add_and_fetch(&t, v); }
 template <class T> T atomicCompareAndSwap(volatile T &t, T newvalue, T comparand)
-{ return __sync_val_compare_and_swap(&t, newvalue, comparand); }
+{ return __sync_val_compare_and_swap(&t, comparand, newvalue); }
 #endif
 
 }
