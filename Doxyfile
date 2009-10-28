@@ -336,14 +336,14 @@ EXTRACT_ANON_NSPACES   = NO
 # various overviews, but no documentation section is generated.
 # This option has no effect if EXTRACT_ALL is enabled.
 
-HIDE_UNDOC_MEMBERS     = YES
+HIDE_UNDOC_MEMBERS     = NO
 
 # If the HIDE_UNDOC_CLASSES tag is set to YES, Doxygen will hide all
 # undocumented classes that are normally visible in the class hierarchy.
 # If set to NO (the default) these classes will be included in the various
 # overviews. This option has no effect if EXTRACT_ALL is enabled.
 
-HIDE_UNDOC_CLASSES     = YES
+HIDE_UNDOC_CLASSES     = NO
 
 # If the HIDE_FRIEND_COMPOUNDS tag is set to YES, Doxygen will hide all
 # friend (class|struct|union) declarations.
@@ -423,7 +423,7 @@ SORT_GROUP_NAMES       = NO
 # Note: This option applies only to the class list, not to the
 # alphabetical list.
 
-SORT_BY_SCOPE_NAME     = NO
+SORT_BY_SCOPE_NAME     = YES
 
 # The GENERATE_TODOLIST tag can be used to enable (YES) or
 # disable (NO) the todo list. This list is created by putting \todo
@@ -474,13 +474,13 @@ SHOW_USED_FILES        = NO
 # then setting the SHOW_DIRECTORIES tag to YES will show the directory hierarchy
 # in the documentation. The default is NO.
 
-SHOW_DIRECTORIES       = NO
+SHOW_DIRECTORIES       = YES
 
 # Set the SHOW_FILES tag to NO to disable the generation of the Files page.
 # This will remove the Files entry from the Quick Index and from the
 # Folder Tree View (if specified). The default is YES.
 
-SHOW_FILES             = NO
+SHOW_FILES             = YES
 
 # Set the SHOW_NAMESPACES tag to NO to disable the generation of the
 # Namespaces page.
