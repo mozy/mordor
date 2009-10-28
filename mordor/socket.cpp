@@ -168,7 +168,11 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
 
 Socket::~Socket()
 {
-    close();
+    if (m_sock != -1) {
+        int rc = ::closesocket(m_sock);
+        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+            << " close(" << m_sock << "): (" << lastError() << ")";
+    }
 #ifdef WINDOWS
     if (m_ioManager && m_hEvent)
         CloseHandle(m_hEvent);
