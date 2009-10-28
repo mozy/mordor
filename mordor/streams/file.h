@@ -34,10 +34,15 @@ public:
     };
 
     enum CreateFlags {
+        /// Create a file. Fail if it exists.
         CREATE_NEW = 1,
+        /// Create a file. If it exists, recreate it from scratch.        
         CREATE_ALWAYS,
+        /// Open a file. Fail if it does not exist.
         OPEN_EXISTING,
+        /// Open a file. Create it if it does not exist.
         OPEN_ALWAYS,
+        /// Open a file, and recreate it from scratch. Fail if it does not exist.
         TRUNCATE_EXISTING
     };
 #endif
