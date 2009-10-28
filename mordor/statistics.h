@@ -176,7 +176,7 @@ template <class T>
 struct AverageMinMaxStatistic : AverageStatistic<T>
 {
     AverageMinMaxStatistic(const char *sumunits = NULL, const char *countunits = NULL)
-        : AverageStatistic(sumunits, countunits),
+        : AverageStatistic<T>(sumunits, countunits),
           min(sumunits),
           max(sumunits)
     {}
@@ -186,30 +186,27 @@ struct AverageMinMaxStatistic : AverageStatistic<T>
 
     void reset()
     {
-        AverageStatistic::reset();
+        AverageStatistic<T>::reset();
         min.reset();
         max.reset();
     }
 
     void update(T value)
     {
-        AverageStatistic::update(value);
+        AverageStatistic<T>::update(value);
         min.update(value);
         max.update(value);
     }
 
-    const Statistic *begin() const { return &count; }
+    const Statistic *begin() const { return &min; }
     const Statistic *next(const Statistic *previous) const
     {
-        if (previous == &count)
-            return &sum;
-        else if (previous == &sum)
-            return &min;
-        else if (previous == &min)
+        if (previous == &min)
             return &max;
         else if (previous == &max)
-            return NULL;
-        MORDOR_NOTREACHED();
+            return AverageStatistic<T>::begin();
+        else
+            return AverageStatistic<T>::next(previous);
     }
 };
 

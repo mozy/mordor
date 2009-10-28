@@ -378,6 +378,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/semaphore.o						\
 	mordor/sleep.o							\
 	mordor/socket.o							\
+	mordor/statistics.o						\
 	mordor/streams/buffer.o						\
 	mordor/streams/buffered.o					\
 	mordor/streams/crypto.o						\

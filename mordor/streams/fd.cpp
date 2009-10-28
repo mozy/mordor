@@ -40,26 +40,6 @@ FDStream::init(IOManager *ioManager, Scheduler *scheduler, int fd, bool own)
     }
 }
 
-FDStream::FDStream(int fd, bool own)
-{
-    init(NULL, NULL, fd, own);
-}
-
-FDStream::FDStream(IOManager &ioManager, int fd, bool own)
-{
-    init(&ioManager, NULL, fd, own);
-}
-
-FDStream::FDStream(Scheduler &scheduler, int fd, bool own)
-{
-    init(NULL, &scheduler, fd, own);
-}
-
-FDStream::FDStream(IOManager &ioManager, Scheduler &scheduler, int fd, bool own)
-{
-    init(&ioManager, &scheduler, fd, own);
-}
-
 FDStream::~FDStream()
 {
     if (m_own && m_fd >= 0) {

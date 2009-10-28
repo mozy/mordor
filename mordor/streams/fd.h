@@ -13,13 +13,13 @@ protected:
     FDStream();
     void init(IOManager *ioManager, Scheduler *scheduler, int fd, bool own = true);
 public:
-    FDStream(int fd, bool own = true);
+    FDStream(int fd, bool own = true)
     { init(NULL, NULL, fd, own); }
-    FDStream(IOManager &ioManager, int fd, bool own = true);
+    FDStream(IOManager &ioManager, int fd, bool own = true)
     { init(&ioManager, NULL, fd, own); }
-    FDStream(Scheduler &scheduler, int fd, bool own = true);
+    FDStream(Scheduler &scheduler, int fd, bool own = true)
     { init(NULL, &scheduler, fd, own); }
-    FDStream(IOManager &ioManager, Scheduler &scheduler, int fd, bool own = true);
+    FDStream(IOManager &ioManager, Scheduler &scheduler, int fd, bool own = true)
     { init(&ioManager, &scheduler, fd, own); }
     ~FDStream();
 
