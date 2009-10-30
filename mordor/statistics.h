@@ -217,6 +217,8 @@ public:
         std::pair<std::string, boost::shared_ptr<Statistic> > >
         StatisticsCache;
 
+    struct StatisticsDumper {};
+
 private:
     Statistics();
 
@@ -246,6 +248,7 @@ public:
 
     static Statistic *lookup(const std::string &name);
     static std::ostream &dump(std::ostream &os);
+    static StatisticsDumper dump() { return StatisticsDumper(); }
 
     static const StatisticsCache &statistics()
     {
@@ -259,6 +262,10 @@ private:
         return stats;
     }
 };
+
+inline std::ostream &operator <<(std::ostream &os,
+    const Statistics::StatisticsDumper &d)
+{ return Statistics::dump(os); }
 
 template <class T>
 class TimeStatistic

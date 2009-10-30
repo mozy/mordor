@@ -36,6 +36,6 @@ int main(int argc, const char **argv)
     } else {
         result = runTests(listener);
     }
-    Statistics::dump(std::cout);
+    std::cout << Statistics::dump();
     return result ? 0 : 1;
 }
