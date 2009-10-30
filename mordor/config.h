@@ -126,6 +126,7 @@ public:
     }
 
     static ConfigVarBase::ptr lookup(const std::string &name);
+    static void visit(boost::function<void (ConfigVarBase::ptr)> dg);
 
     static void loadFromEnvironment();
 

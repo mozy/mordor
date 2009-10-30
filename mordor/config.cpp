@@ -69,6 +69,17 @@ Config::lookup(const std::string &name)
     return ConfigVarBase::ptr();
 }
 
+void
+Config::visit(boost::function<void (ConfigVarBase::ptr)> dg)
+{
+    for (std::set<ConfigVarBase::ptr,
+            ConfigVarBase::Comparator>::const_iterator it = vars().begin();
+        it != vars().end();
+        ++it) {
+        dg(*it);
+    }
+}
+
 bool
 ConfigVarBase::Comparator::operator()(const ConfigVarBase::ptr &lhs,
                                       const ConfigVarBase::ptr &rhs) const
