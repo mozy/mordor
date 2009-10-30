@@ -260,7 +260,7 @@ Socket::connect(const Address &to)
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                    &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
+                    &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
             Scheduler::getThis()->yieldTo();
             if (timeout)
                 timeout->cancel();
