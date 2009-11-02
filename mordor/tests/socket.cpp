@@ -17,8 +17,15 @@ struct Connection
 {
     Socket::ptr connect;
     Socket::ptr listen;
+    Socket::ptr accept;
     Address::ptr address;
 };
+}
+
+static void acceptOne(Connection &conns)
+{
+    MORDOR_ASSERT(conns.listen);
+    conns.accept = conns.listen->accept();
 }
 
 Connection
@@ -61,7 +68,9 @@ MORDOR_UNITTEST(Socket, receiveTimeout)
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
     conns.connect->receiveTimeout(1000000);
+    ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
     conns.connect->connect(conns.address);
+    ioManager.dispatch();
     char buf;
     unsigned long long start = TimerManager::now();
     MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->receive(&buf, 1), TimedOutException);
@@ -77,10 +86,11 @@ static void testShutdownException(bool send, bool shutdown, bool otherEnd)
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
+    ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
     conns.connect->connect(conns.address);
-    Socket::ptr accept = conns.listen->accept();
+    ioManager.dispatch();
 
-    Socket::ptr socketToClose = otherEnd ? accept : conns.connect;
+    Socket::ptr socketToClose = otherEnd ? conns.accept : conns.connect;
     if (shutdown)
         socketToClose->shutdown(SHUT_RDWR);
     else
@@ -217,14 +227,15 @@ MORDOR_UNITTEST(Socket, sendReceive)
     Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
+    ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
     conns.connect->connect(conns.address);
-    Socket::ptr accept = conns.listen->accept();
+    ioManager.dispatch();
 
     const char *sendbuf = "abcd";
     char receivebuf[5];
     memset(receivebuf, 0, 5);
     MORDOR_TEST_ASSERT_EQUAL(conns.connect->send(sendbuf, 1), 1u);
-    MORDOR_TEST_ASSERT_EQUAL(accept->receive(receivebuf, 1), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(conns.accept->receive(receivebuf, 1), 1u);
     MORDOR_TEST_ASSERT_EQUAL(receivebuf[0], 'a');
     receivebuf[0] = 0;
     iovec iov[2];
@@ -235,7 +246,7 @@ MORDOR_UNITTEST(Socket, sendReceive)
     MORDOR_TEST_ASSERT_EQUAL(conns.connect->send(iov, 2), 4u);
     iov[0].iov_base = &receivebuf[0];
     iov[1].iov_base = &receivebuf[2];
-    MORDOR_TEST_ASSERT_EQUAL(accept->receive(iov, 2), 4u);
+    MORDOR_TEST_ASSERT_EQUAL(conns.accept->receive(iov, 2), 4u);
     MORDOR_TEST_ASSERT_EQUAL(sendbuf, (const char *)receivebuf);
 }
 
