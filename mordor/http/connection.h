@@ -24,7 +24,8 @@ protected:
     static bool hasMessageBody(const GeneralHeaders &general,
         const EntityHeaders &entity,
         Method method,
-        Status status);
+        Status status,
+        bool includeEmpty = true);
 
     boost::shared_ptr<Stream> getStream(const GeneralHeaders &general,
         const EntityHeaders &entity,

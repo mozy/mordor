@@ -330,6 +330,9 @@ ClientRequest::hasResponseBody()
         m_response.status.status);
 }
 
+static void delete_nothing(Stream *)
+{}
+
 Stream::ptr
 ClientRequest::responseStream()
 {
@@ -339,8 +342,13 @@ ClientRequest::responseStream()
     // You can only ask for the response stream once
     // (to avoid circular references)
     MORDOR_ASSERT(!m_hasResponseBody);
-    MORDOR_ASSERT(!m_responseDone);
     ensureResponse();
+    if (m_responseDone) {
+        m_hasResponseBody = true;
+        result.reset(&NullStream::get(), &delete_nothing);
+        m_responseStream = result;
+        return result;
+    }
     MORDOR_ASSERT(m_response.entity.contentType.type != "multipart");
     result = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
@@ -804,7 +812,7 @@ ClientRequest::ensureResponse()
         // If the there is a message body, but it's undelimited, make sure we're
         // closing the connection
         bool hasBody = Connection::hasMessageBody(m_response.general, m_response.entity,
-            m_request.requestLine.method, m_response.status.status);
+            m_request.requestLine.method, m_response.status.status, false);
         if (hasBody &&
             transferEncoding.empty() && m_response.entity.contentLength == ~0ull &&
             m_response.entity.contentType.type != "multipart") {

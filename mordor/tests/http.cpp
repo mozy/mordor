@@ -807,10 +807,6 @@ MORDOR_UNITTEST(HTTPClient, emptyRequest)
         "Connection: close\r\n"
         "\r\n");
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
-    MORDOR_TEST_ASSERT(!request->hasResponseBody());
-#ifdef DEBUG
-    MORDOR_TEST_ASSERT_ASSERTED(request->responseStream());
-#endif
 
     // No more requests possible, because we used Connection: close
     MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders),
@@ -917,6 +913,49 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequestsAssertion)
     MORDOR_TEST_ASSERT_ASSERTED(request2->response());
 }
 #endif
+
+MORDOR_UNITTEST(HTTPClient, emptyResponseBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    // Verify response characteristics
+    MORDOR_TEST_ASSERT(request->hasResponseBody());
+    Stream::ptr response = request->responseStream();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
+    MORDOR_TEST_ASSERT_EQUAL(response->size(), 0);
+
+    // Verify response itself
+    MemoryStream responseBody;
+    transferStream(response, responseBody);
+    MORDOR_TEST_ASSERT(responseBody.buffer() == "");
+
+    response.reset();
+#ifdef DEBUG
+    MORDOR_TEST_ASSERT_ASSERTED(request->responseStream());
+#endif
+}
 
 MORDOR_UNITTEST(HTTPClient, simpleResponseBody)
 {
@@ -1140,8 +1179,6 @@ MORDOR_UNITTEST(HTTPClient, simpleRequestBody)
         "hello");
 
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
-    // Verify response characteristics
-    MORDOR_TEST_ASSERT(!request->hasResponseBody());
 }
 
 MORDOR_UNITTEST(HTTPClient, multipleCloseRequestBody)
@@ -1287,8 +1324,6 @@ MORDOR_UNITTEST(HTTPClient, chunkedRequestBody)
         "\r\n");
 
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
-    // Verify response characteristics
-    MORDOR_TEST_ASSERT(!request->hasResponseBody());
 }
 
 MORDOR_UNITTEST(HTTPClient, simpleRequestPartialWrites)
@@ -1319,8 +1354,6 @@ MORDOR_UNITTEST(HTTPClient, simpleRequestPartialWrites)
         "\r\n");
 
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
-    // Verify response characteristics
-    MORDOR_TEST_ASSERT(!request->hasResponseBody());
 }
 
 static void pipelinedRequests(ClientConnection::ptr conn,

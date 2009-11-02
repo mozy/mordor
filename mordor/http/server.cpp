@@ -431,7 +431,7 @@ ServerRequest::doRequest()
             m_request.general.connection.insert("TE");
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity,
-            m_request.requestLine.method, INVALID)) {
+            m_request.requestLine.method, INVALID, false)) {
             m_conn->scheduleNextRequest(shared_from_this());
         }
         m_conn->m_dg(shared_from_this());
@@ -585,7 +585,7 @@ ServerRequest::commit()
         MORDOR_LOG_TRACE(g_log) << str;
         m_conn->m_stream->write(str.c_str(), str.size());
 
-        if (!Connection::hasMessageBody(m_response.general, m_response.entity, m_request.requestLine.method, m_response.status.status)) {
+        if (!Connection::hasMessageBody(m_response.general, m_response.entity, m_request.requestLine.method, m_response.status.status, false)) {
             responseDone();
         }
     } catch(...) {

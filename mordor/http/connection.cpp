@@ -32,7 +32,8 @@ bool
 Connection::hasMessageBody(const GeneralHeaders &general,
                                  const EntityHeaders &entity,
                                  Method method,
-                                 Status status)
+                                 Status status,
+                                 bool includeEmpty)
 {
     if (status == INVALID) {
         // Request
@@ -48,7 +49,7 @@ Connection::hasMessageBody(const GeneralHeaders &general,
         if (entity.contentLength != ~0ull && entity.contentLength != 0)
             return true;
         if (entity.contentLength == 0)
-            return false;
+            return includeEmpty;
         for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
             it != general.transferEncoding.end();
             ++it) {
@@ -81,7 +82,7 @@ Connection::hasMessageBody(const GeneralHeaders &general,
                 return true;
         }
         if (entity.contentLength == 0)
-            return false;
+            return includeEmpty;
         if (entity.contentType.type == "multipart")
             return true;
         return true;

@@ -16,9 +16,11 @@ public:
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
+    bool supportsSize() { return true; }
 
     size_t read(Buffer &b, size_t len) { return 0; }
     size_t write(const Buffer &b, size_t len) { return len; }
+    long long size() { return 0; }
 
 private:
     static NullStream s_nullStream;
