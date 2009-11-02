@@ -27,7 +27,7 @@ private:
     Timer(unsigned long long next);
 
 public:
-    void cancel();
+    bool cancel();
 
 private:
     unsigned long long m_next;

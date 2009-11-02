@@ -81,7 +81,7 @@ Timer::Timer(unsigned long long next)
     : m_next(next)
 {}
 
-void
+bool
 Timer::cancel()
 {
     MORDOR_LOG_VERBOSE(g_log) << this << " cancel";
@@ -89,10 +89,13 @@ Timer::cancel()
         boost::mutex::scoped_lock lock(m_manager->m_mutex);
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
             m_manager->m_timers.find(shared_from_this());
-        MORDOR_ASSERT(it != m_manager->m_timers.end());
         m_next = 0;
-        m_manager->m_timers.erase(it);
+        if (it != m_manager->m_timers.end()) {
+            m_manager->m_timers.erase(it);
+            return true;
+        }
     }
+    return false;
 }
 
 TimerManager::~TimerManager()
