@@ -6,17 +6,24 @@
 
 #include "assert.h"
 #include "exception.h"
+#include "log.h"
 
 namespace Mordor {
+
+static Logger::ptr g_log = Log::lookup("mordor:iomanager");
 
 IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_epfd = epoll_create(5000);
-    if (m_epfd <= 0) {
+    MORDOR_LOG_LEVEL(g_log, m_epfd <= 0 ? Log::ERROR : Log::TRACE) << this
+        << " epoll_create(5000): " << m_epfd;
+    if (m_epfd <= 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_create");
-    }
-    if (pipe(m_tickleFds)) {
+    int rc = pipe(m_tickleFds);
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " pipe(): "
+        << rc << " (" << errno << ")";
+    if (rc) {
         close(m_epfd);
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
     }
@@ -25,7 +32,11 @@ IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
     epoll_event event;
     event.events = EPOLLIN;
     event.data.fd = m_tickleFds[0];
-    if (epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event)) {
+    rc = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+        << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_ADD, " << m_tickleFds[0]
+        << ", EPOLLIN): " << rc << " (" << errno << ")";
+    if (rc) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
         close(m_epfd);
@@ -37,7 +48,9 @@ IOManagerEPoll::~IOManagerEPoll()
 {
     stop();
     close(m_epfd);
+    MORDOR_LOG_TRACE(g_log) << this << " close(" << m_epfd << ")";
     close(m_tickleFds[0]);
+    MORDOR_LOG_VERBOSE(g_log) << this << " close(" << m_tickleFds[0] << ")";
     close(m_tickleFds[1]);
 }
 
@@ -88,9 +101,13 @@ m_pendingEvents.find(fd);
             event->m_fiberOut = Fiber::getThis();
         }
     }
-    if (epoll_ctl(m_epfd, op, event->event.data.fd, &event->event)) {
+    int rc = epoll_ctl(m_epfd, op, event->event.data.fd, &event->event);
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+        << " epoll_ctl(" << m_epfd << ", " << op << ", "
+        << event->event.data.fd << ", " << event->event.events << "): " << rc
+        << " (" << errno << ")";
+    if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-    }
 }
 
 void
@@ -119,9 +136,12 @@ IOManagerEPoll::cancelEvent(int fd, Event events)
     }
     e.event.events &= ~events;
     if (e.event.events == 0) {
-        if (epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &e.event)) {
+        int rc = epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &e.event);
+        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+            << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_DEL, " << fd
+            << ", " << e.event.events << "): " << rc << " (" << errno << ")";
+        if (rc)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-        }
         m_pendingEvents.erase(it);
     }
 }
@@ -157,9 +177,10 @@ IOManagerEPoll::idle()
                 timeout = (int)(nextTimeout / 1000);
             rc = epoll_wait(m_epfd, events, 64, timeout);
         }
-        if (rc < 0) {
+        MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
+            << " epoll_wait(" << m_epfd << "): " << rc << " (" << errno << ")";
+        if (rc < 0)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_wait");
-        }
         processTimers();
 
         for(int i = 0; i < rc; ++i) {
@@ -168,6 +189,7 @@ IOManagerEPoll::idle()
                 unsigned char dummy;
                 int rc2 = read(m_tickleFds[0], &dummy, 1);
                 MORDOR_VERIFY(rc2 == 1);
+                MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
                 continue;
             }
             bool err = event.events & (EPOLLERR | EPOLLHUP);
@@ -197,9 +219,14 @@ m_pendingEvents.find(event.data.fd);
             }
             e.event.events &= ~event.events;
             if (err || e.event.events == 0) {
-                if (epoll_ctl(m_epfd, EPOLL_CTL_DEL, event.data.fd, &e.event)) {
+                int rc2 = epoll_ctl(m_epfd, EPOLL_CTL_DEL, event.data.fd,
+                    &e.event);
+                MORDOR_LOG_LEVEL(g_log, rc2 ? Log::ERROR : Log::VERBOSE) << this
+                    << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_DEL, "
+                    << event.data.fd << ", " << e.event.events << "): " << rc2
+                    << " (" << errno << ")";
+                if (rc2)
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-                }
                 m_pendingEvents.erase(it);
             }
         }
@@ -211,6 +238,8 @@ void
 IOManagerEPoll::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
+    MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
+        << rc << " (" << errno << ")";
     MORDOR_VERIFY(rc == 1);
 }
 

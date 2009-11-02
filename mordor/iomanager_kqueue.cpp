@@ -34,7 +34,7 @@ IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
     EV_SET(&event, m_tickleFds[0], EVFILT_READ, EV_ADD, 0, 0, NULL);
     rc = kevent(m_kqfd, &event, 1, NULL, 0, NULL);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
-        << m_kqfd << ", " << m_tickleFds[0] << ", EVFILT_READ, EV_ADD): " << rc
+        << m_kqfd << ", (" << m_tickleFds[0] << ", EVFILT_READ, EV_ADD)): " << rc
         << " (" << errno << ")";
     if (rc) {
         close(m_tickleFds[0]);
@@ -147,9 +147,8 @@ IOManagerKQueue::idle()
         }
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " kevent(" << m_kqfd << "): " << rc << " (" << errno << ")";
-        if (rc < 0) {
+        if (rc < 0)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
-        }
         processTimers();
 
         for(int i = 0; i < rc; ++i) {
@@ -158,6 +157,7 @@ IOManagerKQueue::idle()
                 unsigned char dummy;
                 int rc2 = read(m_tickleFds[0], &dummy, 1);
                 MORDOR_ASSERT(rc2 == 1);
+                MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
                 continue;
             }
 
