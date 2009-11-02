@@ -176,7 +176,7 @@ Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
     FiberAndThread ft = {f, NULL, thread };
     bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);
-    if (tickleMe)
+    if (tickleMe && Scheduler::getThis() != this)
         tickle();
 }
 
@@ -190,7 +190,7 @@ Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
     FiberAndThread ft = {Fiber::ptr(), dg, thread };
     bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);
-    if (tickleMe)
+    if (tickleMe && Scheduler::getThis() != this)
         tickle();
 }
 
