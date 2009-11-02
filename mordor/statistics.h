@@ -16,6 +16,7 @@ namespace Mordor {
 struct Statistic
 {
     Statistic(const char *_units = NULL) : units(_units) {}
+    virtual ~Statistic() {}
     const char *units;
 
     virtual void reset() = 0;

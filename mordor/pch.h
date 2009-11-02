@@ -57,6 +57,7 @@
 #include <sys/epoll.h>
 #include <syscall.h>
 #elif defined(OSX)
+#include <libkern/OSAtomic.h>
 #include <mach/mach_init.h>
 #include <mach/mach_time.h>
 #include <mach/task.h>
