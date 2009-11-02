@@ -46,6 +46,7 @@ public:
     void close(CloseType type = BOTH);
 
     void accept();
+    void cancelAccept();
 
 private:
     bool m_supportsRead, m_supportsWrite;

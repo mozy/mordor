@@ -18,11 +18,14 @@ public:
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
+    bool supportsCancel() { return true; }
 
     void close(CloseType type = BOTH);
 
     size_t read(Buffer &b, size_t len);
+    void cancelRead();
     size_t write(const Buffer &b, size_t len);
+    void cancelWrite();
 
     boost::shared_ptr<Socket> socket() { return m_socket; }
 

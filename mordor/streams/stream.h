@@ -57,6 +57,7 @@ public:
 
     virtual bool supportsRead() { return false; }
     virtual bool supportsWrite() { return false; }
+    virtual bool supportsCancel() { return false; }
     virtual bool supportsSeek() { return false; }
     virtual bool supportsSize() { return false; }
     virtual bool supportsTruncate() { return false; }
@@ -80,6 +81,12 @@ public:
     /// @return The amount actually read
     virtual size_t read(Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
 
+    /// @brief Cancels a read that is currently blocked
+
+    /// Must be called from a different Fiber/Thread than the one that is
+    /// blocked.
+    virtual void cancelRead() { MORDOR_NOTREACHED(); }
+
     /// @brief Write data to the Stream
 
     /// write() is allowed to return less than length. If is @b not allowed to
@@ -88,6 +95,12 @@ public:
     /// @pre @c buffer.readAvailable() >= @c length
     /// @return The amount actually written
     virtual size_t write(const Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
+
+    /// @brief Cancels a write that is currently blocked
+
+    /// Must be called from a different Fiber/Thread than the one that is
+    /// blocked.
+    virtual void cancelWrite() { MORDOR_NOTREACHED(); }
 
     /// @brief Change the current stream pointer
 

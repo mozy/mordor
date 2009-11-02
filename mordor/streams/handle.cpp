@@ -5,6 +5,7 @@
 #include "handle.h"
 
 #include "mordor/exception.h"
+#include "mordor/runtime_linking.h"
 
 namespace Mordor {
 
@@ -13,7 +14,9 @@ HandleStream::HandleStream()
   m_scheduler(NULL),
   m_pos(0),
   m_hFile(INVALID_HANDLE_VALUE),
-  m_own(false)
+  m_own(false),
+  m_cancelRead(false),
+  m_cancelWrite(false)
 {}
 
 void
@@ -23,6 +26,7 @@ HandleStream::init(IOManagerIOCP *ioManager, Scheduler *scheduler, HANDLE hFile,
     MORDOR_ASSERT(hFile != INVALID_HANDLE_VALUE);
     m_hFile = hFile;
     m_own = own;
+    m_cancelRead = m_cancelWrite = false;
     m_ioManager = ioManager;
     m_scheduler = scheduler;
     if (m_ioManager) {
@@ -45,6 +49,23 @@ HandleStream::~HandleStream()
     }
 }
 
+static bool g_supportsCancel;
+static bool g_queriedSupportsCancel;
+
+bool
+HandleStream::supportsCancel()
+{
+    if (m_ioManager)
+        return true;
+    if (!g_supportsCancel && !g_queriedSupportsCancel) {
+        BOOL bRet = pCancelIoEx(INVALID_HANDLE_VALUE, NULL);
+        MORDOR_ASSERT(!bRet);
+        g_supportsCancel = GetLastError() != ERROR_CALL_NOT_IMPLEMENTED;
+        g_queriedSupportsCancel = true;
+    }
+    return g_supportsCancel;
+}
+
 void
 HandleStream::close(CloseType type)
 {
@@ -60,6 +81,8 @@ HandleStream::close(CloseType type)
 size_t
 HandleStream::read(Buffer &b, size_t len)
 {
+    if (m_cancelRead)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
     SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     DWORD read;
     OVERLAPPED *overlapped = NULL;
@@ -106,9 +129,23 @@ HandleStream::read(Buffer &b, size_t len)
     return read;
 }
 
+void
+HandleStream::cancelRead()
+{
+    m_cancelRead = true;
+    if (m_ioManager) {
+        m_ioManager->cancelEvent(m_hFile, &m_readEvent);
+    } else {
+        if (!pCancelIoEx(m_hFile, NULL))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIoEx");
+    }
+}
+
 size_t
 HandleStream::write(const Buffer &b, size_t len)
 {
+    if (m_cancelWrite)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
     SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     DWORD written;
     OVERLAPPED *overlapped = NULL;
@@ -144,6 +181,19 @@ HandleStream::write(const Buffer &b, size_t len)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
     }
     return written;
+}
+
+void
+HandleStream::cancelWrite()
+{
+    m_cancelWrite = true;
+    if (m_ioManager) {
+        m_ioManager->cancelEvent(m_hFile, &m_writeEvent);
+    } else {
+        MORDOR_ASSERT(supportsCancel());
+        if (!pCancelIoEx(m_hFile, NULL))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIoEx");
+    }
 }
 
 long long

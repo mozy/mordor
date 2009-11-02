@@ -27,13 +27,16 @@ public:
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
+    bool supportsCancel();
     bool supportsSeek() { return GetFileType(m_hFile) == FILE_TYPE_DISK; }
     bool supportsSize() { return supportsSeek(); }
     bool supportsTruncate() { return supportsSeek(); }
 
     void close(CloseType type = BOTH);
     size_t read(Buffer &b, size_t len);
+    void cancelRead();
     size_t write(const Buffer &b, size_t len);
+    void cancelWrite();
     long long seek(long long offset, Anchor anchor);
     long long size();
     void truncate(long long size);
@@ -47,7 +50,7 @@ protected:
     AsyncEventIOCP m_writeEvent;
     long long m_pos;
     HANDLE m_hFile;
-    bool m_own;
+    bool m_own, m_cancelRead, m_cancelWrite;
 };
 
 typedef HandleStream NativeStream;

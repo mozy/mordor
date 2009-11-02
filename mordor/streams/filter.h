@@ -27,6 +27,7 @@ public:
 
     bool supportsRead() { return m_parent->supportsRead(); }
     bool supportsWrite() { return m_parent->supportsWrite(); }
+    bool supportsCancel() { return m_parent->supportsCancel(); }
     bool supportsSeek() { return m_parent->supportsSeek(); }
     bool supportsSize() { return m_parent->supportsSize(); }
     bool supportsTruncate() { return m_parent->supportsTruncate(); }
@@ -40,7 +41,9 @@ public:
         }
     }
     size_t read(Buffer &b, size_t len) { return m_parent->read(b, len); }
+    void cancelRead() { m_parent->cancelRead(); }
     size_t write(const Buffer &b, size_t len) { return m_parent->write(b, len); }
+    void cancelWrite() { m_parent->cancelWrite(); }
     long long seek(long long offset, Anchor anchor) { return m_parent->seek(offset, anchor); }
     long long size() { return m_parent->size(); }
     void truncate(long long size) { m_parent->truncate(size); }

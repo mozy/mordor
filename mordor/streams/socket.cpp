@@ -54,6 +54,12 @@ SocketStream::read(Buffer &b, size_t len)
     return result;
 }
 
+void
+SocketStream::cancelRead()
+{
+    m_socket->cancelReceive();
+}
+
 size_t
 SocketStream::write(const Buffer &b, size_t len)
 {
@@ -64,6 +70,12 @@ SocketStream::write(const Buffer &b, size_t len)
     size_t result = m_socket->send(&bufs[0], bufs.size());
     MORDOR_ASSERT(result > 0);
     return result;
+}
+
+void
+SocketStream::cancelWrite()
+{
+    m_socket->cancelSend();
 }
 
 }

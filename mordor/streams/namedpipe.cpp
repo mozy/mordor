@@ -5,6 +5,7 @@
 #include "namedpipe.h"
 
 #include "mordor/exception.h"
+#include "mordor/runtime_linking.h"
 #include "mordor/string.h"
 
 namespace Mordor {
@@ -53,6 +54,8 @@ NamedPipeStream::close(CloseType type)
 void
 NamedPipeStream::accept()
 {
+    if (m_cancelRead)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
     SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     OVERLAPPED *overlapped = NULL;
     if (m_ioManager) {
@@ -81,6 +84,19 @@ NamedPipeStream::accept()
         if (!ret) {
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ConnectNamedPipe");
         }
+    }
+}
+
+void
+NamedPipeStream::cancelAccept()
+{
+    m_cancelRead = true;
+    if (m_ioManager) {
+        m_ioManager->cancelEvent(m_hFile, &m_readEvent);
+    } else {
+        MORDOR_ASSERT(supportsCancel());
+        if (!pCancelIoEx(m_hFile, NULL))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIoEx");
     }
 }
 
