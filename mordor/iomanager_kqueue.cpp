@@ -169,14 +169,13 @@ IOManagerKQueue::idle()
             const AsyncEvent &e = it->second;
 
             event.flags = EV_DELETE;
-            rc = kevent(m_kqfd, &event, 1, NULL, 0, NULL);
-            MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+            int rc2 = kevent(m_kqfd, &event, 1, NULL, 0, NULL);
+            MORDOR_LOG_LEVEL(g_log, rc2 ? Log::ERROR : Log::VERBOSE) << this
                 << " kevent(" << m_kqfd << ", (" << event.ident << ", "
-                << event.filter << ", EV_DELETE)): " << rc << " (" << errno
+                << event.filter << ", EV_DELETE)): " << rc2 << " (" << errno
                 << ")";
-            if (rc) {
+            if (rc2)
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
-            }
             if (e.m_dg)
                 e.m_scheduler->schedule(e.m_dg);
             else
