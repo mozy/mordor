@@ -9,6 +9,7 @@
 
 #include "assert.h"
 #include "exception.h"
+#include "log.h"
 #include "version.h"
 
 #ifdef OSX
@@ -21,6 +22,8 @@
 #endif
 
 namespace Mordor {
+
+static Logger::ptr g_log = Log::lookup("mordor:timer");
 
 #ifdef WINDOWS
 static unsigned long long queryFrequency()
@@ -81,6 +84,7 @@ Timer::Timer(unsigned long long next)
 void
 Timer::cancel()
 {
+    MORDOR_LOG_VERBOSE(g_log) << this << " cancel";
     if (m_next != 0) {
         boost::mutex::scoped_lock lock(m_manager->m_mutex);
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
@@ -112,8 +116,12 @@ TimerManager::registerTimer(unsigned long long us, boost::function<void ()> dg,
         bool recurring, bool &atFront)
 {
     Timer::ptr result(new Timer(us, dg, recurring, this));
-    boost::mutex::scoped_lock lock(m_mutex);
-    atFront = (m_timers.insert(result).first == m_timers.begin());
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        atFront = (m_timers.insert(result).first == m_timers.begin());
+    }
+    MORDOR_LOG_VERBOSE(g_log) << result.get() << " registerTimer(" << us
+        << ", " << us << ", " << recurring << "): " << atFront;
     return result;
 }
 
@@ -121,13 +129,19 @@ unsigned long long
 TimerManager::nextTimer()
 {
     boost::mutex::scoped_lock lock(m_mutex);
-    if (m_timers.empty())
+    if (m_timers.empty()) {
+        MORDOR_LOG_VERBOSE(g_log) << this << " nextTimer(): ~0ull";
         return ~0ull;
+    }
     const Timer::ptr &next = *m_timers.begin();
     unsigned long long nowUs = now();
+    unsigned long long result;
     if (nowUs >= next->m_next)
-        return 0;
-    return next->m_next - nowUs;
+        result = 0;
+    else
+        result = next->m_next - nowUs;
+    MORDOR_LOG_VERBOSE(g_log) << this << " nextTimer(): " << result;
+    return result;
 }
 
 static
@@ -173,6 +187,7 @@ TimerManager::processTimers()
         // TODO: need a per-timer lock for this?
         if (timer->m_next != 0) {
             if (!timer->m_recurring) timer->m_next = 0;
+            MORDOR_LOG_VERBOSE(g_log) << timer.get() << " dg()";
             timer->m_dg();
         }
     }
