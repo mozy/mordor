@@ -14,7 +14,7 @@ void
 NamedPipeStream::init(IOManager *ioManager, Scheduler *scheduler, const std::string &name, Flags flags)
 {
     HANDLE hPipe = CreateNamedPipeW(toUtf16(name).c_str(),
-        (DWORD)flags,
+        (DWORD)flags | (ioManager ? FILE_FLAG_OVERLAPPED : 0),
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
         0, 0, 0, NULL);
@@ -29,7 +29,7 @@ void
 NamedPipeStream::init(IOManager *ioManager, Scheduler *scheduler, const std::wstring &name, Flags flags)
 {
     HANDLE hPipe = CreateNamedPipeW(name.c_str(),
-        (DWORD)flags,
+        (DWORD)flags | (ioManager ? FILE_FLAG_OVERLAPPED : 0),
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
         0, 0, 0, NULL);

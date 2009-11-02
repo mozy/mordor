@@ -9,6 +9,8 @@ namespace Mordor {
 class NamedPipeStream : public HandleStream
 {
 public:
+    typedef boost::shared_ptr<NamedPipeStream> ptr;
+
     enum Flags {
         READ = PIPE_ACCESS_INBOUND,
         WRITE = PIPE_ACCESS_OUTBOUND,
