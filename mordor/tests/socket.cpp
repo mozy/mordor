@@ -172,7 +172,7 @@ MORDOR_UNITTEST(Socket, sendAfterShutdownOtherEnd)
 #elif defined(BSD)
     // BSD lets you write to the socket, but it blocks, so we have to check
     // for it blocking
-    testShutdownException<OperationAbortedException>(true, true, true);
+    testShutdownException<TimedOutException>(true, true, true);
 #else
     testShutdownException<BrokenPipeException>(true, false, true);
 #endif
