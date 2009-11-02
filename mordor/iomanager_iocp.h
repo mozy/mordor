@@ -45,7 +45,8 @@ private:
         WaitBlock(IOManagerIOCP &outer);
         ~WaitBlock();
 
-        bool registerEvent(HANDLE handle, boost::function<void ()> dg);
+        bool registerEvent(HANDLE handle, boost::function<void ()> dg,
+            bool recurring);
         bool unregisterEvent(HANDLE handle);
 
     private:
@@ -58,6 +59,7 @@ private:
         Scheduler *m_schedulers[MAXIMUM_WAIT_OBJECTS];
         Fiber::ptr m_fibers[MAXIMUM_WAIT_OBJECTS];
         boost::function<void ()> m_dgs[MAXIMUM_WAIT_OBJECTS];
+        bool m_recurring[MAXIMUM_WAIT_OBJECTS];
         int m_inUseCount;
     };
 
@@ -71,12 +73,15 @@ public:
     void registerEvent(AsyncEventIOCP *e);
     // Only use if the async call failed, not for cancelling it
     void unregisterEvent(AsyncEventIOCP *e);
-    void registerEvent(HANDLE handle, boost::function<void ()> dg = NULL);
+    void registerEvent(HANDLE handle, boost::function<void ()> dg,
+        bool recurring = false);
+    void registerEvent(HANDLE handle, bool recurring = false)
+    { registerEvent(handle, NULL, recurring); }
     bool unregisterEvent(HANDLE handle);
     void cancelEvent(HANDLE hFile, AsyncEventIOCP *e);
 
-    Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
-        bool recurring = false);
+    Timer::ptr registerTimer(unsigned long long us,
+        boost::function<void ()> dg, bool recurring = false);
     
 protected:
     bool stopping(unsigned long long &nextTimeout);

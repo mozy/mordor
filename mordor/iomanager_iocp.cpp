@@ -42,7 +42,8 @@ IOManagerIOCP::WaitBlock::~WaitBlock()
 
 bool
 IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
-                                        boost::function <void ()> dg)
+                                        boost::function <void ()> dg,
+                                        bool recurring)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     if (m_inUseCount == -1 || m_inUseCount == MAXIMUM_WAIT_OBJECTS)
@@ -52,6 +53,7 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
     m_schedulers[m_inUseCount] = Scheduler::getThis();
     m_fibers[m_inUseCount] = Fiber::getThis();
     m_dgs[m_inUseCount] = dg;
+    m_recurring[m_inUseCount] = recurring;
     MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " registerEvent(" << hEvent << ", "
         << dg << ")";
     if (m_inUseCount == 1) {
@@ -82,6 +84,7 @@ IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
         m_fibers[index].~shared_ptr<Fiber>();
         memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
         new(&m_fibers[m_inUseCount]) Fiber::ptr();
+        memmove(&m_recurring[index], &m_recurring[index + 1], (m_inUseCount - index) * sizeof(bool));
 
         if (--m_inUseCount == 0)
             --m_inUseCount;
@@ -132,22 +135,25 @@ IOManagerIOCP::WaitBlock::run()
                     m_schedulers[index]->schedule(m_fibers[index]);
                 else
                     m_schedulers[index]->schedule(m_dgs[index]);
-                memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
-                // Manually destruct old object, move others down, and default construct unused one
-                m_dgs[index].~functor();
-                memmove(&m_dgs[index], &m_dgs[index + 1], (m_inUseCount - index) * sizeof(boost::function<void ()>));
-                new(&m_dgs[m_inUseCount]) boost::function<void ()>();
-                // Manually destruct old object, move others down, and default construct unused one
-                m_fibers[index].~shared_ptr<Fiber>();
-                memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
-                new(&m_fibers[m_inUseCount]) Fiber::ptr();
+                if (!m_recurring[index]) {
+                    memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
+                    // Manually destruct old object, move others down, and default construct unused one
+                    m_dgs[index].~functor();
+                    memmove(&m_dgs[index], &m_dgs[index + 1], (m_inUseCount - index) * sizeof(boost::function<void ()>));
+                    new(&m_dgs[m_inUseCount]) boost::function<void ()>();
+                    // Manually destruct old object, move others down, and default construct unused one
+                    m_fibers[index].~shared_ptr<Fiber>();
+                    memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
+                    new(&m_fibers[m_inUseCount]) Fiber::ptr();
+                    memmove(&m_recurring[index], &m_recurring[index + 1], (m_inUseCount - index) * sizeof(bool));
 
-                if (--m_inUseCount == 0) {
-                    --m_inUseCount;
-                    break;
+                    if (--m_inUseCount == 0) {
+                        --m_inUseCount;
+                        break;
+                    }
+                    count = m_inUseCount + 1;
+                    memcpy(handles, m_handles, (count) * sizeof(HANDLE));
                 }
-                count = m_inUseCount + 1;
-                memcpy(handles, m_handles, (count) * sizeof(HANDLE));
             }
         } else if (dwRet == WAIT_FAILED) {
             // What to do, what to do?  Probably a bad handle.
@@ -238,7 +244,7 @@ IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
 }
 
 void
-IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg)
+IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg, bool recurring)
 {
     MORDOR_LOG_VERBOSE(g_log) << this << " registerEvent(" << handle << ", " << dg
         << ")";
@@ -252,11 +258,11 @@ IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg)
     for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();
         it != m_waitBlocks.end();
         ++it) {
-        if ((*it)->registerEvent(handle, dg))
+        if ((*it)->registerEvent(handle, dg, recurring))
             return;
     }
     m_waitBlocks.push_back(WaitBlock::ptr(new WaitBlock(*this)));
-    bool result = m_waitBlocks.back()->registerEvent(handle, dg);
+    bool result = m_waitBlocks.back()->registerEvent(handle, dg, recurring);
     MORDOR_ASSERT(result);
 }
 
