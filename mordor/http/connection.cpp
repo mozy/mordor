@@ -35,58 +35,49 @@ Connection::hasMessageBody(const GeneralHeaders &general,
                                  Status status,
                                  bool includeEmpty)
 {
-    if (status == INVALID) {
-        // Request
-        switch (method) {
-            case GET:
-            case HEAD:
-            case TRACE:
-            case CONNECT:
-                return false;
-            default:
-                break;
-        }
-        if (entity.contentLength != ~0ull && entity.contentLength != 0)
+    // Connect escapes HTTP
+    if (method == CONNECT && (status == OK || status == INVALID))
+        return false;
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.8
+    // A TRACE request MUST NOT include an entity.
+    if (status == INVALID && method == TRACE)
+        return false;
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.4
+    // the server MUST NOT return a message-body in the response
+    if (status != INVALID && method == HEAD)
+        return false;
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.1
+    // This class of status code indicates a provisional response, consisting only of the Status-Line and optional headers
+    if (((int)status >= 100 && status <= 199) ||
+        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.2.5
+        // The 204 response MUST NOT include a message-body
+        (int)status == 204 ||
+        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.5
+        // The 304 response MUST NOT contain a message-body
+        (int)status == 304)
+        return false;
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+    // 2.
+    for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
+        it != general.transferEncoding.end();
+        ++it) {
+        if (stricmp(it->value.c_str(), "identity") != 0)
             return true;
-        if (entity.contentLength == 0)
-            return includeEmpty;
-        for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
-            it != general.transferEncoding.end();
-            ++it) {
-            if (stricmp(it->value.c_str(), "identity") != 0)
-                return true;
-        }
-        if (entity.contentType.type == "multipart")
-            return true;
-        throw std::runtime_error("Requests must have some way to determine when they end!");
-    } else {
-        // Response
-        switch (method) {
-            case HEAD:
-            case TRACE:
-                return false;
-            default:
-                break;
-        }
-        if (((int)status >= 100 && status <= 199) ||
-            (int)status == 204 ||
-            (int)status == 304 ||
-            method == HEAD)
-            return false;
-        if ((int)status == 200 && method == CONNECT)
-            return false;
-        for (ParameterizedList::const_iterator it(general.transferEncoding.begin());
-            it != general.transferEncoding.end();
-            ++it) {
-            if (stricmp(it->value.c_str(), "identity") != 0)
-                return true;
-        }
-        if (entity.contentLength == 0)
-            return includeEmpty;
-        if (entity.contentType.type == "multipart")
-            return true;
-        return true;
     }
+    // 3.
+    if (entity.contentLength == 0)
+        return includeEmpty;
+    if (entity.contentLength != ~0ull)
+        return true;
+    // 4.
+    if (entity.contentType.type == "multipart")
+        return true;
+    // 5. By the server closing the connection.
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.3
+    // (by default, requests don't have a message body, because you can't
+    // tell where it would end, without precluding the possibility of a
+    // response)
+    return status != INVALID;
 }
 
 Stream::ptr

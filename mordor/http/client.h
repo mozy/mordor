@@ -25,6 +25,14 @@ class ClientRequest : public boost::enable_shared_from_this<ClientRequest>, boos
 {
 private:
     friend class ClientConnection;
+
+    enum State {
+        WAITING,
+        HEADERS,
+        INFLIGHT,
+        COMPLETE,
+        ERROR
+    };
 public:
     typedef boost::shared_ptr<ClientRequest> ptr;
     typedef boost::weak_ptr<ClientRequest> weak_ptr;
@@ -65,8 +73,8 @@ private:
     Request m_request;
     Response m_response;
     EntityHeaders m_requestTrailer, m_responseTrailer;
-    bool m_requestDone, m_requestInFlight, m_responseHeadersDone, m_responseDone, m_responseInFlight, m_cancelled, m_aborted;
-    bool m_badTrailer, m_incompleteTrailer, m_hasResponseBody;
+    State m_requestState, m_responseState;
+    bool m_cancelled, m_aborted, m_badResponse, m_incompleteResponse, m_badTrailer, m_incompleteTrailer, m_hasResponseBody;
     Stream::ptr m_requestStream;
     boost::weak_ptr<Stream> m_responseStream;
     Multipart::ptr m_requestMultipart;
@@ -75,16 +83,19 @@ private:
 
 class ClientConnection : public Connection, public boost::enable_shared_from_this<ClientConnection>, boost::noncopyable
 {
-public:
-    typedef boost::shared_ptr<ClientConnection> ptr;
 private:
     friend class ClientRequest;
+
+public:
+    typedef boost::shared_ptr<ClientConnection> ptr;
+
 public:
     ClientConnection(Stream::ptr stream);
 
     ClientRequest::ptr request(const Request &requestHeaders);
 
     bool newRequestsAllowed();
+
 private:
     void scheduleNextRequest(ClientRequest *currentRequest);
     void scheduleNextResponse(ClientRequest *currentRequest);
