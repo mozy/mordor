@@ -35,6 +35,7 @@ HandleStream::init(IOManagerIOCP *ioManager, Scheduler *scheduler, HANDLE hFile,
         } catch(...) {
             if (own) {
                 CloseHandle(m_hFile);
+                m_hFile = INVALID_HANDLE_VALUE;
             }
             throw;
         }
