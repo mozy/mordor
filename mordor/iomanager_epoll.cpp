@@ -181,7 +181,8 @@ IOManagerEPoll::idle()
             << " epoll_wait(" << m_epfd << "): " << rc << " (" << errno << ")";
         if (rc < 0)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_wait");
-        processTimers();
+        std::vector<boost::function<void ()> > expired = processTimers();
+        schedule(expired.begin(), expired.end());
 
         for(int i = 0; i < rc; ++i) {
             epoll_event &event = events[i];

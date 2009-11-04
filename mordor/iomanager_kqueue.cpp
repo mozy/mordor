@@ -149,7 +149,8 @@ IOManagerKQueue::idle()
             << " kevent(" << m_kqfd << "): " << rc << " (" << errno << ")";
         if (rc < 0)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
-        processTimers();
+        std::vector<boost::function<void ()> > expired = processTimers();
+        schedule(expired.begin(), expired.end());
 
         for(int i = 0; i < rc; ++i) {
             struct kevent &event = events[i];

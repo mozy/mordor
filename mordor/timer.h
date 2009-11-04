@@ -27,13 +27,15 @@ private:
     Timer(unsigned long long next);
 
 public:
+    /// @return If the timer was successfully cancelled before it fired
+    /// (if non-recurring)
     bool cancel();
 
 private:
+    bool m_recurring;
     unsigned long long m_next;
     unsigned long long m_us;
     boost::function<void ()> m_dg;
-    bool m_recurring;
     TimerManager *m_manager;
 
 private:
@@ -55,7 +57,7 @@ public:
 
     // How *long* until the next timer expires; ~0ull if no timers
     unsigned long long nextTimer();
-    void processTimers();
+    void executeTimers();
 
     // Return monotonically increasing count of microseconds.  The number returned
     // isn't guaranteed to be relative to any particular start time, however,
@@ -67,6 +69,7 @@ public:
 protected:
     Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
         bool recurring, bool &atFront);
+    std::vector<boost::function<void ()> > processTimers();
 
 private:
     std::set<Timer::ptr, Timer::Comparator> m_timers;

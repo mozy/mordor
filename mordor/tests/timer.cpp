@@ -25,7 +25,7 @@ MORDOR_UNITTEST(Timer, single)
     manager.registerTimer(0, boost::bind(&singleTimer, boost::ref(sequence), 1));
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
-    manager.processTimers();
+    manager.executeTimers();
     ++sequence;
     MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
@@ -42,7 +42,7 @@ MORDOR_UNITTEST(Timer, multiple)
         boost::ref(sequence)));
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
-    manager.processTimers();
+    manager.executeTimers();
     ++sequence;
     MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
@@ -58,7 +58,7 @@ MORDOR_UNITTEST(Timer, cancel)
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     timer->cancel();
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
-    manager.processTimers();
+    manager.executeTimers();
     MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
 }
 
@@ -73,7 +73,7 @@ MORDOR_UNITTEST(Timer, idempotentCancel)
     timer->cancel();
     timer->cancel();
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
-    manager.processTimers();
+    manager.executeTimers();
     MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
 }
 
@@ -86,7 +86,7 @@ MORDOR_UNITTEST(Timer, idempotentCancelAfterSuccess)
         manager.registerTimer(0, boost::bind(&singleTimer, boost::ref(sequence), 1));
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
-    manager.processTimers();
+    manager.executeTimers();
     ++sequence;
     MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
@@ -107,12 +107,12 @@ MORDOR_UNITTEST(Timer, recurring)
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
     expected = 1;
-    manager.processTimers();
+    manager.executeTimers();
     ++sequence;
     MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0u);
     expected = 3;
-    manager.processTimers();
+    manager.executeTimers();
     ++sequence;
     MORDOR_TEST_ASSERT_EQUAL(sequence, 4);
     timer->cancel();
@@ -129,7 +129,7 @@ MORDOR_UNITTEST(Timer, later)
     MORDOR_TEST_ASSERT_ABOUT_EQUAL(manager.nextTimer(),
         1000 * 1000 * 1000u, 100 * 1000 * 1000u);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
-    manager.processTimers();
+    manager.executeTimers();
     ++sequence;
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
     timer->cancel();

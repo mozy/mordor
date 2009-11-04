@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "assert.h"
+#include "atomic.h"
 #include "exception.h"
 #include "log.h"
 #include "version.h"
@@ -68,9 +69,9 @@ TimerManager::now()
 
 Timer::Timer(unsigned long long us, boost::function<void ()> dg, bool recurring,
              TimerManager *manager)
-    : m_us(us),
+    : m_recurring(recurring),
+      m_us(us),
       m_dg(dg),
-      m_recurring(recurring),
       m_manager(manager)
 {
     MORDOR_ASSERT(m_dg);
@@ -85,15 +86,14 @@ bool
 Timer::cancel()
 {
     MORDOR_LOG_VERBOSE(g_log) << this << " cancel";
-    if (m_next != 0) {
-        boost::mutex::scoped_lock lock(m_manager->m_mutex);
+    boost::mutex::scoped_lock lock(m_manager->m_mutex);
+    if (m_dg) {
+        m_dg = NULL;
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
             m_manager->m_timers.find(shared_from_this());
-        m_next = 0;
-        if (it != m_manager->m_timers.end()) {
+        if (it != m_manager->m_timers.end())
             m_manager->m_timers.erase(it);
-            return true;
-        }
+        return true;
     }
     return false;
 }
@@ -121,7 +121,9 @@ TimerManager::registerTimer(unsigned long long us, boost::function<void ()> dg,
     Timer::ptr result(new Timer(us, dg, recurring, this));
     {
         boost::mutex::scoped_lock lock(m_mutex);
-        atFront = (m_timers.insert(result).first == m_timers.begin());
+        std::set<Timer::ptr, Timer::Comparator>::iterator it =
+            m_timers.insert(result).first;
+        atFront = (it == m_timers.begin());
     }
     MORDOR_LOG_VERBOSE(g_log) << result.get() << " registerTimer(" << us
         << ", " << us << ", " << recurring << "): " << atFront;
@@ -151,15 +153,16 @@ static
 void delete_nothing(Timer *t)
 {}
 
-void
+std::vector<boost::function<void ()> >
 TimerManager::processTimers()
 {
     std::vector<Timer::ptr> expired;
+    std::vector<boost::function<void ()> > result;
     unsigned long long nowUs = now();
     {
         boost::mutex::scoped_lock lock(m_mutex);
         if (m_timers.empty() || (*m_timers.begin())->m_next > nowUs)
-            return;
+            return result;
         Timer nowTimer(nowUs);
         Timer::ptr nowTimerPtr(&nowTimer, &delete_nothing);
         // Find all timers that are expired
@@ -169,30 +172,35 @@ TimerManager::processTimers()
         // Copy to expired, remove from m_timers;
         expired.insert(expired.begin(), m_timers.begin(), it);
         m_timers.erase(m_timers.begin(), it);
+        result.reserve(expired.size());
         // Look at expired timers and re-register recurring timers
         // (while under the same lock)
         for (std::vector<Timer::ptr>::iterator it2(expired.begin());
             it2 != expired.end();
             ++it2) {
             Timer::ptr &timer = *it2;
+            MORDOR_ASSERT(timer->m_dg);
+            result.push_back(timer->m_dg);
             if (timer->m_recurring) {
                 timer->m_next = nowUs + timer->m_us;
                 m_timers.insert(timer);
+            } else {
+                timer->m_dg = NULL;
             }
         }                        
     }
+    return result;
+}
+
+void
+TimerManager::executeTimers()
+{
+    std::vector<boost::function<void ()> > expired = processTimers();
     // Run the callbacks for each expired timer (not under a lock)
-    for (std::vector<Timer::ptr>::iterator it2(expired.begin());
-        it2 != expired.end();
-        ++it2) {
-        Timer::ptr &timer = *it2;
-        // Make sure someone else hasn't cancelled us
-        // TODO: need a per-timer lock for this?
-        if (timer->m_next != 0) {
-            if (!timer->m_recurring) timer->m_next = 0;
-            MORDOR_LOG_VERBOSE(g_log) << timer.get() << " dg()";
-            timer->m_dg();
-        }
+    for (std::vector<boost::function<void ()> >::iterator it(expired.begin());
+        it != expired.end();
+        ++it) {
+        (*it)();
     }
 }
 

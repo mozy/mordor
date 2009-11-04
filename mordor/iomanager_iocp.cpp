@@ -362,12 +362,17 @@ IOManagerIOCP::idle()
         }
         if (!ret && overlapped == NULL) {
             if (GetLastError() == WAIT_TIMEOUT) {
-                processTimers();
+                std::vector<boost::function<void ()> > expired = processTimers();
+                if (!expired.empty()) {
+                    schedule(expired.begin(), expired.end());
+                    Fiber::yield();
+                }
                 continue;
             }
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetQueuedCompletionStatus");
         }
-        processTimers();
+        std::vector<boost::function<void ()> > expired = processTimers();
+        schedule(expired.begin(), expired.end());
 
         AsyncEventIOCP *e;
         {
