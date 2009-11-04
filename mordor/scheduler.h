@@ -92,6 +92,20 @@ public:
     /// run on
     void schedule(boost::function<void ()> dg, boost::thread::id thread = boost::thread::id());
 
+    /// Schedule multiple items to be executed at once
+    
+    /// @param begin The first item to schedule
+    /// @param end One past the last item to schedule
+    template <class InputIterator>
+    void schedule(InputIterator begin, InputIterator end)
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        while (begin != end) {
+            scheduleNoLock(*begin);
+            ++begin;
+        }
+    }
+
     /// Change the currently executing Fiber to be running on this Scheduler
     
     /// This function can be used to change which Scheduler/thread the
@@ -144,6 +158,9 @@ protected:
 private:
     void yieldTo(bool yieldToCallerOnTerminate);
     void run();
+
+    void scheduleNoLock(Fiber::ptr f, boost::thread::id thread = boost::thread::id());
+    void scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread = boost::thread::id());
 
 private:
     struct FiberAndThread {

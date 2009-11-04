@@ -169,10 +169,23 @@ Scheduler::stopping()
 void
 Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
 {
+    boost::mutex::scoped_lock lock(m_mutex);
+    scheduleNoLock(f, thread);
+}
+
+void
+Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    scheduleNoLock(dg, thread);
+}
+
+void
+Scheduler::scheduleNoLock(Fiber::ptr f, boost::thread::id thread)
+{
     MORDOR_LOG_VERBOSE(g_log) << this << " scheduling " << f << " on thread "
         << thread;
     MORDOR_ASSERT(f);
-    boost::mutex::scoped_lock lock(m_mutex);
     FiberAndThread ft = {f, NULL, thread };
     bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);
@@ -181,12 +194,11 @@ Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
 }
 
 void
-Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
+Scheduler::scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread)
 {
     MORDOR_LOG_VERBOSE(g_log) << this << " scheduling " << dg << " on thread "
         << thread;
     MORDOR_ASSERT(dg);
-    boost::mutex::scoped_lock lock(m_mutex);
     FiberAndThread ft = {Fiber::ptr(), dg, thread };
     bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);
