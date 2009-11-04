@@ -28,7 +28,7 @@ FileStream::init(IOManager *ioManager, Scheduler *scheduler,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
         createFlags,
-        0,
+        ioManager ? FILE_FLAG_OVERLAPPED : 0,
         NULL);
 #else
     int oflags = (int)flags;
@@ -79,7 +79,7 @@ FileStream::init(IOManager *ioManager, Scheduler *scheduler,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
         createFlags,
-        0,
+        ioManager ? FILE_FLAG_OVERLAPPED : 0,
         NULL);
     if (handle == (NativeHandle)-1)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
