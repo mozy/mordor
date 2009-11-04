@@ -30,6 +30,24 @@ atomicCompareAndSwap(volatile T& t, T newvalue, T comparand)
 {
     return InterlockedCompareExchange((volatile LONG*)&t, (LONG)newvalue, (LONG)comparand);
 }
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(LONG), T>::type
+atomicSwap(volatile T& t, T newvalue)
+{
+    return InterlockedExchange((volatile LONG*)&t, (LONG)newvalue);
+}
+inline
+bool
+atomicTestAndSet(volatile void *address, int bit = 0)
+{
+    return !!InterlockedBitTestAndSet((volatile LONG*)address + (bit >> 5), (LONG)(0x80000000 >> (bit & 31)));
+}
+inline
+bool
+atomicTestAndClear(volatile void *address, int bit = 0)
+{
+    return !!InterlockedBitTestAndReset((volatile LONG*)address + (bit >> 5), (LONG)(0x80000000 >> (bit & 31)));
+}
 #ifdef X86_64
 template <class T>
 typename boost::enable_if_c<sizeof(T) == sizeof(LONGLONG), T>::type
@@ -54,6 +72,12 @@ typename boost::enable_if_c<sizeof(T) == sizeof(LONGLONG), T>::type
 atomicCompareAndSwap(volatile T& t, T newvalue, T comparand)
 {
     return InterlockedCompareExchange64((volatile LONGLONG*)&t, (LONGLONG)newvalue, (LONGLONG)comparand);
+}
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(LONGLONG), T>::type
+atomicSwap(volatile T& t, T newvalue)
+{
+    return InterlockedExchange64((volatile LONGLONG*)&t, (LONGLONG)newvalue);
 }
 #endif
 #elif defined(OSX)
@@ -84,6 +108,27 @@ atomicCompareAndSwap(volatile T &t, T newvalue, T comparand)
 {
     return OSAtomicCompareAndSwap32Barrier((int32_t)comparand, (int32_t)newvalue, (volatile int32_t *)&t) ? comparand : t;
 }
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(int32_t), T>::type
+atomicSwap(volatile T &t, T newvalue)
+{
+    int32_t comparand = (int32_t)t;
+    while (!OSAtomicCompareAndSwap32Barrier((int32_t)comparand, (int32_t)newvalue))
+        comparand = (int32_t)t;
+    return comparand;
+}
+inline
+bool
+atomicTestAndSet(volatile T &t, int bit = 0)
+{
+    return OSAtomicTestAndSetBarrier((uint32_t)bit, (volatile void *)&t);
+}
+inline
+bool
+atomicTestAndClear(volatile T &t, int bit = 0)
+{
+    return OSAtomicTestAndClearBarrier((uint32_t)bit, (volatile void *)&t);
+}
 #ifdef X86_64
 template <class T>
 typename boost::enable_if_c<sizeof(T) == sizeof(int64_t), T>::type
@@ -109,6 +154,15 @@ atomicCompareAndSwap(volatile T &t, T newvalue, T comparand)
 {
     return OSAtomicCompareAndSwap64Barrier((int64_t)comparand, (int64_t)newvalue, (volatile int64_t *)&t) ? comparand : t;
 }
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(int64_t), T>::type
+atomicSwap(volatile T &t, T newvalue)
+{
+    int64_t comparand = (int64_t)t;
+    while (!OSAtomicCompareAndSwap64Barrier((int64_t)comparand, (int64_t)newvalue))
+        comparand = (int64_t)t;
+    return comparand;
+}
 #endif
 #elif (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)
 template <class T> 
@@ -124,6 +178,35 @@ template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(void *), T>::type
 atomicCompareAndSwap(volatile T &t, T newvalue, T comparand)
 { return __sync_val_compare_and_swap(&t, comparand, newvalue); }
+typename boost::enable_if_c<sizeof(T) <= sizeof(void *), T>::type
+atomicSwap(volatile T &t, T newvalue)
+{ return __sync_lock_test_and_set(&t, newvalue); }
+inline
+bool
+atomicTestAndSet(volatile void *address, int bit = 0)
+{
+    int mask = (1 << (sizeof(int) * 8 - 1)) >> (bit & (sizeof(int) * 8 - 1))));
+    volatile int &target = *((volatile int *)address >> (sizeof(int) >> 3));
+    int oldvalue, newvalue;
+    do {
+        int oldvalue = target;
+        int newvalue = oldvalue | mask;                
+    } while (newvalue != atomicCompareAndSwap(target, newvalue, oldvalue));
+    return !!(oldvalue & mask);
+}
+inline
+bool
+atomicTestAndClear(volatile void *address, int bit = 0)
+{
+    int mask = (1 << (sizeof(int) * 8 - 1)) >> (bit & (sizeof(int) * 8 - 1))));
+    volatile int &target = *((volatile int *)address >> (sizeof(int) >> 3));
+    int oldvalue, newvalue;
+    do {
+        int oldvalue = target;
+        int newvalue = oldvalue & ~mask;                
+    } while (newvalue != atomicCompareAndSwap(target, newvalue, oldvalue));
+    return !!(oldvalue & mask);
+}
 #elif (__GNUC__ == 4 && __GNUC_MINOR__ == 0) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
 template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(_Atomic_word), T>::type
