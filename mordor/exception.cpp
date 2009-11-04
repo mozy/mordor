@@ -235,6 +235,9 @@ void throwExceptionFromLastError(error_t error)
         case ERROR_OPERATION_ABORTED:
             throw boost::enable_current_exception(OperationAbortedException())
                 << errinfo_nativeerror(error);
+        case ERROR_BROKEN_PIPE:
+            throw boost::enable_current_exception(UnexpectedEofException())
+                << errinfo_nativeerror(error);
         case WSAESHUTDOWN:
             throw boost::enable_current_exception(BrokenPipeException())
                 << errinfo_nativeerror(error);
