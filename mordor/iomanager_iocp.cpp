@@ -30,14 +30,24 @@ IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
         << " (" << GetLastError() << ")";
     if (!m_handles[0])
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
+    m_reconfigured = CreateEventW(NULL, FALSE, FALSE, NULL);
+    MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " CreateEventW(): "
+        << m_reconfigured << " (" << GetLastError() << ")";
+    if (!m_reconfigured) {
+        CloseHandle(m_handles[0]);
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
+    }
 }
 
 IOManagerIOCP::WaitBlock::~WaitBlock()
 {
     MORDOR_ASSERT(m_inUseCount <= 0);
     BOOL bRet = CloseHandle(m_handles[0]);
-    MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " CloseHandle(" << m_handles[0]
-        << "): " << bRet << " (" << GetLastError() << ")";
+    MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " CloseHandle("
+        << m_handles[0] << "): " << bRet << " (" << GetLastError() << ")";
+    bRet = CloseHandle(m_reconfigured);
+    MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " CloseHandle("
+        << m_reconfigured << "): " << bRet << " (" << GetLastError() << ")";
 }
 
 bool
@@ -54,8 +64,8 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
     m_fibers[m_inUseCount] = Fiber::getThis();
     m_dgs[m_inUseCount] = dg;
     m_recurring[m_inUseCount] = recurring;
-    MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " registerEvent(" << hEvent << ", "
-        << dg << ")";
+    MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " registerEvent(" << hEvent
+        << ", " << dg << ")";
     if (m_inUseCount == 1) {
         boost::thread thread(boost::bind(&WaitBlock::run, this));
     } else {
@@ -88,7 +98,13 @@ IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
 
         if (--m_inUseCount == 0)
             --m_inUseCount;
-        SetEvent(m_handles[0]);
+        if (!ResetEvent(m_reconfigured))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ResetEvent");
+        if (!SetEvent(m_handles[0]))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
+        lock.unlock();
+        if (WaitForSingleObject(m_reconfigured, INFINITE) == WAIT_FAILED)
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WaitForSingleObject");
         return true;
     }
     return false;
@@ -117,6 +133,8 @@ IOManagerIOCP::WaitBlock::run()
         if (dwRet == WAIT_OBJECT_0) {
             // Array just got reconfigured
             boost::mutex::scoped_lock lock(m_mutex);
+            if (!SetEvent(m_reconfigured))
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
             if (m_inUseCount == -1)
                 break;
             count = m_inUseCount + 1;
@@ -156,8 +174,6 @@ IOManagerIOCP::WaitBlock::run()
                 }
             }
         } else if (dwRet == WAIT_FAILED) {
-            // What to do, what to do?  Probably a bad handle.
-            // This will bring down the whole process
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WaitForMultipleObjects");
         } else {
             MORDOR_NOTREACHED();
@@ -249,10 +265,9 @@ IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg, bool re
     MORDOR_LOG_DEBUG(g_log) << this << " registerEvent(" << handle << ", " << dg
         << ")";
     MORDOR_ASSERT(handle);
-    if (!dg) {
-        MORDOR_ASSERT(Scheduler::getThis());
+    MORDOR_ASSERT(Scheduler::getThis());
+    if (!dg)
         MORDOR_ASSERT(Fiber::getThis());
-    }
 
     boost::mutex::scoped_lock lock(m_mutex);
     for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();

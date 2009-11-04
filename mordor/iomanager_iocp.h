@@ -55,6 +55,7 @@ private:
     private:
         boost::mutex m_mutex;
         IOManagerIOCP &m_outer;
+        HANDLE m_reconfigured;
         HANDLE m_handles[MAXIMUM_WAIT_OBJECTS];
         Scheduler *m_schedulers[MAXIMUM_WAIT_OBJECTS];
         Fiber::ptr m_fibers[MAXIMUM_WAIT_OBJECTS];
