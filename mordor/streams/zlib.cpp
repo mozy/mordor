@@ -141,7 +141,7 @@ ZlibStream::read(Buffer &b, size_t len)
             m_strm.avail_in = 0;
         }
         int rc = inflate(&m_strm, Z_NO_FLUSH);
-        MORDOR_LOG_VERBOSE(g_log) << this << " inflate(("
+        MORDOR_LOG_DEBUG(g_log) << this << " inflate(("
             << (inbufs.empty() ? 0 : inbufs[0].iov_len) << ", "
             << outbuf.iov_len << ")): " << rc << " (" << m_strm.avail_in
             << ", " << m_strm.avail_out << ")";
@@ -200,7 +200,7 @@ ZlibStream::write(const Buffer &b, size_t len)
         m_strm.next_out = (Bytef*)outbuf.iov_base;
         m_strm.avail_out = outbuf.iov_len;
         int rc = deflate(&m_strm, Z_NO_FLUSH);
-        MORDOR_LOG_VERBOSE(g_log) << this << " deflate((" << inbuf.iov_len << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " deflate((" << inbuf.iov_len << ", "
             << outbuf.iov_len << "), Z_NO_FLUSH): " << rc << " ("
             << m_strm.avail_in << ", " << m_strm.avail_out << ")";
         // We are always providing both input and output
@@ -246,7 +246,7 @@ ZlibStream::flush(int flush)
         m_strm.avail_out = outbuf.iov_len;
         int rc = deflate(&m_strm, flush);
         MORDOR_ASSERT(m_strm.avail_in == 0);
-        MORDOR_LOG_VERBOSE(g_log) << this << " deflate((0, " << outbuf.iov_len
+        MORDOR_LOG_DEBUG(g_log) << this << " deflate((0, " << outbuf.iov_len
             << "), " << flush << "): " << rc << " (0, " << m_strm.avail_out
             << ")";
         m_outBuffer.produce(outbuf.iov_len - m_strm.avail_out);

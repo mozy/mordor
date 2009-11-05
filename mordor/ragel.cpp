@@ -130,7 +130,7 @@ RagelParser::run(const void *buf, size_t len, bool isEof)
         eof = NULL;
     }
 
-    MORDOR_LOG_VERBOSE(g_log) << charslice(p, pe - p);
+    MORDOR_LOG_DEBUG(g_log) << charslice(p, pe - p);
     exec();
 
     if (!mark) {

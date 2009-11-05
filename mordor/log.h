@@ -27,6 +27,11 @@ class LogSink;
 
 class LoggerIterator;
 
+#ifdef DEBUG
+#undef DEBUG
+#define DEBUG DEBUG
+#endif
+
 class Log
 {
 private:
@@ -39,8 +44,9 @@ public:
         ERROR,
         WARNING,
         INFO,
+        VERBOSE,
+        DEBUG,
         TRACE,
-        VERBOSE
     };
 
     static boost::shared_ptr<Logger> lookup(const std::string &name);
@@ -159,18 +165,20 @@ public:
     { return LogEvent(shared_from_this(), level, file, line); }
     void log(Log::Level level, const std::string &str, const char *file = NULL, int line = 0);
 
-    LogEvent verbose(const char *file = NULL, int line = -1)
-    { return log(Log::VERBOSE, file, line); }
-    LogEvent trace(const char *file = NULL, int line = -1)
-    { return log(Log::TRACE, file, line); }
-    LogEvent info(const char *file = NULL, int line = -1)
-    { return log(Log::INFO, file, line); }
-    LogEvent warning(const char *file = NULL, int line = -1)
-    { return log(Log::WARNING, file, line); }
-    LogEvent error(const char *file = NULL, int line = -1)
-    { return log(Log::ERROR, file, line); }
     LogEvent fatal(const char *file = NULL, int line = -1)
     { return log(Log::FATAL, file, line); }
+    LogEvent error(const char *file = NULL, int line = -1)
+    { return log(Log::ERROR, file, line); }
+    LogEvent warning(const char *file = NULL, int line = -1)
+    { return log(Log::WARNING, file, line); }
+    LogEvent info(const char *file = NULL, int line = -1)
+    { return log(Log::INFO, file, line); }
+    LogEvent verbose(const char *file = NULL, int line = -1)
+    { return log(Log::VERBOSE, file, line); }
+    LogEvent debug(const char *file = NULL, int line = -1)
+    { return log(Log::DEBUG, file, line); }
+    LogEvent trace(const char *file = NULL, int line = -1)
+    { return log(Log::TRACE, file, line); }
 
     std::string name() const { return m_name; }
 
@@ -185,12 +193,13 @@ private:
 
 #define MORDOR_LOG_LEVEL(lg, level) if ((lg)->enabled(level))                   \
     (lg)->log(level, __FILE__, __LINE__).os()
-#define MORDOR_LOG_VERBOSE(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::VERBOSE)
-#define MORDOR_LOG_TRACE(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::TRACE)
-#define MORDOR_LOG_INFO(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::INFO)
-#define MORDOR_LOG_WARNING(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::WARNING)
-#define MORDOR_LOG_ERROR(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::ERROR)
 #define MORDOR_LOG_FATAL(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::FATAL)
+#define MORDOR_LOG_ERROR(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::ERROR)
+#define MORDOR_LOG_WARNING(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::WARNING)
+#define MORDOR_LOG_INFO(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::INFO)
+#define MORDOR_LOG_VERBOSE(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::VERBOSE)
+#define MORDOR_LOG_DEBUG(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::DEBUG)
+#define MORDOR_LOG_TRACE(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::TRACE)
 
 std::ostream &operator <<(std::ostream &os, Mordor::Log::Level level);
 

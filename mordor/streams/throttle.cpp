@@ -20,7 +20,7 @@ ThrottleStream::read(Buffer &b, size_t len)
     unsigned long long minTime
         = throttle ? 1000000ull * (m_read * 8) / throttle : 0;
     unsigned long long actualTime = (now - m_readTimestamp);
-    MORDOR_LOG_VERBOSE(g_log) << this << " read " << m_read << "B throttle "
+    MORDOR_LOG_DEBUG(g_log) << this << " read " << m_read << "B throttle "
         << throttle << "bps now " << now << "us last " << m_readTimestamp
         << "us min" << minTime << " us actual " << actualTime << "us";
     if (actualTime < minTime) {
@@ -48,7 +48,7 @@ ThrottleStream::write(const Buffer &b, size_t len)
     unsigned long long minTime =
         throttle ? 1000000ull * (m_written * 8) / throttle : 0;
     unsigned long long actualTime = (now - m_writeTimestamp);
-    MORDOR_LOG_VERBOSE(g_log) << this << " write " << m_written << "B throttle "
+    MORDOR_LOG_DEBUG(g_log) << this << " write " << m_written << "B throttle "
         << throttle << "bps now " << now << "us last " << m_writeTimestamp
         << "us min" << minTime << " us actual " << actualTime << "us";
     if (actualTime < minTime) {

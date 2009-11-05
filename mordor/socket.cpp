@@ -93,7 +93,7 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
 #ifdef WINDOWS
     if (m_ioManager) {
         m_sock = socket(family, type, protocol);
-        MORDOR_LOG_LEVEL(g_log, m_sock == -1 ? Log::ERROR : Log::VERBOSE) << this
+        MORDOR_LOG_LEVEL(g_log, m_sock == -1 ? Log::ERROR : Log::DEBUG) << this
             << " socket(" << family << ", " << type << ", " << protocol
             << "): " << m_sock << " (" << lastError() << ")";
         if (m_sock == -1) {
@@ -110,7 +110,7 @@ Socket::Socket(int family, int type, int protocol)
   m_ioManager(NULL)
 {
     m_sock = socket(family, type, protocol);
-    MORDOR_LOG_VERBOSE(g_log) << this << " socket(" << family << ", " << type << ", "
+    MORDOR_LOG_DEBUG(g_log) << this << " socket(" << family << ", " << type << ", "
         << protocol << "): " << m_sock << " (" << lastError() << ")";
     if (m_sock == -1) {
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("socket");
@@ -139,7 +139,7 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
 #endif
 {
     m_sock = socket(family, type, protocol);
-    MORDOR_LOG_VERBOSE(g_log) << this << " socket(" << family << ", " << type << ", "
+    MORDOR_LOG_DEBUG(g_log) << this << " socket(" << family << ", " << type << ", "
         << protocol << "): " << m_sock << " (" << lastError() << ")";
     if (m_sock == -1) {
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("socket");
@@ -170,7 +170,7 @@ Socket::~Socket()
 {
     if (m_sock != -1) {
         int rc = ::closesocket(m_sock);
-        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::DEBUG) << this
             << " close(" << m_sock << "): (" << lastError() << ")";
     }
 #ifdef WINDOWS
@@ -188,7 +188,7 @@ Socket::bind(const Address &addr)
             << "): (" << lastError() << ")";
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("bind");
     }
-    MORDOR_LOG_VERBOSE(g_log) << this << " bind(" << m_sock << ", " << addr << ")";
+    MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock << ", " << addr << ")";
 }
 
 void
@@ -384,7 +384,7 @@ void
 Socket::listen(int backlog)
 {
     int rc = ::listen(m_sock, backlog);
-    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " listen("
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::DEBUG) << this << " listen("
         << m_sock << ", " << backlog << "): " << rc << " (" << lastError()
         << ")";
     if (rc) {
@@ -416,7 +416,7 @@ Socket::accept(Socket &target)
     MORDOR_ASSERT(target.m_protocol == m_protocol);
     if (!m_ioManager) {
         socket_t newsock = ::accept(m_sock, NULL, NULL);
-        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::TRACE)
+        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::VERBOSE)
             << this << " accept(" << m_sock << "): " << newsock << " ("
             << lastError() << ")";
         if (newsock == -1) {
@@ -461,7 +461,7 @@ Socket::accept(Socket &target)
                     << m_receiveEvent.lastError << ")";
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_receiveEvent.lastError, "AcceptEx");
             }
-            MORDOR_LOG_TRACE(g_log) << this << " accept(" << m_sock << "): "
+            MORDOR_LOG_VERBOSE(g_log) << this << " accept(" << m_sock << "): "
                 << target.m_sock;
             target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
             target.m_ioManager->registerFile((HANDLE)target.m_sock);
@@ -548,7 +548,7 @@ Socket::accept(Socket &target)
             }
             newsock = ::accept(m_sock, NULL, NULL);
         }
-        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::TRACE)
+        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::VERBOSE)
             << this << " accept(" << m_sock << "): " << newsock
             << " (" << lastError() << ")";
         if (newsock == -1) {
@@ -571,7 +571,7 @@ Socket::shutdown(int how)
             << how << "): (" << lastError() << ")";
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("shutdown");
     }
-    MORDOR_LOG_TRACE(g_log) << this << " shutdown(" << m_sock << ", "
+    MORDOR_LOG_VERBOSE(g_log) << this << " shutdown(" << m_sock << ", "
         << how << ")";
 }
 
@@ -584,7 +584,7 @@ Socket::close()
                 << lastError() << ")";
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("close");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " close(" << m_sock << ")";
+        MORDOR_LOG_DEBUG(g_log) << this << " close(" << m_sock << ")";
         m_sock = -1;
     }
 }
@@ -636,7 +636,7 @@ Socket::send(const void *buf, size_t len, int flags)
                 << len << "): (" << m_sendEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_sendEvent.lastError, "WSASend");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " send(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " send(" << m_sock << ", "
             << len << "): " << m_sendEvent.numberOfBytes;
         return m_sendEvent.numberOfBytes;
     } else
@@ -672,7 +672,7 @@ Socket::send(const void *buf, size_t len, int flags)
             rc = ::send(m_sock, buf, len, flags);
         }
 #endif
-        MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+        MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::DEBUG) << this
             << " send(" << m_sock << ", " << len << "): " << rc << " ("
             << lastError() << ")";
         if (rc == -1) {
@@ -725,7 +725,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
                 << len << "): (" << m_sendEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_sendEvent.lastError, "WSASend");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " sendv(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " sendv(" << m_sock << ", "
             << len << "): " << m_sendEvent.numberOfBytes;
         return m_sendEvent.numberOfBytes;
     } else {
@@ -737,7 +737,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
                 << len << "): (" << lastError() << ")";
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSASend");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " sendv(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " sendv(" << m_sock << ", "
             << len << "): " << sent;
         return sent;
     }
@@ -772,7 +772,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         }
         rc = ::sendmsg(m_sock, &msg, flags);
     }
-    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::DEBUG) << this
             << " sendv(" << m_sock << ", " << len << "): " << rc << " ("
             << lastError() << ")";
     if (rc == -1) {
@@ -827,7 +827,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
                 << len << ", " << to << "): (" << m_sendEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_sendEvent.lastError, "WSASendTo");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " sendv(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " sendv(" << m_sock << ", "
             << len << ", " << to << "): " << m_sendEvent.numberOfBytes;
         return m_sendEvent.numberOfBytes;
     } else
@@ -861,7 +861,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
             rc = ::sendto(m_sock, buf, len, flags, to.name(), to.nameLen());
         }
 #endif
-        MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+        MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::DEBUG) << this
             << " sendto(" << m_sock << ", " << len << ", " << to << "): "
             << rc << " (" << lastError() << ")";
         if (rc == -1) {
@@ -923,7 +923,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
                 << len << ", " << to << "): (" << lastError() << ")";
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSASendTo");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " sendtov(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " sendtov(" << m_sock << ", "
             << len << ", " << to << "): " << sent;
         return sent;
     }
@@ -960,7 +960,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         }
         rc = ::sendmsg(m_sock, &msg, flags);
     }
-    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::DEBUG) << this
             << " sendtov(" << m_sock << ", " << len << ", " << to << "): "
             << rc << " (" << lastError() << ")";
     if (rc == -1) {
@@ -1013,7 +1013,7 @@ Socket::receive(void *buf, size_t len, int flags)
                 << len << "): (" << m_receiveEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_receiveEvent.lastError, "WSARecv");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " recv(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " recv(" << m_sock << ", "
             << len << "): " << m_receiveEvent.numberOfBytes;
         return m_receiveEvent.numberOfBytes;
     } else
@@ -1047,7 +1047,7 @@ Socket::receive(void *buf, size_t len, int flags)
             rc = ::recv(m_sock, buf, len, flags);
         }
 #endif
-        MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+        MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::DEBUG) << this
             << " recv(" << m_sock << ", " << len << "): " << rc << " ("
             << lastError() << ")";
         if (rc == -1) {
@@ -1096,7 +1096,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
                 << len << "): (" << m_receiveEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_receiveEvent.lastError, "WSARecv");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " recvv(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " recvv(" << m_sock << ", "
             << len << "): " << m_receiveEvent.numberOfBytes;
         return m_receiveEvent.numberOfBytes;
     } else {
@@ -1108,7 +1108,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
                 << len << "): (" << lastError() << ")";
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSARecv");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " recvv(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " recvv(" << m_sock << ", "
             << len << "): " << received;
         return received;
     }
@@ -1143,7 +1143,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         }
         rc = ::recvmsg(m_sock, &msg, flags);
     }
-    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::DEBUG) << this
             << " recvv(" << m_sock << ", " << len << "): " << rc << " ("
             << lastError() << ")";
     if (rc == -1) {
@@ -1199,7 +1199,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
                 << len << "): (" << m_receiveEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_receiveEvent.lastError, "WSARecvFrom");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " recvfrom(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " recvfrom(" << m_sock << ", "
             << len << "): " << m_receiveEvent.numberOfBytes << ", " << from;
         return m_receiveEvent.numberOfBytes;
     } else {
@@ -1211,7 +1211,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
                 << len << "): (" << lastError() << ")";
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSARecvFrom");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " recvfrom(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " recvfrom(" << m_sock << ", "
             << len << "): " << sent << ", " << from;
         return sent;
     }
@@ -1251,7 +1251,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
         }
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
-    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::DEBUG) << this
         << " recvfrom(" << m_sock << ", " << len << "): "
         << rc << ", " << from << " (" << lastError() << ")";
     if (rc == -1) {
@@ -1304,7 +1304,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
                 << len << "): (" << m_receiveEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_receiveEvent.lastError, "WSARecvFrom");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " recvfrom(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " recvfrom(" << m_sock << ", "
             << len << "): " << m_receiveEvent.numberOfBytes << ", " << from;
         return m_receiveEvent.numberOfBytes;
     } else {
@@ -1317,7 +1317,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
                 << len << "): (" << lastError() << ")";
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSARecvFrom");
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " recvfromv(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " recvfromv(" << m_sock << ", "
             << len << "): " << sent << ", " << from;
         return sent;
     }
@@ -1354,7 +1354,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
         }
         rc = ::recvmsg(m_sock, &msg, *flags);
     }
-    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::VERBOSE) << this
+    MORDOR_LOG_LEVEL(g_log, rc == -1 ? Log::ERROR : Log::DEBUG) << this
         << " recvfromv(" << m_sock << ", " << len << "): "
         << rc << ", " << from << " (" << lastError() << ")";
     if (rc == -1) {

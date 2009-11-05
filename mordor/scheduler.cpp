@@ -93,7 +93,7 @@ Scheduler::getThis()
 void
 Scheduler::start()
 {
-    MORDOR_LOG_TRACE(g_log) << this << " starting " << m_threadCount << " threads";
+    MORDOR_LOG_VERBOSE(g_log) << this << " starting " << m_threadCount << " threads";
     MORDOR_ASSERT(m_stopping);
     m_stopping = false;
     m_threads.start(m_threadCount);
@@ -106,7 +106,7 @@ Scheduler::stop()
     if (m_rootFiber &&
         m_threads.size() == 0 &&
         (m_rootFiber->state() == Fiber::TERM || m_rootFiber->state() == Fiber::INIT)) {
-        MORDOR_LOG_TRACE(g_log) << this << " stopped";
+        MORDOR_LOG_VERBOSE(g_log) << this << " stopped";
         m_stopping = true;
         // A derived class may inhibit stopping while it has things to do in
         // its idle loop, so we can't break early
@@ -120,7 +120,7 @@ Scheduler::stop()
         // original thread
         MORDOR_ASSERT(Scheduler::getThis() == this);
         // First switch to the correct thread
-        MORDOR_LOG_VERBOSE(g_log) << this << " switching to root thread to stop";
+        MORDOR_LOG_DEBUG(g_log) << this << " switching to root thread to stop";
         switchTo(m_rootThread);
     } else {
         // A spawned-threads only scheduler cannot be stopped from within
@@ -141,7 +141,7 @@ Scheduler::stop()
         }
         while (moreWork) {                
             // Give this thread's run fiber a chance to kill itself off
-            MORDOR_LOG_VERBOSE(g_log) << this << " yielding to this thread to stop";
+            MORDOR_LOG_DEBUG(g_log) << this << " yielding to this thread to stop";
             yieldTo(true);
             moreWork = t_fiber->state() == Fiber::HOLD || !stopping();
             if (!moreWork) {
@@ -152,12 +152,12 @@ Scheduler::stop()
     }
     if (m_rootThread == boost::this_thread::get_id() ||
         Scheduler::getThis() != this) {
-        MORDOR_LOG_VERBOSE(g_log) << this << " waiting for other threads to stop";
+        MORDOR_LOG_DEBUG(g_log) << this << " waiting for other threads to stop";
         m_threads.join_all();
     } else {
         MORDOR_NOTREACHED();
     }
-    MORDOR_LOG_TRACE(g_log) << this << " stopped";
+    MORDOR_LOG_VERBOSE(g_log) << this << " stopped";
 }
 
 bool
@@ -183,7 +183,7 @@ Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
 void
 Scheduler::scheduleNoLock(Fiber::ptr f, boost::thread::id thread)
 {
-    MORDOR_LOG_VERBOSE(g_log) << this << " scheduling " << f << " on thread "
+    MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << f << " on thread "
         << thread;
     MORDOR_ASSERT(f);
     FiberAndThread ft = {f, NULL, thread };
@@ -196,7 +196,7 @@ Scheduler::scheduleNoLock(Fiber::ptr f, boost::thread::id thread)
 void
 Scheduler::scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread)
 {
-    MORDOR_LOG_VERBOSE(g_log) << this << " scheduling " << dg << " on thread "
+    MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << dg << " on thread "
         << thread;
     MORDOR_ASSERT(dg);
     FiberAndThread ft = {Fiber::ptr(), dg, thread };
@@ -210,7 +210,7 @@ void
 Scheduler::switchTo(boost::thread::id thread)
 {
     MORDOR_ASSERT(Scheduler::getThis() != NULL);
-    MORDOR_LOG_VERBOSE(g_log) << this << " switching to thread " << thread;
+    MORDOR_LOG_DEBUG(g_log) << this << " switching to thread " << thread;
     if (Scheduler::getThis() == this) {
         if (thread == boost::thread::id() ||
             thread == boost::this_thread::get_id()) {
@@ -224,7 +224,7 @@ Scheduler::switchTo(boost::thread::id thread)
 void
 Scheduler::yieldTo()
 {
-    MORDOR_LOG_VERBOSE(g_log) << this << " yielding to scheduler";
+    MORDOR_LOG_DEBUG(g_log) << this << " yielding to scheduler";
     MORDOR_ASSERT(t_fiber.get());
     if (m_rootThread == boost::this_thread::get_id() &&
         (t_fiber->state() == Fiber::INIT || t_fiber->state() == Fiber::TERM)) {
@@ -237,7 +237,7 @@ Scheduler::yieldTo()
 void
 Scheduler::dispatch()
 {
-    MORDOR_LOG_VERBOSE(g_log) << this << " dispatching";
+    MORDOR_LOG_DEBUG(g_log) << this << " dispatching";
     MORDOR_ASSERT(m_rootThread == boost::this_thread::get_id() &&
         m_threads.size() == 0);
     m_stopping = true;
@@ -275,7 +275,7 @@ Scheduler::run()
         threadfiber.reset();
     }
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this)));
-    MORDOR_LOG_TRACE(g_log) << this << " starting thread with idle fiber " << idleFiber;
+    MORDOR_LOG_VERBOSE(g_log) << this << " starting thread with idle fiber " << idleFiber;
     Fiber::ptr dgFiber;
     // use a vector for O(1) .size()
     std::vector<FiberAndThread> batch(m_batchSize);
@@ -288,7 +288,7 @@ Scheduler::run()
                  it != m_fibers.end() && batch.size() < m_batchSize; ) {
                 if (it->thread != boost::thread::id() &&
                     it->thread != boost::this_thread::get_id()) {
-                    MORDOR_LOG_VERBOSE(g_log) << this
+                    MORDOR_LOG_DEBUG(g_log) << this
                         << " skipping item scheduled for thread "
                         << it->thread;
 
@@ -301,7 +301,7 @@ Scheduler::run()
                 MORDOR_ASSERT(it->fiber || it->dg);
                 if (it->fiber && it->fiber->state() == Fiber::EXEC) {
                     ++it;
-                    MORDOR_LOG_VERBOSE(g_log) << this
+                    MORDOR_LOG_DEBUG(g_log) << this
                         << " skipping executing fiber " << it->fiber;
                     dontIdle = true;
                     continue;
@@ -310,7 +310,7 @@ Scheduler::run()
                 it = m_fibers.erase(it);
             }
         }
-        MORDOR_LOG_VERBOSE(g_log) << this
+        MORDOR_LOG_DEBUG(g_log) << this
             << " got " << batch.size() << " fiber/dgs to process (max: "
             << m_batchSize << ")";
         if (!batch.empty()) {
@@ -321,14 +321,14 @@ Scheduler::run()
 
                 if (f) {
                     if (f->state() != Fiber::TERM) {
-                        MORDOR_LOG_VERBOSE(g_log) << this << " running " << f;
+                        MORDOR_LOG_DEBUG(g_log) << this << " running " << f;
                         f->yieldTo();
                     }
                 } else if (dg) {
                     if (!dgFiber)
                         dgFiber.reset(new Fiber(dg));
                     dgFiber->reset(dg);
-                    MORDOR_LOG_VERBOSE(g_log) << this << " running " << dg;
+                    MORDOR_LOG_DEBUG(g_log) << this << " running " << dg;
                     dgFiber->yieldTo();
                     if (dgFiber->state() != Fiber::TERM)
                         dgFiber.reset();
@@ -340,10 +340,10 @@ Scheduler::run()
             continue;
 
         if (idleFiber->state() == Fiber::TERM) {
-            MORDOR_LOG_VERBOSE(g_log) << this << " idle fiber terminated";
+            MORDOR_LOG_DEBUG(g_log) << this << " idle fiber terminated";
             return;
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " idling";
+        MORDOR_LOG_DEBUG(g_log) << this << " idling";
         idleFiber->call();
     }
 }
@@ -369,7 +369,7 @@ WorkerPool::idle()
 void
 WorkerPool::tickle()
 {
-    MORDOR_LOG_VERBOSE(g_workerLog) << this << " tickling";
+    MORDOR_LOG_DEBUG(g_workerLog) << this << " tickling";
     m_semaphore.notify();
 }
 

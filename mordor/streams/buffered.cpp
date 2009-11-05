@@ -26,7 +26,7 @@ BufferedStream::BufferedStream(Stream::ptr parent, bool own)
 void
 BufferedStream::close(CloseType type)
 {
-    MORDOR_LOG_TRACE(g_log) << this << " close(" << type << ")";
+    MORDOR_LOG_VERBOSE(g_log) << this << " close(" << type << ")";
     if (type & READ)
         m_readBuffer.clear();
     try {
@@ -66,17 +66,17 @@ BufferedStream::read(Buffer &b, size_t len)
             // the buffer size
             size_t todo = ((remaining - 1) / m_bufferSize + 1) * m_bufferSize;
             try {
-                MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(" << todo
+                MORDOR_LOG_TRACE(g_log) << this << " parent()->read(" << todo
                     << ")";
                 result = parent()->read(m_readBuffer, todo);
-                MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(" << todo
+                MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(" << todo
                     << "): " << result;
             } catch (...) {
                 if (remaining == len) {
-                    MORDOR_LOG_TRACE(g_log) << this << " forwarding exception";
+                    MORDOR_LOG_VERBOSE(g_log) << this << " forwarding exception";
                     throw;
                 } else {
-                    MORDOR_LOG_TRACE(g_log) << this << " swallowing exception";
+                    MORDOR_LOG_VERBOSE(g_log) << this << " swallowing exception";
                     // Swallow the exception
                     return len - remaining;
                 }
@@ -122,16 +122,16 @@ BufferedStream::flushWrite(size_t len)
     {
         size_t result;
         try {
-            MORDOR_LOG_VERBOSE(g_log) << this << " parent()->write("
+            MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
                 << m_writeBuffer.readAvailable() << ")";
             result = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
-            MORDOR_LOG_VERBOSE(g_log) << this << " parent()->write("
+            MORDOR_LOG_DEBUG(g_log) << this << " parent()->write("
                 << m_writeBuffer.readAvailable() << "): " << result;
         } catch (...) {
             // If this entire write is still in our buffer,
             // back it out and report the error
             if (m_writeBuffer.readAvailable() >= len) {
-                MORDOR_LOG_TRACE(g_log) << this << " forwarding exception";
+                MORDOR_LOG_VERBOSE(g_log) << this << " forwarding exception";
                 Buffer tempBuffer;
                 tempBuffer.copyIn(m_writeBuffer, m_writeBuffer.readAvailable() - len);
                 m_writeBuffer.clear();
@@ -143,7 +143,7 @@ BufferedStream::flushWrite(size_t len)
                 // write, and we can't report an error because
                 // the caller will think he needs to repeat
                 // the entire write
-                MORDOR_LOG_TRACE(g_log) << this << " swallowing exception";
+                MORDOR_LOG_VERBOSE(g_log) << this << " swallowing exception";
                 return len;
             }
         }
@@ -159,7 +159,7 @@ BufferedStream::seek(long long offset, Anchor anchor)
     // read and writes;
     MORDOR_ASSERT(!(m_readBuffer.readAvailable() && m_writeBuffer.readAvailable()));
     if (offset == 0 && anchor == CURRENT) {
-        MORDOR_LOG_TRACE(g_log) << this << " parent()->seek(0, CURRENT) - "
+        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->seek(0, CURRENT) - "
             << m_readBuffer.readAvailable() << " + "
             << m_writeBuffer.readAvailable();
         return parent()->seek(offset, anchor)
@@ -202,10 +202,10 @@ void
 BufferedStream::flush()
 {
     while (m_writeBuffer.readAvailable()) {
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->write("
+        MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
             << m_writeBuffer.readAvailable() << ")";
         size_t result = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->write("
+        MORDOR_LOG_DEBUG(g_log) << this << " parent()->write("
             << m_writeBuffer.readAvailable() << "): " << result;
         MORDOR_ASSERT(result > 0);
         m_writeBuffer.consume(result);
@@ -234,10 +234,10 @@ BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
             return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
 
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
+        MORDOR_LOG_TRACE(g_log) << this << " parent()->read(" << m_bufferSize
             << ")";
         size_t result = parent()->read(m_readBuffer, m_bufferSize);
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
+        MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(" << m_bufferSize
             << "): " << result;
         if (result == 0) {
             // EOF
@@ -269,10 +269,10 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
             return -(ptrdiff_t)m_readBuffer.readAvailable() - 1;
         }
 
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
+        MORDOR_LOG_TRACE(g_log) << this << " parent()->read(" << m_bufferSize
             << ")";
         size_t result = parent()->read(m_readBuffer, m_bufferSize);
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(" << m_bufferSize
+        MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(" << m_bufferSize
             << "): " << result;
         if (result == 0) {
             // EOF

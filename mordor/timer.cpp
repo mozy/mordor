@@ -85,7 +85,7 @@ Timer::Timer(unsigned long long next)
 bool
 Timer::cancel()
 {
-    MORDOR_LOG_VERBOSE(g_log) << this << " cancel";
+    MORDOR_LOG_DEBUG(g_log) << this << " cancel";
     boost::mutex::scoped_lock lock(m_manager->m_mutex);
     if (m_dg) {
         m_dg = NULL;
@@ -125,7 +125,7 @@ TimerManager::registerTimer(unsigned long long us, boost::function<void ()> dg,
             m_timers.insert(result).first;
         atFront = (it == m_timers.begin());
     }
-    MORDOR_LOG_VERBOSE(g_log) << result.get() << " registerTimer(" << us
+    MORDOR_LOG_DEBUG(g_log) << result.get() << " registerTimer(" << us
         << ", " << us << ", " << recurring << "): " << atFront;
     return result;
 }
@@ -135,7 +135,7 @@ TimerManager::nextTimer()
 {
     boost::mutex::scoped_lock lock(m_mutex);
     if (m_timers.empty()) {
-        MORDOR_LOG_VERBOSE(g_log) << this << " nextTimer(): ~0ull";
+        MORDOR_LOG_DEBUG(g_log) << this << " nextTimer(): ~0ull";
         return ~0ull;
     }
     const Timer::ptr &next = *m_timers.begin();
@@ -145,7 +145,7 @@ TimerManager::nextTimer()
         result = 0;
     else
         result = next->m_next - nowUs;
-    MORDOR_LOG_VERBOSE(g_log) << this << " nextTimer(): " << result;
+    MORDOR_LOG_DEBUG(g_log) << this << " nextTimer(): " << result;
     return result;
 }
 

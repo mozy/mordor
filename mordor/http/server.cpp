@@ -350,7 +350,7 @@ ServerRequest::doRequest()
             respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
             return;
         }
-        MORDOR_LOG_TRACE(g_log) << m_request;
+        MORDOR_LOG_VERBOSE(g_log) << m_request;
 
         if (m_request.requestLine.ver.major != 1) {
             respondError(shared_from_this(), HTTP_VERSION_NOT_SUPPORTED, "", true);
@@ -582,7 +582,7 @@ ServerRequest::commit()
         std::ostringstream os;
         os << m_response;
         std::string str = os.str();
-        MORDOR_LOG_TRACE(g_log) << str;
+        MORDOR_LOG_VERBOSE(g_log) << str;
         m_conn->m_stream->write(str.c_str(), str.size());
 
         if (!Connection::hasMessageBody(m_response.general, m_response.entity, m_request.requestLine.method, m_response.status.status, false)) {
@@ -611,7 +611,7 @@ ServerRequest::requestDone()
             throw std::runtime_error("Error parsing trailer");
         }
         MORDOR_ASSERT(parser.complete());
-        MORDOR_LOG_TRACE(g_log) << m_requestTrailer;
+        MORDOR_LOG_VERBOSE(g_log) << m_requestTrailer;
     }
     m_conn->scheduleNextRequest(shared_from_this());
 }
@@ -631,7 +631,7 @@ ServerRequest::responseDone()
         std::ostringstream os;
         os << m_responseTrailer << "\r\n";
         std::string str = os.str();
-        MORDOR_LOG_TRACE(g_log) << str;
+        MORDOR_LOG_VERBOSE(g_log) << str;
         m_conn->m_stream->write(str.c_str(), str.size());         
     }
     MORDOR_LOG_INFO(g_log) << m_request.requestLine << " " << m_response.status.status;

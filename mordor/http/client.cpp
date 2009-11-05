@@ -655,7 +655,7 @@ ClientRequest::doRequest()
         std::ostringstream os;
         os << m_request;
         std::string str = os.str();
-        if (g_log->enabled(Log::VERBOSE)) {
+        if (g_log->enabled(Log::DEBUG)) {
             std::string webAuth, proxyAuth;
             if (stricmp(m_request.request.authorization.scheme.c_str(), "Basic") == 0) {
                 webAuth = m_request.request.authorization.base64;
@@ -665,13 +665,13 @@ ClientRequest::doRequest()
                 proxyAuth = m_request.request.proxyAuthorization.base64;
                 m_request.request.proxyAuthorization.base64 = "<hidden>";
             }
-            MORDOR_LOG_VERBOSE(g_log) << this << " " << m_request;
+            MORDOR_LOG_DEBUG(g_log) << this << " " << m_request;
             if (!webAuth.empty())
                 m_request.request.authorization.base64 = webAuth;
             if (!proxyAuth.empty())
                 m_request.request.proxyAuthorization.base64 = proxyAuth;
         } else {
-            MORDOR_LOG_TRACE(g_log) << this << " " << m_request.requestLine;
+            MORDOR_LOG_VERBOSE(g_log) << this << " " << m_request.requestLine;
         }
         m_conn->m_stream->write(str.c_str(), str.size());
         m_requestState = INFLIGHT;
@@ -779,10 +779,10 @@ ClientRequest::ensureResponse()
                 m_incompleteResponse = true;
                 MORDOR_THROW_EXCEPTION(IncompleteMessageHeaderException());
             }
-            if (g_log->enabled(Log::VERBOSE)) {
-                MORDOR_LOG_VERBOSE(g_log) << this << " " << m_response;
+            if (g_log->enabled(Log::DEBUG)) {
+                MORDOR_LOG_DEBUG(g_log) << this << " " << m_response;
             } else {
-                MORDOR_LOG_TRACE(g_log) << this << " " << m_response.status;
+                MORDOR_LOG_VERBOSE(g_log) << this << " " << m_response.status;
             }
         }
         if (m_badResponse)
@@ -919,7 +919,7 @@ ClientRequest::requestDone()
         std::ostringstream os;
         os << m_requestTrailer << "\r\n";
         std::string str = os.str();
-        MORDOR_LOG_VERBOSE(g_log) << this << " " << str;
+        MORDOR_LOG_DEBUG(g_log) << this << " " << str;
         m_conn->m_stream->write(str.c_str(), str.size());        
     }
     m_conn->scheduleNextRequest(this);
@@ -959,7 +959,7 @@ ClientRequest::responseDone()
             m_incompleteTrailer = true;
             return;
         }
-        MORDOR_LOG_VERBOSE(g_log) << this << " " << m_responseTrailer;
+        MORDOR_LOG_DEBUG(g_log) << this << " " << m_responseTrailer;
     }
     m_conn->scheduleNextResponse(this);
 }

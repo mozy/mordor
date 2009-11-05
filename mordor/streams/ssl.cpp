@@ -122,7 +122,7 @@ SSLStream::close(CloseType type)
             ERR_clear_error();
             int result = SSL_shutdown(m_ssl.get());
             int error = SSL_get_error(m_ssl.get(), result);
-            MORDOR_LOG_VERBOSE(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+            MORDOR_LOG_DEBUG(g_log) << this << " SSL_shutdown(" << m_ssl.get()
                 << "): " << result << " (" << error << ")";
             switch (error) {
                 case SSL_ERROR_NONE:
@@ -174,7 +174,7 @@ SSLStream::read(Buffer &b, size_t len)
     while (true) {
         int result = SSL_read(m_ssl.get(), bufs[0].iov_base, toRead);
         int error = SSL_get_error(m_ssl.get(), result);
-        MORDOR_LOG_VERBOSE(g_log) << this << " SSL_read(" << m_ssl.get() << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " SSL_read(" << m_ssl.get() << ", "
             << toRead << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -235,7 +235,7 @@ SSLStream::write(const Buffer &b, size_t len)
     while (true) {
         int result = SSL_write(m_ssl.get(), bufs[0].iov_base, toWrite);
         int error = SSL_get_error(m_ssl.get(), result);
-        MORDOR_LOG_VERBOSE(g_log) << this << " SSL_write(" << m_ssl.get() << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " SSL_write(" << m_ssl.get() << ", "
             << toWrite << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -295,7 +295,7 @@ SSLStream::flush()
         while (true) {
             int result = SSL_shutdown(m_ssl.get());
             int error = SSL_get_error(m_ssl.get(), result);
-            MORDOR_LOG_VERBOSE(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+            MORDOR_LOG_DEBUG(g_log) << this << " SSL_shutdown(" << m_ssl.get()
                 << "): " << result << " (" << error << ")";
             switch (error) {
                 case SSL_ERROR_NONE:
@@ -349,7 +349,7 @@ SSLStream::accept()
     while (true) {
         int result = SSL_accept(m_ssl.get());
         int error = SSL_get_error(m_ssl.get(), result);
-        MORDOR_LOG_VERBOSE(g_log) << this << " SSL_accept(" << m_ssl.get() << "): "
+        MORDOR_LOG_DEBUG(g_log) << this << " SSL_accept(" << m_ssl.get() << "): "
             << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -403,7 +403,7 @@ SSLStream::connect()
     while (true) {
         int result = SSL_connect(m_ssl.get());
         int error = SSL_get_error(m_ssl.get(), result);
-        MORDOR_LOG_VERBOSE(g_log) << this << " SSL_connect(" << m_ssl.get() << "): "
+        MORDOR_LOG_DEBUG(g_log) << this << " SSL_connect(" << m_ssl.get() << "): "
             << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
@@ -454,7 +454,7 @@ void
 SSLStream::verifyPeerCertificate()
 {
     long verifyResult = SSL_get_verify_result(m_ssl.get());
-    MORDOR_LOG_LEVEL(g_log, verifyResult ? Log::WARNING : Log::VERBOSE) << this
+    MORDOR_LOG_LEVEL(g_log, verifyResult ? Log::WARNING : Log::DEBUG) << this
         << " SSL_get_verify_result(" << m_ssl.get() << "): "
         << verifyResult;
     if (verifyResult != X509_V_OK)
@@ -528,9 +528,9 @@ SSLStream::flushBuffer()
     char *writeBuf;
     size_t toWrite = BIO_get_mem_data(m_writeBio, &writeBuf);
     while (toWrite) {
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->write(" << toWrite << ")";
+        MORDOR_LOG_DEBUG(g_log) << this << " parent()->write(" << toWrite << ")";
         size_t written = parent()->write(writeBuf, toWrite);
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->write(" << toWrite << "): "
+        MORDOR_LOG_DEBUG(g_log) << this << " parent()->write(" << toWrite << "): "
             << written;
         writeBuf += written;
         toWrite -= written;
@@ -549,9 +549,9 @@ SSLStream::wantRead()
     m_readBuffer.consume(bm->max);
     if (m_readBuffer.readAvailable() == 0) {
         // Maximum SSL record size
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(16389)";
+        MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(16389)";
         size_t result = parent()->read(m_readBuffer, 16384 + 5);
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->read(16389): " << result;
+        MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(16389): " << result;
         if (result == 0) {
             BIO_set_mem_eof_return(m_readBio, 0);
             return;
@@ -562,7 +562,7 @@ SSLStream::wantRead()
     bm->data = (char *)bufs[0].iov_base;
     bm->length = bm->max =
         (long)std::min<size_t>(0x7fffffff, bufs[0].iov_len);
-    MORDOR_LOG_VERBOSE(g_log) << this << " wantRead(): " << bm->length;
+    MORDOR_LOG_DEBUG(g_log) << this << " wantRead(): " << bm->length;
 }
 
 }
