@@ -57,7 +57,7 @@ ServerConnection::scheduleNextRequest(ServerRequest::ptr request)
     if (!close) {
         Fiber::ptr requestFiber(new Fiber(boost::bind(&ServerRequest::doRequest, request)));
         Scheduler::getThis()->schedule(requestFiber);
-    } else {
+    } else if (m_stream->supportsHalfClose()) {
         m_stream->close(Stream::READ);
     }
 }

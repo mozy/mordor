@@ -21,9 +21,11 @@ static void shuttleData(Stream::ptr oneEnd, Stream::ptr otherEnd)
 {
     try {
         transferStream(oneEnd, otherEnd);
-        otherEnd->close(Stream::WRITE);
+        if (otherEnd->supportsHalfClose())
+            otherEnd->close(Stream::WRITE);
     } catch (std::exception &) {
-        oneEnd->close(Stream::READ);
+        if (oneEnd->supportsHalfClose())
+            oneEnd->close(Stream::READ);
     }
 }
 

@@ -16,6 +16,7 @@ public:
 public:
     SocketStream(boost::shared_ptr<Socket> s, bool own = true);
 
+    bool supportsHalfClose() { return true; }
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
     bool supportsCancel() { return true; }

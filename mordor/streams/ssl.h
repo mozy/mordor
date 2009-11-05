@@ -48,6 +48,8 @@ public:
 public:
     SSLStream(Stream::ptr parent, bool client = true, bool own = true, SSL_CTX *ctx = NULL);
 
+    bool supportsHalfClose() { return false; }
+
     void close(CloseType type = BOTH);
     size_t read(Buffer &b, size_t len);
     size_t write(const Buffer &b, size_t len);

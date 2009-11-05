@@ -34,6 +34,7 @@ FDStream::init(IOManager *ioManager, Scheduler *scheduler, int fd, bool own)
         } catch(...) {
             if (own) {
                 ::close(m_fd);
+                m_fd = -1;
             }
             throw;
         }
@@ -51,7 +52,8 @@ FDStream::~FDStream()
 void
 FDStream::close(CloseType type)
 {
-    if (type == BOTH && m_fd > 0) {
+    MORDOR_ASSERT(type == BOTH);
+    if (m_fd > 0 && m_own) {
         SchedulerSwitcher switcher(m_scheduler);
         if (::close(m_fd))
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("close");

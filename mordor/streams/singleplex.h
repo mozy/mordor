@@ -32,10 +32,12 @@ public:
     void close(CloseType type = BOTH)
     {
         if (ownsParent()) {
-            if (m_type == READ && type & Stream::READ) {
-                parent()->close(Stream::READ);
-            } else if (m_type == WRITE && type & Stream::WRITE) {
-                parent()->close(Stream::WRITE);
+            if (m_type == READ && (type & Stream::READ)) {
+                parent()->close(parent()->supportsHalfClose() ?
+                    Stream::READ : BOTH);
+            } else if (m_type == WRITE && (type & Stream::WRITE)) {
+                parent()->close(parent()->supportsHalfClose() ?
+                    Stream::WRITE : BOTH);
             }
         }
     }
@@ -66,7 +68,8 @@ public:
         MORDOR_ASSERT(m_type == READ);
         return parent()->find(delim);
     }
-    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)
+    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0,
+        bool throwIfNotFound = true)
     {
         MORDOR_ASSERT(m_type == READ);
         return parent()->find(str, sanitySize, throwIfNotFound);

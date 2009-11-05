@@ -4,6 +4,7 @@
 
 #include "mordor/streams/memory.h"
 #include "mordor/streams/buffered.h"
+#include "mordor/streams/singleplex.h"
 #include "mordor/streams/test.h"
 #include "mordor/test/test.h"
 
@@ -158,7 +159,8 @@ MORDOR_UNITTEST(BufferedStream, partialWriteGuarantee)
 
 MORDOR_UNITTEST(BufferedStream, unread)
 {
-    MemoryStream::ptr baseStream(new MemoryStream(Buffer("01234567890123456789")));
+    Stream::ptr baseStream(new MemoryStream(Buffer("01234567890123456789")));
+    baseStream.reset(new SingleplexStream(baseStream, SingleplexStream::READ));
     BufferedStream::ptr bufferedStream(new BufferedStream(baseStream));
     bufferedStream->bufferSize(5);
 

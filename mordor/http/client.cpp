@@ -493,7 +493,7 @@ ClientRequest::cancel(bool abort)
         if (m_responseState != WAITING) {
             m_conn->scheduleAllWaitingResponses();
             m_conn->m_stream->close();
-        } else {
+        } else if (m_conn->m_stream->supportsHalfClose()) {
             m_conn->m_stream->close(Stream::WRITE);
         }
     }
@@ -869,7 +869,8 @@ ClientRequest::ensureResponse()
         if (!hasBody && !connect) {
             if (close) {
                 m_responseState = COMPLETE;
-                m_conn->m_stream->close(Stream::READ);
+                if (m_conn->m_stream->supportsHalfClose())
+                    m_conn->m_stream->close(Stream::READ);
             } else {
                 m_conn->scheduleNextResponse(this);
             }

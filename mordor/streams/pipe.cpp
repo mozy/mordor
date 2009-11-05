@@ -22,6 +22,7 @@ public:
     PipeStream(size_t bufferSize);
     ~PipeStream();
 
+    bool supportsHalfClose() { return true; }
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
 

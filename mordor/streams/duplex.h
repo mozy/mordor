@@ -29,18 +29,19 @@ public:
     Stream::ptr writeParent() { return m_writeParent; }
     bool ownsParents() { return m_own; }
 
+    bool supportsHalfClose() { return true; }
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
-    bool supportsFind() { return m_readParent.get() && m_readParent->supportsFind(); }
-    bool supportsUnread() { return m_readParent.get() && m_readParent->supportsUnread(); }
+    bool supportsFind() { return m_readParent && m_readParent->supportsFind(); }
+    bool supportsUnread() { return m_readParent && m_readParent->supportsUnread(); }
 
     void close(CloseType type = BOTH)
     {
         if (m_own) {
             if ((type & READ) && m_readParent)
-                m_readParent->close(READ);
+                m_readParent->close(m_readParent->supportsHalfClose() ? READ : BOTH);
             if ((type & WRITE) && m_writeParent)
-                m_writeParent->close(WRITE);
+                m_writeParent->close(m_writeParent->supportsHalfClose() ? WRITE : BOTH);
         }
         if (type & READ)
             m_readParent.reset();
@@ -49,31 +50,31 @@ public:
     }
     size_t read(Buffer &b, size_t len)
     {
-        if (!m_readParent.get()) MORDOR_THROW_EXCEPTION(BrokenPipeException());
+        if (!m_readParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         return m_readParent->read(b, len);
     }
     size_t write(const Buffer &b, size_t len)
     {
-        if (!m_writeParent.get()) MORDOR_THROW_EXCEPTION(BrokenPipeException());
+        if (!m_writeParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         return m_writeParent->write(b, len);
     }
     void flush()
     {
-        if (!m_writeParent.get()) MORDOR_THROW_EXCEPTION(BrokenPipeException());
+        if (!m_writeParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         m_writeParent->flush();
     }
     ptrdiff_t find(char delim)
     {
-        if (!m_readParent.get()) MORDOR_THROW_EXCEPTION(BrokenPipeException());
+        if (!m_readParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         return m_readParent->find(delim);
     }
     ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwOnNotFound = true)
     {
-        if (!m_readParent.get()) MORDOR_THROW_EXCEPTION(BrokenPipeException());
+        if (!m_readParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         return m_readParent->find(str, sanitySize, throwOnNotFound);
     }
     void unread(const Buffer &b, size_t len) {
-        if (!m_readParent.get()) MORDOR_THROW_EXCEPTION(BrokenPipeException());
+        if (!m_readParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         return m_readParent->unread(b, len);
     }
 

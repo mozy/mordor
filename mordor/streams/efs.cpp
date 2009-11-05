@@ -113,20 +113,18 @@ EFSStream::~EFSStream()
 void
 EFSStream::close(Stream::CloseType type)
 {
-    if (((type & READ) && m_read) ||
-        ((type & WRITE) && !m_read)) {
-        if (!m_read && m_fiber && m_fiber->state() == Fiber::HOLD) {
-            m_todo = 0;
-            m_fiber->call();
-        }
-        if (m_fiber && m_fiber->state() == Fiber::HOLD) {
-            m_pos = -1;
-            m_fiber->call();
-        }
-        if (m_context && m_own) {
-            CloseEncryptedFileRaw(m_context);
-            m_context = NULL;
-        }
+    MORDOR_ASSERT(type == BOTH);
+    if (!m_read && m_fiber && m_fiber->state() == Fiber::HOLD) {
+        m_todo = 0;
+        m_fiber->call();
+    }
+    if (m_fiber && m_fiber->state() == Fiber::HOLD) {
+        m_pos = -1;
+        m_fiber->call();
+    }
+    if (m_context && m_own) {
+        CloseEncryptedFileRaw(m_context);
+        m_context = NULL;
     }
 }
 

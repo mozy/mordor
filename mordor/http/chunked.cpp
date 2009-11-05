@@ -22,17 +22,15 @@ ChunkedStream::ChunkedStream(Stream::ptr parent, bool own)
 : MutatingFilterStream(parent, own),
   m_nextChunk(~0)
 {
-    if (parent->supportsRead()) {
+    if (parent->supportsRead())
         MORDOR_ASSERT(parent->supportsFind());
-    }
 }
 
 void
 ChunkedStream::close(Stream::CloseType type)
 {
-    if (supportsWrite() && (type & Stream::WRITE)) {
+    if (supportsWrite() && (type & WRITE))
         parent()->write("0\r\n", 3);
-    }
     if (ownsParent())
         parent()->close(type);
 }

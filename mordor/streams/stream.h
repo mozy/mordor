@@ -27,7 +27,8 @@ public:
 
     /// Flags for which end of a Stream to close
     enum CloseType {
-        /// Neither
+        /// Neither (should not be passed to close(); only useful for keeping
+        /// track of the current state of a Stream)
         NONE  = 0x00,
         /// Further reads from this Stream should fail;
         /// further writes on the "other" end of this Stream should fail.
@@ -35,8 +36,7 @@ public:
         /// Further writes to this Stream should fail;
         /// further reads on the "other" end of this Stream should receive EOF.
         WRITE = 0x02,
-        /// The default, and what is always interpreted if the underlying
-        /// implementation does not support half-open
+        /// The default; closes both the read and write directions
         BOTH  = 0x03
     };
 
@@ -55,6 +55,7 @@ public:
     /// closing it.
     virtual ~Stream() {}
 
+    virtual bool supportsHalfClose() { return false; }
     virtual bool supportsRead() { return false; }
     virtual bool supportsWrite() { return false; }
     virtual bool supportsCancel() { return false; }
@@ -69,6 +70,8 @@ public:
 
     /// It is valid to call close() multiple times without error
     /// @param type Which ends of the stream to close
+    /// @pre type == BOTH || type == READ || type == WRITE
+    /// @pre if (type != BOTH) supportsHalfClose()
     virtual void close(CloseType type = BOTH) {}
 
     /// @brief Read data from the Stream

@@ -25,6 +25,7 @@ public:
     bool ownsParent() { return m_own; }
     void ownsParent(bool own) { m_own = own; }
 
+    bool supportsHalfClose() { return m_parent->supportsHalfClose(); }
     bool supportsRead() { return m_parent->supportsRead(); }
     bool supportsWrite() { return m_parent->supportsWrite(); }
     bool supportsCancel() { return m_parent->supportsCancel(); }
@@ -35,12 +36,7 @@ public:
     bool supportsFind() { return m_parent->supportsFind(); }
     bool supportsUnread() { return m_parent->supportsUnread(); }
 
-    void close(CloseType type = BOTH)
-    {
-        if (m_own) {
-            m_parent->close(type);
-        }
-    }
+    void close(CloseType type = BOTH) { if (m_own) m_parent->close(type); }
     size_t read(Buffer &b, size_t len) { return m_parent->read(b, len); }
     void cancelRead() { m_parent->cancelRead(); }
     size_t write(const Buffer &b, size_t len) { return m_parent->write(b, len); }
