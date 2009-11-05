@@ -29,6 +29,7 @@ public:
     bool supportsWrite() { return m_parent->supportsWrite(); }
     bool supportsCancel() { return m_parent->supportsCancel(); }
     bool supportsSeek() { return m_parent->supportsSeek(); }
+    bool supportsTell() { return m_parent->supportsTell(); }
     bool supportsSize() { return m_parent->supportsSize(); }
     bool supportsTruncate() { return m_parent->supportsTruncate(); }
     bool supportsFind() { return m_parent->supportsFind(); }
@@ -71,6 +72,7 @@ protected:
     {}
 
     bool supportsSeek() { return false; }
+    bool supportsTell() { return supportsSeek(); }
     bool supportsSize() { return false; }
     bool supportsTruncate() { return false; }
     bool supportsFind() { return false; }

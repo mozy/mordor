@@ -17,6 +17,7 @@ MORDOR_UNITTEST(ChunkedStream, readEmpty)
     MORDOR_TEST_ASSERT(chunkedStream->supportsRead());
     MORDOR_TEST_ASSERT(chunkedStream->supportsWrite());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsSeek());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsTell());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsSize());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsTruncate());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsFind());
@@ -24,7 +25,7 @@ MORDOR_UNITTEST(ChunkedStream, readEmpty)
 
     Buffer output;
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 10), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 3);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 3);
 }
 
 MORDOR_UNITTEST(ChunkedStream, readSome)
@@ -34,16 +35,16 @@ MORDOR_UNITTEST(ChunkedStream, readSome)
 
     Buffer output;
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 13);
     MORDOR_TEST_ASSERT(output == "helloworld");
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 18);
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 18);
 }
 
 MORDOR_UNITTEST(ChunkedStream, readUppercaseHex)
@@ -53,7 +54,7 @@ MORDOR_UNITTEST(ChunkedStream, readUppercaseHex)
 
     Buffer output;
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 13);
     MORDOR_TEST_ASSERT(output == "helloworld");
 }
 
@@ -64,7 +65,7 @@ MORDOR_UNITTEST(ChunkedStream, ignoreExtensions)
 
     Buffer output;
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 26);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 26);
     MORDOR_TEST_ASSERT(output == "helloworld");
 }
 
@@ -75,20 +76,20 @@ MORDOR_UNITTEST(ChunkedStream, dontReadPastEnd)
 
     Buffer output;
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 10u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 13);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 13);
     MORDOR_TEST_ASSERT(output == "helloworld");
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 18);
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 18);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 18);
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(baseStream->read(output, 15), 10u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 28);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 28);
     MORDOR_TEST_ASSERT(output == "more stuff");
 }
 
@@ -132,6 +133,7 @@ MORDOR_UNITTEST(ChunkedStream, writeEmpty)
     MORDOR_TEST_ASSERT(chunkedStream->supportsRead());
     MORDOR_TEST_ASSERT(chunkedStream->supportsWrite());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsSeek());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsTell());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsSize());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsTruncate());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsFind());
@@ -149,6 +151,7 @@ MORDOR_UNITTEST(ChunkedStream, write)
     MORDOR_TEST_ASSERT(chunkedStream->supportsRead());
     MORDOR_TEST_ASSERT(chunkedStream->supportsWrite());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsSeek());
+    MORDOR_TEST_ASSERT(!chunkedStream->supportsTell());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsSize());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsTruncate());
     MORDOR_TEST_ASSERT(!chunkedStream->supportsFind());

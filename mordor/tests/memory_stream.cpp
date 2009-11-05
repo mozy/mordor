@@ -14,19 +14,19 @@ MORDOR_UNITTEST(MemoryStream, basic)
     MemoryStream stream;
     Buffer buffer;
     MORDOR_TEST_ASSERT_EQUAL(stream.size(), 0);
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 0);
     MORDOR_TEST_ASSERT_EQUAL(stream.write("cody", 4), 4u);
     MORDOR_TEST_ASSERT_EQUAL(stream.size(), 4);
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 4);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 4);
     MORDOR_TEST_ASSERT(stream.buffer() == "cody");
     MORDOR_TEST_ASSERT(stream.readBuffer() == "");
     MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::BEGIN), 0);
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 0);
     MORDOR_TEST_ASSERT(stream.buffer() == "cody");
     MORDOR_TEST_ASSERT(stream.readBuffer() == "cody");
     MORDOR_TEST_ASSERT_EQUAL(stream.read(buffer, 2), 2u);
     MORDOR_TEST_ASSERT_EQUAL(stream.size(), 4);
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 2);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 2);
     MORDOR_TEST_ASSERT(buffer == "co");
     MORDOR_TEST_ASSERT(stream.buffer() == "cody");
     MORDOR_TEST_ASSERT(stream.readBuffer() == "dy");
@@ -122,23 +122,23 @@ MORDOR_UNITTEST(MemoryStream, truncate)
     stream.write("cody", 4u);
     MORDOR_TEST_ASSERT(stream.buffer() == "cody");
     MORDOR_TEST_ASSERT(stream.readBuffer() == "");
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 4);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 4);
     stream.truncate(4);
     MORDOR_TEST_ASSERT(stream.buffer() == "cody");
     MORDOR_TEST_ASSERT(stream.readBuffer() == "");
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 4);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 4);
     stream.truncate(3);
     MORDOR_TEST_ASSERT(stream.buffer() == "cod");
     MORDOR_TEST_ASSERT(stream.readBuffer() == "");
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 4);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 4);
     stream.truncate(5);
     MORDOR_TEST_ASSERT(stream.buffer() == std::string("cod\0\0", 5));
     MORDOR_TEST_ASSERT(stream.readBuffer() == std::string("\0", 1));
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 4);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 4);
     stream.truncate(0);
     MORDOR_TEST_ASSERT(stream.buffer() == "");
     MORDOR_TEST_ASSERT(stream.readBuffer() == "");
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 4);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 4);
 #ifdef X86
     MORDOR_TEST_ASSERT_EXCEPTION(stream.truncate(0x100000000ull), std::invalid_argument);
 #endif
@@ -163,7 +163,7 @@ MORDOR_UNITTEST(MemoryStream, writep1)
     MORDOR_TEST_ASSERT(stream.buffer() == "cody");
     MORDOR_TEST_ASSERT_EQUAL(stream.seek(1, Stream::BEGIN), 1);
     MORDOR_TEST_ASSERT_EQUAL(stream.write("c", 1), 1u);
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 2);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 2);
     MORDOR_TEST_ASSERT(stream.buffer() == "ccdy");
 }
 
@@ -174,7 +174,7 @@ MORDOR_UNITTEST(MemoryStream, writep2)
     MORDOR_TEST_ASSERT(stream.buffer() == "cody");
     MORDOR_TEST_ASSERT_EQUAL(stream.seek(1, Stream::BEGIN), 1);
     MORDOR_TEST_ASSERT_EQUAL(stream.write("cutrer", 6), 6u);
-    MORDOR_TEST_ASSERT_EQUAL(stream.seek(0, Stream::CURRENT), 7);
+    MORDOR_TEST_ASSERT_EQUAL(stream.tell(), 7);
     MORDOR_TEST_ASSERT_EQUAL(stream.size(), 7);
     MORDOR_TEST_ASSERT(stream.buffer() == "ccutrer");
 }

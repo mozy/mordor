@@ -11,6 +11,7 @@ class LimitedStream : public MutatingFilterStream
 public:
     LimitedStream(Stream::ptr parent, long long size, bool own = true);
 
+    bool supportsTell() { return true; }
     bool supportsSize() { return true; }
     bool supportsTruncate() { return false; }
 

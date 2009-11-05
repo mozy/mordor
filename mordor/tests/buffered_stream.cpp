@@ -24,50 +24,50 @@ MORDOR_UNITTEST(BufferedStream, read)
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 0), 0u);
     // Nothing has been read yet
     MORDOR_TEST_ASSERT_EQUAL(output.readAvailable(), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 0);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 0);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);
 
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 2), 2u);
     MORDOR_TEST_ASSERT(output == "01");
     // baseStream should have had a full buffer read from it
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 5);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 5);
     // But the bufferedStream is hiding it
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 2);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 2);
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 2), 2u);
     MORDOR_TEST_ASSERT(output == "23");
     // baseStream stays at the same position, because the read should have been
     // satisfied by the buffer
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 5);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 4);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 5);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 4);
     
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 7), 7u);
     MORDOR_TEST_ASSERT(output == "4567890");
     // baseStream should have had two buffer-fuls read
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 11);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 15);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 11);
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 2), 2u);
     MORDOR_TEST_ASSERT(output == "12");
     // baseStream stays at the same position, because the read should have been
     // satisfied by the buffer
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 13);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 15);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 13);
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 10), 7u);
     MORDOR_TEST_ASSERT(output == "3456789");
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 20);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 20);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 20);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 20);
 
     // Make sure the buffered stream gives us EOF properly
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 10), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 20);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 20);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 20);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 20);
 }
 
 MORDOR_UNITTEST(BufferedStream, partialReadGuarantee)
@@ -81,22 +81,22 @@ MORDOR_UNITTEST(BufferedStream, partialReadGuarantee)
 
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 5), 5u);
     MORDOR_TEST_ASSERT(output == "01234");
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 6);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 5);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 6);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 5);
 
     bufferedStream->allowPartialReads(true);
     output.clear();
     // Use up the rest of what's buffered
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 5), 1u);
     MORDOR_TEST_ASSERT(output == "5");
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 6);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 6);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 6);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 6);
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 5), 2u);
     MORDOR_TEST_ASSERT(output == "67");
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 8);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 8);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 8);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 8);
 }
 
 MORDOR_UNITTEST(BufferedStream, write)
@@ -168,25 +168,25 @@ MORDOR_UNITTEST(BufferedStream, unread)
     Buffer output;
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 6), 6u);
     MORDOR_TEST_ASSERT(output == "012345");
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 10);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 6);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 10);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 6);
 
     output.consume(3);
     bufferedStream->unread(output);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 10);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 3);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 10);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 3);
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 6), 6u);
     MORDOR_TEST_ASSERT(output == "345678");
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 10);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 9);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 10);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 9);
 
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 6), 6u);
     MORDOR_TEST_ASSERT(output == "901234");
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 15);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 15);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 15);
 }
 
 MORDOR_UNITTEST(BufferedStream, find)
@@ -196,19 +196,19 @@ MORDOR_UNITTEST(BufferedStream, find)
     bufferedStream->bufferSize(5);
     
     MORDOR_TEST_ASSERT(bufferedStream->supportsFind());
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 0);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 0);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->find('0'), 0);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 5);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 5);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->find("01234"), 0);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 5);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 5);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);
     Buffer output;
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 1), 1u);
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->find("0123"), 9);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 15);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 1);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 15);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 1);
 }
 
 MORDOR_UNITTEST(BufferedStream, findSanityChecks)
@@ -241,29 +241,29 @@ MORDOR_UNITTEST(BufferedStream, errorOnRead)
     BufferedStream::ptr bufferedStream(new BufferedStream(testStream));
     testStream->onRead(&throwRuntimeError);
 
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 0);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 0);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);
 
     Buffer output;
     MORDOR_TEST_ASSERT_EXCEPTION(bufferedStream->read(output, 5), std::runtime_error);
     MORDOR_TEST_ASSERT_EQUAL(output.readAvailable(), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 0);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 0);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);
 
     testStream->onRead(&throwRuntimeError, 2);
     // Partial read still allowed on exception (it's assumed the next read
     // will be either EOF or error)
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 5), 2u);
     MORDOR_TEST_ASSERT(output == "01");
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 2);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 2);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 2);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 2);
 
     output.clear();
     // Make sure that's correct
     MORDOR_TEST_ASSERT_EXCEPTION(bufferedStream->read(output, 5), std::runtime_error);
     MORDOR_TEST_ASSERT_EQUAL(output.readAvailable(), 0u);
-    MORDOR_TEST_ASSERT_EQUAL(baseStream->seek(0, Stream::CURRENT), 2);
-    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0, Stream::CURRENT), 2);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 2);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 2);
 }
 
 MORDOR_UNITTEST(BufferedStream, errorOnWrite)

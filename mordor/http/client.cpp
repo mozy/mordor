@@ -908,9 +908,9 @@ ClientRequest::requestDone()
     notify->notifyOnClose = NULL;
     notify->notifyOnEof = NULL;
     notify->notifyOnException = NULL;
-    if (m_requestStream->supportsSize()) {
+    if (m_requestStream->supportsSize() && m_requestStream->supportsTell()) {
         if (m_requestStream->size() !=
-            m_requestStream->seek(0, Stream::CURRENT)) {
+            m_requestStream->tell()) {
             cancel(true);
             MORDOR_THROW_EXCEPTION(UnexpectedEofException());
         }

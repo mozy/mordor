@@ -59,6 +59,7 @@ public:
     virtual bool supportsWrite() { return false; }
     virtual bool supportsCancel() { return false; }
     virtual bool supportsSeek() { return false; }
+    virtual bool supportsTell() { return supportsSeek(); }
     virtual bool supportsSize() { return false; }
     virtual bool supportsTruncate() { return false; }
     virtual bool supportsFind() { return false; }
@@ -116,6 +117,12 @@ public:
     /// @exception std::invalid_argument The resulting position would be negative
     /// @return The new stream pointer position
     virtual long long seek(long long offset, Anchor anchor) { MORDOR_NOTREACHED(); }
+
+    /// @brief Convenience method to call seek(0, CURRENT)
+    /// @note Cannot be overridden.
+    /// @return The current stream pointer position
+    /// @pre supportsTell()
+    long long tell() { return seek(0, CURRENT); }
 
     /// @brief Return the size of the stream
     /// @return The size of the stream

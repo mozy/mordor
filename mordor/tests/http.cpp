@@ -835,7 +835,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequests)
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
         "\r\n");
-    MORDOR_TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), 0);
 
     requestHeaders.general.connection.insert("close");
     ClientRequest::ptr request2 = conn->request(requestHeaders);
@@ -847,7 +847,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequests)
         "Connection: close\r\n"
         "Host: garbage\r\n"
         "\r\n");
-    MORDOR_TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), 0);
 
     // No more requests possible, even pipelined ones, because we used
     // Connection: close
@@ -858,7 +858,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequests)
     // Can't test for if half of the stream has been consumed here, because it
     // will be in a buffer somewhere
     MORDOR_TEST_ASSERT_EQUAL(request2->response().status.status, OK);
-    MORDOR_TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), responseStream->size());
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), responseStream->size());
 }
 
 #ifdef DEBUG
@@ -884,7 +884,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequestsAssertion)
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
         "\r\n");
-    MORDOR_TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), 0);
 
     requestHeaders.general.connection.insert("close");
     ClientRequest::ptr request2 = conn->request(requestHeaders);
@@ -896,7 +896,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequestsAssertion)
         "Connection: close\r\n"
         "Host: garbage\r\n"
         "\r\n");
-    MORDOR_TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), 0);
 
     // No more requests possible, even pipelined ones, because we used
     // Connection: close
@@ -1450,14 +1450,14 @@ MORDOR_UNITTEST(HTTPClient, pipelinedRequests)
         "\r\n");
     
     // Nothing has been read yet
-    MORDOR_TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), 0);
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), 0);
 
     MORDOR_TEST_ASSERT_EQUAL(request1->response().status.status, OK);
     pool.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 7);
 
     // Both responses have been read now
-    MORDOR_TEST_ASSERT_EQUAL(responseStream->seek(0, Stream::CURRENT), responseStream->size());
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), responseStream->size());
 }
 
 MORDOR_UNITTEST(HTTPClient, missingTrailerResponse)
