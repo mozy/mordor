@@ -151,6 +151,24 @@ public:
     virtual ptrdiff_t find(const std::string &delimiter, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
     //@}
 
+    /// @brief Convenience function for calling find() then read(), and return
+    /// the results in a std::string
+    /// @details
+    /// getDelimited() is provided so that users of the Stream class do not
+    /// need to be aware of if or where a Stream that supportsFind() is in
+    /// the stack of FilterStreams, and forcing all FilterStreams to deal with
+    /// it. Instead, the operaton is broken up into find() and read().
+    /// FilterStreams just pass the find() on to the parent, and do their stuff
+    /// on the actual data as they see it in the read().
+    /// @note Cannot be overridden.
+    /// @param delimiter The byte to look for
+    /// @param eofIsDelimiter Instead of throwing an exception if the delimiter
+    /// is not found, return the remainder of the stream.
+    /// @return The data from the current stream position up to and including
+    /// the delimiter
+    /// @pre supportsFind() && supportsRead()
+    std::string getDelimited(char delimiter = '\n', bool eofIsDelimiter = false);
+
     /// @brief Return data to the stream to be read again
 
     /// @param buffer The data to return
@@ -162,8 +180,6 @@ public:
     // filters do not need to implement these
     virtual size_t write(const void *buffer, size_t length);
     size_t write(const char *sz);
-
-    std::string getDelimited(char delim = '\n', bool eofIsDelimiter = false);
 };
 
 }

@@ -65,16 +65,13 @@ Stream::getDelimited(char delim, bool eofIsDelimiter)
     eofIsDelimiter = offset < 0;
     if (offset < 0)
         offset = -offset - 1;
-    Buffer buf;
+    std::string result;
+    result.resize(offset + (eofIsDelimiter ? 0 : 1));
 #ifdef DEBUG
     size_t readResult = 
 #endif
-    read(buf, offset + (eofIsDelimiter ? 0 : 1));
-    MORDOR_ASSERT((ptrdiff_t)readResult == offset + (eofIsDelimiter ? 0 : 1));
-    // Don't copyOut the delimiter itself
-    std::string result;
-    result.resize(offset);
-    buf.copyOut(const_cast<char*>(result.data()), offset);
+    read((char *)result.c_str(), result.size());
+    MORDOR_ASSERT((ptrdiff_t)readResult == result.size());
     return result;
 }
 

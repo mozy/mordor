@@ -42,6 +42,8 @@ ChunkedStream::read(Buffer &b, size_t len)
 {
     if (m_nextChunk == ~0ull - 1) {
         std::string chunk = parent()->getDelimited();
+        MORDOR_ASSERT(!chunk.empty());
+        chunk.resize(chunk.size() - 1);
         if (!chunk.empty() && chunk[chunk.size() - 1] == '\r')
             chunk.resize(chunk.size() - 1);
         if (!chunk.empty()) {
@@ -51,6 +53,8 @@ ChunkedStream::read(Buffer &b, size_t len)
     }
     if (m_nextChunk == ~0ull) {
         std::string chunk = parent()->getDelimited();
+        MORDOR_ASSERT(!chunk.empty());
+        chunk.resize(chunk.size() - 1);
         if (!chunk.empty() && chunk[chunk.size() - 1] == '\r')
             chunk.resize(chunk.size() - 1);
         char *end;

@@ -89,6 +89,8 @@ Multipart::nextPart()
         }
         if (b != "\r\n") {
             std::string restOfLine = m_stream->getDelimited();
+            MORDOR_ASSERT(!restOfLine.empty());
+            restOfLine.resize(restOfLine.size() - 1);
             if (restOfLine.find_first_not_of(" \r\t") != std::string::npos) {
                 MORDOR_THROW_EXCEPTION(InvalidMultipartBoundaryException());
             }
