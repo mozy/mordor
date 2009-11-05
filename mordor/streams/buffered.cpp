@@ -299,7 +299,7 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
 void
 BufferedStream::unread(const Buffer &b, size_t len)
 {
-    MORDOR_ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
+    MORDOR_ASSERT(supportsUnread());
     Buffer tempBuffer;
     tempBuffer.copyIn(b, len);
     tempBuffer.copyIn(m_readBuffer);

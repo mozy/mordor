@@ -19,8 +19,8 @@ public:
     bool allowPartialReads() { return m_allowPartialReads; }
     void allowPartialReads(bool allowPartialReads) { m_allowPartialReads = allowPartialReads; }
 
-    bool supportsFind() { return true; }
-    bool supportsUnread() { return true; }
+    bool supportsFind() { return supportsRead(); }
+    bool supportsUnread() { return supportsRead() && (!supportsWrite() || !supportsSeek()); }
 
     void close(CloseType type = BOTH);
     size_t read(Buffer &buffer, size_t length);
