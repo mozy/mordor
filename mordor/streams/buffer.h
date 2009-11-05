@@ -20,6 +20,7 @@ public:
     public:
         SegmentData();
         SegmentData(size_t length);
+        SegmentData(void *buffer, size_t length);
 
         SegmentData slice(size_t start, size_t length = ~0);
         const SegmentData slice(size_t start, size_t length = ~0) const;
@@ -46,6 +47,7 @@ private:
     public:
         Segment(size_t len);
         Segment(SegmentData);
+        Segment(void *buffer, size_t length);
 
         size_t readAvailable() const;
         size_t writeAvailable() const;
@@ -77,6 +79,7 @@ public:
     // Primarily for unit tests
     size_t segments() const;
 
+    void adopt(void *buffer, size_t length);
     void reserve(size_t len);
     void compact();
     void clear();
@@ -93,6 +96,8 @@ public:
     void copyIn(const char* sz);
     void copyIn(const void* data, size_t len);
 
+    void copyOut(Buffer &buffer, size_t length) const
+    { buffer.copyIn(*this, length); }
     void copyOut(void* buf, size_t len) const;
 
     ptrdiff_t find(char delim, size_t len = ~0) const;

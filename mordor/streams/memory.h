@@ -22,6 +22,7 @@ public:
     bool supportsFind() { return true; }
 
     size_t read(Buffer &b, size_t len);
+    size_t read(void *buffer, size_t length);
     size_t write(const Buffer &b, size_t len);
     size_t write(const void *b, size_t len);
     long long seek(long long offset, Anchor anchor);
@@ -35,11 +36,13 @@ public:
     const Buffer &readBuffer() const { return m_read; }
 
 private:
+    template <class T> size_t readInternal(T &buffer, size_t length);
+    template <class T> size_t writeInternal(const T &buffer, size_t length);
+
+private:
     Buffer m_read;
     Buffer m_original;
     size_t m_offset;
-
-    template <class T> size_t writeInternal(const T &b, size_t len);
 };
 
 }

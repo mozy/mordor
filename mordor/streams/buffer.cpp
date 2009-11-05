@@ -25,6 +25,17 @@ Buffer::SegmentData::SegmentData(size_t length)
     this->length(length);
 }
 
+static void delete_nothing(unsigned char *)
+{}
+
+Buffer::SegmentData::SegmentData(void *buffer, size_t length)
+{
+    MORDOR_ASSERT(length <= 0xffffffff);
+    m_array.reset((unsigned char *)buffer, &delete_nothing);
+    start(m_array.get());
+    this->length(length);
+}
+
 Buffer::SegmentData
 Buffer::SegmentData::slice(size_t start, size_t length)
 {
@@ -70,6 +81,12 @@ Buffer::Segment::Segment(size_t len)
 
 Buffer::Segment::Segment(Buffer::SegmentData data)
 : m_writeIndex(data.length()), m_data(data)
+{
+    invariant();
+}
+
+Buffer::Segment::Segment(void *buffer, size_t length)
+: m_writeIndex(0), m_data(buffer, length)
 {
     invariant();
 }
@@ -211,6 +228,27 @@ Buffer::segments() const
 {
     invariant();
     return m_segments.size();
+}
+
+void
+Buffer::adopt(void *buffer, size_t length)
+{
+    invariant();
+    Segment newBuf(buffer, length);
+    if (readAvailable() == 0) {
+        // put the new buffer at the front if possible to avoid
+        // fragmentation
+        m_segments.push_front(newBuf);
+        m_writeIt = m_segments.begin();
+    } else {
+        m_segments.push_back(newBuf);
+        if (m_writeAvailable == 0) {
+            m_writeIt = m_segments.end();
+            --m_writeIt;
+        }
+    }
+    m_writeAvailable += length;
+    invariant();
 }
 
 void

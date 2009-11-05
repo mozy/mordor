@@ -9,17 +9,53 @@
 namespace Mordor {
 
 size_t
-Stream::write(const char *sz)
+Stream::read(void *buffer, size_t length)
 {
-    return write(sz, strlen(sz));
+    Buffer internalBuffer;
+    internalBuffer.adopt(buffer, length);
+    size_t result = read(internalBuffer, length);
+    MORDOR_ASSERT(result <= length);
+    MORDOR_ASSERT(internalBuffer.readAvailable() == result);
+    std::vector<iovec> iovs = internalBuffer.readBufs(result);
+    MORDOR_ASSERT(!iovs.empty());
+    // It wrote directly into our buffer
+    if (iovs.front().iov_base == buffer && iovs.front().iov_len == result)
+        return result;
+    bool overlapping = false;
+    for (std::vector<iovec>::iterator it = iovs.begin();
+        it != iovs.end();
+        ++it) {
+        if (it->iov_base >= buffer || it->iov_base <=
+            (unsigned char *)buffer + length) {
+            overlapping = true;
+            break;
+        }
+    }
+    // It didn't touch our buffer at all; it's safe to just copyOut
+    if (!overlapping) {
+        internalBuffer.copyOut(buffer, result);
+        return result;
+    }
+    // We have to allocate *another* buffer so we don't destroy any data while
+    // copying to our buffer
+    boost::scoped_array<unsigned char> extraBuffer(new unsigned char[result]);
+    internalBuffer.copyOut(extraBuffer.get(), result);
+    memcpy(buffer, extraBuffer.get(), result);
+    return result;
 }
 
 size_t
-Stream::write(const void *b, size_t len)
+Stream::write(const char *string)
 {
-    Buffer buf;
-    buf.copyIn(b, len);
-    return write(buf, len);
+    return write(string, strlen(string));
+}
+
+size_t
+Stream::write(const void *buffer, size_t length)
+{
+    Buffer internalBuffer;
+    internalBuffer.copyIn(buffer, length);
+    return write(internalBuffer, length);
 }
 
 std::string

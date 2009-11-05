@@ -19,51 +19,64 @@ MemoryStream::MemoryStream(const Buffer &b)
 {}
 
 size_t
-MemoryStream::read(Buffer &b, size_t len)
+MemoryStream::read(Buffer &buffer, size_t length)
 {
-    size_t todo = std::min(len, m_read.readAvailable());
-    b.copyIn(m_read, todo);
+    return readInternal(buffer, length);
+}
+
+size_t
+MemoryStream::read(void *buffer, size_t length)
+{
+    return readInternal(buffer, length);
+}
+
+template <class T>
+size_t
+MemoryStream::readInternal(T &buffer, size_t length)
+{
+    size_t todo = std::min(length, m_read.readAvailable());
+    m_read.copyOut(buffer, todo);
     m_read.consume(todo);
     m_offset += todo;
     return todo;
 }
 
 size_t
-MemoryStream::write(const Buffer &b, size_t len)
+MemoryStream::write(const Buffer &buffer, size_t length)
 {
-    return writeInternal(b, len);
+    return writeInternal(buffer, length);
 }
 
 size_t
-MemoryStream::write(const void *b, size_t len)
+MemoryStream::write(const void *buffer, size_t length)
 {
-    return writeInternal(b, len);
+    return writeInternal(buffer, length);
 }
 
 template <class T>
 size_t
-MemoryStream::writeInternal(const T &b, size_t len)
+MemoryStream::writeInternal(const T &buffer, size_t length)
 {
     size_t size = m_original.readAvailable();
     if (m_offset == size) {
-        m_original.copyIn(b, len);
-        m_offset += len;
+        m_original.copyIn(buffer, length);
+        m_offset += length;
     } else if (m_offset > size) {
         // extend the stream, then write
         truncate(m_offset);
-        m_original.copyIn(b, len);
-        m_offset += len;
+        m_original.copyIn(buffer, length);
+        m_offset += length;
     } else {
         // write at offset
         Buffer original(m_original);
-        // Truncate orig to all data before the write
+        // Truncate original to all data before the write
         m_original.truncate(m_offset);
         original.consume(m_offset);
         // copy in the write, advancing the stream pointer
-        m_original.copyIn(b, len);
-        m_offset += len;
+        m_original.copyIn(buffer, length);
+        m_offset += length;
         if (m_offset < size) {
-            original.consume(len);
+            original.consume(length);
             // Copy in any remaining data beyond the write
             m_original.copyIn(original);
             // Reset our read buffer to the current stream pos
@@ -71,7 +84,7 @@ MemoryStream::writeInternal(const T &b, size_t len)
             m_read.copyIn(original);
         }
     }
-    return len;
+    return length;
 }
 
 long long

@@ -80,7 +80,14 @@ public:
     /// @param length The maximum amount to read
     /// @return The amount actually read
     virtual size_t read(Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
-
+    /// @copydoc read(Buffer &, size_t)
+    /// @brief Convenience function to call read() without first creating a
+    /// Buffer
+    /// @note
+    /// A default implementation is provided which calls
+    /// read(Buffer &, size_t).  Only implement if it can be more efficient
+    /// than creating a new Buffer.
+    virtual size_t read(void *buffer, size_t length);
     /// @brief Cancels a read that is currently blocked
 
     /// Must be called from a different Fiber/Thread than the one that is

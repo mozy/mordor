@@ -42,22 +42,34 @@ BufferedStream::close(CloseType type)
 }
 
 size_t
-BufferedStream::read(Buffer &b, size_t len)
+BufferedStream::read(Buffer &buffer, size_t length)
+{
+    return readInternal(buffer, length);
+}
+
+size_t
+BufferedStream::read(void *buffer, size_t length)
+{
+    return readInternal(buffer, length);
+}
+
+template <class T>
+size_t
+BufferedStream::readInternal(T &buffer, size_t length)
 {
     MORDOR_ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
-    size_t remaining = len;
+    size_t remaining = length;
 
     size_t buffered = std::min(m_readBuffer.readAvailable(), remaining);
-    b.copyIn(m_readBuffer, buffered);
+    m_readBuffer.copyOut(buffer, buffered);
     m_readBuffer.consume(buffered);
     remaining -= buffered;
 
-    MORDOR_LOG_VERBOSE(g_log) << this << " read(" << len << "): " << buffered
-        << " read from buffer";
+    MORDOR_LOG_VERBOSE(g_log) << this << " read(" << length << "): "
+        << buffered << " read from buffer";
 
-    if (remaining == 0) {
-        return len;
-    }
+    if (remaining == 0)
+        return length;
 
     if (buffered == 0 || !m_allowPartialReads) {
         size_t result;
@@ -72,51 +84,51 @@ BufferedStream::read(Buffer &b, size_t len)
                 MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(" << todo
                     << "): " << result;
             } catch (...) {
-                if (remaining == len) {
+                if (remaining == length) {
                     MORDOR_LOG_VERBOSE(g_log) << this << " forwarding exception";
                     throw;
                 } else {
                     MORDOR_LOG_VERBOSE(g_log) << this << " swallowing exception";
                     // Swallow the exception
-                    return len - remaining;
+                    return length - remaining;
                 }
             }
 
             buffered = std::min(m_readBuffer.readAvailable(), remaining);
-            b.copyIn(m_readBuffer, buffered);
+            m_readBuffer.copyOut(buffer, buffered);
             m_readBuffer.consume(buffered);
             remaining -= buffered;
         } while (remaining > 0 && !m_allowPartialReads && result != 0);
     }
 
-    return len - remaining;
+    return length - remaining;
 }
 
 size_t
-BufferedStream::write(const Buffer &b, size_t len)
+BufferedStream::write(const Buffer &buffer, size_t length)
 {
     MORDOR_ASSERT(!m_readBuffer.readAvailable() || !supportsSeek());
-    m_writeBuffer.copyIn(b, len);
-    size_t result = flushWrite(len);
+    m_writeBuffer.copyIn(buffer, length);
+    size_t result = flushWrite(length);
     // Partial writes not allowed
-    MORDOR_ASSERT(result == len);
+    MORDOR_ASSERT(result == length);
     return result;
 }
 
 size_t
-BufferedStream::write(const void *b, size_t len)
+BufferedStream::write(const void *buffer, size_t length)
 {
     MORDOR_ASSERT(!m_readBuffer.readAvailable() || !supportsSeek());
-    m_writeBuffer.reserve(std::max(m_bufferSize, len));
-    m_writeBuffer.copyIn(b, len);
-    size_t result = flushWrite(len);
+    m_writeBuffer.reserve(std::max(m_bufferSize, length));
+    m_writeBuffer.copyIn(buffer, length);
+    size_t result = flushWrite(length);
     // Partial writes not allowed
-    MORDOR_ASSERT(result == len);
+    MORDOR_ASSERT(result == length);
     return result;
 }
 
 size_t
-BufferedStream::flushWrite(size_t len)
+BufferedStream::flushWrite(size_t length)
 {
     while (m_writeBuffer.readAvailable() >= m_bufferSize)
     {
@@ -130,10 +142,11 @@ BufferedStream::flushWrite(size_t len)
         } catch (...) {
             // If this entire write is still in our buffer,
             // back it out and report the error
-            if (m_writeBuffer.readAvailable() >= len) {
+            if (m_writeBuffer.readAvailable() >= length) {
                 MORDOR_LOG_VERBOSE(g_log) << this << " forwarding exception";
                 Buffer tempBuffer;
-                tempBuffer.copyIn(m_writeBuffer, m_writeBuffer.readAvailable() - len);
+                tempBuffer.copyIn(m_writeBuffer, m_writeBuffer.readAvailable()
+                    - length);
                 m_writeBuffer.clear();
                 m_writeBuffer.copyIn(tempBuffer);
                 throw;
@@ -144,12 +157,12 @@ BufferedStream::flushWrite(size_t len)
                 // the caller will think he needs to repeat
                 // the entire write
                 MORDOR_LOG_VERBOSE(g_log) << this << " swallowing exception";
-                return len;
+                return length;
             }
         }
         m_writeBuffer.consume(result);
     }
-    return len;
+    return length;
 }
 
 long long
