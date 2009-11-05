@@ -28,7 +28,6 @@ public:
     bool supportsHalfClose() { return m_parent->supportsHalfClose(); }
     bool supportsRead() { return m_parent->supportsRead(); }
     bool supportsWrite() { return m_parent->supportsWrite(); }
-    bool supportsCancel() { return m_parent->supportsCancel(); }
     bool supportsSeek() { return m_parent->supportsSeek(); }
     bool supportsTell() { return m_parent->supportsTell(); }
     bool supportsSize() { return m_parent->supportsSize(); }

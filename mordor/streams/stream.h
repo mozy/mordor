@@ -13,8 +13,8 @@
 
 namespace Mordor {
 
-/// Byte-oriented stream
-
+/// @brief Byte-oriented stream
+/// @details
 /// Stream is the main interface for dealing with a stream of data.  It can
 /// represent half or full duplex streams, as well as random access streams
 /// or sequential only streams.  By default, a Stream advertises that it
@@ -55,27 +55,37 @@ public:
     /// closing it.
     virtual ~Stream() {}
 
+    /// @return If it is valid to call close() with READ or WRITE
     virtual bool supportsHalfClose() { return false; }
+    /// @return If it is valid to call read()
     virtual bool supportsRead() { return false; }
+    /// @return If it is valid to call write()
     virtual bool supportsWrite() { return false; }
-    virtual bool supportsCancel() { return false; }
+    /// @return If it is valid to call seek() with any parameters
     virtual bool supportsSeek() { return false; }
+    /// @note
+    /// If supportsSeek(), then the default implementation supportsTell().
+    /// @return If it is valid to call tell() or call seek(0, CURRENT)
     virtual bool supportsTell() { return supportsSeek(); }
+    /// @return If it is valid to call size()
     virtual bool supportsSize() { return false; }
+    /// @return If it is valid to call truncate()
     virtual bool supportsTruncate() { return false; }
+    /// @return If it is valid to call find()
     virtual bool supportsFind() { return false; }
+    /// @return If it is valid to call unread()
     virtual bool supportsUnread() { return false; }
 
     /// @brief Gracefully close the Stream
-
-    /// It is valid to call close() multiple times without error
+    /// @details
+    /// It is valid to call close() multiple times without error.
     /// @param type Which ends of the stream to close
     /// @pre type == BOTH || type == READ || type == WRITE
     /// @pre if (type != BOTH) supportsHalfClose()
     virtual void close(CloseType type = BOTH) {}
 
     /// @brief Read data from the Stream
-
+    /// @details
     /// read() is allowed to return less than length, even if there is more data
     /// available. A return value of 0 is the @b only reliable method of
     /// detecting EOF. If an exception is thrown, you can be assured that
@@ -83,6 +93,7 @@ public:
     /// @param buffer The Buffer to read in to
     /// @param length The maximum amount to read
     /// @return The amount actually read
+    /// @pre supportsRead()
     virtual size_t read(Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
     /// @copydoc read(Buffer &, size_t)
     /// @brief Convenience function to call read() without first creating a
@@ -93,32 +104,50 @@ public:
     /// than creating a new Buffer.
     virtual size_t read(void *buffer, size_t length);
     /// @brief Cancels a read that is currently blocked
-
+    /// @details
     /// Must be called from a different Fiber/Thread than the one that is
-    /// blocked.
+    /// blocked. This is safe to call on any Stream, but may not have any
+    /// effect.
     virtual void cancelRead() { MORDOR_NOTREACHED(); }
 
     /// @brief Write data to the Stream
-
+    /// @details
     /// write() is allowed to return less than length. If is @b not allowed to
     /// return 0. If an exception is thrown, you can be assured that nothing
     /// was written to the underlying implementation.
     /// @pre @c buffer.readAvailable() >= @c length
     /// @return The amount actually written
+    /// @pre supportsWrite()
     virtual size_t write(const Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
 
+    /// @copydoc write(const Buffer &, size_t)
+    /// @brief Convenience function to call write() without first creating a
+    /// Buffer
+    /// @note
+    /// A default implementation is provided which calls
+    /// write(const Buffer &, size_t).  Only implement if it can be more efficient
+    /// than creating a new Buffer.
+    virtual size_t write(const void *buffer, size_t length);
+    /// @copydoc write(const Buffer &, size_t)
+    /// @brief
+    /// Convenience function to call write() with a null-terminated string
+    /// @note
+    /// A default implementation is provided which calls
+    /// write(const void *, size_t).  Cannot be overridden.
+    size_t write(const char *string);
     /// @brief Cancels a write that is currently blocked
-
+    /// @details
     /// Must be called from a different Fiber/Thread than the one that is
-    /// blocked.
+    /// blocked. This is safe to call on any Stream, but may not have any
+    /// effect.
     virtual void cancelWrite() { MORDOR_NOTREACHED(); }
 
     /// @brief Change the current stream pointer
-
     /// @param offset Where to seek to
     /// @param anchor Where to seek from
     /// @exception std::invalid_argument The resulting position would be negative
     /// @return The new stream pointer position
+    /// @pre supportsSeek() || supportsTell()
     virtual long long seek(long long offset, Anchor anchor) { MORDOR_NOTREACHED(); }
 
     /// @brief Convenience method to call seek(0, CURRENT)
@@ -129,10 +158,12 @@ public:
 
     /// @brief Return the size of the stream
     /// @return The size of the stream
+    /// @pre supportsSize()
     virtual long long size() { MORDOR_NOTREACHED(); }
 
     /// @brief Truncate the stream
     /// @param size The new size of the stream
+    /// @pre supportsTruncate()
     virtual void truncate(long long size) { MORDOR_NOTREACHED(); }
 
     /// @brief Flush the stream
@@ -157,6 +188,7 @@ public:
     /// @c delimiter
     /// @return Offset from the current stream position of the found
     /// @c delimiter
+    /// @pre supportsFind()
     virtual ptrdiff_t find(char delimiter, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
     virtual ptrdiff_t find(const std::string &delimiter, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
     //@}
@@ -184,12 +216,8 @@ public:
     /// @param buffer The data to return
     /// @param length How much data to return
     /// @pre @c buffer.readAvailable() >= @c length
+    /// @pre supportsUnread()
     virtual void unread(const Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
-
-    // Convenience functions - do *not* implement in FilterStream, so that
-    // filters do not need to implement these
-    virtual size_t write(const void *buffer, size_t length);
-    size_t write(const char *sz);
 };
 
 }
