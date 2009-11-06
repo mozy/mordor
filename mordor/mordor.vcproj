@@ -406,6 +406,42 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\http.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_stream.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_stream.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_stream.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_stream.obj"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\iomanager_iocp.cpp"
 				>
 			</File>
@@ -765,6 +801,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\hash.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\http.h"
 				>
 			</File>
 			<File

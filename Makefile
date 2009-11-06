@@ -398,6 +398,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/fd.o						\
 	mordor/streams/file.o						\
 	mordor/streams/hash.o						\
+	mordor/streams/http.o						\
 	mordor/streams/limited.o					\
 	mordor/streams/memory.o						\
 	mordor/streams/null.o						\

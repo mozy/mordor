@@ -194,6 +194,18 @@ struct ETag
             return true;
         return value < rhs.value;
     }
+
+    bool operator== (const ETag &rhs) const
+    {
+        return weak == rhs.weak && unspecified == rhs.unspecified &&
+            value == rhs.value;
+    }
+
+    bool operator!= (const ETag &rhs) const
+    {
+        return weak != rhs.weak || unspecified != rhs.unspecified ||
+            value != rhs.value;
+    }
 };
 
 typedef std::set<ETag> ETagSet;
