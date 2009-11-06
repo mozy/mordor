@@ -290,6 +290,13 @@ ClientRequest::request()
     return m_request;
 }
 
+bool
+ClientRequest::hasRequestBody() const
+{
+    return Connection::hasMessageBody(m_request.general,
+        m_request.entity, m_request.requestLine.method, INVALID);
+}
+
 Stream::ptr
 ClientRequest::requestStream()
 {

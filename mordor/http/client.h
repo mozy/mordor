@@ -44,6 +44,7 @@ public:
     ~ClientRequest();
 
     const Request &request();
+    bool hasRequestBody() const;
     Stream::ptr requestStream();
     Multipart::ptr requestMultipart();
     EntityHeaders &requestTrailer();
@@ -79,6 +80,27 @@ private:
     boost::weak_ptr<Stream> m_responseStream;
     Multipart::ptr m_requestMultipart;
     boost::weak_ptr<Multipart> m_responseMultipart;
+};
+
+// Logically the entire response is unexpected
+struct InvalidResponseException : virtual HTTP::Exception
+{
+public:
+    InvalidResponseException(const std::string &message, ClientRequest::ptr request)
+        : m_message(message),
+          m_request(request)
+    {}
+    InvalidResponseException(ClientRequest::ptr request)
+        : m_request(request)
+    {}
+    ~InvalidResponseException() throw() {}
+
+    const char *what() const throw() { return m_message.c_str(); }
+    ClientRequest::ptr request() { return m_request; }
+
+private:
+    std::string m_message;
+    ClientRequest::ptr m_request;
 };
 
 class ClientConnection : public Connection, public boost::enable_shared_from_this<ClientConnection>, boost::noncopyable

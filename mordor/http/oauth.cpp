@@ -60,16 +60,20 @@ OAuth::getRequestToken()
         requestHeaders.entity.contentLength = body.size();
     }
 
-    ClientRequest::ptr request =
-        m_connDg(m_requestTokenUri)->request(requestHeaders);
+    ClientRequest::ptr request;
+    try {
+        request = m_requestBroker->request(requestHeaders);
+        m_requestTokenUri = requestHeaders.requestLine.uri;
+    } catch (...) {
+        m_requestTokenUri = requestHeaders.requestLine.uri;
+        throw;
+    }
     if (!body.empty()) {
         request->requestStream()->write(body.c_str(), body.size());
         request->requestStream()->close();
     }
-    if (request->response().status.status != OK) {
-        request->cancel();
-        MORDOR_THROW_EXCEPTION(InvalidResponseException("", request->response()));
-    }
+    if (request->response().status.status != OK)
+        MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
 
     MemoryStream responseStream;
     transferStream(request->responseStream(), responseStream);
@@ -80,21 +84,21 @@ OAuth::getRequestToken()
     URI::QueryString::iterator it = m_params.find("oauth_token");
     if (it == m_params.end())
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token in response",
-            request->response()));
+            request));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token") == 0)
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token in response",
-            request->response()));
+            request));
     it = m_params.find("oauth_token_secret");
     if (it == m_params.end())
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token_secret in response",
-            request->response()));
+            request));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token_secret") == 0)
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token_secret in response",
-            request->response()));
+            request));
 }
 
 void
@@ -126,16 +130,20 @@ OAuth::getAccessToken(const std::string &verifier)
         requestHeaders.entity.contentLength = body.size();
     }
 
-    ClientRequest::ptr request =
-        m_connDg(m_accessTokenUri)->request(requestHeaders);
+    ClientRequest::ptr request;
+    try {
+        request = m_requestBroker->request(requestHeaders);
+        m_accessTokenUri = requestHeaders.requestLine.uri;
+    } catch (...) {
+        m_accessTokenUri = requestHeaders.requestLine.uri;
+        throw;
+    }
     if (!body.empty()) {
         request->requestStream()->write(body.c_str(), body.size());
         request->requestStream()->close();
     }
-    if (request->response().status.status != OK) {
-        request->cancel();
-        MORDOR_THROW_EXCEPTION(InvalidResponseException("", request->response()));
-    }
+    if (request->response().status.status != OK)
+        MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
 
     MemoryStream responseStream;
     transferStream(request->responseStream(), responseStream);
@@ -146,21 +154,21 @@ OAuth::getAccessToken(const std::string &verifier)
     URI::QueryString::iterator it = m_params.find("oauth_token");
     if (it == m_params.end())
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token in response",
-            request->response()));
+            request));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token") == 0)
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token in response",
-            request->response()));
+            request));
     it = m_params.find("oauth_token_secret");
     if (it == m_params.end())
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token_secret in response",
-            request->response()));
+            request));
     ++it;
     if (it != m_params.end() &&
         stricmp(it->first.c_str(), "oauth_token_secret") == 0)
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token_secret in response",
-            request->response()));
+            request));
 }
 
 URI::QueryString

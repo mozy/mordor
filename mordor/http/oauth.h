@@ -4,7 +4,7 @@
 
 #include <boost/function.hpp>
 
-#include "client.h"
+#include "broker.h"
 #include "http.h"
 
 namespace Mordor {
@@ -13,7 +13,7 @@ namespace HTTP {
 class OAuth
 {
 public:
-    OAuth(boost::function<ClientConnection::ptr (const URI &uri)> connDg,
+    OAuth(RequestBroker::ptr requestBroker,
         boost::function<std::string (const URI::QueryString &params)> authDg,
         const URI &requestTokenUri, Method requestTokenMethod,
         const std::string &requestTokenSignatureMethod,
@@ -21,7 +21,7 @@ public:
         const std::string &accessTokenSignatureMethod,
         const std::string &consumerKey, const std::string &consumerSecret,
         const URI &callbackUri = "")
-        : m_connDg(connDg),
+        : m_requestBroker(requestBroker),
           m_authDg(authDg),
           m_requestTokenUri(requestTokenUri),
           m_accessTokenUri(accessTokenUri),
@@ -50,8 +50,8 @@ private:
     void sign(const URI &uri, Method method, const std::string &signatureMethod,
         URI::QueryString &params);
 private:
+    RequestBroker::ptr m_requestBroker;
     boost::function<std::pair<unsigned long long, std::string> ()> m_nonceDg;
-    boost::function<HTTP::ClientConnection::ptr (const URI &uri)> m_connDg;
     boost::function<std::string (const URI::QueryString &params)> m_authDg;
     URI m_requestTokenUri, m_accessTokenUri;
     HTTP::Method m_requestTokenMethod, m_accessTokenMethod;

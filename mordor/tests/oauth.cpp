@@ -2,13 +2,13 @@
 
 #include "mordor/pch.h"
 
-#include "mordor/http/mockserver.h"
 #include "mordor/http/oauth.h"
 #include "mordor/http/server.h"
 #include "mordor/scheduler.h"
 #include "mordor/streams/memory.h"
 #include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
+#include "mordor/util.h"
 
 using namespace Mordor;
 using namespace Mordor::HTTP;
@@ -132,9 +132,10 @@ MORDOR_UNITTEST(OAuth, oauthExample)
 {
     Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
-    MockServer server(&oauthExampleServer);
+    MockConnectionBroker server(&oauthExampleServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
 
-    OAuth oauth(boost::bind(&MockServer::getConnection, &server, _1),
+    OAuth oauth(RequestBroker::ptr(&requestBroker, &nop<RequestBroker *>),
         &oauthExampleAuth,
         "https://photos.example.net/request_token", POST, "PLAINTEXT",
         "https://photos.example.net/access_token", POST, "PLAINTEXT",

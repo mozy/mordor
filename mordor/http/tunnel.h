@@ -21,7 +21,7 @@ Stream::ptr tunnel(T &conn, const std::string &proxy, const std::string &target)
         return request->stream();
     } else {
         MORDOR_THROW_EXCEPTION(InvalidResponseException("proxy connection failed",
-            request->response()));
+            request));
     }
 }
 

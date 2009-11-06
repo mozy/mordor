@@ -373,6 +373,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/fiber_$(ARCH)$(UNDERSCORE).o				\
 	mordor/http/auth.o						\
 	mordor/http/basic.o						\
+	mordor/http/broker.o						\
 	mordor/http/chunked.o						\
 	mordor/http/client.o						\
 	mordor/http/connection.o					\

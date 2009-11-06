@@ -401,24 +401,6 @@ bool isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithPar
 bool isPreferred(const AcceptListWithParameters &list, const AcceptValueWithParameters &lhs, const AcceptValueWithParameters &rhs);
 const AcceptValueWithParameters *preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters &available);
 
-// Logically the entire response is unexpected
-struct InvalidResponseException : virtual HTTP::Exception
-{
-public:
-    InvalidResponseException(const std::string &message, const Response &response)
-        : m_message(message),
-          m_response(response)
-    {}
-    ~InvalidResponseException() throw() {}
-
-    const char *what() const throw() { return m_message.c_str(); }
-    const Response &response() { return m_response; }
-
-private:
-    std::string m_message;
-    Response m_response;
-};
-
 std::ostream& operator<<(std::ostream& os, Method m);
 std::ostream& operator<<(std::ostream& os, Status s);
 std::ostream& operator<<(std::ostream& os, Version v);
