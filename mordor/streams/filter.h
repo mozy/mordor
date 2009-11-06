@@ -55,10 +55,11 @@ private:
     bool m_own;
 };
 
-// A mutating filter stream is one that declares that it changes the data
-// as it flows through it.  It implicitly turns off and asserts features
-// that would need to be implemented by the inheritor, instead of defaulting
-// to the parent streams implementation.
+/// @details
+/// A mutating filter stream is one that declares that it changes the data
+/// as it flows through it.  It implicitly turns off and asserts features
+/// that would need to be implemented by the inheritor, instead of defaulting
+/// to the parent streams implementation.
 class MutatingFilterStream : public FilterStream
 {
 protected:
@@ -66,6 +67,7 @@ protected:
         : FilterStream(parent, owns)
     {}
 
+public:
     bool supportsSeek() { return false; }
     bool supportsTell() { return supportsSeek(); }
     bool supportsSize() { return false; }
@@ -73,7 +75,6 @@ protected:
     bool supportsFind() { return false; }
     bool supportsUnread() { return false; }
 
-public:
     long long seek(long long offset, Anchor anchor) { MORDOR_NOTREACHED(); }
     long long size() { MORDOR_NOTREACHED(); }
     void truncate(long long size) { MORDOR_NOTREACHED(); }
