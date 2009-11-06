@@ -7,14 +7,13 @@
 #include <algorithm>
 
 #include "mordor/string.h"
+#include "util.h"
 
 #ifndef WINDOWS
 extern char **environ;
 #endif
 
 namespace Mordor {
-
-static void delete_nothing(ConfigVarBase *) {}
 
 void
 Config::loadFromEnvironment()
@@ -49,7 +48,7 @@ Config::loadFromEnvironment()
         if (key.find_first_not_of("abcdefghijklmnopqrstuvwxyz.") != std::string::npos)
             continue;
         ConfigVarBase var(key);
-        ConfigVarBase::ptr ptr(&var, &delete_nothing);
+        ConfigVarBase::ptr ptr(&var, &nop<ConfigVarBase *>);
         std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator>::iterator it = vars().find(ptr);
         if (it != vars().end()) {
             (*it)->fromString(value);
@@ -61,7 +60,7 @@ ConfigVarBase::ptr
 Config::lookup(const std::string &name)
 {
     ConfigVarBase var(name);
-    ConfigVarBase::ptr ptr(&var, &delete_nothing);
+    ConfigVarBase::ptr ptr(&var, &nop<ConfigVarBase *>);
     std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator>::iterator it = vars().find(ptr);
     if (it != vars().end()) {
         return *it;

@@ -14,6 +14,7 @@
 #include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/transfer.h"
+#include "mordor/util.h"
 #include "parser.h"
 
 namespace Mordor {
@@ -352,9 +353,6 @@ ClientRequest::hasResponseBody()
         m_response.status.status);
 }
 
-static void delete_nothing(Stream *)
-{}
-
 Stream::ptr
 ClientRequest::responseStream()
 {
@@ -367,7 +365,7 @@ ClientRequest::responseStream()
     ensureResponse();
     if (m_responseState == COMPLETE) {
         m_hasResponseBody = true;
-        result.reset(&NullStream::get(), &delete_nothing);
+        result.reset(&NullStream::get(), &nop<Stream *>);
         m_responseStream = result;
         return result;
     }

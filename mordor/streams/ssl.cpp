@@ -10,6 +10,7 @@
 #include <openssl/x509v3.h>
 
 #include "mordor/log.h"
+#include "mordor/util.h"
 
 #ifdef MSVC
 #pragma comment(lib, "libeay32")
@@ -71,15 +72,13 @@ CertificateVerificationException::constructMessage(long verifyResult)
     return X509_verify_cert_error_string(verifyResult);
 }
 
-static void delete_nothing(SSL_CTX *) {}
-
 SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
 : MutatingFilterStream(parent, own)
 {
     MORDOR_ASSERT(parent);
     ERR_clear_error();
     if (ctx)
-        m_ctx.reset(ctx, &delete_nothing);
+        m_ctx.reset(ctx, &nop<SSL_CTX *>);
     else
         m_ctx.reset(SSL_CTX_new(client ? SSLv23_client_method() :
             SSLv23_server_method()), &SSL_CTX_free);

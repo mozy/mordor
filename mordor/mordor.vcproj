@@ -924,6 +924,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\util.h"
+				>
+			</File>
+			<File
 				RelativePath=".\version.h"
 				>
 			</File>

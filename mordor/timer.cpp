@@ -12,6 +12,7 @@
 #include "exception.h"
 #include "log.h"
 #include "version.h"
+#include "util.h"
 
 #ifdef OSX
  #include <mach/mach_time.h>
@@ -149,10 +150,6 @@ TimerManager::nextTimer()
     return result;
 }
 
-static
-void delete_nothing(Timer *t)
-{}
-
 std::vector<boost::function<void ()> >
 TimerManager::processTimers()
 {
@@ -164,7 +161,7 @@ TimerManager::processTimers()
         if (m_timers.empty() || (*m_timers.begin())->m_next > nowUs)
             return result;
         Timer nowTimer(nowUs);
-        Timer::ptr nowTimerPtr(&nowTimer, &delete_nothing);
+        Timer::ptr nowTimerPtr(&nowTimer, &nop<Timer *>);
         // Find all timers that are expired
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
             m_timers.lower_bound(nowTimerPtr);

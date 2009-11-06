@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include "mordor/assert.h"
+#include "mordor/util.h"
 
 namespace Mordor {
 
@@ -25,13 +26,10 @@ Buffer::SegmentData::SegmentData(size_t length)
     this->length(length);
 }
 
-static void delete_nothing(unsigned char *)
-{}
-
 Buffer::SegmentData::SegmentData(void *buffer, size_t length)
 {
     MORDOR_ASSERT(length <= 0xffffffff);
-    m_array.reset((unsigned char *)buffer, &delete_nothing);
+    m_array.reset((unsigned char *)buffer, &nop<unsigned char *>);
     start(m_array.get());
     this->length(length);
 }
