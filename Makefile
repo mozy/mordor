@@ -385,6 +385,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/http/http_parser.o					\
 	mordor/http/server.o						\
 	mordor/iomanager_$(IOMANAGER).o					\
+	mordor/json.o							\
 	mordor/log.o							\
 	mordor/ragel.o							\
 	mordor/scheduler.o						\

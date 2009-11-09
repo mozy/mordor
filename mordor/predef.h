@@ -10,6 +10,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _CRT_NONSTDC_NO_WARNINGS
 
+#define strtoll _strtoi64
 #define strtoull _strtoui64
 #define strnicmp _strnicmp
 
