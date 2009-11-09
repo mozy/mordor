@@ -117,6 +117,7 @@ public:
     ClientRequest::ptr request(const Request &requestHeaders);
 
     bool newRequestsAllowed();
+    size_t outstandingRequests();
 
 private:
     void scheduleNextRequest(ClientRequest *currentRequest);

@@ -49,6 +49,14 @@ ClientConnection::newRequestsAllowed()
         !m_priorRequestFailed && !m_priorResponseFailed;
 }
 
+size_t
+ClientConnection::outstandingRequests()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    invariant();
+    return m_pendingRequests.size();
+}
+
 void
 ClientConnection::scheduleNextRequest(ClientRequest *request)
 {
