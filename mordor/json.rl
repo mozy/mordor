@@ -2,7 +2,7 @@
 
 #include "mordor/pch.h"
 
-#include "json.h"
+#include "mordor/json.h"
 
 namespace Mordor {
 namespace JSON {
@@ -268,7 +268,7 @@ public:
     }
     void operator()(const bool &b)
     {
-        os << b ? "true" : "false";
+        os << (b ? "true" : "false");
     }
     template <class T>
     void operator()(const T &t)

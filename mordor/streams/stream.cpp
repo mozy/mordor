@@ -71,7 +71,7 @@ Stream::getDelimited(char delim, bool eofIsDelimiter)
     size_t readResult = 
 #endif
     read((char *)result.c_str(), result.size());
-    MORDOR_ASSERT((ptrdiff_t)readResult == result.size());
+    MORDOR_ASSERT(readResult == result.size());
     return result;
 }
 

@@ -379,7 +379,6 @@ LIBMORDOROBJECTS := 							\
 	mordor/http/connection.o					\
 	mordor/http/digest.o						\
 	mordor/http/http.o						\
-	mordor/http/mockserver.o					\
 	mordor/http/multipart.o						\
 	mordor/http/oauth.o						\
 	mordor/http/http_parser.o					\

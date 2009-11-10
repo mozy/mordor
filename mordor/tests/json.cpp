@@ -31,10 +31,10 @@ MORDOR_UNITTEST(JSON, example1)
     MORDOR_ASSERT(!parser.error());
 
     const Object &rootObject = boost::get<Object>(root);
-    MORDOR_TEST_ASSERT_EQUAL(rootObject.size(), 1);
+    MORDOR_TEST_ASSERT_EQUAL(rootObject.size(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(rootObject.begin()->first, "Image");
     const Object &imageObject = boost::get<Object>(rootObject.begin()->second);
-    MORDOR_TEST_ASSERT_EQUAL(imageObject.size(), 5);
+    MORDOR_TEST_ASSERT_EQUAL(imageObject.size(), 5u);
     Object::const_iterator it = imageObject.find("Width");
     MORDOR_ASSERT(it != imageObject.end());
     MORDOR_TEST_ASSERT_EQUAL(boost::get<long long>(it->second), 800);
@@ -47,7 +47,7 @@ MORDOR_UNITTEST(JSON, example1)
     it = imageObject.find("Thumbnail");
     MORDOR_ASSERT(it != imageObject.end());
     const Object &thumbnailObject = boost::get<Object>(it->second);
-    MORDOR_TEST_ASSERT_EQUAL(thumbnailObject.size(), 3);
+    MORDOR_TEST_ASSERT_EQUAL(thumbnailObject.size(), 3u);
     it = thumbnailObject.find("Url");
     MORDOR_ASSERT(it != thumbnailObject.end());
     MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(it->second), "http://www.example.com/image/481989943");
@@ -60,7 +60,7 @@ MORDOR_UNITTEST(JSON, example1)
     it = imageObject.find("IDs");
     MORDOR_ASSERT(it != imageObject.end());
     const Array &ids = boost::get<Array>(it->second);
-    MORDOR_TEST_ASSERT_EQUAL(ids.size(), 4);
+    MORDOR_TEST_ASSERT_EQUAL(ids.size(), 4u);
     Array::const_iterator it2 = ids.begin();
     MORDOR_TEST_ASSERT_EQUAL(boost::get<long long>(*it2++), 116);
     MORDOR_TEST_ASSERT_EQUAL(boost::get<long long>(*it2++), 943);
@@ -121,10 +121,10 @@ MORDOR_UNITTEST(JSON, example2)
     MORDOR_ASSERT(!parser.error());
 
     const Array &rootArray = boost::get<Array>(root);
-    MORDOR_TEST_ASSERT_EQUAL(rootArray.size(), 2);
+    MORDOR_TEST_ASSERT_EQUAL(rootArray.size(), 2u);
     Array::const_iterator it = rootArray.begin();
     const Object &object1 = boost::get<Object>(*it);
-    MORDOR_TEST_ASSERT_EQUAL(object1.size(), 8);
+    MORDOR_TEST_ASSERT_EQUAL(object1.size(), 8u);
     Object::const_iterator it2 = object1.find("precision");
     MORDOR_ASSERT(it2 != object1.end());
     MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(it2->second), "zip");
@@ -153,7 +153,7 @@ MORDOR_UNITTEST(JSON, example2)
     MORDOR_ASSERT(it2 != object1.end());
     MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(it2->second), "US");
     const Object &object2 = boost::get<Object>(*++it);
-    MORDOR_TEST_ASSERT_EQUAL(object2.size(), 8);
+    MORDOR_TEST_ASSERT_EQUAL(object2.size(), 8u);
     it2 = object2.find("precision");
     MORDOR_ASSERT(it2 != object2.end());
     MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(it2->second), "zip");
