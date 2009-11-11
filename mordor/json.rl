@@ -50,7 +50,20 @@ std::string unquote(const std::string &string)
                     break;
                 case 'u':
                     MORDOR_ASSERT(c + 4 < end);
-                    utf16 = strtol(c, NULL, 10);
+                    utf16 = 0;
+                    ++c;
+                    for (int i = 0; i < 4; ++i) {
+                        utf16 *= 16;
+                        if (*c >= '0' && *c <= '9')
+                            utf16 += *c - '0';
+                        else if (*c >= 'a' && *c <= 'f')
+                            utf16 += *c - 'a' + 10;
+                        else if (*c >= 'A' && *c <= 'F')
+                            utf16 += *c - 'A' + 10;
+                        else
+                            MORDOR_NOTREACHED();
+                        ++c;
+                    }
                     // Utf16->Utf8 conversion not supported yet
                     MORDOR_ASSERT(utf16 < 255);
                     result.append(1, (char)utf16);
@@ -117,7 +130,7 @@ std::string unquote(const std::string &string)
     }
     action call_parse_array
     {
-	    *m_stack.top() = Array();
+        *m_stack.top() = Array();
         fcall *json_parser_en_parse_array;
     }
     action parse_true
