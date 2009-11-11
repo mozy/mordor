@@ -676,7 +676,7 @@ ClientRequest::doRequest()
         m_conn->m_stream->write(str.c_str(), str.size());
         m_requestState = INFLIGHT;
 
-        if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID)) {
+        if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID, false)) {
             m_conn->scheduleNextRequest(this);
         }
     } catch(...) {
