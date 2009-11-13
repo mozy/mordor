@@ -55,6 +55,20 @@ ThreadPool::join_all()
 
 ThreadLocalStorage<Scheduler *> Scheduler::t_scheduler;
 ThreadLocalStorage<Fiber *> Scheduler::t_fiber;
+bool
+ThreadPool::contains(boost::thread::id id)
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    for (std::list<boost::shared_ptr<boost::thread> >::const_iterator it(m_threads.begin());
+        it != m_threads.end();
+        ++it)
+    {
+        if ((*it)->get_id() == id)
+            return true;
+    }
+    return false;
+}
+
 
 Scheduler::Scheduler(int threads, bool useCaller, size_t batchSize)
     : m_stopping(true),
@@ -186,6 +200,9 @@ Scheduler::scheduleNoLock(Fiber::ptr f, boost::thread::id thread)
     MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << f << " on thread "
         << thread;
     MORDOR_ASSERT(f);
+    // Not thread-targeted, or this scheduler owns the targetted thread
+    MORDOR_ASSERT(thread == boost::thread::id() || thread == m_rootThread ||
+        m_threads.contains(thread));
     FiberAndThread ft = {f, NULL, thread };
     bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);
@@ -199,6 +216,9 @@ Scheduler::scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread)
     MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << dg << " on thread "
         << thread;
     MORDOR_ASSERT(dg);
+    // Not thread-targeted, or this scheduler owns the targetted thread
+    MORDOR_ASSERT(thread == boost::thread::id() || thread == m_rootThread ||
+        m_threads.contains(thread));
     FiberAndThread ft = {Fiber::ptr(), dg, thread };
     bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);

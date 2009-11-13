@@ -259,14 +259,12 @@ MORDOR_UNITTEST(Scheduler, parallelForEachException)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 9);
 }
 
-/*
-MORDOR_UNITTEST(Scheduler, uncaughtExceptionHijack)
+#ifdef DEBUG
+MORDOR_UNITTEST(Scheduler, scheduleForThreadNotOnScheduler)
 {
-    WorkerPool pool;
-
-    pool.schedule(Fiber::ptr(new Fiber(&exception)));
-    
-    pool.dispatch();
-    MORDOR_TEST_ASSERT_EXCEPTION(pool.dispatch(), OperationAbortedException);
+    Fiber::ptr doNothingFiber(new Fiber(&doNothing));
+    WorkerPool pool(1, false);
+    MORDOR_TEST_ASSERT_ASSERTED(pool.schedule(doNothingFiber, boost::this_thread::get_id()));
+    pool.stop();
 }
-*/
+#endif

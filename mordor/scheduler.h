@@ -31,6 +31,7 @@ public:
 
     size_t size();
     void join_all();
+    bool contains(boost::thread::id id);
 
 private:
     boost::function<void ()> m_proc;
