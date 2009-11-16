@@ -65,7 +65,7 @@ IOManagerEPoll::registerEvent(int fd, Event events, boost::function<void ()> dg)
     MORDOR_ASSERT(epollevents != 0);
     boost::mutex::scoped_lock lock(m_mutex);
     int op;
-    std::map<int, AsyncEvent>::iterator it = 
+    std::map<int, AsyncEvent>::iterator it =
 m_pendingEvents.find(fd);
     AsyncEvent *event;
     if (it == m_pendingEvents.end()) {
@@ -140,9 +140,9 @@ IOManagerEPoll::cancelEvent(int fd, Event events)
         MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
             << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_DEL, " << fd
             << ", " << e.event.events << "): " << rc << " (" << errno << ")";
+        m_pendingEvents.erase(it);
         if (rc)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-        m_pendingEvents.erase(it);
     }
 }
 
@@ -195,7 +195,7 @@ IOManagerEPoll::idle()
             }
             bool err = event.events & (EPOLLERR | EPOLLHUP);
             boost::mutex::scoped_lock lock(m_mutex);
-            std::map<int, AsyncEvent>::iterator it = 
+            std::map<int, AsyncEvent>::iterator it =
 m_pendingEvents.find(event.data.fd);
             if (it == m_pendingEvents.end())
                 continue;
