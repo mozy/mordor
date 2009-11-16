@@ -15,6 +15,11 @@ typedef AsyncEventIOCP AsyncEvent;
 namespace Mordor {
 typedef IOManagerEPoll IOManager;
 }
+#elif defined(OSX)
+#include "iomanager_event.h"
+namespace Mordor {
+typedef IOManagerEvent IOManager;
+}
 #elif defined(BSD)
 #include "iomanager_kqueue.h"
 namespace Mordor {
