@@ -62,6 +62,8 @@ PLATFORMDIR := $(PLATFORM)/$(ARCH)
 
 ifeq ($(PLATFORM), Darwin)
     DARWIN := 1
+    BOOST_EXT := -mt
+    BOOST_LIB_FLAGS := -L/opt/local/lib
     IOMANAGER := kqueue
     UNDERSCORE := _underscore
     GCC_ARCH := $(shell file -L `which gcc` | grep x86_64 -o | uniq)
@@ -132,6 +134,11 @@ endif
 # add current dir to include dir
 INC_FLAGS := -I$(SRCDIR)
 
+ifeq ($(PLATFORM), Darwin)
+    INC_FLAGS := $(INC_FLAGS) -I/opt/local/include
+endif
+
+
 # run with 'make V=1' for verbose make output
 ifeq ($(V),1)
     Q :=
@@ -154,7 +161,10 @@ ifeq ($(RAGEL_MAJOR), 6)
     RLCODEGEN :=
 endif
 
-LIBS := -lboost_thread -lboost_regex -lboost_date_time -lssl -lcrypto -lz
+ifeq ($(PLATFORM), Darwin)
+endif
+
+LIBS := $(BOOST_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz
 
 ifeq ($(PLATFORM), FreeBSD)
     LIBS += -lexecinfo
@@ -319,14 +329,14 @@ endif
 mordor/examples/simpleclient: mordor/examples/simpleclient.o		\
 	mordor/libmordor.a
 ifeq ($(Q),@)
-	@echo ld $@ 
+	@echo ld $@
 endif
 	$(COMPLINK)
 
 mordor/examples/tunnel: mordor/examples/tunnel.o			\
 	mordor/libmordor.a
 ifeq ($(Q),@)
-	@echo ld $@ 
+	@echo ld $@
 endif
 	$(COMPLINK)
 
@@ -350,14 +360,14 @@ ifeq ($(Q),@)
 endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
-   
+
 mordor/streams/socket_stream.o: mordor/streams/socket.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
-   
+
 mordor/xml/xml_parser.o: mordor/xml/parser.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
@@ -370,7 +380,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/config.o							\
 	mordor/exception.o						\
 	mordor/fiber.o							\
-	mordor/fiber_$(ARCH)$(UNDERSCORE).o				\
+	mordor/fiber_$(ARCH)$(UNDERSCORE).o                             \
 	mordor/http/auth.o						\
 	mordor/http/basic.o						\
 	mordor/http/broker.o						\
