@@ -62,6 +62,7 @@ IOManagerKQueue::registerEvent(int fd, Event events,
     MORDOR_ASSERT(Scheduler::getThis());
     MORDOR_ASSERT(Fiber::getThis());
 
+    boost::mutex::scoped_lock lock(m_mutex);
     std::map<std::pair<int, Event>, AsyncEvent>::iterator it =
         m_pendingEvents.find(std::pair<int, Event>(fd, events));
     MORDOR_ASSERT(it == m_pendingEvents.end());
