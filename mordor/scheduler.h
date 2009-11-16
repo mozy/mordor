@@ -133,6 +133,11 @@ public:
     /// @pre this is a hijacking Scheduler
     void dispatch();
 
+    size_t threadCount() const
+    {
+        return m_threadCount + (m_rootFiber ? 1 : 0);
+    }
+
 protected:
     /// Derived classes should call start() in their constructor.
     void start();
