@@ -12,17 +12,17 @@
 
 namespace Mordor {
 
-static void readOne(Stream &src, Buffer &buffer, size_t len, size_t &result)
+static void readOne(Stream &src, Buffer *&buffer, size_t len, size_t &result)
 {
-    result = src.read(buffer, len);
+    result = src.read(*buffer, len);
 }
 
-static void writeOne(Stream &dst, Buffer &buffer, unsigned long long *totalWritten)
+static void writeOne(Stream &dst, Buffer *&buffer, unsigned long long *totalWritten)
 {
     size_t result;
-    while (buffer.readAvailable() > 0) {
-        result = dst.write(buffer, buffer.readAvailable());
-        buffer.consume(result);
+    while (buffer->readAvailable() > 0) {
+        result = dst.write(*buffer, buffer->readAvailable());
+        buffer->consume(result);
         if (totalWritten)
             *totalWritten += result;
     }
@@ -53,7 +53,7 @@ void transferStream(Stream &src, Stream &dst,
     todo = chunkSize;
     if (toTransfer - *totalRead < (unsigned long long)todo)
         todo = (size_t)(toTransfer - *totalRead);
-    readOne(src, *readBuffer, todo, readResult);
+    readOne(src, readBuffer, todo, readResult);
     *totalRead += readResult;
     if (readResult == 0 && toTransfer != ~0ull) {
         MORDOR_THROW_EXCEPTION(UnexpectedEofException());
@@ -67,6 +67,10 @@ void transferStream(Stream &src, Stream &dst,
     fibers.resize(2);
     fibers[0].reset(new Fiber(NULL));
     fibers[1].reset(new Fiber(NULL));
+    dgs[0] = boost::bind(&readOne, boost::ref(src), boost::ref(readBuffer),
+        boost::ref(todo), boost::ref(readResult));
+    dgs[1] = boost::bind(&writeOne, boost::ref(dst), boost::ref(writeBuffer), 
+        totalWritten);
     while (*totalRead < toTransfer) {
         writeBuffer = readBuffer;
         if (readBuffer == &buf1)
@@ -76,10 +80,6 @@ void transferStream(Stream &src, Stream &dst,
         todo = chunkSize;
         if (toTransfer - *totalRead < (unsigned long long)todo)
             todo = (size_t)(toTransfer - *totalRead);
-        dgs[0] = boost::bind(&readOne, boost::ref(src), boost::ref(*readBuffer), todo, 
-boost::ref(readResult));
-        dgs[1] = boost::bind(&writeOne, boost::ref(dst), boost::ref(*writeBuffer), 
-totalWritten);
         parallel_do(dgs, fibers);
         *totalRead += readResult;
         if (readResult == 0 && toTransfer != ~0ull && *totalRead < toTransfer) {
@@ -89,7 +89,7 @@ totalWritten);
             return;
     }
     writeBuffer = readBuffer;
-    writeOne(dst, *writeBuffer, totalWritten);
+    writeOne(dst, writeBuffer, totalWritten);
 }
 
 void transferStream(Stream::ptr src, Stream &dst,
