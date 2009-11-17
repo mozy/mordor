@@ -52,7 +52,7 @@ void transferStream(Stream &src, Stream &dst,
     readBuffer = &buf1;
     todo = chunkSize;
     if (toTransfer - *totalRead < (unsigned long long)todo)
-        todo = (size_t)toTransfer;
+        todo = (size_t)(toTransfer - *totalRead);
     readOne(src, *readBuffer, todo, readResult);
     *totalRead += readResult;
     if (readResult == 0 && toTransfer != ~0ull) {
@@ -75,7 +75,7 @@ void transferStream(Stream &src, Stream &dst,
             readBuffer = &buf1;
         todo = chunkSize;
         if (toTransfer - *totalRead < (unsigned long long)todo)
-            todo = (size_t)toTransfer;
+            todo = (size_t)(toTransfer - *totalRead);
         dgs[0] = boost::bind(&readOne, boost::ref(src), boost::ref(*readBuffer), todo, 
 boost::ref(readResult));
         dgs[1] = boost::bind(&writeOne, boost::ref(dst), boost::ref(*writeBuffer), 
