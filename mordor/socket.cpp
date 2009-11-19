@@ -605,9 +605,13 @@ Socket::send(const void *buf, size_t len, int flags)
         wsabuf.len = (unsigned int)len;
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
-        int ret = WSASend(m_sock, &wsabuf, 1, NULL, flags,
+        DWORD sent;
+        int ret = WSASend(m_sock, &wsabuf, 1, &sent, flags,
             &m_sendEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
+        if (ret == 0)
+            MORDOR_LOG_DEBUG(g_log) << this << " send(" << m_sock << ", "
+                << len << "): " << sent;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " send(" << m_sock << ", " << len
                 << "): (" << lastError() << ")";
@@ -694,9 +698,13 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         MORDOR_ASSERT(len <= 0xffffffff);
-        int ret = WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
+        DWORD sent;
+        int ret = WSASend(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, flags,
             &m_sendEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
+        if (ret == 0)
+            MORDOR_LOG_DEBUG(g_log) << this << " sendv(" << m_sock << ", "
+                << len << "): " << sent;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", " << len
                 << "): (" << lastError() << ")";
@@ -795,10 +803,14 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
         wsabuf.len = (unsigned int)len;
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
-        int ret = WSASendTo(m_sock, &wsabuf, 1, NULL, flags,
+        DWORD sent;
+        int ret = WSASendTo(m_sock, &wsabuf, 1, &sent, flags,
             to.name(), to.nameLen(),
             &m_sendEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
+        if (ret == 0)
+            MORDOR_LOG_DEBUG(g_log) << this << " sendto(" << m_sock << ", "
+                << len << ", " << to << "): " << sent;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", " << len
                 << ", " << to << "): (" << lastError() << ")";
@@ -823,11 +835,11 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
             if (m_sendEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledSend != ERROR_OPERATION_ABORTED)
                 m_sendEvent.lastError = WSAETIMEDOUT;
-            MORDOR_LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
+            MORDOR_LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", "
                 << len << ", " << to << "): (" << m_sendEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_sendEvent.lastError, "WSASendTo");
         }
-        MORDOR_LOG_DEBUG(g_log) << this << " sendv(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " sendto(" << m_sock << ", "
             << len << ", " << to << "): " << m_sendEvent.numberOfBytes;
         return m_sendEvent.numberOfBytes;
     } else
@@ -880,10 +892,14 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         MORDOR_ASSERT(len <= 0xffffffff);
-        int ret = WSASendTo(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, flags,
+        DWORD sent;
+        int ret = WSASendTo(m_sock, (LPWSABUF)bufs, (DWORD)len, &sent, flags,
             to.name(), to.nameLen(),
             &m_sendEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
+        if (ret == 0)
+            MORDOR_LOG_DEBUG(g_log) << this << " sendtov(" << m_sock << ", "
+                << len << ", " << to << "): " << sent;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", " << len
                 << ", " << to << "): (" << lastError() << ")";
@@ -912,6 +928,8 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
                 << len << ", " << to << "): (" << m_sendEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_sendEvent.lastError, "WSASendTo");
         }
+        MORDOR_LOG_DEBUG(g_log) << this << " sendtov(" << m_sock << ", "
+            << len << ", " << to << "): " << m_sendEvent.numberOfBytes;
         return m_sendEvent.numberOfBytes;
     } else {
         DWORD sent;
@@ -982,9 +1000,13 @@ Socket::receive(void *buf, size_t len, int flags)
         wsabuf.len = (unsigned int)len;
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
-        int ret = WSARecv(m_sock, &wsabuf, 1, NULL, (LPDWORD)&flags,
+        DWORD recvd;
+        int ret = WSARecv(m_sock, &wsabuf, 1, &recvd, (LPDWORD)&flags,
             &m_receiveEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
+        if (ret == 0)
+            MORDOR_LOG_DEBUG(g_log) << this << " recv(" << m_sock << ", "
+                << len << "): " << recvd;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " recv(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
@@ -1065,9 +1087,13 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
         MORDOR_ASSERT(len <= 0xffffffff);
-        int ret = WSARecv(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)&flags,
+        DWORD recvd;
+        int ret = WSARecv(m_sock, (LPWSABUF)bufs, (DWORD)len, &recvd, (LPDWORD)&flags,
             &m_receiveEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
+        if (ret == 0)
+            MORDOR_LOG_DEBUG(g_log) << this << " recvv(" << m_sock << ", "
+                << len << "): " << recvd;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
@@ -1166,11 +1192,15 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
     int namelen = from.nameLen();
     if (m_ioManager) {
         ptr self = shared_from_this();
-        m_ioManager->registerEvent(&m_sendEvent);        
-        int ret = WSARecvFrom(m_sock, &wsabuf, 1, NULL, (LPDWORD)flags,
+        m_ioManager->registerEvent(&m_sendEvent);
+        DWORD recvd;
+        int ret = WSARecvFrom(m_sock, &wsabuf, 1, &recvd, (LPDWORD)flags,
             from.name(), &namelen,
             &m_receiveEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
+        if (ret == 0)
+            MORDOR_LOG_DEBUG(g_log) << this << " recvfrom(" << m_sock << ", "
+                << len << "): " << recvd << ", " << from;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
                 << len << "): (" << lastError() << ")";
@@ -1272,10 +1302,14 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
         ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
         MORDOR_ASSERT(len <= 0xffffffff);
-        int ret = WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, NULL, (LPDWORD)flags,
+        DWORD recvd;
+        int ret = WSARecvFrom(m_sock, (LPWSABUF)bufs, (DWORD)len, &recvd, (LPDWORD)flags,
             from.name(), &namelen,
             &m_receiveEvent.overlapped, NULL);
         DWORD dwLastError = GetLastError();
+        if (ret == 0)
+            MORDOR_LOG_DEBUG(g_log) << this << " recvfromv(" << m_sock << ", "
+                << len << "): " << recvd << ", " << from;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", " << len
                 << "): (" << lastError() << ")";
@@ -1300,11 +1334,11 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
             if (m_receiveEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledReceive != ERROR_OPERATION_ABORTED)
                 m_receiveEvent.lastError = WSAETIMEDOUT;
-            MORDOR_LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
+            MORDOR_LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", "
                 << len << "): (" << m_receiveEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_receiveEvent.lastError, "WSARecvFrom");
         }
-        MORDOR_LOG_DEBUG(g_log) << this << " recvfrom(" << m_sock << ", "
+        MORDOR_LOG_DEBUG(g_log) << this << " recvfromv(" << m_sock << ", "
             << len << "): " << m_receiveEvent.numberOfBytes << ", " << from;
         return m_receiveEvent.numberOfBytes;
     } else {
