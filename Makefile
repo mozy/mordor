@@ -245,6 +245,7 @@ ALLBINS = mordor/examples/cat						\
 	mordor/examples/tunnel						\
 	mordor/examples/udpstats					\
 	mordor/examples/wget						\
+	mordor/examples/crypto						\
 	mordor/tests/run_tests
 
 
@@ -312,7 +313,8 @@ EXAMPLEOBJECTS :=							\
 	mordor/examples/simpleclient.o					\
 	mordor/examples/tunnel.o					\
 	mordor/examples/udpstats.o					\
-	mordor/examples/wget.o
+	mordor/examples/wget.o					\
+	mordor/examples/crypto.o
 
 $(EXAMPLEOBJECTS): mordor/pch.h.gch
 
@@ -352,6 +354,13 @@ endif
 	$(COMPLINK)
 
 mordor/examples/wget: mordor/examples/wget.o				\
+	mordor/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(COMPLINK)
+
+mordor/examples/crypto: mordor/examples/crypto.o				\
 	mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
