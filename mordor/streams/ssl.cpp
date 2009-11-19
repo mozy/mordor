@@ -66,6 +66,11 @@ static std::string getOpenSSLErrorMessage()
     return os.str();
 }
 
+OpenSSLException::OpenSSLException() : 
+    std::runtime_error(getOpenSSLErrorMessage())
+{
+}
+
 std::string
 CertificateVerificationException::constructMessage(long verifyResult)
 {

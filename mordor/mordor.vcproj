@@ -358,6 +358,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\random.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\digest.cpp"
 				>
 			</File>
@@ -761,6 +765,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\crypto.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\random.h"
 				>
 			</File>
 			<File

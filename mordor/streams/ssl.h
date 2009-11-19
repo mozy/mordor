@@ -16,6 +16,8 @@ public:
     OpenSSLException(const std::string &message)
         : std::runtime_error(message)
     {}
+
+    OpenSSLException();   // queries OpenSSL for the error code
 };
 
 class CertificateVerificationException : public OpenSSLException
