@@ -15,6 +15,9 @@ namespace Mordor {
 class HashStream : public FilterStream
 {
 public:
+    typedef boost::shared_ptr<HashStream> ptr;
+
+public:
     HashStream(Stream::ptr parent, bool own = true)
         : FilterStream(parent, own)
     {}
