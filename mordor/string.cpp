@@ -262,6 +262,26 @@ replace(std::string &str, char find, char replaceWith)
     }
 }
 
+void
+replace(std::string &str, char find, const std::string &replaceWith)
+{
+    size_t index = str.find(find);
+    while (index != std::string::npos) {
+        str = str.substr(0, index) + replaceWith + str.substr(index + 1);
+        index = str.find(find, index + replaceWith.size());
+    }
+}
+
+void
+replace(std::string &str, const std::string &find, const std::string &replaceWith)
+{
+    size_t index = str.find(find);
+    while (index != std::string::npos) {
+        str = str.substr(0, index) + replaceWith + str.substr(index + find.size());
+        index = str.find(find, index + replaceWith.size());
+    }
+}
+
 std::vector<std::string>
 split(const std::string &str, char delim, size_t max)
 {

@@ -29,6 +29,8 @@ void hexstringFromData(const void *data, size_t len, void *output);
 std::string hexstringFromData(const void *data, size_t len);
 
 void replace(std::string &str, char find, char replaceWith);
+void replace(std::string &str, char find, const std::string &replaceWith);
+void replace(std::string &str, const std::string &find, const std::string &replaceWith);
 
 std::vector<std::string> split(const std::string &str, char delim, size_t max = ~0);
 std::vector<std::string> split(const std::string &str, const char *delims, size_t max = ~0);
