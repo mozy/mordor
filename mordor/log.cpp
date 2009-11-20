@@ -40,6 +40,8 @@ static ConfigVar<bool>::ptr g_logStdout =
 static ConfigVar<std::string>::ptr g_logFile =
     Config::lookup("log.file", std::string(""), "Log to file");
 
+static FiberLocalStorage<bool> f_logDisabled;
+
 namespace {
 
 static struct Initializer
@@ -262,13 +264,28 @@ Log::clearSinks()
     root()->clearSinks();
 }
 
+LogDisabler::LogDisabler()
+{
+    if (Fiber::getThis()) {
+        m_disabled = !f_logDisabled;
+        f_logDisabled = true;
+    } else {
+        m_disabled = false;
+    }
+}
+
+LogDisabler::~LogDisabler()
+{
+    if (m_disabled)
+        f_logDisabled = false;
+}
+
 bool
 LoggerLess::operator ()(const Logger::ptr &lhs,
     const Logger::ptr &rhs) const
 {
     return lhs->m_name < rhs->m_name;
 }
-
 
 Logger::Logger()
 : m_name(":"),
@@ -281,6 +298,12 @@ Logger::Logger(const std::string &name, Logger::ptr parent)
   m_level(Log::INFO),
   m_inheritSinks(true)
 {}
+
+bool
+Logger::enabled(Log::Level level)
+{
+    return m_level >= level && Fiber::getThis() && !f_logDisabled;
+}
 
 void
 Logger::level(Log::Level level, bool propagate)
@@ -310,6 +333,7 @@ Logger::log(Log::Level level, const std::string &str,
 {
     if (str.empty() || !enabled(level))
         return;
+    LogDisabler disable;
     // TODO: capture timestamp
     Logger::ptr _this = shared_from_this();
 #ifdef WINDOWS

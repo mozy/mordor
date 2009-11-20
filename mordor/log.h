@@ -134,6 +134,15 @@ private:
     std::ostringstream m_os;
 };
 
+struct LogDisabler
+{
+    LogDisabler();
+    ~LogDisabler();
+
+private:
+    bool m_disabled;
+};
+
 struct LoggerLess
 {
     bool operator()(const boost::shared_ptr<Logger> &lhs,
@@ -151,7 +160,7 @@ private:
     Logger(const std::string &name, Logger::ptr parent);
 
 public:
-    bool enabled(Log::Level level) { return m_level >= level; }
+    bool enabled(Log::Level level);
     void level(Log::Level level, bool propagate = true);
     Log::Level level() const { return m_level; }
 
