@@ -14,7 +14,6 @@ using namespace Mordor::Test;
 
 MORDOR_SUITE_INVARIANT(Scheduler)
 {
-    MORDOR_TEST_ASSERT(!Fiber::getThis());
     MORDOR_TEST_ASSERT(!Scheduler::getThis());
 }
 
@@ -25,7 +24,6 @@ static void doNothing()
 // Stop can be called multiple times without consequence
 MORDOR_UNITTEST(Scheduler, idempotentStopHijack)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     pool.stop();
     pool.stop();
@@ -33,7 +31,6 @@ MORDOR_UNITTEST(Scheduler, idempotentStopHijack)
 
 MORDOR_UNITTEST(Scheduler, idempotentStopHybrid)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool(2);
     pool.stop();
     pool.stop();
@@ -41,7 +38,6 @@ MORDOR_UNITTEST(Scheduler, idempotentStopHybrid)
 
 MORDOR_UNITTEST(Scheduler, idempotentStopSpawn)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool(1, false);
     pool.stop();
     pool.stop();
@@ -52,7 +48,6 @@ MORDOR_UNITTEST(Scheduler, idempotentStopSpawn)
 // destruction
 MORDOR_UNITTEST(Scheduler, hijackBasic)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr doNothingFiber(new Fiber(&doNothing));
     WorkerPool pool;
     MORDOR_TEST_ASSERT_EQUAL(Scheduler::getThis(), &pool);
@@ -66,7 +61,6 @@ MORDOR_UNITTEST(Scheduler, hijackBasic)
 // to it again should implicitly restart it
 MORDOR_UNITTEST(Scheduler, hijackMultipleDispatch)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr doNothingFiber(new Fiber(&doNothing));
     WorkerPool pool;
     MORDOR_TEST_ASSERT_EQUAL(Scheduler::getThis(), &pool);
@@ -85,7 +79,6 @@ MORDOR_UNITTEST(Scheduler, hijackMultipleDispatch)
 // synchronize and MORDOR_ASSERT( that they are on different threads
 MORDOR_UNITTEST(Scheduler, hybridBasic)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr doNothingFiber(new Fiber(&doNothing));
     WorkerPool pool(2);
     MORDOR_TEST_ASSERT_EQUAL(Scheduler::getThis(), &pool);
@@ -107,7 +100,6 @@ otherThreadProc(Scheduler *scheduler, bool &done)
 MORDOR_UNITTEST(Scheduler, spawnBasic)
 {
     bool done = false;
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool(1, false);
     Fiber::ptr f(new Fiber(
         boost::bind(&otherThreadProc, &pool, boost::ref(done))));
@@ -123,7 +115,6 @@ MORDOR_UNITTEST(Scheduler, spawnBasic)
 
 MORDOR_UNITTEST(Scheduler, switchToStress)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool poolA(1, true), poolB(1, false);
 
     // Ensure we return to poolA
@@ -150,7 +141,6 @@ runInContext(Scheduler &poolA, Scheduler &poolB)
 
 MORDOR_UNITTEST(Scheduler, switcherExceptions)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool poolA(1, true), poolB(1, false);
 
     MORDOR_TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);
@@ -169,7 +159,6 @@ static void increment(int &total)
 
 MORDOR_UNITTEST(Scheduler, parallelDo)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
 
     int total = 0;
@@ -188,7 +177,6 @@ static void exception()
 
 MORDOR_UNITTEST(Scheduler, parallelDoException)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
 
     std::vector<boost::function<void ()> > dgs;
@@ -208,7 +196,6 @@ static bool checkEqual(int x, int &sequence)
 MORDOR_UNITTEST(Scheduler, parallelForEach)
 {
     const int values[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
 
     int sequence = 1;
@@ -220,7 +207,6 @@ MORDOR_UNITTEST(Scheduler, parallelForEach)
 MORDOR_UNITTEST(Scheduler, parallelForEachLessThanParallelism)
 {
     const int values[] = { 1, 2 };
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
 
     int sequence = 1;
@@ -239,7 +225,6 @@ static bool checkEqualStop5(int x, int &sequence)
 MORDOR_UNITTEST(Scheduler, parallelForEachStopShort)
 {
     const int values[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
 
     int sequence = 1;
@@ -261,7 +246,6 @@ static bool checkEqualExceptionOn5(int x, int &sequence)
 MORDOR_UNITTEST(Scheduler, parallelForEachException)
 {
     const int values[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
 
     int sequence = 1;
@@ -278,7 +262,6 @@ MORDOR_UNITTEST(Scheduler, parallelForEachException)
 /*
 MORDOR_UNITTEST(Scheduler, uncaughtExceptionHijack)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
 
     pool.schedule(Fiber::ptr(new Fiber(&exception)));

@@ -19,7 +19,6 @@ int main(int argc, const char *argv[])
 {
     Config::loadFromEnvironment();
     StdoutStream stdoutStream;
-    Fiber::ptr mainfiber(new Fiber());
     WorkerPool pool(2);
     try {
         if (argc == 1) {

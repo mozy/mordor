@@ -130,7 +130,6 @@ getTimestampAndNonce()
 
 MORDOR_UNITTEST(OAuth, oauthExample)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     MockConnectionBroker server(&oauthExampleServer);
     BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));

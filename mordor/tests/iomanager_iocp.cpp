@@ -31,7 +31,6 @@ MORDOR_UNITTEST(IOManager, eventPreventsStop)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
     bool fired = false;
     try {
-        Fiber::ptr mainfiber(new Fiber());
         IOManager ioManager;
         ioManager.registerEvent(hEvent, boost::bind(&handleEvent,
             boost::ref(fired)));

@@ -264,15 +264,12 @@ void
 Scheduler::run()
 {
     t_scheduler = this;
-    Fiber::ptr threadfiber = Fiber::getThis();
-    if (!threadfiber) {
+    if (boost::this_thread::get_id() != m_rootThread) {
         // Running in own thread
-        threadfiber.reset(new Fiber());
         t_fiber = Fiber::getThis().get();
     } else {
         // Hijacked a thread
         MORDOR_ASSERT(t_fiber.get() == Fiber::getThis().get());
-        threadfiber.reset();
     }
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this)));
     MORDOR_LOG_VERBOSE(g_log) << this << " starting thread with idle fiber " << idleFiber;
@@ -622,7 +619,6 @@ FiberEvent::~FiberEvent()
 void
 FiberEvent::wait()
 {
-    MORDOR_ASSERT(Scheduler::getThis());
     {
         boost::mutex::scoped_lock lock(m_mutex);
         if (m_signalled) {

@@ -18,11 +18,6 @@ using namespace Mordor;
 using namespace Mordor::HTTP;
 using namespace Mordor::Test;
 
-MORDOR_SUITE_INVARIANT(HTTPClient)
-{
-    MORDOR_TEST_ASSERT(!Fiber::getThis());
-}
-
 // Simplest success case
 MORDOR_UNITTEST(HTTP, simpleRequest)
 {
@@ -705,7 +700,6 @@ doSingleRequest(const char *request, Response &response)
     MemoryStream::ptr output(new MemoryStream());
     Stream::ptr stream(new DuplexStream(input, output));
     ServerConnection::ptr conn(new ServerConnection(stream, &httpRequest));
-    Fiber::ptr mainfiber(new Fiber());
     WorkerPool pool;
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&ServerConnection::processRequests, conn))));
     pool.dispatch();
@@ -908,7 +902,6 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequestsAssertion)
     // so the scheduler will exit when this tries to block, returning
     // immediately, and triggering an assertion that request2 isn't the current
     // response
-    Fiber::ptr mainFiber(new Fiber());
     IOManager ioManager;
     MORDOR_TEST_ASSERT_ASSERTED(request2->response());
 }
@@ -1397,7 +1390,6 @@ static void pipelinedRequests(ClientConnection::ptr conn,
 
 MORDOR_UNITTEST(HTTPClient, pipelinedRequests)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     int sequence = 1;
 

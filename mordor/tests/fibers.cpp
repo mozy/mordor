@@ -12,11 +12,6 @@ using namespace Mordor::Test;
 
 struct DummyException : public boost::exception, public std::exception {};
 
-MORDOR_SUITE_INVARIANT(Fibers)
-{
-    MORDOR_TEST_ASSERT(!Fiber::getThis());
-}
-
 static void
 fiberProc1(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence)
 {
@@ -39,7 +34,7 @@ fiberProc1(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence)
 MORDOR_UNITTEST(Fibers, call)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr mainFiber = Fiber::getThis();
     Fiber::ptr a(new Fiber(NULL));
     a->reset(boost::bind(&fiberProc1, mainFiber, Fiber::weak_ptr(a), boost::ref(sequence)));
     MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
@@ -96,7 +91,7 @@ fiberProc2b(Fiber::ptr mainFiber, Fiber::weak_ptr weakself,
 MORDOR_UNITTEST(Fibers, nestedCall)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr mainFiber = Fiber::getThis();
     Fiber::ptr a(new Fiber(NULL));
     Fiber::ptr b(new Fiber(NULL));
     a->reset(boost::bind(&fiberProc2a, mainFiber, Fiber::weak_ptr(a),
@@ -225,7 +220,7 @@ fiberProc3d(Fiber::ptr mainFiber, Fiber::weak_ptr weaka, Fiber::weak_ptr weakb,
 MORDOR_UNITTEST(Fibers, yieldTo)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr mainFiber = Fiber::getThis();
     Fiber::ptr a(new Fiber(NULL));
     Fiber::ptr b(new Fiber(NULL));
     Fiber::ptr c(new Fiber(NULL));
@@ -292,7 +287,7 @@ static void fiberProcYieldBack(int &sequence, Fiber::ptr caller,
 MORDOR_UNITTEST(Fibers, yieldBackThenCall)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr mainFiber = Fiber::getThis();
     Fiber::ptr a(new Fiber(NULL));
     a->reset(boost::bind(&fiberProcYieldBack, boost::ref(sequence),
         mainFiber, Fiber::weak_ptr(a)));
@@ -330,7 +325,7 @@ fiberProc4(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence, bool e
 MORDOR_UNITTEST(Fibers, reset)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr mainFiber = Fiber::getThis();
     Fiber::ptr a(new Fiber(NULL));
     a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
         boost::ref(sequence), false));
@@ -386,7 +381,6 @@ static void throwBadAlloc()
 
 MORDOR_UNITTEST(Fibers, badAlloc)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwBadAlloc));
     MORDOR_TEST_ASSERT_EXCEPTION(fiber->call(), std::bad_alloc);
 }
@@ -398,7 +392,6 @@ static void throwFileNotFound()
 
 MORDOR_UNITTEST(Fibers, nativeException)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwFileNotFound));
     MORDOR_TEST_ASSERT_EXCEPTION(fiber->call(), FileNotFoundException);
 }
@@ -410,7 +403,6 @@ static void throwRuntimeError()
 
 MORDOR_UNITTEST(Fibers, runtimeError)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwRuntimeError));
     try {
         fiber->call();
@@ -421,7 +413,6 @@ MORDOR_UNITTEST(Fibers, runtimeError)
 
 MORDOR_UNITTEST(Fibers, badAllocYieldTo)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwBadAlloc));
     MORDOR_TEST_ASSERT_EXCEPTION(fiber->yieldTo(), std::bad_alloc);
 }
@@ -433,14 +424,12 @@ static void throwGenericException()
 
 MORDOR_UNITTEST(Fibers, genericException)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr fiber(new Fiber(&throwGenericException));
     MORDOR_TEST_ASSERT_EXCEPTION(fiber->call(), DummyException);
 }
 
 MORDOR_UNITTEST(Fibers, fiberThrowingExceptionOutOfScope)
 {
-    Fiber::ptr mainFiber(new Fiber());
     try {
         Fiber::ptr fiber(new Fiber(&throwGenericException));
         fiber->call();
@@ -449,17 +438,8 @@ MORDOR_UNITTEST(Fibers, fiberThrowingExceptionOutOfScope)
     }
 }
 
-#ifdef DEBUG
-MORDOR_UNITTEST(Fibers, assertNeedCallingFiber)
-{
-    Fiber::ptr fiber(new Fiber(&throwGenericException));
-    MORDOR_TEST_ASSERT_ASSERTED(fiber->call());
-}
-#endif
-
 MORDOR_UNITTEST(Fibers, forceThrowExceptionNewFiberCall)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr f(new Fiber(&throwRuntimeError));
     boost::exception_ptr exception;
     try {
@@ -483,7 +463,6 @@ static void catchAndThrowDummy()
 
 MORDOR_UNITTEST(Fibers, forceThrowExceptionFiberYield)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Fiber::ptr f(new Fiber(&catchAndThrowDummy));
     boost::exception_ptr exception;
     try {
@@ -508,7 +487,7 @@ static void catchAndThrowDummyYieldTo(Fiber::ptr caller)
 
 MORDOR_UNITTEST(Fibers, forceThrowExceptionFiberYieldTo)
 {
-    Fiber::ptr mainFiber(new Fiber());
+    Fiber::ptr mainFiber = Fiber::getThis();
     Fiber::ptr f(new Fiber(boost::bind(&catchAndThrowDummyYieldTo,
         mainFiber)));
     boost::exception_ptr exception;

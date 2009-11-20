@@ -21,7 +21,6 @@ int main(int argc, char **argv)
         return 1;
     }
     try {
-        Fiber::ptr mainFiber(new Fiber());
         IOManager ioManager;
         AverageMinMaxStatistic<size_t> &stats = Statistics::registerStatistic("broadcasts",
             AverageMinMaxStatistic<size_t>("bytes", "packets"));

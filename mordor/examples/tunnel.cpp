@@ -140,7 +140,6 @@ static void socketServer(Socket::ptr s, IOManager &ioManager,
 int main(int argc, const char *argv[])
 {
     Config::loadFromEnvironment();
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     if (argc <= 2) {
         std::cerr << "Usage: (<listen> | -) <to> [-ssl] [<proxy> [<username> <password>]]"

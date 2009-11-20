@@ -1,4 +1,4 @@
-// Copyright (c) 2009 - Decho Corp.
+\// Copyright (c) 2009 - Decho Corp.
 
 #include "mordor/pch.h"
 
@@ -72,8 +72,14 @@ static ConfigVar<size_t>::ptr g_defaultStackSize = Config::lookup<size_t>(
     "Default stack size for new fibers.  This is the virtual size; physical "
     "memory isn't consumed until it is actually referenced.");
 
+// t_fiber is the Fiber currently executing on this thread
+// t_threadFiber is the Fiber that represents the thread's original stack
+// t_threadFiber is a boost::tss, because it supports automatic cleanup when
+// the thread exits (and datatypes larger than pointer size), while
+// ThreadLocalStorage does not
+// t_fiber is a ThreadLocalStorage, because it's faster than boost::tss
 ThreadLocalStorage<Fiber *> Fiber::t_fiber;
-
+static boost::thread_specific_ptr<Fiber::ptr> t_threadFiber;
 
 static boost::mutex & g_flsMutex()
 {
@@ -88,7 +94,7 @@ static std::vector<bool> & g_flsIndices()
 
 Fiber::Fiber()
 {
-    MORDOR_ASSERT(!getThis());
+    MORDOR_ASSERT(!t_fiber);
     m_state = EXEC;
     m_stack = NULL;
     m_stacksize = 0;
@@ -180,9 +186,12 @@ Fiber::reset(boost::function<void ()> dg)
 Fiber::ptr
 Fiber::getThis()
 {
-    if (t_fiber.get())
+    if (t_fiber)
         return t_fiber->shared_from_this();
-    return ptr();
+    Fiber::ptr threadFiber(new Fiber());
+    MORDOR_ASSERT(t_fiber.get() == threadFiber.get());
+    t_threadFiber.reset(new Fiber::ptr(threadFiber));
+    return t_fiber->shared_from_this();
 }
 
 void
@@ -680,10 +689,10 @@ Fiber::flsSet(size_t key, intptr_t value)
         return;
     }
 #endif
-    MORDOR_ASSERT(t_fiber);
-    if (t_fiber->m_fls.size() <= key)
-        t_fiber->m_fls.resize(key + 1);
-    t_fiber->m_fls[key] = value;
+    Fiber::ptr self = Fiber::getThis();
+    if (self->m_fls.size() <= key)
+        self->m_fls.resize(key + 1);
+    self->m_fls[key] = value;
 }
 
 intptr_t
@@ -693,10 +702,10 @@ Fiber::flsGet(size_t key)
     if (!g_doesntHaveOSFLS)
         return (intptr_t)pFlsGetValue((DWORD)key);
 #endif
-    MORDOR_ASSERT(t_fiber);
-    if (t_fiber->m_fls.size() <= key)
+    Fiber::ptr self = Fiber::getThis();
+    if (self->m_fls.size() <= key)
         return NULL;
-    return t_fiber->m_fls[key];
+    return self->m_fls[key];
 }
 
 }

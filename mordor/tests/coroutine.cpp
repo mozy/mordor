@@ -19,7 +19,6 @@ static int countTo5(Coroutine<int>::ptr self)
 
 MORDOR_UNITTEST(Coroutine, basic)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Coroutine<int>::ptr coro(new Coroutine<int>(&countTo5));
     int sequence = 0;
     MORDOR_TEST_ASSERT_EQUAL(coro->state(), Fiber::INIT);
@@ -39,7 +38,6 @@ static int echo(Coroutine<int, int>::ptr self, int arg)
 
 MORDOR_UNITTEST(Coroutine, basicWithArg)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Coroutine<int, int>::ptr coro(new Coroutine<int, int>(boost::function<int (Coroutine<int, int>::ptr, int)>(&echo)));
     MORDOR_TEST_ASSERT_EQUAL(coro->state(), Fiber::INIT);
     for (int i = 0; i <= 5; ++i) {
@@ -72,7 +70,6 @@ static int consumer(Coroutine<int, int>::ptr self, int arg,
 
 MORDOR_UNITTEST(Coroutine, producerConsumer)
 {
-    Fiber::ptr mainFiber(new Fiber());
     Coroutine<int, int>::ptr producerCoro(new Coroutine<int, int>());
     Coroutine<int, int>::ptr consumerCoro(new Coroutine<int, int>());
 

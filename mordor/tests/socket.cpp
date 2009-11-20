@@ -47,13 +47,11 @@ establishConn(IOManager &ioManager)
 
 MORDOR_SUITE_INVARIANT(Socket)
 {
-    MORDOR_TEST_ASSERT(!Fiber::getThis());
     MORDOR_TEST_ASSERT(!Scheduler::getThis());
 }
 
 MORDOR_UNITTEST(Socket, acceptTimeout)
 {
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
     conns.listen->receiveTimeout(1000000);
@@ -64,7 +62,6 @@ MORDOR_UNITTEST(Socket, acceptTimeout)
 
 MORDOR_UNITTEST(Socket, receiveTimeout)
 {
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
     conns.connect->receiveTimeout(1000000);
@@ -83,7 +80,6 @@ class DummyException
 template <class Exception>
 static void testShutdownException(bool send, bool shutdown, bool otherEnd)
 {
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
     ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
@@ -213,7 +209,6 @@ static void cancelMe(Socket::ptr sock)
 
 MORDOR_UNITTEST(Socket, cancelAccept)
 {
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
 
@@ -224,7 +219,6 @@ MORDOR_UNITTEST(Socket, cancelAccept)
 
 MORDOR_UNITTEST(Socket, sendReceive)
 {
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
     ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
@@ -320,7 +314,6 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
 
 MORDOR_UNITTEST(Socket, sendReceiveForceAsync)
 {
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
     int sequence = 0;

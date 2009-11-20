@@ -51,7 +51,6 @@ int main(int argc, const char *argv[])
 {
     Config::loadFromEnvironment();
     StdoutStream stdoutStream;
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     try {
         URI uri = argv[1];

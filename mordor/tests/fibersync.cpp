@@ -9,7 +9,6 @@ using namespace Mordor;
 
 MORDOR_UNITTEST(FiberMutex, basic)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     FiberMutex mutex;
 
@@ -26,7 +25,6 @@ static void contentionFiber(int fiberNo, FiberMutex &mutex, int &sequence)
 
 MORDOR_UNITTEST(FiberMutex, contention)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     FiberMutex mutex;
     int sequence = 0;
@@ -54,7 +52,6 @@ MORDOR_UNITTEST(FiberMutex, contention)
 #ifdef DEBUG
 MORDOR_UNITTEST(FiberMutex, notRecursive)
 {
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     FiberMutex mutex;
 
@@ -72,7 +69,6 @@ static void signalMe(FiberCondition &condition, int &sequence)
 MORDOR_UNITTEST(FiberCondition, signal)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     FiberMutex mutex;
     FiberCondition condition(mutex);
@@ -98,7 +94,6 @@ static void waitOnMe(FiberCondition &condition, FiberMutex &mutex,
 MORDOR_UNITTEST(FiberCondition, broadcast)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     FiberMutex mutex;
     FiberCondition condition(mutex);
@@ -126,7 +121,6 @@ static void signalMe2(FiberEvent &event, int &sequence)
 MORDOR_UNITTEST(FiberEvent, autoReset)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     FiberEvent event;
 
@@ -143,7 +137,6 @@ MORDOR_UNITTEST(FiberEvent, autoReset)
 MORDOR_UNITTEST(FiberEvent, manualReset)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     FiberEvent event(false);
 
@@ -168,7 +161,6 @@ static void waitOnMe2(FiberEvent &event, int &sequence, int expected)
 MORDOR_UNITTEST(FiberEvent, manualResetMultiple)
 {
     int sequence = 0;
-    Fiber::ptr mainFiber(new Fiber());
     WorkerPool pool;
     FiberEvent event(false);
 

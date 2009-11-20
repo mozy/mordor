@@ -26,11 +26,6 @@ static void basic(FiberLocalStorage<int> &fls)
 static void thread(FiberLocalStorage<int> &fls,
                    Fiber::ptr fiber)
 {
-#if defined(DEBUG) && !defined(WINDOWS)
-    MORDOR_TEST_ASSERT_ASSERTED(fls.get());
-    MORDOR_TEST_ASSERT_ASSERTED(fls = 1);
-#endif
-    Fiber::ptr mainfiber(new Fiber());
     MORDOR_TEST_ASSERT_EQUAL(fls.get(), 0);
     fls = 3;
     MORDOR_TEST_ASSERT_EQUAL(fls.get(), 3);
@@ -43,11 +38,6 @@ static void thread(FiberLocalStorage<int> &fls,
 MORDOR_UNITTEST(FLS, basic)
 {
     FiberLocalStorage<int> fls;
-#if defined(DEBUG) && !defined(WINDOWS)
-    MORDOR_TEST_ASSERT_ASSERTED(fls.get());
-    MORDOR_TEST_ASSERT_ASSERTED(fls = 1);
-#endif
-    Fiber::ptr mainfiber(new Fiber());
     MORDOR_TEST_ASSERT_EQUAL(fls.get(), 0);
     fls = 1;
     MORDOR_TEST_ASSERT_EQUAL(fls.get(), 1);

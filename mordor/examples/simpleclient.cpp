@@ -14,7 +14,6 @@ using namespace Mordor;
 int main(int argc, const char *argv[])
 {
     Config::loadFromEnvironment();
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     std::vector<Address::ptr> addresses =
         Address::lookup(argv[1], AF_UNSPEC, SOCK_STREAM);

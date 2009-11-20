@@ -51,7 +51,6 @@ static void basicInFibers(Stream::ptr stream, int &sequence)
 
 MORDOR_UNITTEST(PipeStream, basicInFibers)
 {
-    Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
     // pool must destruct before pipe, because when pool destructs it
     // waits for the other fiber to complete, which has a weak ref
@@ -106,7 +105,6 @@ static void blockingRead(Stream::ptr stream, int &sequence)
 
 MORDOR_UNITTEST(PipeStream, blockingRead)
 {
-    Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
     WorkerPool pool;
     int sequence = 1;
@@ -130,7 +128,6 @@ static void blockingWrite(Stream::ptr stream, int &sequence)
 
 MORDOR_UNITTEST(PipeStream, blockingWrite)
 {
-    Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
     WorkerPool pool;
     int sequence = 1;
@@ -167,7 +164,6 @@ static void closeOnBlockingReader(Stream::ptr stream, int &sequence)
 
 MORDOR_UNITTEST(PipeStream, closeOnBlockingReader)
 {
-    Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
     WorkerPool pool;
     int sequence = 1;
@@ -189,7 +185,6 @@ static void closeOnBlockingWriter(Stream::ptr stream, int &sequence)
 
 MORDOR_UNITTEST(PipeStream, closeOnBlockingWriter)
 {
-    Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
     WorkerPool pool;
     int sequence = 1;
@@ -215,7 +210,6 @@ static void destructOnBlockingReader(boost::weak_ptr<Stream> weakStream, int &se
 
 MORDOR_UNITTEST(PipeStream, destructOnBlockingReader)
 {
-    Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
     WorkerPool pool;
     int sequence = 1;
@@ -243,7 +237,6 @@ static void destructOnBlockingWriter(boost::weak_ptr<Stream> weakStream, int &se
 
 MORDOR_UNITTEST(PipeStream, destructOnBlockingWriter)
 {
-    Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
     WorkerPool pool;
     int sequence = 1;
@@ -305,7 +298,6 @@ void threadStress(Stream::ptr stream)
 
 MORDOR_UNITTEST(PipeStream, threadStress)
 {
-    Fiber::ptr mainFiber(new Fiber());
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
     WorkerPool pool(2);
     

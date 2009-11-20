@@ -122,7 +122,6 @@ void startHttpServer(IOManager &ioManager)
 int main(int argc, const char *argv[])
 {
     Config::loadFromEnvironment();
-    Fiber::ptr mainfiber(new Fiber());
     IOManager ioManager;
     startSocketServer(ioManager);
     startHttpServer(ioManager);

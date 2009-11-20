@@ -233,7 +233,6 @@ IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
 {
     MORDOR_ASSERT(e);
     MORDOR_ASSERT(Scheduler::getThis());
-    MORDOR_ASSERT(Fiber::getThis());
     e->m_scheduler = Scheduler::getThis();
     e->m_thread = boost::this_thread::get_id();
     e->m_fiber = Fiber::getThis();
@@ -266,8 +265,6 @@ IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg, bool re
         << ")";
     MORDOR_ASSERT(handle);
     MORDOR_ASSERT(Scheduler::getThis());
-    if (!dg)
-        MORDOR_ASSERT(Fiber::getThis());
 
     boost::mutex::scoped_lock lock(m_mutex);
     for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();

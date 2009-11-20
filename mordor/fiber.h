@@ -74,11 +74,13 @@ public:
         TERM
     };
 
-public:
+private:
     /// @brief Create a Fiber for the currently executing thread
     /// @pre No other Fiber object represents the currently executing thread
     /// @post state() == EXEC
     Fiber();
+
+public:
     /// @brief Create a new Fiber
     /// @param dg The initial function
     /// @param stacksize An explicit size for the stack.  This is initial size in virtual
@@ -110,7 +112,6 @@ public:
     ///
     /// call() does not return until the Fiber calls yield(), returns,
     /// or throws an exception.
-    /// @pre Fiber::getThis() != NULL
     /// @pre state() == INIT || state() == HOLD
     void call();
 
@@ -119,7 +120,6 @@ public:
     /// The Fiber is executed, but instead of returning from yield() or
     /// yieldTo(), exception is rethrown in the Fiber
     /// @param exception The exception to be rethrown in the Fiber
-    /// @pre Fiber::getThis() != NULL
     /// @pre state() == INIT || state() == HOLD
     void inject(boost::exception_ptr exception);
 
@@ -138,14 +138,12 @@ public:
     /// Fiber terminates
     /// @return The Fiber that yielded back
     /// (not necessarily the Fiber that was yielded to)
-    /// @pre Fiber::getThis() != NULL
     /// @pre state() == INIT || state() == HOLD
     Fiber::ptr yieldTo(bool yieldToCallerOnTerminate = true);
     
     /// Yield to the calling Fiber
 
     /// yield() returns when the Fiber has been called or yielded to again
-    /// @pre Fiber::getThis() != NULL
     /// @pre This Fiber was executed by call()
     static void yield();
 
