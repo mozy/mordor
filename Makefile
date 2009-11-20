@@ -426,6 +426,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/memory.o						\
 	mordor/streams/null.o						\
 	mordor/streams/pipe.o						\
+	mordor/streams/random.o						\
 	mordor/streams/socket_stream.o					\
 	mordor/streams/ssl.o						\
 	mordor/streams/std.o						\
