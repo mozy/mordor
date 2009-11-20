@@ -16,7 +16,7 @@ MORDOR_UNITTEST(EFSStream, basic)
 {
     Fiber::ptr mainFiber(new Fiber());
     {
-        FileStream file("dummy.efs", FileStream::WRITE, CREATE_ALWAYS);
+        FileStream file("dummy.efs", FileStream::WRITE, FileStream::OVERWRITE_OR_CREATE);
         file.write("cody", 4);
     }
     if (!EncryptFileW(L"dummy.efs"))

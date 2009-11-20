@@ -18,71 +18,48 @@ class FileStream : public NativeStream
 {
 public:
 #ifdef WINDOWS
-    enum Flags {
+    enum AccessFlags {
         READ      = 0x01,
         WRITE     = 0x02,
         READWRITE = 0x03,
         APPEND    = 0x06,
     };
-    typedef DWORD CreateFlags;
+    enum CreateFlags {
+        OPEN = OPEN_EXISTING,
+        CREATE = CREATE_NEW,
+        OPEN_OR_CREATE = OPEN_ALWAYS,
+        OVERWRITE = TRUNCATE_EXISTING,
+        OVERWRITE_OR_CREATE = CREATE_ALWAYS
+    };
 #else
-    enum Flags {
+    enum AccessFlags {
         READ = O_RDONLY,
         WRITE = O_WRONLY,
         READWRITE = O_RDWR,
         APPEND = O_APPEND | O_WRONLY
     };
-
     enum CreateFlags {
-        /// Create a file. Fail if it exists.
-        CREATE_NEW = 1,
-        /// Create a file. If it exists, recreate it from scratch.        
-        CREATE_ALWAYS,
         /// Open a file. Fail if it does not exist.
-        OPEN_EXISTING,
+        OPEN = 1,
+        /// Create a file. Fail if it exists.
+        CREATE,
         /// Open a file. Create it if it does not exist.
-        OPEN_ALWAYS,
+        OPEN_OR_CREATE,
         /// Open a file, and recreate it from scratch. Fail if it does not exist.
-        TRUNCATE_EXISTING
+        OVERWRITE,
+        /// Create a file. If it exists, recreate it from scratch.
+        OVERWRITE_OR_CREATE
     };
 #endif
 
-private:
-    void init(IOManager *ioManager, Scheduler *scheduler,
-        const std::string &filename, Flags flags, CreateFlags createFlags);
-#ifdef WINDOWS
-    void init(IOManager *ioManager, Scheduler *scheduler,
-        const std::wstring &filename, Flags flags, CreateFlags createFlags);
-#endif
-
 public:
-    FileStream(const std::string &filename, Flags flags = READWRITE,
-        CreateFlags createFlags = OPEN_EXISTING)
-    { init(NULL, NULL, filename, flags, createFlags); }
-    FileStream(IOManager &ioManager, const std::string &filename,
-        Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING)
-    { init(&ioManager, NULL, filename, flags, createFlags); }
-    FileStream(Scheduler &scheduler, const std::string &filename,
-        Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING)
-    { init(NULL, &scheduler, filename, flags, createFlags); }
-    FileStream(IOManager &ioManager, Scheduler &scheduler,
-        const std::string &filename, Flags flags = READWRITE,
-        CreateFlags createFlags = OPEN_EXISTING)
-    { init(&ioManager, &scheduler, filename, flags, createFlags); }
+    FileStream(const std::string &filename,
+        AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
+        IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
 #ifdef WINDOWS
-    FileStream(const std::wstring &filename, Flags flags = READWRITE,
-        CreateFlags createFlags = OPEN_EXISTING)
-    { init(NULL, NULL, filename, flags, createFlags); }
-    FileStream(IOManager &ioManager, const std::wstring &filename,
-        Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING)
-    { init(&ioManager, NULL, filename, flags, createFlags); }
-    FileStream(Scheduler &scheduler, const std::wstring &filename,
-        Flags flags = READWRITE, CreateFlags createFlags = OPEN_EXISTING)
-    { init(NULL, &scheduler, filename, flags, createFlags); }
-    FileStream(IOManager &ioManager, Scheduler &scheduler,
-        const std::wstring &filename, Flags flags = READWRITE,
-        CreateFlags createFlags = OPEN_EXISTING)
-    { init(&ioManager, &scheduler, filename, flags, createFlags); }
+    FileStream(const std::wstring &filename,
+        AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
+        IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
 #endif
 
     bool supportsRead() { return m_supportsRead && NativeStream::supportsRead(); }

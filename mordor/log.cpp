@@ -152,7 +152,8 @@ StdoutLogSink::log(const std::string &logger, tid_t thread,
 
 FileLogSink::FileLogSink(const std::string &file)
 {
-    m_stream.reset(new FileStream(file, FileStream::APPEND));
+    m_stream.reset(new FileStream(file, FileStream::APPEND,
+        FileStream::OPEN_OR_CREATE));
     m_file = file;
 }
 

@@ -9,19 +9,17 @@
 
 namespace Mordor {
 
-void
-FileStream::init(IOManager *ioManager, Scheduler *scheduler,
-                 const std::string &filename, Flags flags,
-                 CreateFlags createFlags)
+FileStream::FileStream(const std::string &filename, AccessFlags accessFlags,
+    CreateFlags createFlags, IOManager *ioManager, Scheduler *scheduler)
 {
     NativeHandle handle;
 #ifdef WINDOWS
     DWORD access = 0;
-    if (flags & READ)
+    if (accessFlags & READ)
         access |= GENERIC_READ;
-    if (flags & WRITE)
+    if (accessFlags & WRITE)
         access |= GENERIC_WRITE;
-    if (flags == APPEND)
+    if (accessFlags == APPEND)
         access = FILE_APPEND_DATA | SYNCHRONIZE;
     handle = CreateFileW(toUtf16(filename).c_str(),
         access,
@@ -31,48 +29,47 @@ FileStream::init(IOManager *ioManager, Scheduler *scheduler,
         ioManager ? FILE_FLAG_OVERLAPPED : 0,
         NULL);
 #else
-    int oflags = (int)flags;
+    int oflags = (int)accessFlags;
     switch (createFlags) {
-        case CREATE_NEW:
+        case OPEN:
+            break;
+        case CREATE:
             oflags |= O_CREAT | O_EXCL;
             break;
-        case CREATE_ALWAYS:
-            oflags |= O_CREAT | O_TRUNC;
-            break;
-        case OPEN_EXISTING:
-            break;
-        case OPEN_ALWAYS:
+        case OPEN_OR_CREATE:
             oflags |= O_CREAT;
             break;
-        case TRUNCATE_EXISTING:
+        case OVERWRITE:
             oflags |= O_TRUNC;
             break;
+        case OVERWRITE_OR_CREATE:
+            oflags |= O_CREAT | O_TRUNC;
+            break;
         default:
-            MORDOR_ASSERT(false);
+            MORDOR_NOTREACHED();
     }
     handle = open(filename.c_str(), oflags, 0777);
 #endif
     if (handle == (NativeHandle)-1)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR();
     NativeStream::init(ioManager, scheduler, handle);
-    m_supportsRead = flags == READ || flags == READWRITE;
-    m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;
-    m_supportsSeek = flags != APPEND;
+    m_supportsRead = accessFlags == READ || accessFlags == READWRITE;
+    m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||
+        accessFlags == APPEND;
+    m_supportsSeek = accessFlags != APPEND;
 }
 
 #ifdef WINDOWS
-void
-FileStream::init(IOManager *ioManager, Scheduler *scheduler,
-                 const std::wstring &filename, Flags flags,
-                 CreateFlags createFlags)
+FileStream::FileStream(const std::wstring &filename, AccessFlags accessFlags,
+    CreateFlags createFlags, IOManager *ioManager, Scheduler *scheduler)
 {
     NativeHandle handle;
     DWORD access = 0;
-    if (flags & READ)
+    if (accessFlags & READ)
         access |= GENERIC_READ;
-    if (flags & WRITE)
+    if (accessFlags & WRITE)
         access |= GENERIC_WRITE;
-    if (flags == APPEND)
+    if (accessFlags == APPEND)
         access = FILE_APPEND_DATA | SYNCHRONIZE;
     handle = CreateFileW(filename.c_str(),
         access,
@@ -81,12 +78,13 @@ FileStream::init(IOManager *ioManager, Scheduler *scheduler,
         createFlags,
         ioManager ? FILE_FLAG_OVERLAPPED : 0,
         NULL);
-    if (handle == (NativeHandle)-1)
+    if (handle == INVALID_HANDLE_VALUE)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
     NativeStream::init(ioManager, scheduler, handle);
-    m_supportsRead = flags == READ || flags == READWRITE;
-    m_supportsWrite = flags == WRITE || flags == READWRITE || flags == APPEND;
-    m_supportsSeek = flags != APPEND;
+    m_supportsRead = accessFlags == READ || accessFlags == READWRITE;
+    m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||
+        accessFlags == APPEND;
+    m_supportsSeek = accessFlags != APPEND;
 }
 #endif
 
