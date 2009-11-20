@@ -53,8 +53,8 @@ ThreadPool::join_all()
     m_threads.clear();
 }
 
-ThreadLocalStorage<Scheduler> Scheduler::t_scheduler;
-ThreadLocalStorage<Fiber> Scheduler::t_fiber;
+ThreadLocalStorage<Scheduler *> Scheduler::t_scheduler;
+ThreadLocalStorage<Fiber *> Scheduler::t_fiber;
 
 Scheduler::Scheduler(int threads, bool useCaller, size_t batchSize)
     : m_stopping(true),
@@ -67,10 +67,10 @@ Scheduler::Scheduler(int threads, bool useCaller, size_t batchSize)
     if (useCaller) {
         --threads;
         MORDOR_ASSERT(getThis() == NULL);
-        t_scheduler.reset(this);
+        t_scheduler = this;
         m_rootFiber.reset(new Fiber(boost::bind(&Scheduler::run, this)));
-        t_scheduler.reset(this);
-        t_fiber.reset(m_rootFiber.get());
+        t_scheduler = this;
+        t_fiber = m_rootFiber.get();
         m_rootThread = boost::this_thread::get_id();
     }
     m_threadCount = threads;
@@ -80,7 +80,7 @@ Scheduler::~Scheduler()
 {
     MORDOR_ASSERT(m_stopping);
     if (getThis() == this) {
-        t_scheduler.reset(NULL);
+        t_scheduler = NULL;
     }
 }
 
@@ -263,12 +263,12 @@ Scheduler::yieldTo(bool yieldToCallerOnTerminate)
 void
 Scheduler::run()
 {
-    t_scheduler.reset(this);
+    t_scheduler = this;
     Fiber::ptr threadfiber = Fiber::getThis();
     if (!threadfiber) {
         // Running in own thread
         threadfiber.reset(new Fiber());
-        t_fiber.reset(Fiber::getThis().get());
+        t_fiber = Fiber::getThis().get();
     } else {
         // Hijacked a thread
         MORDOR_ASSERT(t_fiber.get() == Fiber::getThis().get());

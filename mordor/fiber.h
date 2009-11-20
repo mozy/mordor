@@ -181,7 +181,7 @@ private:
     weak_ptr m_terminateOuter;
     boost::exception_ptr m_exception;
 
-    static ThreadLocalStorage<Fiber> t_fiber;
+    static ThreadLocalStorage<Fiber *> t_fiber;
 };
 
 }

@@ -72,7 +72,7 @@ static ConfigVar<size_t>::ptr g_defaultStackSize = Config::lookup<size_t>(
     "Default stack size for new fibers.  This is the virtual size; physical "
     "memory isn't consumed until it is actually referenced.");
 
-ThreadLocalStorage<Fiber> Fiber::t_fiber;
+ThreadLocalStorage<Fiber *> Fiber::t_fiber;
 
 Fiber::Fiber()
 {
@@ -176,7 +176,7 @@ Fiber::getThis()
 void
 Fiber::setThis(Fiber* f)
 {
-    t_fiber.reset(f);
+    t_fiber = f;
 }
 
 void

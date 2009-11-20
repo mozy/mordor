@@ -4,6 +4,8 @@
 
 #include "predef.h"
 
+#include <boost/noncopyable.hpp>
+
 #ifdef WINDOWS
 #include <windows.h>
 #else
@@ -13,10 +15,10 @@
 namespace Mordor {
 
 template <class T>
-class ThreadLocalStorage
+class ThreadLocalStorageBase : boost::noncopyable
 {
 public:
-    ThreadLocalStorage()
+    ThreadLocalStorageBase()
     {
 #ifdef WINDOWS
         m_key = TlsAlloc();
@@ -29,7 +31,7 @@ public:
 #endif
     }
 
-    ~ThreadLocalStorage()
+    ~ThreadLocalStorageBase()
     {
 #ifdef WINDOWS
         TlsFree(m_key);
@@ -38,28 +40,31 @@ public:
 #endif
     }
 
-    void reset(T *t)
+    typename boost::enable_if_c<sizeof(T) <= sizeof(void *)>::type set(const T &t)
     {
 #ifdef WINDOWS
-        if (!TlsSetValue(m_key, t))
+        if (!TlsSetValue(m_key, (LPVOID)t))
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("TlsSetValue");
 #else
-        int rc = pthread_setspecific(m_key, t);
+        int rc = pthread_setspecific(m_key, (const void *)t);
         if (rc)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(rc, "pthread_setspecific");
 #endif
     }
 
-    T *get()
+    T get() const
     {
 #ifdef WINDOWS
-        return (T *)TlsGetValue(m_key);
+#pragma warning(push)
+#pragma warning(disable: 4800)
+        return (T)TlsGetValue(m_key);
+#pragma warning(pop)
 #else
-        return (T *)pthread_getspecific(m_key);
+        return (T)pthread_getspecific(m_key);
 #endif
     }
 
-    T *operator->() { return get(); }
+    operator T() const { return get(); }
 
 private:
 #ifdef WINDOWS
@@ -67,6 +72,22 @@ private:
 #else
     pthread_key_t m_key;
 #endif
+};
+
+template <class T>
+class ThreadLocalStorage : public ThreadLocalStorageBase<T>
+{
+public:
+    T operator =(T t) { set(t); return t; }
+};
+
+template <class T>
+class ThreadLocalStorage<T *> : public ThreadLocalStorageBase<T *>
+{
+public:
+    T * operator =(T *const t) { set(t); return t; }
+    T & operator*() { return *ThreadLocalStorageBase<T *>::get(); }
+    T * operator->() { return ThreadLocalStorageBase<T *>::get(); }
 };
 
 };

@@ -173,8 +173,8 @@ private:
         boost::function<void ()> dg;
         boost::thread::id thread;
     };
-    static ThreadLocalStorage<Scheduler> t_scheduler;
-    static ThreadLocalStorage<Fiber> t_fiber;
+    static ThreadLocalStorage<Scheduler *> t_scheduler;
+    static ThreadLocalStorage<Fiber *> t_fiber;
     boost::mutex m_mutex;
     std::list<FiberAndThread> m_fibers;
     boost::thread::id m_rootThread;
