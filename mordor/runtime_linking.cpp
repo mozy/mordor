@@ -46,6 +46,42 @@ MORDOR_RUNTIME_LINK_DEFINITION(FindNextStreamW, BOOL, APIENTRY,
     return FALSE;
 }
 
+MORDOR_RUNTIME_LINK_DEFINITION(FlsAlloc, DWORD, WINAPI,
+    (PFLS_CALLBACK_FUNCTION LpCallback),
+    (LpCallback),
+    L"kernel32.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FLS_OUT_OF_INDEXES;
+}
+
+MORDOR_RUNTIME_LINK_DEFINITION(FlsFree, BOOL, WINAPI,
+    (DWORD dwFlsIndex),
+    (dwFlsIndex),
+    L"kernel32.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FALSE;
+}
+
+MORDOR_RUNTIME_LINK_DEFINITION(FlsGetValue, PVOID, WINAPI,
+    (DWORD dwFlsIndex),
+    (dwFlsIndex),
+    L"kernel32.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return NULL;
+}
+
+MORDOR_RUNTIME_LINK_DEFINITION(FlsSetValue, BOOL, WINAPI,
+    (DWORD dwFlsIndex, PVOID lpFlsData),
+    (dwFlsIndex, lpFlsData),
+    L"kernel32.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FALSE;
+}
+
 MORDOR_RUNTIME_LINK_DEFINITION(FreeAddrInfoW, VOID, WSAAPI,
     (PADDRINFOW pAddrInfo),
     (pAddrInfo),

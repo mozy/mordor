@@ -74,6 +74,18 @@ static ConfigVar<size_t>::ptr g_defaultStackSize = Config::lookup<size_t>(
 
 ThreadLocalStorage<Fiber *> Fiber::t_fiber;
 
+
+static boost::mutex & g_flsMutex()
+{
+    static boost::mutex mutex;
+    return mutex;
+}
+static std::vector<bool> & g_flsIndices()
+{
+    static std::vector<bool> indices;
+    return indices;
+}
+
 Fiber::Fiber()
 {
     MORDOR_ASSERT(!getThis());
@@ -599,6 +611,92 @@ Fiber::initStack()
     push(m_sp, 0x00000000);             // ESI
     push(m_sp, 0x00000000);             // EDI
 #endif
+}
+
+#ifdef WINDOWS
+static bool g_doesntHaveOSFLS;
+#endif
+
+size_t
+Fiber::flsAlloc()
+{
+#ifdef WINDOWS
+    while (!g_doesntHaveOSFLS) {
+        size_t result = pFlsAlloc(NULL);
+        if (result == FLS_OUT_OF_INDEXES && GetLastError() == ERROR_CALL_NOT_IMPLEMENTED) {
+            g_doesntHaveOSFLS = true;
+            break;
+        }
+        if (result == FLS_OUT_OF_INDEXES)
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("FlsAlloc");
+        return result;
+    }
+#endif
+    boost::mutex::scoped_lock lock(g_flsMutex());
+    std::vector<bool>::iterator it = std::find(g_flsIndices().begin(),
+        g_flsIndices().end(), false);
+    // TODO: we don't clear out values when freeing, so we can't reuse
+    // force new
+    it = g_flsIndices().end();
+    if (it == g_flsIndices().end()) {
+        g_flsIndices().resize(g_flsIndices().size() + 1);
+        g_flsIndices()[g_flsIndices().size() - 1] = true;
+        return g_flsIndices().size() - 1;
+    } else {
+        size_t result = it - g_flsIndices().begin();
+        g_flsIndices()[result] = true;
+        return result;
+    }
+}
+
+void
+Fiber::flsFree(size_t key)
+{
+#ifdef WINDOWS
+    if (!g_doesntHaveOSFLS) {
+        if (!pFlsFree((DWORD)key))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("FlsFree");
+        return;
+    }
+#endif
+    boost::mutex::scoped_lock lock(g_flsMutex());
+    MORDOR_ASSERT(key < g_flsIndices().size());
+    MORDOR_ASSERT(g_flsIndices()[key]);
+    if (key + 1 == g_flsIndices().size()) {
+        g_flsIndices().resize(key);
+    } else {
+        // TODO: clear out current values
+        g_flsIndices()[key] = false;
+    }
+}
+
+void
+Fiber::flsSet(size_t key, intptr_t value)
+{
+#ifdef WINDOWS
+    if (!g_doesntHaveOSFLS) {
+        if (!pFlsSetValue((DWORD)key, (PVOID)value))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("FlsSetValue");
+        return;
+    }
+#endif
+    MORDOR_ASSERT(t_fiber);
+    if (t_fiber->m_fls.size() <= key)
+        t_fiber->m_fls.resize(key + 1);
+    t_fiber->m_fls[key] = value;
+}
+
+intptr_t
+Fiber::flsGet(size_t key)
+{
+#ifdef WINDOWS
+    if (!g_doesntHaveOSFLS)
+        return (intptr_t)pFlsGetValue((DWORD)key);
+#endif
+    MORDOR_ASSERT(t_fiber);
+    if (t_fiber->m_fls.size() <= key)
+        return NULL;
+    return t_fiber->m_fls[key];
 }
 
 }

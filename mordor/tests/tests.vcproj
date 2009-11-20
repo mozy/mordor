@@ -364,6 +364,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\fls.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\hmac.cpp"
 				>
 			</File>

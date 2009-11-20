@@ -12,6 +12,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "exception.h"
 #include "thread_local_storage.h"
@@ -53,6 +54,7 @@ namespace Mordor {
 /// Cooperative Thread
 class Fiber : public boost::enable_shared_from_this<Fiber>
 {
+    template <class T> friend class FiberLocalStorageBase;
 public:
     typedef boost::shared_ptr<Fiber> ptr;
     typedef boost::weak_ptr<Fiber> weak_ptr;
@@ -182,6 +184,67 @@ private:
     boost::exception_ptr m_exception;
 
     static ThreadLocalStorage<Fiber *> t_fiber;
+
+    // FLS Support
+    static size_t flsAlloc();
+    static void flsFree(size_t key);
+    static void flsSet(size_t key, intptr_t value);
+    static intptr_t flsGet(size_t key);
+
+    std::vector<intptr_t> m_fls;
+};
+
+template <class T>
+class FiberLocalStorageBase : boost::noncopyable
+{
+public:
+    FiberLocalStorageBase()
+    {
+        m_key = Fiber::flsAlloc();
+    }
+
+    ~FiberLocalStorageBase()
+    {
+        Fiber::flsFree(m_key);
+    }
+
+    typename boost::enable_if_c<sizeof(T) <= sizeof(intptr_t)>::type set(const T &t)
+    {
+        Fiber::flsSet(m_key, (intptr_t)t);
+    }
+
+    T get() const
+    {
+#ifdef WINDOWS
+#pragma warning(push)
+#pragma warning(disable: 4800)
+#endif
+        return (T)Fiber::flsGet(m_key);
+#ifdef WINDOWS
+#pragma warning(pop)
+#endif
+    }
+
+    operator T() const { return get(); }
+
+private:
+    size_t m_key;
+};
+
+template <class T>
+class FiberLocalStorage : public FiberLocalStorageBase<T>
+{
+public:
+    T operator =(T t) { set(t); return t; }
+};
+
+template <class T>
+class FiberLocalStorage<T *> : public FiberLocalStorageBase<T *>
+{
+public:
+    T * operator =(T *const t) { set(t); return t; }
+    T & operator*() { return *FiberLocalStorageBase<T *>::get(); }
+    T * operator->() { return FiberLocalStorageBase<T *>::get(); }
 };
 
 }
