@@ -30,7 +30,7 @@ public:
         READ = O_RDONLY,
         WRITE = O_WRONLY,
         READWRITE = O_RDWR,
-        APPEND = O_APPEND
+        APPEND = O_APPEND | O_WRONLY
     };
 
     enum CreateFlags {
