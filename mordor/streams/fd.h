@@ -11,16 +11,12 @@ class FDStream : public Stream
 {
 protected:
     FDStream();
-    void init(IOManager *ioManager, Scheduler *scheduler, int fd, bool own = true);
+    void init(int fd, IOManager *ioManager = NULL, Scheduler *scheduler = NULL,
+        bool own = true);
 public:
-    FDStream(int fd, bool own = true)
-    { init(NULL, NULL, fd, own); }
-    FDStream(IOManager &ioManager, int fd, bool own = true)
-    { init(&ioManager, NULL, fd, own); }
-    FDStream(Scheduler &scheduler, int fd, bool own = true)
-    { init(NULL, &scheduler, fd, own); }
-    FDStream(IOManager &ioManager, Scheduler &scheduler, int fd, bool own = true)
-    { init(&ioManager, &scheduler, fd, own); }
+    FDStream(int fd, IOManager *ioManager = NULL, Scheduler *scheduler = NULL,
+        bool own = true)
+    { init(fd, ioManager, scheduler, own); }
     ~FDStream();
 
     bool supportsRead() { return true; }

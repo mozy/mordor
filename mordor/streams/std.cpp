@@ -16,9 +16,9 @@ StdStream::StdStream(IOManager *ioManager, Scheduler *scheduler, int stream)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetStdHandle");
     if (hFile == NULL)
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(ERROR_FILE_NOT_FOUND, "GetStdHandle");
-    init(ioManager, scheduler, hFile, false);
+    init(hFile, ioManager, scheduler, false);
 #else
-    init(ioManager, scheduler, stream, false);
+    init(stream, ioManager, scheduler, stream);
 #endif
 }
 

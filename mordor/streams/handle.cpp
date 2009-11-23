@@ -20,7 +20,8 @@ HandleStream::HandleStream()
 {}
 
 void
-HandleStream::init(IOManagerIOCP *ioManager, Scheduler *scheduler, HANDLE hFile, bool own)
+HandleStream::init(HANDLE hFile, IOManager *ioManager, Scheduler *scheduler,
+                   bool own)
 {
     MORDOR_ASSERT(hFile != NULL);
     MORDOR_ASSERT(hFile != INVALID_HANDLE_VALUE);

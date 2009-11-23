@@ -20,7 +20,7 @@ NamedPipeStream::init(IOManager *ioManager, Scheduler *scheduler, const std::str
         0, 0, 0, NULL);
     if (hPipe == INVALID_HANDLE_VALUE)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateNamedPipeW");
-    HandleStream::init(ioManager, scheduler, hPipe);
+    HandleStream::init(hPipe, ioManager, scheduler);
     m_supportsRead = !!(flags & READ);
     m_supportsWrite = !!(flags & WRITE);
 }
@@ -35,7 +35,7 @@ NamedPipeStream::init(IOManager *ioManager, Scheduler *scheduler, const std::wst
         0, 0, 0, NULL);
     if (hPipe == INVALID_HANDLE_VALUE)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateNamedPipeW");
-    HandleStream::init(ioManager, scheduler, hPipe);
+    HandleStream::init(hPipe, ioManager, scheduler);
     m_supportsRead = !!(flags & READ);
     m_supportsWrite = !!(flags & WRITE);
 }

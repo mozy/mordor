@@ -58,14 +58,27 @@ public:
     };
 #endif
 
-public:
-    FileStream(const std::string &filename,
+protected:
+    FileStream();
+    void init(const std::string &filename,
         AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
         IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
 #ifdef WINDOWS
-    FileStream(const std::wstring &filename,
+    void init(const std::wstring &filename,
         AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
         IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
+#endif
+
+public:
+    FileStream(const std::string &filename,
+        AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
+        IOManager *ioManager = NULL, Scheduler *scheduler = NULL)
+    { init(filename, accessFlags, createFlags, ioManager, scheduler); }
+#ifdef WINDOWS
+    FileStream(const std::wstring &filename,
+        AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
+        IOManager *ioManager = NULL, Scheduler *scheduler = NULL)
+    { init(filename, accessFlags, createFlags, ioManager, scheduler); }
 #endif
 
     bool supportsRead() { return m_supportsRead && NativeStream::supportsRead(); }

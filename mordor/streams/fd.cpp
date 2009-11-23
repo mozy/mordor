@@ -20,7 +20,7 @@ FDStream::FDStream()
 {}
 
 void
-FDStream::init(IOManager *ioManager, Scheduler *scheduler, int fd, bool own)
+FDStream::init(int fd, IOManager *ioManager, Scheduler *scheduler, bool own)
 {
     MORDOR_ASSERT(fd >= 0);
     m_ioManager = ioManager;
@@ -28,15 +28,13 @@ FDStream::init(IOManager *ioManager, Scheduler *scheduler, int fd, bool own)
     m_fd = fd;
     m_own = own;
     if (m_ioManager) {
-        try {
-        if (fcntl(m_fd, F_SETFL, O_NONBLOCK))
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
-        } catch(...) {
+        if (fcntl(m_fd, F_SETFL, O_NONBLOCK)) {
+            int error = errno;
             if (own) {
                 ::close(m_fd);
                 m_fd = -1;
             }
-            throw;
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "fcntl");
         }
     }
 }

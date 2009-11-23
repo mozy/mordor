@@ -431,6 +431,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/ssl.o						\
 	mordor/streams/std.o						\
 	mordor/streams/stream.o						\
+	mordor/streams/temp.o						\
 	mordor/streams/test.o						\
 	mordor/streams/throttle.o					\
 	mordor/streams/transfer.o					\
