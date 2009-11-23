@@ -364,11 +364,8 @@ Stream::ptr
 ClientRequest::responseStream()
 {
     Stream::ptr result = m_responseStream.lock();
-    if (result)
+    if (result || m_hasResponseBody)
         return result;
-    // You can only ask for the response stream once
-    // (to avoid circular references)
-    MORDOR_ASSERT(!m_hasResponseBody);
     ensureResponse();
     if (m_responseState == COMPLETE) {
         m_hasResponseBody = true;
