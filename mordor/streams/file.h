@@ -29,7 +29,9 @@ public:
         CREATE = CREATE_NEW,
         OPEN_OR_CREATE = OPEN_ALWAYS,
         OVERWRITE = TRUNCATE_EXISTING,
-        OVERWRITE_OR_CREATE = CREATE_ALWAYS
+        OVERWRITE_OR_CREATE = CREATE_ALWAYS,
+
+        DELETE_ON_CLOSE = 0x80000000
     };
 #else
     enum AccessFlags {
@@ -48,7 +50,11 @@ public:
         /// Open a file, and recreate it from scratch. Fail if it does not exist.
         OVERWRITE,
         /// Create a file. If it exists, recreate it from scratch.
-        OVERWRITE_OR_CREATE
+        OVERWRITE_OR_CREATE,
+
+        /// Delete the file when it is closed.  Can be combined with any of the
+        /// other options
+        DELETE_ON_CLOSE = 0x80000000
     };
 #endif
 

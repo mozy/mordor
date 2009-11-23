@@ -21,16 +21,26 @@ FileStream::FileStream(const std::string &filename, AccessFlags accessFlags,
         access |= GENERIC_WRITE;
     if (accessFlags == APPEND)
         access = FILE_APPEND_DATA | SYNCHRONIZE;
+    DWORD flags = 0;
+    if (createFlags & DELETE_ON_CLOSE) {
+        flags |= FILE_FLAG_DELETE_ON_CLOSE;
+        createFlags = (CreateFlags)(createFlags & ~DELETE_ON_CLOSE);
+    }
+    if (ioManager)
+        flags |= FILE_FLAG_OVERLAPPED;
+    MORDOR_ASSERT(createFlags >= CREATE_NEW && createFlags <= TRUNCATE_EXISTING);
     handle = CreateFileW(toUtf16(filename).c_str(),
         access,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
         createFlags,
-        ioManager ? FILE_FLAG_OVERLAPPED : 0,
+        flags,
         NULL);
+    if (handle == INVALID_HANDLE_VALUE)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
 #else
     int oflags = (int)accessFlags;
-    switch (createFlags) {
+    switch (createFlags & ~DELETE_ON_CLOSE) {
         case OPEN:
             break;
         case CREATE:
@@ -49,9 +59,17 @@ FileStream::FileStream(const std::string &filename, AccessFlags accessFlags,
             MORDOR_NOTREACHED();
     }
     handle = open(filename.c_str(), oflags, 0777);
-#endif
-    if (handle == (NativeHandle)-1)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR();
+    if (handle < 0)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("open");
+    if (createFlags & DELETE_ON_CLOSE) {
+        int rc = unlink(filename.c_str());
+        if (rc != 0) {
+            int error = errno;
+            ::close(handle);
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "unlink");
+        }
+    }
+#endif       
     NativeStream::init(ioManager, scheduler, handle);
     m_supportsRead = accessFlags == READ || accessFlags == READWRITE;
     m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||
@@ -71,12 +89,20 @@ FileStream::FileStream(const std::wstring &filename, AccessFlags accessFlags,
         access |= GENERIC_WRITE;
     if (accessFlags == APPEND)
         access = FILE_APPEND_DATA | SYNCHRONIZE;
+    DWORD flags = 0;
+    if (createFlags & DELETE_ON_CLOSE) {
+        flags |= FILE_FLAG_DELETE_ON_CLOSE;
+        createFlags = (CreateFlags)(createFlags & ~DELETE_ON_CLOSE);
+    }
+    if (ioManager)
+        flags |= FILE_FLAG_OVERLAPPED;
+    MORDOR_ASSERT(createFlags >= CREATE_NEW && createFlags <= TRUNCATE_EXISTING);
     handle = CreateFileW(filename.c_str(),
         access,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
         createFlags,
-        ioManager ? FILE_FLAG_OVERLAPPED : 0,
+        flags,
         NULL);
     if (handle == INVALID_HANDLE_VALUE)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
