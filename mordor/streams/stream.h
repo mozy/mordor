@@ -148,7 +148,7 @@ public:
     /// @exception std::invalid_argument The resulting position would be negative
     /// @return The new stream pointer position
     /// @pre supportsSeek() || supportsTell()
-    virtual long long seek(long long offset, Anchor anchor) { MORDOR_NOTREACHED(); }
+    virtual long long seek(long long offset, Anchor anchor = BEGIN) { MORDOR_NOTREACHED(); }
 
     /// @brief Convenience method to call seek(0, CURRENT)
     /// @note Cannot be overridden.

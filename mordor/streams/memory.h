@@ -25,7 +25,7 @@ public:
     size_t read(void *buffer, size_t length);
     size_t write(const Buffer &b, size_t len);
     size_t write(const void *b, size_t len);
-    long long seek(long long offset, Anchor anchor);
+    long long seek(long long offset, Anchor anchor = BEGIN);
     long long size();
     void truncate(long long size);
     ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true);

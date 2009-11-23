@@ -23,7 +23,7 @@ public:
     void close(CloseType type = BOTH);
     size_t read(Buffer &b, size_t len);
     size_t write(const Buffer &b, size_t len);
-    long long seek(long long offset, Anchor anchor);
+    long long seek(long long offset, Anchor anchor = BEGIN);
 
 private:
     void init();

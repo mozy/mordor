@@ -40,7 +40,7 @@ public:
     void cancelRead() { m_parent->cancelRead(); }
     size_t write(const Buffer &b, size_t len) { return m_parent->write(b, len); }
     void cancelWrite() { m_parent->cancelWrite(); }
-    long long seek(long long offset, Anchor anchor) { return m_parent->seek(offset, anchor); }
+    long long seek(long long offset, Anchor anchor = BEGIN) { return m_parent->seek(offset, anchor); }
     long long size() { return m_parent->size(); }
     void truncate(long long size) { m_parent->truncate(size); }
     void flush() { m_parent->flush(); }
@@ -75,7 +75,7 @@ public:
     bool supportsFind() { return false; }
     bool supportsUnread() { return false; }
 
-    long long seek(long long offset, Anchor anchor) { MORDOR_NOTREACHED(); }
+    long long seek(long long offset, Anchor anchor = BEGIN) { MORDOR_NOTREACHED(); }
     long long size() { MORDOR_NOTREACHED(); }
     void truncate(long long size) { MORDOR_NOTREACHED(); }
     ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }

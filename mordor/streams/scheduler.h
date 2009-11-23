@@ -50,7 +50,7 @@ public:
         SchedulerSwitcher switcher(m_ioScheduler);
         return parent()->write(b, len);
     }
-    long long seek(long long offset, Anchor anchor)
+    long long seek(long long offset, Anchor anchor = BEGIN)
     {
         SchedulerSwitcher switcher(m_seekScheduler);
         return parent()->seek(offset, anchor);

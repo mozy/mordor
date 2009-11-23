@@ -33,7 +33,7 @@ public:
     void cancelRead();
     size_t write(const Buffer &b, size_t len);
     void cancelWrite();
-    long long seek(long long offset, Anchor anchor);
+    long long seek(long long offset, Anchor anchor = BEGIN);
     long long size();
     void truncate(long long size);
 

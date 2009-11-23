@@ -23,7 +23,7 @@ public:
     bool supportsTell() { return true; }
 
     size_t read(Buffer &buffer, size_t length);
-    long long seek(long long offset, Anchor anchor);
+    long long seek(long long offset, Anchor anchor = BEGIN);
     long long size();
 
 private:
