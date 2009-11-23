@@ -47,6 +47,7 @@ protected:
     long long m_pos;
     HANDLE m_hFile;
     bool m_own, m_cancelRead, m_cancelWrite;
+    size_t m_maxOpSize;
 };
 
 typedef HandleStream NativeStream;

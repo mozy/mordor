@@ -16,7 +16,8 @@ HandleStream::HandleStream()
   m_hFile(INVALID_HANDLE_VALUE),
   m_own(false),
   m_cancelRead(false),
-  m_cancelWrite(false)
+  m_cancelWrite(false),
+  m_maxOpSize(0xffffffff)
 {}
 
 void
@@ -30,6 +31,14 @@ HandleStream::init(HANDLE hFile, IOManager *ioManager, Scheduler *scheduler,
     m_cancelRead = m_cancelWrite = false;
     m_ioManager = ioManager;
     m_scheduler = scheduler;
+    DWORD type = GetFileType(hFile);
+    if (type == FILE_TYPE_CHAR) {
+        m_ioManager = NULL;
+        CONSOLE_SCREEN_BUFFER_INFO info;
+        if (!GetConsoleScreenBufferInfo(hFile, &info))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetConsoleScreenBufferInfo");
+        m_maxOpSize = info.dwSize.X * info.dwSize.Y / 2;
+    }
     if (m_ioManager) {
         try {
             m_ioManager->registerFile(m_hFile);
@@ -97,8 +106,7 @@ HandleStream::read(Buffer &b, size_t len)
             overlapped->OffsetHigh = (DWORD)(m_pos >> 32);
         }
     }
-    if (len > 0xffffffff)
-        len = 0xffffffff;
+    len = std::min(len, m_maxOpSize);
     Buffer::SegmentData buf = b.writeBuf(len);
     BOOL ret = ReadFile(m_hFile, buf.start(), (DWORD)len, &read, overlapped);
     if (m_ioManager) {
@@ -160,8 +168,7 @@ HandleStream::write(const Buffer &b, size_t len)
             overlapped->OffsetHigh = (DWORD)(m_pos >> 32);
         }
     }
-    if (len > 0xffffffff)
-        len = 0xffffffff;
+    len = std::min(len, m_maxOpSize);
     const Buffer::SegmentData buf = b.readBuf(len);
     BOOL ret = WriteFile(m_hFile, buf.start(), (DWORD)len, &written, overlapped);
     if (m_ioManager) {
