@@ -266,12 +266,8 @@ Log::clearSinks()
 
 LogDisabler::LogDisabler()
 {
-    if (Fiber::getThis()) {
-        m_disabled = !f_logDisabled;
-        f_logDisabled = true;
-    } else {
-        m_disabled = false;
-    }
+    m_disabled = !f_logDisabled;
+    f_logDisabled = true;
 }
 
 LogDisabler::~LogDisabler()
@@ -302,7 +298,7 @@ Logger::Logger(const std::string &name, Logger::ptr parent)
 bool
 Logger::enabled(Log::Level level)
 {
-    return m_level >= level && Fiber::getThis() && !f_logDisabled;
+    return m_level >= level && !f_logDisabled;
 }
 
 void
