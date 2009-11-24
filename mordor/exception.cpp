@@ -127,7 +127,7 @@ std::vector<void *> backtrace(int framesToSkip)
     std::vector<void *> result;
 #ifdef WINDOWS
     result.resize(64);
-    WORD count = pRtlCaptureStackBackTrace(1 + framesToSkip, 62 - framesToSkip, &result[0], NULL);
+    WORD count = pRtlCaptureStackBackTrace(1 + framesToSkip, 61 - framesToSkip, &result[0], NULL);
     result.resize(count);
 #else
     result.resize(64);
