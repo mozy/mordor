@@ -203,6 +203,9 @@ static void throwSocketException(error_t error)
             throw boost::enable_current_exception(NetworkDownException())
                 << errinfo_nativeerror(error);
         case WSA(ENETRESET):
+#ifdef WINDOWS
+        case ERROR_NETNAME_DELETED:
+#endif
             throw boost::enable_current_exception(NetworkResetException())
                 << errinfo_nativeerror(error);
         case WSA(ENETUNREACH):
