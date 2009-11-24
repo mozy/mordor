@@ -178,6 +178,7 @@ template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(void *), T>::type
 atomicCompareAndSwap(volatile T &t, T newvalue, T comparand)
 { return __sync_val_compare_and_swap(&t, comparand, newvalue); }
+template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(void *), T>::type
 atomicSwap(volatile T &t, T newvalue)
 { return __sync_lock_test_and_set(&t, newvalue); }
@@ -185,12 +186,12 @@ inline
 bool
 atomicTestAndSet(volatile void *address, int bit = 0)
 {
-    int mask = (1 << (sizeof(int) * 8 - 1)) >> (bit & (sizeof(int) * 8 - 1))));
-    volatile int &target = *((volatile int *)address >> (sizeof(int) >> 3));
+    int mask = (1 << (sizeof(int) * 8 - 1)) >> (bit & (sizeof(int) * 8 - 1));
+    volatile int &target = *(volatile int *)((intptr_t)address >> (sizeof(int) >> 3));
     int oldvalue, newvalue;
     do {
-        int oldvalue = target;
-        int newvalue = oldvalue | mask;                
+        oldvalue = target;
+        newvalue = oldvalue | mask;                
     } while (newvalue != atomicCompareAndSwap(target, newvalue, oldvalue));
     return !!(oldvalue & mask);
 }
@@ -198,12 +199,12 @@ inline
 bool
 atomicTestAndClear(volatile void *address, int bit = 0)
 {
-    int mask = (1 << (sizeof(int) * 8 - 1)) >> (bit & (sizeof(int) * 8 - 1))));
-    volatile int &target = *((volatile int *)address >> (sizeof(int) >> 3));
+    int mask = (1 << (sizeof(int) * 8 - 1)) >> (bit & (sizeof(int) * 8 - 1));
+    volatile int &target = *(volatile int *)((intptr_t)address >> (sizeof(int) >> 3));
     int oldvalue, newvalue;
     do {
-        int oldvalue = target;
-        int newvalue = oldvalue & ~mask;                
+        oldvalue = target;
+        newvalue = oldvalue & ~mask;                
     } while (newvalue != atomicCompareAndSwap(target, newvalue, oldvalue));
     return !!(oldvalue & mask);
 }
