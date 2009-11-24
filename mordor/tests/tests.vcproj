@@ -444,6 +444,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\temp_stream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\timer.cpp"
 				>
 			</File>

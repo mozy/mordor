@@ -17,10 +17,19 @@ static ConfigVar<std::string>::ptr g_tempDir = Config::lookup(
 TempStream::TempStream(const std::string &prefix, IOManager *ioManager,
                        Scheduler *scheduler)
 {
-    std::string tempdir = g_tempDir->val();
+    std::string tempdir;
+    bool absolutePath =
+#ifdef WINDOWS
+        (prefix.size() >= 2 && (prefix[1] == ':' || prefix[1] == '\\')) ||
+        (!prefix.empty() && prefix[0] == '\\');
+#else
+        !prefix.empty() && prefix[0] == '/';
+#endif
+    if (!absolutePath)
+        tempdir = g_tempDir->val();
 #ifdef WINDOWS
     std::wstring wtempdir = toUtf16(tempdir);
-    if (wtempdir.empty()) {
+    if (!absolutePath && wtempdir.empty()) {
         wtempdir.resize(MAX_PATH);
         DWORD len = GetTempPathW(MAX_PATH, &wtempdir[0]);
         if (len == 0)
@@ -28,10 +37,16 @@ TempStream::TempStream(const std::string &prefix, IOManager *ioManager,
         else
             wtempdir.resize(len);
     }
+    std::wstring prefixW = toUtf16(prefix);
+    size_t backslash = prefixW.rfind(L'\\');
+    if (backslash != std::wstring::npos) {
+        wtempdir += prefixW.substr(0, backslash);
+        prefixW = prefixW.substr(backslash + 1);
+    }
     std::wstring tempfile;
     tempfile.resize(MAX_PATH);
     UINT len = GetTempFileNameW(wtempdir.c_str(),
-        toUtf16(prefix).c_str(),
+        prefixW.c_str(),
         0,
         &tempfile[0]);
     if (len == 0)
@@ -40,10 +55,12 @@ TempStream::TempStream(const std::string &prefix, IOManager *ioManager,
         (FileStream::CreateFlags)(FileStream::OPEN | FileStream::DELETE_ON_CLOSE),
         ioManager, scheduler);
 #else
-    if (tempdir.empty())
+    if (!absolutePath && tempdir.empty())
         tempdir = "/tmp/" + prefix + "XXXXXX";
-    else
+    else if (!absolutePath)
         tempdir += prefix + "XXXXXX";
+    else
+        tempdir = prefix + "XXXXXX";
     int fd = mkstemp(&tempdir[0]);
     if (fd < 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("mkstemp");
