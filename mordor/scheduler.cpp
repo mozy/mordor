@@ -530,14 +530,14 @@ FiberMutex::lock()
 }
 
 void
-FiberMutex::release()
+FiberMutex::unlock()
 {
     boost::mutex::scoped_lock lock(m_mutex);
-    releaseNoLock();
+    unlockNoLock();
 }
 
 void
-FiberMutex::releaseNoLock()
+FiberMutex::unlockNoLock()
 {
     MORDOR_ASSERT(m_owner == Fiber::getThis());
     m_owner.reset();
@@ -567,7 +567,7 @@ FiberCondition::wait()
         MORDOR_ASSERT(m_fiberMutex.m_owner == Fiber::getThis());
         m_waiters.push_back(std::make_pair(Scheduler::getThis(),
             Fiber::getThis()));
-        m_fiberMutex.releaseNoLock();
+        m_fiberMutex.unlockNoLock();
     }
     Scheduler::getThis()->yieldTo();
 #ifdef DEBUG

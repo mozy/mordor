@@ -396,23 +396,33 @@ public:
     {
     public:
         ScopedLock(FiberMutex &mutex)
-            : m_mutex(&mutex)
+            : m_mutex(mutex)
         {
-            m_mutex->lock();
+            m_mutex.lock();
+            m_locked = true;
         }
         ~ScopedLock()
-        { release(); }
+        { unlock(); }
 
-        void release()
+        void lock()
         {
-            if (m_mutex) {
-                m_mutex->release();
-                m_mutex = NULL;
+            if (!m_locked) {
+                m_mutex.lock();
+                m_locked = true;
+            }
+        }
+
+        void unlock()
+        {
+            if (m_locked) {
+                m_mutex.unlock();
+                m_locked = false;
             }
         }
 
     private:
-        FiberMutex *m_mutex;
+        FiberMutex &m_mutex;
+        bool m_locked;
     };
 
 public:
@@ -425,12 +435,12 @@ public:
     /// @pre Fiber::getThis() does not own this mutex
     /// @post Fiber::getThis() owns this mutex
     void lock();
-    /// @brief Releases the mutex
+    /// @brief Unlocks the mutex
     /// @pre Fiber::getThis() owns this mutex
-    void release();
+    void unlock();
 
 private:
-    void releaseNoLock();
+    void unlockNoLock();
 
 private:
     boost::mutex m_mutex;
