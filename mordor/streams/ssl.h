@@ -8,6 +8,8 @@
 
 #include <openssl/ssl.h>
 
+#include "mordor/scheduler.h"
+
 namespace Mordor {
 
 class OpenSSLException : public std::runtime_error
@@ -65,9 +67,14 @@ public:
 
 private:
     void flushBuffer();
-    void wantRead();
+    void wantRead(FiberMutex::ScopedLock &lock);
 
 private:
+    // Need a mutex to serialize access to SSL context from both read/write
+    // and to serialize reads to the underlying stream (write can cause reads)
+    FiberMutex m_mutex;
+    bool m_inRead;
+    FiberCondition m_readCondition;
     boost::shared_ptr<SSL_CTX> m_ctx;
     boost::shared_ptr<SSL> m_ssl;
     Buffer m_readBuffer;

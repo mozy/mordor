@@ -20,6 +20,11 @@ namespace Mordor {
 /// or sequential only streams.  By default, a Stream advertises that it
 /// cannot support any operations, and calling any of them will result in an
 /// assertion.  close() and flush() are always safe to call.
+///
+/// Streams are not thread safe, except for cancelRead() and cancelWrite(),
+/// and it is safe to call read() at the same time as write() (assuming the
+/// Stream supports both, and don't supportSeek()).  read() and write() are
+/// @b not re-entrant.
 class Stream : boost::noncopyable
 {
 public:

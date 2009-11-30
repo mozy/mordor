@@ -78,7 +78,9 @@ CertificateVerificationException::constructMessage(long verifyResult)
 }
 
 SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
-: MutatingFilterStream(parent, own)
+: MutatingFilterStream(parent, own),
+  m_inRead(false),
+  m_readCondition(m_mutex)
 {
     MORDOR_ASSERT(parent);
     ERR_clear_error();
@@ -121,6 +123,7 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
 void
 SSLStream::close(CloseType type)
 {
+    FiberMutex::ScopedLock lock(m_mutex);
     MORDOR_ASSERT(type == BOTH);
     if (!(SSL_get_shutdown(m_ssl.get()) & SSL_SENT_SHUTDOWN)) {
         ERR_clear_error();
@@ -162,7 +165,7 @@ SSLStream::close(CloseType type)
                 }
             default:
                 MORDOR_NOTREACHED();
-        }                
+        }
         flushBuffer();
     }
     parent()->close();
@@ -171,6 +174,7 @@ SSLStream::close(CloseType type)
 size_t
 SSLStream::read(Buffer &b, size_t len)
 {
+    FiberMutex::ScopedLock lock(m_mutex);
     flushBuffer();
     std::vector<iovec> bufs = b.writeBufs(len);
     int toRead = (int)std::min<size_t>(0x0fffffff, bufs[0].iov_len);
@@ -188,7 +192,7 @@ SSLStream::read(Buffer &b, size_t len)
                 MORDOR_ASSERT(result == 0);
                 return 0;
             case SSL_ERROR_WANT_READ:
-                wantRead();
+                wantRead(lock);
                 continue;
             case SSL_ERROR_WANT_WRITE:
             case SSL_ERROR_WANT_CONNECT:
@@ -230,6 +234,7 @@ SSLStream::read(Buffer &b, size_t len)
 size_t
 SSLStream::write(const Buffer &b, size_t len)
 {
+    FiberMutex::ScopedLock lock(m_mutex);
     flushBuffer();
     if (len == 0)
         return 0;
@@ -250,7 +255,7 @@ SSLStream::write(const Buffer &b, size_t len)
                 MORDOR_ASSERT(result != 0);
                 return result;
             case SSL_ERROR_WANT_READ:
-                wantRead();
+                wantRead(lock);
                 continue;
             case SSL_ERROR_WANT_WRITE:
             case SSL_ERROR_WANT_CONNECT:
@@ -293,6 +298,7 @@ SSLStream::write(const Buffer &b, size_t len)
 void
 SSLStream::flush()
 {
+    FiberMutex::ScopedLock lock(m_mutex);
     if ( (SSL_get_shutdown(m_ssl.get()) & SSL_SENT_SHUTDOWN) &&
         !(SSL_get_shutdown(m_ssl.get()) & SSL_RECEIVED_SHUTDOWN)) {
         while (true) {
@@ -305,7 +311,7 @@ SSLStream::flush()
                 case SSL_ERROR_ZERO_RETURN:
                     break;
                 case SSL_ERROR_WANT_READ:
-                    wantRead();
+                    wantRead(lock);
                     continue;
                 case SSL_ERROR_WANT_WRITE:
                 case SSL_ERROR_WANT_CONNECT:
@@ -348,6 +354,7 @@ SSLStream::flush()
 void
 SSLStream::accept()
 {
+    FiberMutex::ScopedLock lock(m_mutex);
     flushBuffer();
     while (true) {
         int result = SSL_accept(m_ssl.get());
@@ -361,7 +368,7 @@ SSLStream::accept()
                 // Received close_notify message
                 return;
             case SSL_ERROR_WANT_READ:
-                wantRead();
+                wantRead(lock);
                 continue;
             case SSL_ERROR_WANT_WRITE:
             case SSL_ERROR_WANT_CONNECT:
@@ -402,6 +409,7 @@ SSLStream::accept()
 void
 SSLStream::connect()
 {
+    FiberMutex::ScopedLock lock(m_mutex);
     flushBuffer();
     while (true) {
         int result = SSL_connect(m_ssl.get());
@@ -415,7 +423,7 @@ SSLStream::connect()
                 // Received close_notify message
                 return;
             case SSL_ERROR_WANT_READ:
-                wantRead();
+                wantRead(lock);
                 continue;
             case SSL_ERROR_WANT_WRITE:
             case SSL_ERROR_WANT_CONNECT:
@@ -543,7 +551,7 @@ SSLStream::flushBuffer()
 }
 
 void
-SSLStream::wantRead()
+SSLStream::wantRead(FiberMutex::ScopedLock &lock)
 {
     flushBuffer();
     BUF_MEM *bm;
@@ -551,14 +559,34 @@ SSLStream::wantRead()
     MORDOR_ASSERT(bm->length == 0);
     m_readBuffer.consume(bm->max);
     if (m_readBuffer.readAvailable() == 0) {
-        // Maximum SSL record size
-        MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(16389)";
-        size_t result = parent()->read(m_readBuffer, 16384 + 5);
-        MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(16389): " << result;
+        if (m_inRead) {
+            m_readCondition.wait();
+            return;
+        }
+        m_inRead = true;
+        lock.unlock();
+        size_t result;
+        Buffer temp;
+        try {
+            // Maximum SSL record size
+            MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(16389)";
+            result = parent()->read(temp, 16384 + 5);
+            MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(16389): " << result;
+        } catch (...) {
+            lock.lock();
+            m_inRead = false;
+            m_readCondition.broadcast();
+            throw;
+        }
+        lock.lock();
+        m_inRead = false;
+        m_readCondition.broadcast();
         if (result == 0) {
             BIO_set_mem_eof_return(m_readBio, 0);
             return;
         }
+        m_readBuffer.copyIn(temp);
+        BIO_get_mem_ptr(m_readBio, &bm);
     }
     MORDOR_ASSERT(m_readBuffer.readAvailable());
     std::vector<iovec> bufs = m_readBuffer.readBufs();
