@@ -17,7 +17,8 @@ protected:
         Scheduler *scheduler = NULL, bool own = true);
 public:
     HandleStream(HANDLE hFile, IOManager *ioManager = NULL,
-        Scheduler *scheduler = NULL, bool own = true)
+        Scheduler *scheduler = NULL, bool own = true) :
+        m_maxOpSize(0xffffffff)
     { init(hFile, ioManager, scheduler, own); }
     ~HandleStream();
 
