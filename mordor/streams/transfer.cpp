@@ -8,6 +8,7 @@
 
 #include "mordor/exception.h"
 #include "mordor/scheduler.h"
+#include "mordor/streams/null.h"
 #include "stream.h"
 
 namespace Mordor {
@@ -60,6 +61,22 @@ void transferStream(Stream &src, Stream &dst,
     }
     if (readResult == 0)
         return;
+
+    // Optimize transfer to NullStream
+    if (&dst == &NullStream::get()) {
+        while (true) {
+            readBuffer->clear();
+            todo = chunkSize;
+            if (toTransfer - *totalRead < (unsigned long long)todo)
+                todo = (size_t)(toTransfer - *totalRead);
+            readOne(src, readBuffer, todo, readResult);
+            *totalRead += readResult;
+            if (readResult == 0 && toTransfer != ~0ull)
+                MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+            if (readResult == 0)
+                return;
+        }
+    }
 
     std::vector<boost::function<void ()> > dgs;
     std::vector<Fiber::ptr> fibers;
