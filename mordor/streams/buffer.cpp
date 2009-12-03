@@ -480,6 +480,8 @@ Buffer::writeBufs(size_t len)
 Buffer::SegmentData
 Buffer::writeBuf(size_t len)
 {
+    if (len == 0u)
+        return SegmentData(NULL, 0);
     // Must allocate just the write buf
     if (writeAvailable() == 0) {
         reserve(len);

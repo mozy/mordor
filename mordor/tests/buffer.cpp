@@ -734,3 +734,18 @@ MORDOR_UNITTEST(Buffer, findStringFalsePositiveAcrossMultipleSegments)
 
     MORDOR_TEST_ASSERT_EQUAL(b.find("000011"), 4);
 }
+
+MORDOR_UNITTEST(Buffer, reserve0)
+{
+    Buffer b;
+    b.reserve(0);
+    MORDOR_TEST_ASSERT_EQUAL(b.segments(), 0u);
+}
+
+MORDOR_UNITTEST(Buffer, writeBuf0)
+{
+    Buffer b;
+    Buffer::SegmentData segment = b.writeBuf(0);
+    MORDOR_TEST_ASSERT_EQUAL(segment.length(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b.segments(), 0u);
+}
