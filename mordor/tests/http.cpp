@@ -4,15 +4,20 @@
 
 #include <boost/bind.hpp>
 
+#include "mordor/http/broker.h"
 #include "mordor/http/client.h"
 #include "mordor/http/parser.h"
 #include "mordor/http/server.h"
 #include "mordor/scheduler.h"
 #include "mordor/streams/duplex.h"
+#include "mordor/streams/limited.h"
 #include "mordor/streams/memory.h"
+#include "mordor/streams/null.h"
+#include "mordor/streams/random.h"
 #include "mordor/streams/test.h"
 #include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
+#include "mordor/util.h"
 
 using namespace Mordor;
 using namespace Mordor::HTTP;
@@ -1832,4 +1837,32 @@ MORDOR_UNITTEST(HTTPClient, responseFailBeforeRequestComplete)
     MORDOR_TEST_ASSERT_EXCEPTION(request->response(), IncompleteMessageHeaderException);
     MORDOR_TEST_ASSERT_EXCEPTION(request->response(), IncompleteMessageHeaderException);
     MORDOR_TEST_ASSERT_EXCEPTION(request->response(), IncompleteMessageHeaderException);
+}
+
+static void
+zlibCausesPrematureEOFServer(const URI &uri, ServerRequest::ptr request)
+{
+    Stream::ptr random(new RandomStream());
+    random.reset(new LimitedStream(random, 4096));
+    request->response().general.transferEncoding.push_back("deflate");
+    request->response().general.transferEncoding.push_back("chunked");
+    request->response().status.status = OK;
+    transferStream(random, request->responseStream());
+    request->responseStream()->close();
+}
+
+MORDOR_UNITTEST(HTTPClient, zlibCausesPrematureEOF)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&zlibCausesPrematureEOFServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    transferStream(request->responseStream(), NullStream::get());
+
+    request = requestBroker.request(requestHeaders);
+    transferStream(request->responseStream(), NullStream::get());
 }

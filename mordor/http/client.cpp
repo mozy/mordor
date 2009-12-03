@@ -8,9 +8,11 @@
 
 #include <boost/bind.hpp>
 
+#include "chunked.h"
 #include "mordor/assert.h"
 #include "mordor/log.h"
 #include "mordor/scheduler.h"
+#include "mordor/streams/limited.h"
 #include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/transfer.h"
@@ -975,6 +977,16 @@ ClientRequest::responseDone()
     notify->notifyOnClose = NULL;
     notify->notifyOnEof = NULL;
     notify->notifyOnException = NULL;
+    // Make sure every stream in the stack gets a proper EOF
+    FilterStream::ptr filter =
+        boost::dynamic_pointer_cast<FilterStream>(notify->parent());
+    Stream::ptr chunked, limited;
+    while (filter && !chunked && !limited) {
+        chunked = boost::dynamic_pointer_cast<ChunkedStream>(filter);
+        limited = boost::dynamic_pointer_cast<LimitedStream>(filter);
+        transferStream(filter, NullStream::get());
+        filter = boost::dynamic_pointer_cast<FilterStream>(filter->parent());
+    }
     if (!m_response.general.transferEncoding.empty()) {
         // Read and parse the trailer
         TrailerParser parser(m_responseTrailer);
