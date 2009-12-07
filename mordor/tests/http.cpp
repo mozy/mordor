@@ -1866,3 +1866,32 @@ MORDOR_UNITTEST(HTTPClient, zlibCausesPrematureEOF)
     request = requestBroker.request(requestHeaders);
     transferStream(request->responseStream(), NullStream::get());
 }
+
+static void waitForPriorResponseFailed(ClientRequest::ptr request, int &sequence)
+{
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->response(), PriorRequestFailedException);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
+}
+
+MORDOR_UNITTEST(HTTPClient, priorResponseFailedPipeline)
+{
+    WorkerPool pool;
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream());
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+
+    ClientRequest::ptr request1 = conn->request(requestHeaders);
+    ClientRequest::ptr request2 = conn->request(requestHeaders);
+    int sequence = 1;
+    pool.schedule(boost::bind(&waitForPriorResponseFailed, request2, boost::ref(sequence)));
+    pool.dispatch();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+    request1->cancel(true);
+    pool.dispatch();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
+}

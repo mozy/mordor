@@ -496,28 +496,28 @@ ClientRequest::cancel(bool abort)
         notify->notifyOnEof = NULL;
         notify->notifyOnException = NULL;
     }
-    boost::mutex::scoped_lock lock(m_conn->m_mutex);
-    m_conn->invariant();
-    (m_requestState == COMPLETE ? m_conn->m_priorResponseFailed :
-        m_conn->m_priorRequestFailed) = true;
+    bool close = false;
+    {
+        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        m_conn->invariant();
+        m_conn->m_priorResponseFailed = true;
 
-    std::list<ClientRequest *>::iterator it =
-        std::find(m_conn->m_pendingRequests.begin(),
-        m_conn->m_pendingRequests.end(), this);
-    if (it != m_conn->m_pendingRequests.end()) {
-        if (it == m_conn->m_currentRequest) {
-            m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(it);
-        } else {
-            m_conn->m_pendingRequests.erase(it);
-        }
-        m_conn->scheduleAllWaitingRequests();
-        if (m_responseState != WAITING) {
+        std::list<ClientRequest *>::iterator it =
+            std::find(m_conn->m_pendingRequests.begin(),
+            m_conn->m_pendingRequests.end(), this);
+        if (it != m_conn->m_pendingRequests.end()) {
+            if (it == m_conn->m_currentRequest) {
+                m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(it);
+            } else {
+                m_conn->m_pendingRequests.erase(it);
+            }
+            m_conn->scheduleAllWaitingRequests();
             m_conn->scheduleAllWaitingResponses();
-            m_conn->m_stream->close();
-        } else if (m_conn->m_stream->supportsHalfClose()) {
-            m_conn->m_stream->close(Stream::WRITE);
+            close = true;
         }
     }
+    if (close)
+        m_conn->m_stream->close();
 }
 
 void
@@ -771,6 +771,14 @@ ClientRequest::ensureResponse()
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
+        if (m_conn->m_priorResponseClosed || m_conn->m_priorResponseFailed) {
+            m_aborted = true;
+            m_responseState = ERROR;
+            if (m_conn->m_priorResponseClosed)
+                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+            else
+                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+        }
         // Probably means that the Scheduler exited in the above yieldTo,
         // and returned to us, because there is no other work to be done
         try {
@@ -781,15 +789,6 @@ ClientRequest::ensureResponse()
             if (it != m_conn->m_waitingResponses.end())
                 m_conn->m_waitingResponses.erase(it);
             throw;
-        }
-        if (m_conn->m_priorResponseClosed || m_conn->m_priorResponseFailed) {
-            m_aborted = true;
-            m_conn->m_pendingRequests.pop_front();
-            m_responseState = ERROR;
-            if (m_conn->m_priorResponseClosed)
-                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-            else
-                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         }
     }
     MORDOR_ASSERT(m_responseState == HEADERS);
