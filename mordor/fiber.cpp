@@ -28,13 +28,7 @@ static AverageMinMaxStatistic<unsigned int> &g_statFree=
     Statistics::registerStatistic("fiber.freestack",
     AverageMinMaxStatistic<unsigned int>("us"));
 
-#if defined(NATIVE_WINDOWS_FIBERS) || defined(UCONTEXT_FIBERS) || defined(SETJMP_FIBERS)
-static
-#else
-static void push(void * &sp, size_t v);
-extern "C"
-#endif
-void fiber_switchContext(void **oldsp, void *newsp);
+static void fiber_switchContext(void **oldsp, void *newsp);
 
 #ifdef SETJMP_FIBERS
 #ifdef OSX
@@ -394,17 +388,6 @@ Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
     fiber_switchContext(&curp->m_sp, curp->m_outer->m_sp);
 }
 
-#if !defined(NATIVE_WINDOWS_FIBERS) && !defined(UCONTEXT_FIBERS) && !defined(SETJMP_FIBERS)
-static
-void
-push(void *&sp, size_t v)
-{
-    size_t *ssp = (size_t *)sp;
-    *--ssp = v;
-    sp = (void *)ssp;
-}
-#endif
-
 #ifdef NATIVE_WINDOWS_FIBERS
 static VOID CALLBACK native_fiber_entryPoint(PVOID lpParameter)
 {
@@ -461,13 +444,6 @@ Fiber::freeStack()
 #endif
 }
 
-#ifdef __GNUC__
-
-#ifdef ASM_X86_POSIX_FIBERS
-extern "C" { int getEbx(); }
-#endif
-#endif
-
 #ifdef NATIVE_WINDOWS_FIBERS
 static void
 fiber_switchContext(void **oldsp, void *newsp)
@@ -487,43 +463,6 @@ fiber_switchContext(void **oldsp, void *newsp)
 {
     if (!setjmp(**(jmp_buf**)oldsp))
          longjmp(*(jmp_buf*)newsp, 1);
-}
-#elif defined(_MSC_VER) && defined(ASM_X86_WINDOWS_FIBERS)
-static
-void
-__declspec(naked)  __cdecl
-fiber_switchContext(void **oldsp, void *newsp)
-{
-    __asm {
-        // save current stack state
-        push ebp;
-        mov ebp, esp;
-        // save exception handler and stack
-        // info in the TIB
-        push dword ptr FS:[0];
-        push dword ptr FS:[4];
-        push dword ptr FS:[8];
-        push ebx;
-        push esi;
-        push edi;
-
-        // store oldsp
-        mov eax, dword ptr 8[ebp];
-        mov [eax], esp;
-        // load newsp to begin context switch
-        mov esp, dword ptr 12[ebp];
-
-        // load saved state from new stack
-        pop edi;
-        pop esi;
-        pop ebx;
-        pop dword ptr FS:[8];
-        pop dword ptr FS:[4];
-        pop dword ptr FS:[0];
-        pop ebp;
-
-        ret;
-    }
 }
 #endif
 
@@ -569,56 +508,6 @@ Fiber::initStack()
 #else
 #error Platform not supported
 #endif
-#elif defined(ASM_X86_64_WINDOWS_FIBERS)
-    // Shadow space (4 registers + return address)
-    for (int i = 0; i < 5; ++i)
-        push(m_sp, 0x0000000000000000ull);
-    push(m_sp, (size_t)&Fiber::entryPoint);     // RIP
-    push(m_sp, 0xffffffffffffffffull);  // RBP
-    push(m_sp, (size_t)m_stack + m_stacksize); // Stack base
-    push(m_sp, (size_t)m_stack);        // Stack top
-    push(m_sp, 0x0000000000000000ull);  // RBX
-    push(m_sp, 0x0000000000000000ull);  // RSI
-    push(m_sp, 0x0000000000000000ull);  // RDI
-    push(m_sp, 0x0000000000000000ull);  // R12
-    push(m_sp, 0x0000000000000000ull);  // R13
-    push(m_sp, 0x0000000000000000ull);  // R14
-    push(m_sp, 0x0000000000000000ull);  // R15
-    push(m_sp, 0x00001f8001df0000ull);  // MXCSR (32 bits), x87 control (16 bits), (unused)
-    // XMM6:15
-    for (int i = 6; i <= 15; ++i) {
-        push(m_sp, 0x0000000000000000ull);
-        push(m_sp, 0x0000000000000000ull);
-    };
-#elif defined(ASM_X86_WINDOWS_FIBERS)
-    push(m_sp, (size_t)&Fiber::entryPoint); // EIP
-    push(m_sp, 0xffffffff);             // EBP
-    push(m_sp, 0xffffffff);             // Exception handler
-    push(m_sp, (size_t)m_stack + m_stacksize); // Stack base
-    push(m_sp, (size_t)m_stack);        // Stack top
-    push(m_sp, 0x00000000);             // EBX
-    push(m_sp, 0x00000000);             // ESI
-    push(m_sp, 0x00000000);             // EDI
-#elif defined(ASM_X86_64_POSIX_FIBERS)
-    push(m_sp, 0x0000000000000000ull);  // empty space to align to 16 bytes
-    push(m_sp, (size_t)&Fiber::entryPoint); // RIP
-    push(m_sp, (size_t)m_sp + 8);       // RBP
-    push(m_sp, 0x0000000000000000ull);  // RBX
-    push(m_sp, 0x0000000000000000ull);  // R12
-    push(m_sp, 0x0000000000000000ull);  // R13
-    push(m_sp, 0x0000000000000000ull);  // R14
-    push(m_sp, 0x0000000000000000ull);  // R15
-    push(m_sp, 0x00001f8001df0000ull);  // MXCSR (32 bits), x87 control (16 bits), (unused)
-    push(m_sp, 0x0000000000000000ull);  // empty space to align to 16 bytes
-#elif defined(ASM_X86_POSIX_FIBERS)
-    push(m_sp, 0x00000000);             // empty space to align to 16 bytes
-    push(m_sp, (size_t)&Fiber::entryPoint); // EIP
-    push(m_sp, (size_t)m_sp + 8);       // EBP
-    push(m_sp, 0x00000000);             // EAX
-    push(m_sp, getEbx());               // EBX used for PIC code
-    push(m_sp, 0x00000000);             // ECX (for alignment)
-    push(m_sp, 0x00000000);             // ESI
-    push(m_sp, 0x00000000);             // EDI
 #endif
 }
 

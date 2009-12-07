@@ -217,13 +217,6 @@ else
 	$(Q)$(RAGEL) $(RAGEL_FLAGS) $< | $(RLCODEGEN) $(RLCODEGEN_FLAGS) -o $@
 endif
 
-%.o: %.s
-ifeq ($(Q),@)
-	@echo as $<
-endif
-	$(Q)mkdir -p $(@D)
-	$(Q)$(AS) $(ASFLAGS) $(MACH_TARGET) -o $@ $<
-
 %.gch: %
 ifeq ($(Q),@)
 	@echo c++ $<
@@ -393,7 +386,6 @@ LIBMORDOROBJECTS := 							\
 	mordor/config.o							\
 	mordor/exception.o						\
 	mordor/fiber.o							\
-	mordor/fiber_$(ARCH)$(UNDERSCORE).o                             \
 	mordor/http/auth.o						\
 	mordor/http/basic.o						\
 	mordor/http/broker.o						\

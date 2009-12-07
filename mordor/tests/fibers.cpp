@@ -500,3 +500,18 @@ MORDOR_UNITTEST(Fibers, forceThrowExceptionFiberYieldTo)
     MORDOR_TEST_ASSERT_EXCEPTION(f->inject(exception), DummyException);
     f->reset(NULL);
 }
+
+static void eatSomeStack()
+{
+    char stackEater[4096];
+    stackEater[0] = 1;
+}
+
+MORDOR_UNITTEST(Fibers, resetStress)
+{
+    Fiber::ptr f(new Fiber(&eatSomeStack));
+    for (int i = 0; i < 1025; ++i) {
+        f->call();
+        f->reset();
+    }
+}
