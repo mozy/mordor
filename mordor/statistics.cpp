@@ -33,7 +33,7 @@ dump(std::ostream &os, const Statistic &stat, int level = 0)
         dump(os, *substat, level);
         substat = stat.next(substat);
     }
-    return os;        
+    return os;
 }
 
 std::ostream &

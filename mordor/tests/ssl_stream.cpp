@@ -21,7 +21,7 @@ MORDOR_UNITTEST(SSLStream, basic)
 {
     WorkerPool pool;
     std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
-    
+
     SSLStream::ptr sslserver(new SSLStream(pipes.first, false));
     SSLStream::ptr sslclient(new SSLStream(pipes.second, true));
 
@@ -60,7 +60,7 @@ MORDOR_UNITTEST(SSLStream, duplexStress)
     WorkerPool pool;
     // Force more fiber context switches by having a smaller buffer
     std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream(1024);
-    
+
     SSLStream::ptr sslserver(new SSLStream(pipes.first, false));
     SSLStream::ptr sslclient(new SSLStream(pipes.second, true));
 
@@ -92,7 +92,7 @@ MORDOR_UNITTEST(SSLStream, forceDuplex)
 {
     WorkerPool pool;
     std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
-    
+
     SSLStream::ptr sslserver(new SSLStream(pipes.first, false));
     SSLStream::ptr sslclient(new SSLStream(pipes.second, true));
 

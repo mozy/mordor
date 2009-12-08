@@ -68,7 +68,7 @@ TempStream::TempStream(const std::string &prefix, IOManager *ioManager,
     int rc = unlink(tempdir.c_str());
     if (rc != 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("unlink");
-#endif            
+#endif
 }
 
 }
