@@ -59,6 +59,8 @@ unsigned long long transferStream(Stream &src, Stream &dst,
             todo = chunkSize;
             if (toTransfer - totalRead < (unsigned long long)todo)
                 todo = (size_t)(toTransfer - totalRead);
+            if (todo == 0)
+                return totalRead;
             readOne(src, readBuffer, todo, readResult);
             totalRead += readResult;
             if (readResult == 0 && toTransfer != ~0ull)

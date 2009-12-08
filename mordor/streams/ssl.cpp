@@ -648,6 +648,7 @@ SSLStream::wantRead(FiberMutex::ScopedLock &lock)
     BIO_get_mem_ptr(m_readBio, &bm);
     MORDOR_ASSERT(bm->length == 0);
     m_readBuffer.consume(bm->max);
+    bm->length = bm->max = 0;
     if (m_readBuffer.readAvailable() == 0) {
         if (m_inRead) {
             m_readCondition.wait();
