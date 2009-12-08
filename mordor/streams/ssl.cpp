@@ -77,6 +77,86 @@ CertificateVerificationException::constructMessage(long verifyResult)
     return X509_verify_cert_error_string(verifyResult);
 }
 
+// Adapted from https://www.codeblog.org/viewsrc/openssl-fips-1.1.1/demos/x509/mkcert.c
+static void add_ext(X509 *cert, int nid, char *value);
+
+static void mkcert(boost::shared_ptr<X509> &cert,
+                  boost::shared_ptr<EVP_PKEY> &pkey, int bits, int serial,
+                  int days)
+{
+    RSA *rsa;
+    X509_NAME *name=NULL;
+
+    pkey.reset(EVP_PKEY_new(), &EVP_PKEY_free);
+    if (!pkey)
+        throw std::bad_alloc();
+    cert.reset(X509_new(), &X509_free);
+    if (!cert)
+        throw std::bad_alloc();
+
+    rsa = RSA_generate_key(bits,RSA_F4,NULL,NULL);
+    MORDOR_VERIFY(EVP_PKEY_assign_RSA(pkey.get(),rsa));
+
+    X509_set_version(cert.get(),2);
+    ASN1_INTEGER_set(X509_get_serialNumber(cert.get()),serial);
+    X509_gmtime_adj(X509_get_notBefore(cert.get()),0);
+    X509_gmtime_adj(X509_get_notAfter(cert.get()),(long)60*60*24*days);
+    X509_set_pubkey(cert.get(),pkey.get());
+
+    name=X509_get_subject_name(cert.get());
+
+    /* This function creates and adds the entry, working out the
+     * correct string type and performing checks on its length.
+     * Normally we'd check the return value for errors...
+     */
+    X509_NAME_add_entry_by_txt(name,"C",
+                            MBSTRING_ASC,
+                            (const unsigned char *)"United States",
+                            -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name,"CN",
+                            MBSTRING_ASC,
+                            (const unsigned char *)"Mordor Default Self-signed Certificate",
+                            -1, -1, 0);
+
+    /* Its self signed so set the issuer name to be the same as the
+     * subject.
+     */
+    X509_set_issuer_name(cert.get(),name);
+
+    /* Add various extensions: standard extensions */
+    add_ext(cert.get(), NID_basic_constraints, "critical,CA:TRUE");
+    add_ext(cert.get(), NID_key_usage, "critical,keyCertSign,cRLSign");
+
+    add_ext(cert.get(), NID_subject_key_identifier, "hash");
+
+    /* Some Netscape specific extensions */
+    add_ext(cert.get(), NID_netscape_cert_type, "sslCA");
+
+    MORDOR_VERIFY(X509_sign(cert.get(),pkey.get(),EVP_md5()));
+}
+
+/* Add extension using V3 code: we can set the config file as NULL
+ * because we wont reference any other sections.
+ */
+
+void add_ext(X509 *cert, int nid, char *value)
+{
+    X509_EXTENSION *ex = NULL;
+    X509V3_CTX ctx;
+    /* This sets the 'context' of the extensions. */
+    /* No configuration database */
+    X509V3_set_ctx_nodb(&ctx);
+    /* Issuer and subject certs: both the target since it is self signed,
+     * no request and no CRL
+     */
+    X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
+    MORDOR_VERIFY(X509V3_EXT_conf_nid(NULL, &ctx, nid, value));
+
+    X509_add_ext(cert,ex,-1);
+    X509_EXTENSION_free(ex);
+}
+
+
 SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
 : MutatingFilterStream(parent, own),
   m_inRead(false),
@@ -95,6 +175,14 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
             << boost::errinfo_api_function("SSL_CTX_new");
     }
     SSL_CTX_set_mode(m_ctx.get(), SSL_MODE_ENABLE_PARTIAL_WRITE);
+    // Auto-generate self-signed server cert
+    if (!ctx && !client) {
+        boost::shared_ptr<X509> cert;
+        boost::shared_ptr<EVP_PKEY> pkey;
+        mkcert(cert, pkey, 1024, 0, 365);
+        SSL_CTX_use_certificate(m_ctx.get(), cert.get());
+        SSL_CTX_use_PrivateKey(m_ctx.get(), pkey.get());
+    }
     m_ssl.reset(SSL_new(m_ctx.get()), &SSL_free);
     if (!m_ssl) {
         MORDOR_VERIFY(hasOpenSSLError());
@@ -363,6 +451,7 @@ SSLStream::accept()
             << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
+                flushBuffer();
                 return;
             case SSL_ERROR_ZERO_RETURN:
                 // Received close_notify message
@@ -418,6 +507,7 @@ SSLStream::connect()
             << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
+                flushBuffer();
                 return;
             case SSL_ERROR_ZERO_RETURN:
                 // Received close_notify message
