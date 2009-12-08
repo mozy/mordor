@@ -34,7 +34,6 @@ SocketStream::close(CloseType type)
         }
         m_socket->shutdown(how);
         if (how == SHUT_RDWR) {
-            m_socket->close();
             m_socket.reset();
         }
     } else if (type == BOTH) {
@@ -57,7 +56,8 @@ SocketStream::read(Buffer &b, size_t len)
 void
 SocketStream::cancelRead()
 {
-    m_socket->cancelReceive();
+    if (m_socket)
+        m_socket->cancelReceive();
 }
 
 size_t
@@ -75,7 +75,8 @@ SocketStream::write(const Buffer &b, size_t len)
 void
 SocketStream::cancelWrite()
 {
-    m_socket->cancelSend();
+    if (m_socket)
+        m_socket->cancelSend();
 }
 
 }
