@@ -102,9 +102,9 @@ private:
     void tickleLocked(TickleState* ts);
 
 private:
-    static ThreadLocalStorage<TickleState> t_tickleState;
-    static ThreadLocalStorage<struct event_base> t_evBase;
-    static ThreadLocalStorage<struct event> t_evTickle;;
+    static ThreadLocalStorage<TickleState*> t_tickleState;
+    static ThreadLocalStorage<struct event_base*> t_evBase;
+    static ThreadLocalStorage<struct event*> t_evTickle;;
 
     boost::mutex m_mutex;
     ThreadTickleState m_threadTickleState;

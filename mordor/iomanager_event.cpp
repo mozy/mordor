@@ -12,9 +12,9 @@ namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:iomanager");
 
-ThreadLocalStorage<struct event_base> IOManagerEvent::t_evBase;
-ThreadLocalStorage<struct event> IOManagerEvent::t_evTickle;;
-ThreadLocalStorage<IOManagerEvent::TickleState> IOManagerEvent::t_tickleState;
+ThreadLocalStorage<struct event_base*> IOManagerEvent::t_evBase;
+ThreadLocalStorage<struct event*> IOManagerEvent::t_evTickle;;
+ThreadLocalStorage<IOManagerEvent::TickleState*> IOManagerEvent::t_tickleState;
 
 IOManagerEvent::IOManagerEvent(int threads, bool useCaller)
     : Scheduler(threads, useCaller),
@@ -191,9 +191,9 @@ IOManagerEvent::idle()
         // Run the event loop. All the fds that have activity will have
         // their fibers or delegates scheduled as part of their callbacks.
         // By the time this returns, all events will have been processed.
-        int rc = event_base_loop(t_evBase.get(), EVLOOP_ONCE);
+        int rc = event_base_loop(t_evBase, EVLOOP_ONCE);
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
-            << " event_base_loop(" << t_evBase.get() << "): "
+            << " event_base_loop(" << t_evBase << "): "
             << rc << " (" << errno << ")";
         if (rc < 0) {
             MORDOR_THROW_EXCEPTION(LibEventBaseLoopFailed());
@@ -273,38 +273,37 @@ IOManagerEvent::initThread()
     boost::mutex::scoped_lock lock(m_mutex);
 
     // Setup the tickle fds
-    TickleState* ts = new TickleState;
-    ts->m_tickled = false;
-    t_tickleState.reset(ts);
+    t_tickleState = new TickleState;
+    t_tickleState->m_tickled = false;
 
-    int rc = pipe(ts->m_fds);
+    int rc = pipe(t_tickleState->m_fds);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE)
         << this << " pipe(): " << rc << " (" << errno << ")";
     if (rc) {
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
     }
 
-    MORDOR_ASSERT(ts->m_fds[0] >= 0);
-    MORDOR_ASSERT(ts->m_fds[1] >= 0);
+    MORDOR_ASSERT(t_tickleState->m_fds[0] >= 0);
+    MORDOR_ASSERT(t_tickleState->m_fds[1] >= 0);
 
-    m_threadTickleState[boost::this_thread::get_id()] = ts;
+    m_threadTickleState[boost::this_thread::get_id()] = t_tickleState;
 
     // setup the event base
-    t_evBase.reset(event_base_new());
-    MORDOR_LOG_LEVEL(g_log, t_evBase.get() == NULL ?
+    t_evBase = event_base_new();
+    MORDOR_LOG_LEVEL(g_log, t_evBase == NULL ?
                      Log::ERROR : Log::VERBOSE)
         << this << " event_base_new(): "
-        << t_evBase.get() << " " << event_base_get_method(t_evBase.get());
-    if (t_evBase.get() == NULL) {
+        << t_evBase << " " << event_base_get_method(t_evBase);
+    if (t_evBase == NULL) {
         MORDOR_THROW_EXCEPTION(LibEventBaseNewFailed());
     }
 
     // setup the tickle event for this thread
-    t_evTickle.reset(new struct event);
-    event_set(t_evTickle.get(), ts->m_fds[0], EV_READ,
+    t_evTickle = new struct event;
+    event_set(t_evTickle, t_tickleState->m_fds[0], EV_READ,
               &IOManagerEvent::tickled, (void*) this);
 
-    rc = event_base_set(t_evBase.get(), t_evTickle.get());
+    rc = event_base_set(t_evBase, t_evTickle);
     if (rc < 0) {
         MORDOR_THROW_EXCEPTION(LibEventBaseSetFailed());
     }
@@ -322,25 +321,25 @@ IOManagerEvent::cleanupThread()
     boost::mutex::scoped_lock lock(m_mutex);
 
     // cleanup tickle event
-    delete t_evTickle.get();
-    t_evTickle.reset(NULL);
+    delete t_evTickle;
+    t_evTickle = NULL;
 
     // cleanup event base
-    event_base_free(t_evBase.get());
-    t_evBase.reset(NULL);
+    event_base_free(t_evBase);
+    t_evBase = NULL;
 
     // cleanup tickle fds
     for (int i = 0; i < 2; i++) {
         MORDOR_LOG_VERBOSE(g_log) << this
-            << " close(" << t_tickleState.get()->m_fds[i] << ")";
-        close(t_tickleState.get()->m_fds[i]);
+            << " close(" << t_tickleState->m_fds[i] << ")";
+        close(t_tickleState->m_fds[i]);
     }
 
     // clean up tickle data structures
     m_threadTickleState.erase(boost::this_thread::get_id());
 
-    delete t_tickleState.get();
-    t_tickleState.reset(NULL);
+    delete t_tickleState;
+    t_tickleState = NULL;
 
     MORDOR_LOG_DEBUG(g_log) << this << " cleanupDone()";
 }
@@ -392,9 +391,9 @@ IOManagerEvent::processAdds()
         // Take ownership of the event
         ev->m_tid = boost::this_thread::get_id();
 
-        rc = event_base_set(t_evBase.get(), &ev->m_ev);
+        rc = event_base_set(t_evBase, &ev->m_ev);
         MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
-            << " event_base_set(" << t_evBase.get() << ", " << *ev << "): "
+            << " event_base_set(" << t_evBase << ", " << *ev << "): "
             << rc << " (" << errno << ")";
         if (rc < 0) {
             // TODO: see error handling comment in addEvent
@@ -450,9 +449,9 @@ IOManagerEvent::addTickle()
         tvp->tv_usec = nextTimeout % 1000000;
     }
 
-    int rc = event_add(t_evTickle.get(), tvp);
+    int rc = event_add(t_evTickle, tvp);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
-        << " event_add(" << *t_evTickle.get() << "): "
+        << " event_add(" << *t_evTickle << "): "
         << rc << " (" << errno << ")";
     if (rc) {
         // TODO: this is basically fatal. Talk with cody about how to
@@ -470,7 +469,7 @@ IOManagerEvent::tickled(int fd, short events, void* arg)
         << " tickled(" << fd << ", " << events << ")";
 
     if (events & EV_READ) {
-        TickleState* ts = t_tickleState.get();
+        TickleState* ts = t_tickleState;
         unsigned char dummy;
         int rc2 = read(ts->m_fds[0], &dummy, 1);
         MORDOR_ASSERT(rc2 == 1);

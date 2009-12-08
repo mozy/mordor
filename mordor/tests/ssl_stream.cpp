@@ -43,14 +43,14 @@ MORDOR_UNITTEST(SSLStream, basic)
     MORDOR_TEST_ASSERT_EQUAL((const char *)buf, "world");
 }
 
-static void writeLotsaData(Stream::ptr stream, long long toTransfer)
+static void writeLotsaData(Stream::ptr stream, unsigned long long toTransfer)
 {
     RandomStream random;
     MORDOR_TEST_ASSERT_EQUAL(transferStream(random, stream, toTransfer), toTransfer);
     stream->flush();
 }
 
-static void readLotsaData(Stream::ptr stream, long long toTransfer)
+static void readLotsaData(Stream::ptr stream, unsigned long long toTransfer)
 {
     MORDOR_TEST_ASSERT_EQUAL(transferStream(stream, NullStream::get(), toTransfer), toTransfer);
 }

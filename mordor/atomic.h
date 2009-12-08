@@ -14,7 +14,7 @@ atomicDecrement(volatile T& t)
 }
 template <class T>
 typename boost::enable_if_c<sizeof(T) == sizeof(LONG), T>::type
-atomicIncrement(volatile T& t) 
+atomicIncrement(volatile T& t)
 {
     return InterlockedIncrement((volatile LONG*)&t);
 }
@@ -57,7 +57,7 @@ atomicDecrement(volatile T& t)
 }
 template <class T>
 typename boost::enable_if_c<sizeof(T) == sizeof(LONGLONG), T>::type
-atomicIncrement(volatile T& t) 
+atomicIncrement(volatile T& t)
 {
     return InterlockedIncrement64((volatile LONGLONG*)&t);
 }
@@ -113,21 +113,21 @@ typename boost::enable_if_c<sizeof(T) == sizeof(int32_t), T>::type
 atomicSwap(volatile T &t, T newvalue)
 {
     int32_t comparand = (int32_t)t;
-    while (!OSAtomicCompareAndSwap32Barrier((int32_t)comparand, (int32_t)newvalue))
+    while (!OSAtomicCompareAndSwap32Barrier((int32_t)comparand, (int32_t)newvalue, (volatile int32_t *) &t))
         comparand = (int32_t)t;
     return comparand;
 }
 inline
 bool
-atomicTestAndSet(volatile T &t, int bit = 0)
+atomicTestAndSet(volatile void *addr, int bit = 0)
 {
-    return OSAtomicTestAndSetBarrier((uint32_t)bit, (volatile void *)&t);
+    return OSAtomicTestAndSetBarrier((uint32_t)bit, addr);
 }
-inline
+template <class T>
 bool
-atomicTestAndClear(volatile T &t, int bit = 0)
+atomicTestAndClear(volatile void *addr, int bit = 0)
 {
-    return OSAtomicTestAndClearBarrier((uint32_t)bit, (volatile void *)&t);
+    return OSAtomicTestAndClearBarrier((uint32_t)bit, addr);
 }
 #ifdef X86_64
 template <class T>
@@ -159,13 +159,13 @@ typename boost::enable_if_c<sizeof(T) == sizeof(int64_t), T>::type
 atomicSwap(volatile T &t, T newvalue)
 {
     int64_t comparand = (int64_t)t;
-    while (!OSAtomicCompareAndSwap64Barrier((int64_t)comparand, (int64_t)newvalue))
-        comparand = (int64_t)t;
+    while (!OSAtomicCompareAndSwap64Barrier((int64_t)comparand, (int64_t)newvalue,
+        comparand = (int64_t)t));
     return comparand;
 }
 #endif
 #elif (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)
-template <class T> 
+template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(void *), T>::type
 atomicDecrement(volatile T& t) { return __sync_sub_and_fetch(&t, 1); }
 template <class T>
@@ -191,7 +191,7 @@ atomicTestAndSet(volatile void *address, int bit = 0)
     int oldvalue, newvalue;
     do {
         oldvalue = target;
-        newvalue = oldvalue | mask;                
+        newvalue = oldvalue | mask;
     } while (newvalue != atomicCompareAndSwap(target, newvalue, oldvalue));
     return !!(oldvalue & mask);
 }
@@ -204,7 +204,7 @@ atomicTestAndClear(volatile void *address, int bit = 0)
     int oldvalue, newvalue;
     do {
         oldvalue = target;
-        newvalue = oldvalue & ~mask;                
+        newvalue = oldvalue & ~mask;
     } while (newvalue != atomicCompareAndSwap(target, newvalue, oldvalue));
     return !!(oldvalue & mask);
 }

@@ -66,7 +66,7 @@ static std::string getOpenSSLErrorMessage()
     return os.str();
 }
 
-OpenSSLException::OpenSSLException() : 
+OpenSSLException::OpenSSLException() :
     std::runtime_error(getOpenSSLErrorMessage())
 {
 }
@@ -78,7 +78,7 @@ CertificateVerificationException::constructMessage(long verifyResult)
 }
 
 // Adapted from https://www.codeblog.org/viewsrc/openssl-fips-1.1.1/demos/x509/mkcert.c
-static void add_ext(X509 *cert, int nid, char *value);
+static void add_ext(X509 *cert, int nid, const char *value);
 
 static void mkcert(boost::shared_ptr<X509> &cert,
                   boost::shared_ptr<EVP_PKEY> &pkey, int bits, int serial,
@@ -139,7 +139,7 @@ static void mkcert(boost::shared_ptr<X509> &cert,
  * because we wont reference any other sections.
  */
 
-void add_ext(X509 *cert, int nid, char *value)
+void add_ext(X509 *cert, int nid, const char *value)
 {
     X509_EXTENSION *ex = NULL;
     X509V3_CTX ctx;
@@ -150,7 +150,7 @@ void add_ext(X509 *cert, int nid, char *value)
      * no request and no CRL
      */
     X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
-    MORDOR_VERIFY(X509V3_EXT_conf_nid(NULL, &ctx, nid, value));
+    MORDOR_VERIFY(X509V3_EXT_conf_nid(NULL, &ctx, nid, (char*) value));
 
     X509_add_ext(cert,ex,-1);
     X509_EXTENSION_free(ex);
@@ -602,7 +602,7 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
                 gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert.get(), NID_subject_alt_name, &critical, &altNameIndex);
             } while (gens);
         }
-        X509_NAME *name = X509_get_subject_name(cert.get());        
+        X509_NAME *name = X509_get_subject_name(cert.get());
         if (!name)
             MORDOR_THROW_EXCEPTION(CertificateVerificationException(
                 X509_V_ERR_APPLICATION_VERIFICATION,
@@ -620,7 +620,7 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
         MORDOR_THROW_EXCEPTION(CertificateVerificationException(
                 X509_V_ERR_APPLICATION_VERIFICATION,
                 "No Matching Common Name"));
-    }    
+    }
 }
 
 void
