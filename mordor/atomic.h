@@ -1,6 +1,8 @@
 #ifndef __MORDOR_ATOMIC_H__
 #define __MORDOR_ATOMIC_H__
 
+#include <boost/utility/enable_if.hpp>
+
 #include "version.h"
 
 namespace Mordor {
@@ -219,6 +221,27 @@ template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(_Atomic_word), T>::type
 atomicAdd(volatile T& t, T v) { return __gnu_cxx::__exchange_and_add((_Atomic_word*)_&t, v) + v; }
 #endif
+
+template <typename T>
+class Atomic
+{
+public:
+    Atomic(T val = 0) : m_val(val) { }
+
+    operator T(void) const { return atomicAdd(m_val, T(0)); }
+    T operator +=(T v) { return atomicAdd(m_val, v); }
+    T operator -=(T v) { return atomicAdd(m_val, -v); }
+    T operator ++(void) { return atomicIncrement(m_val); }
+    T operator --(void) { return atomicDecrement(m_val); }
+
+    // the postfix operators couild be a little more efficient if we
+    // created atomicPost(Increment,Decrement) functions, but meh
+    T operator ++(int) { return atomicIncrement(m_val) - 1; }
+    T operator --(int) { return atomicDecrement(m_val) + 1; }
+
+private:
+    mutable T m_val;
+};
 
 }
 
