@@ -14,6 +14,8 @@ public:
     typedef boost::shared_ptr<ConnectionBroker> ptr;
 
 public:
+    virtual ~ConnectionBroker() {}
+
     virtual std::pair<ClientConnection::ptr, bool>
         getConnection(const URI &uri, bool forceNewConnection = false) = 0;
 };
@@ -43,6 +45,8 @@ public:
     typedef boost::shared_ptr<RequestBroker> ptr;
 
 public:
+    virtual ~RequestBroker() {}
+
     virtual ClientRequest::ptr request(Request &requestHeaders,
         bool forceNewConnection = false) = 0;
 
