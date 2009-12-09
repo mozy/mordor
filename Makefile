@@ -234,6 +234,7 @@ DEPS := $(shell find $(CURDIR) -name '*.d')
 
 ALLBINS = mordor/examples/cat						\
 	mordor/examples/echoserver					\
+	mordor/examples/iombench					\
 	mordor/examples/simpleclient					\
 	mordor/examples/tunnel						\
 	mordor/examples/udpstats					\
@@ -303,6 +304,7 @@ endif
 EXAMPLEOBJECTS :=							\
 	mordor/examples/cat.o						\
 	mordor/examples/echoserver.o					\
+	mordor/examples/iombench.o					\
 	mordor/examples/simpleclient.o					\
 	mordor/examples/tunnel.o					\
 	mordor/examples/udpstats.o					\
@@ -327,6 +329,14 @@ endif
 
 mordor/examples/simpleclient: mordor/examples/simpleclient.o		\
 	mordor/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(COMPLINK)
+
+mordor/examples/iombench: mordor/examples/iombench.o                    \
+                          mordor/examples/netbench.o			\
+			  mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif

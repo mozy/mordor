@@ -1,6 +1,7 @@
 cat
 crypto
 echoserver
+iombench
 simpleclient
 tunnel
 udpstats
