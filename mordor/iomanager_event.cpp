@@ -11,6 +11,8 @@
 namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:iomanager");
+static Logger::ptr g_logAddQ = Log::lookup("mordor:iomanager:addq");
+static Logger::ptr g_logModQ = Log::lookup("mordor:iomanager:modq");
 
 ThreadLocalStorage<struct event_base*> IOManagerEvent::t_evBase;
 ThreadLocalStorage<struct event*> IOManagerEvent::t_evTickle;;
@@ -21,6 +23,8 @@ IOManagerEvent::IOManagerEvent(int threads, bool useCaller)
       m_addEventsSize(0)
 {
     MORDOR_LOG_DEBUG(g_log) << this << " IOManagerEvent()";
+    start();
+    MORDOR_LOG_DEBUG(g_log) << this << " IOManagerEvent() done";
 }
 
 IOManagerEvent::~IOManagerEvent()
@@ -60,7 +64,7 @@ IOManagerEvent::registerEvent(int fd, Event events, Delegate dg)
     if (it == m_registeredEvents.end()) {
         ev = &m_registeredEvents[fd];
         event_set(&ev->m_ev, fd, events, &IOManagerEvent::eventCb, this);
-        MORDOR_LOG_VERBOSE(g_log) << this
+        MORDOR_LOG_VERBOSE(g_logAddQ) << this
             << " m_addEvents.push_back(" << *ev << ")";
         m_addEventsSize++;
         m_addEvents.push_back(ev);
@@ -75,7 +79,7 @@ IOManagerEvent::registerEvent(int fd, Event events, Delegate dg)
         // we shouldn't requeue it.  The changes get merged and will
         // be processed correctly
         if (!ev->m_queued) {
-            MORDOR_LOG_VERBOSE(g_log) << this
+            MORDOR_LOG_VERBOSE(g_logModQ) << this
                 << " m_modEvents[" << ev->m_tid << "].push_back("
                 << *ev << ")";
             m_modEvents[ev->m_tid].push_back(ev);
@@ -159,7 +163,6 @@ Timer::ptr
 IOManagerEvent::registerTimer(unsigned long long us, Delegate dg,
                               bool recurring)
 {
-    // XXX: is register timer thread safe?
     bool atFront;
     Timer::ptr result = TimerManager::registerTimer(us, dg, recurring,
                                                     atFront);
@@ -367,6 +370,10 @@ IOManagerEvent::processAdds()
 {
     boost::mutex::scoped_lock lock(m_mutex);
 
+    MORDOR_LOG_DEBUG(g_logAddQ) << this
+        << " processAdds " << m_addEventsSize << " " << m_addEvents.size();
+
+
     // Try to balance the incoming fd adds accross the various threads.
     size_t maxTodo = m_addEventsSize / threadCount() + 1;
 
@@ -379,7 +386,7 @@ IOManagerEvent::processAdds()
 
         ev->m_queued = false;
 
-        MORDOR_LOG_VERBOSE(g_log) << this << " add " << *ev;
+        MORDOR_LOG_VERBOSE(g_logAddQ) << this << " add " << *ev;
 
         // This can happen if someone does an registerEvent() followed
         // by a cancleEvent() before we get here
@@ -402,13 +409,18 @@ IOManagerEvent::processAdds()
 
         addEvent(ev);
     }
+
+    MORDOR_LOG_DEBUG(g_logAddQ) << this
+        << " processAdds done " << m_addEventsSize << " " << m_addEvents.size();
 }
 
 void
 IOManagerEvent::processMods()
 {
     boost::mutex::scoped_lock lock(m_mutex);
+
     EventList& modEvents = m_modEvents[boost::this_thread::get_id()];
+    MORDOR_LOG_DEBUG(g_logModQ) << this << " processMods " << modEvents.size();
 
     while (!modEvents.empty()) {
         AsyncEvent* ev = modEvents.front();
@@ -435,6 +447,9 @@ IOManagerEvent::processMods()
             m_registeredEvents.erase(ev->m_ev.ev_fd);
         }
     }
+
+    MORDOR_LOG_DEBUG(g_logModQ) << this
+        << " processModsDone " << modEvents.size();
 }
 
 void
@@ -471,7 +486,10 @@ IOManagerEvent::tickled(int fd, short events, void* arg)
     if (events & EV_READ) {
         TickleState* ts = t_tickleState;
         unsigned char dummy;
-        int rc2 = read(ts->m_fds[0], &dummy, 1);
+#ifdef DEBUG
+        int rc2 =
+#endif
+        read(ts->m_fds[0], &dummy, 1);
         MORDOR_ASSERT(rc2 == 1);
 
         // We do want to be a bit careful with this lock because
