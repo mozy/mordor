@@ -252,7 +252,7 @@ clean:
 	$(Q)find . -name '*.o' | xargs rm -f
 	$(Q)find . -name '*.a' | xargs rm -f
 	$(Q)rm -f mordor/pch.h.gch
-	$(Q)rm -f mordor/uri.cpp mordor/http/parser.cpp mordor/xml/parser.cpp
+	$(Q)rm -f mordor/uri.cpp mordor/http/parser.cpp mordor/xml/parser.cpp mordor/json.cpp
 	$(Q)rm -f $(ALLBINS) mordor/tests/run_tests
 	$(Q)rm -rf lcov* html
 
