@@ -100,11 +100,16 @@ public:
     template <class InputIterator>
     void schedule(InputIterator begin, InputIterator end)
     {
-        boost::mutex::scoped_lock lock(m_mutex);
-        while (begin != end) {
-            scheduleNoLock(*begin);
-            ++begin;
+        bool tickleMe = false;
+        {
+            boost::mutex::scoped_lock lock(m_mutex);
+            while (begin != end) {
+                tickleMe = scheduleNoLock(*begin) || tickleMe;
+                ++begin;
+            }
         }
+        if (tickleMe && Scheduler::getThis() != this)
+            tickle();
     }
 
     /// Change the currently executing Fiber to be running on this Scheduler
@@ -165,8 +170,8 @@ private:
     void yieldTo(bool yieldToCallerOnTerminate);
     void run();
 
-    void scheduleNoLock(Fiber::ptr f, boost::thread::id thread = boost::thread::id());
-    void scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread = boost::thread::id());
+    bool scheduleNoLock(Fiber::ptr f, boost::thread::id thread = boost::thread::id());
+    bool scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread = boost::thread::id());
 
 private:
     struct FiberAndThread {

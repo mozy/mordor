@@ -183,18 +183,28 @@ Scheduler::stopping()
 void
 Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
 {
-    boost::mutex::scoped_lock lock(m_mutex);
-    scheduleNoLock(f, thread);
+    bool tickleMe;
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        tickleMe = scheduleNoLock(f, thread);
+    }
+    if (tickleMe && Scheduler::getThis() != this)
+        tickle();
 }
 
 void
 Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
 {
-    boost::mutex::scoped_lock lock(m_mutex);
-    scheduleNoLock(dg, thread);
+    bool tickleMe;
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        tickleMe = scheduleNoLock(dg, thread);
+    }
+    if (tickleMe && Scheduler::getThis() != this)
+        tickle();
 }
 
-void
+bool
 Scheduler::scheduleNoLock(Fiber::ptr f, boost::thread::id thread)
 {
     MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << f << " on thread "
@@ -206,11 +216,10 @@ Scheduler::scheduleNoLock(Fiber::ptr f, boost::thread::id thread)
     FiberAndThread ft = {f, NULL, thread };
     bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);
-    if (tickleMe && Scheduler::getThis() != this)
-        tickle();
+    return tickleMe;
 }
 
-void
+bool
 Scheduler::scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread)
 {
     MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << dg << " on thread "
@@ -222,8 +231,7 @@ Scheduler::scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread)
     FiberAndThread ft = {Fiber::ptr(), dg, thread };
     bool tickleMe = m_fibers.empty();
     m_fibers.push_back(ft);
-    if (tickleMe && Scheduler::getThis() != this)
-        tickle();
+    return tickleMe;
 }
 
 void
@@ -299,6 +307,7 @@ Scheduler::run()
     while (true) {
         batch.clear();
         bool dontIdle = false;
+        bool tickleMe = false;
         {
             boost::mutex::scoped_lock lock(m_mutex);
             for (std::list<FiberAndThread>::iterator it(m_fibers.begin());
@@ -310,7 +319,7 @@ Scheduler::run()
                         << it->thread;
 
                     // Wake up another thread to hopefully service this
-                    tickle();
+                    tickleMe = true;
                     dontIdle = true;
                     ++it;
                     continue;
@@ -353,6 +362,8 @@ Scheduler::run()
             }
             continue;
         }
+        if (tickleMe)
+            tickle();
         if (dontIdle)
             continue;
 
