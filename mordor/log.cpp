@@ -189,43 +189,42 @@ Logger::ptr Log::root()
 Logger::ptr Log::lookup(const std::string &name)
 {
     Logger::ptr log = root();
+    if(name.empty() || name == ":"){
+        return log;
+    }
     std::set<Logger::ptr, LoggerLess>::iterator it;
     Logger dummy(name, log);
     Logger::ptr dummyPtr(&dummy, &deleteNothing);
-    while (true) {
-        it = log->m_children.lower_bound(dummyPtr);
-        if (it == log->m_children.end()) {
-            Logger::ptr child(new Logger(name, log));
-            log->m_children.insert(child);
-            return child;
+    size_t start = 0;
+    std::string child_name;
+    std::string node_name;
+    while (start < name.size()) {
+        size_t pos = name.find(':', start);
+        if(pos == std::string::npos){
+            child_name = name.substr(start);
+            start = name.size();
+        }else{
+            child_name = name.substr(start, pos - start);
+            start = pos + 1;
         }
-        if ((*it)->m_name == name)
-            return *it;
-        // Child of existing logger
-        if (name.length() > (*it)->m_name.length() &&
-            name[(*it)->m_name.length()] == ':' &&
-            strncmp((*it)->m_name.c_str(), name.c_str(), (*it)->m_name.length()) == 0) {
-            log = *it;
+        if(child_name.empty()){
             continue;
         }
-        ++it;
-        // Existing logger should be child of this logger
-        if (it != log->m_children.end() &&
-            (*it)->m_name.length() > name.length() &&
-            (*it)->m_name[name.length()] == ':' &&
-            strncmp((*it)->m_name.c_str(), name.c_str(), name.length()) == 0) {
-            Logger::ptr child = *it;
-            Logger::ptr parent(new Logger(name, log));
-            log->m_children.erase(it);
-            log->m_children.insert(parent);
-            parent->m_children.insert(child);
-            child->m_parent = parent;
-            return parent;
+        if(!node_name.empty()){
+            node_name += ":";
         }
-        Logger::ptr child(new Logger(name, log));
-        log->m_children.insert(child);
-        return child;        
+        node_name += child_name;
+        dummyPtr->m_name = node_name;
+        it = log->m_children.lower_bound(dummyPtr);
+        if(it == log->m_children.end() || (*it)->m_name != node_name){
+            Logger::ptr child(new Logger(node_name, log));
+            log->m_children.insert(child);
+            log = child;
+        }else{
+            log = *it;            
+        }
     }
+    return log;
 }
 
 void
@@ -348,7 +347,7 @@ Logger::log(Log::Level level, const std::string &str,
         }
         if (!_this->m_inheritSinks)
             break;
-        _this = m_parent.lock();
+        _this = _this->m_parent.lock();
     }
     if (level == Log::FATAL)
         MORDOR_THROW_EXCEPTION(Assertion("Fatal error: " + str));

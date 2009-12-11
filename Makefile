@@ -164,7 +164,7 @@ endif
 ifeq ($(PLATFORM), Darwin)
 endif
 
-LIBS := $(BOOST_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz
+LIBS := $(BOOST_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
 
 ifeq ($(PLATFORM), FreeBSD)
     LIBS += -lexecinfo

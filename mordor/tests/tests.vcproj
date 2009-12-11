@@ -384,6 +384,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\log.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\memory_stream.cpp"
 				>
 			</File>
