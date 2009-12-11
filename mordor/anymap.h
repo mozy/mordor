@@ -17,32 +17,6 @@ public:
     typedef T value_type;
 };
 
-template <class T>
-class anymapvalue
-{
-    friend class anymap;
-private:
-    anymapvalue(boost::any &any)
-        : m_any(any)
-    {}
-
-public:
-    anymapvalue &operator =(const T &v)
-    {
-        m_any = v;
-        return *this;
-    }
-
-    operator T() const
-    { return boost::any_cast<T>(m_any); }
-
-    bool empty() const
-    { return m_any.empty(); }
-
-private:
-    boost::any m_any;
-};
-
 class anymap
 {
 private:
@@ -63,12 +37,17 @@ private:
     private:
         const std::type_info &m_type;
     };
+
 public:
     template <class TagType>
-    anymapvalue<typename TagType::value_type>
+    typename TagType::value_type&
     operator[](const TagType &)
     {
-        return anymapvalue<typename TagType::value_type>(m_map[typeid(typename TagType::tag_type)]);
+        boost::any &val = m_map[typeid(typename TagType::tag_type)];
+        if (val.empty()) {
+            val = typename TagType::value_type();
+        }
+        return *boost::any_cast<typename TagType::value_type>(&val);
     }
 
 private:
