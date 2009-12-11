@@ -53,7 +53,6 @@ IOManagerEvent::AsyncEventDispatch::schedule()
             m_scheduler->schedule(m_fiber);
         }
     }
-
 }
 
 IOManagerEvent::IOManagerEvent(int threads, bool useCaller)
@@ -394,13 +393,14 @@ IOManagerEvent::cleanupThread()
     // method, but really, it's a one time shot, so who cares
     boost::mutex::scoped_lock lock(m_mutex);
 
-    // cleanup tickle event
-    delete t_evTickle;
-    t_evTickle = NULL;
-
     // cleanup event base
     event_base_free(t_evBase);
     t_evBase = NULL;
+
+    // cleanup tickle event (must do this after event_base_free
+    // because it might still be intrusively linked into the libevent queues)
+    delete t_evTickle;
+    t_evTickle = NULL;
 
     // cleanup tickle fds
     for (int i = 0; i < 2; i++) {
