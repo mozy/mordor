@@ -59,9 +59,15 @@ IOManagerEvent::IOManagerEvent(int threads, bool useCaller)
     : Scheduler(threads, useCaller),
       m_addEventsSize(0)
 {
-    MORDOR_LOG_DEBUG(g_log) << this << " IOManagerEvent()";
-    start();
-    MORDOR_LOG_DEBUG(g_log) << this << " IOManagerEvent() done";
+    MORDOR_LOG_DEBUG(g_log) << this
+        << " IOManagerEvent(" << threads << ", " << useCaller << ")";
+
+    if (threads - (useCaller ? 1 : 0)) {
+        start();
+    }
+
+    MORDOR_LOG_DEBUG(g_log) << this
+        << " IOManagerEvent(" << threads << ", " << useCaller << ") done";
 }
 
 IOManagerEvent::~IOManagerEvent()
