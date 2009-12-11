@@ -31,6 +31,23 @@ public:
         WRITE = EV_WRITE
     };
 
+    struct AsyncEvent;
+
+    class AsyncEventDispatch
+    {
+    public:
+        AsyncEventDispatch() : m_scheduler(NULL) { }
+
+        void set(boost::function<void ()>& dg);
+        void transfer(AsyncEventDispatch& aed);
+        void schedule();
+
+    private:
+        Scheduler* m_scheduler;
+        Fiber::ptr m_fiber;
+        boost::function<void ()> m_dg;
+    };
+
     struct AsyncEvent
     {
         AsyncEvent() : m_queued(false), m_events(0) { }
@@ -48,14 +65,10 @@ public:
         struct event m_ev;
 
         // State for read notification
-        Scheduler* m_schedulerRead;
-        Fiber::ptr m_fiberRead;
-        boost::function<void ()> m_dgRead;
+        AsyncEventDispatch m_read;
 
         // State for write notification
-        Scheduler* m_schedulerWrite;
-        Fiber::ptr m_fiberWrite;
-        boost::function<void ()> m_dgWrite;
+        AsyncEventDispatch m_write;
     };
 
 private:
@@ -94,7 +107,7 @@ private:
     void processMods();
     static void tickled(int fd, short events, void* self);
     void addEvent(AsyncEvent* ev);
-    static void scheduleEvent(AsyncEvent* ev, int events);
+    static void processEvent(AsyncEvent* ev, int events);
     static void eventCb(int fd, short events, void* self);
 
     void tickleLocked();

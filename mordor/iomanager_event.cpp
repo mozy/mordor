@@ -13,10 +13,48 @@ namespace Mordor {
 static Logger::ptr g_log = Log::lookup("mordor:iomanager");
 static Logger::ptr g_logAddQ = Log::lookup("mordor:iomanager:addq");
 static Logger::ptr g_logModQ = Log::lookup("mordor:iomanager:modq");
+static Logger::ptr g_logReg = Log::lookup("mordor:iomanager:registered");
 
 ThreadLocalStorage<struct event_base*> IOManagerEvent::t_evBase;
 ThreadLocalStorage<struct event*> IOManagerEvent::t_evTickle;;
 ThreadLocalStorage<IOManagerEvent::TickleState*> IOManagerEvent::t_tickleState;
+
+void
+IOManagerEvent::AsyncEventDispatch::set(boost::function<void ()>& dg)
+{
+    m_scheduler = Scheduler::getThis();
+    if (dg) {
+        m_dg = dg;
+        m_fiber.reset();
+    } else {
+        m_dg = NULL;
+        m_fiber = Fiber::getThis();
+    }
+}
+
+void
+IOManagerEvent::AsyncEventDispatch::transfer(AsyncEventDispatch& aed)
+{
+    m_scheduler= aed.m_scheduler;
+    m_fiber = aed.m_fiber;
+    m_dg = aed.m_dg;
+    aed.m_scheduler = NULL;
+    aed.m_dg = NULL;
+    aed.m_fiber.reset();
+}
+
+void
+IOManagerEvent::AsyncEventDispatch::schedule()
+{
+    if (m_scheduler) {
+        if (m_dg) {
+            m_scheduler->schedule(m_dg);
+        } else {
+            m_scheduler->schedule(m_fiber);
+        }
+    }
+
+}
 
 IOManagerEvent::IOManagerEvent(int threads, bool useCaller)
     : Scheduler(threads, useCaller),
@@ -49,77 +87,68 @@ IOManagerEvent::registerEvent(int fd, Event events, Delegate dg)
     // both, so removing this assert would be safe
     MORDOR_ASSERT(events == EV_READ || events == EV_WRITE);
 
-    boost::mutex::scoped_lock lock(m_mutex);
+    // Keep track of the thread to tickle, if any.  (avoids holding
+    // lock during the write syscall)
+    boost::thread::id* id;
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
 
-    // Find or allocate an event and get it put into the right
-    // queue, either the new queue for initial add or queue it
-    // up for the thread that has already been working with
-    // the event... note, the event hasn't been fully
-    // initialized yet, so don't release the lock at the end
-    // of this snippet even though we are done with the
-    // shared collection datastructures (since the event
-    // itself doesn't have a lock)
-    AsyncEvent* ev;
-    RegisteredEvents::iterator it = m_registeredEvents.find(fd);
-    if (it == m_registeredEvents.end()) {
-        ev = &m_registeredEvents[fd];
-        event_set(&ev->m_ev, fd, events, &IOManagerEvent::eventCb, this);
-        MORDOR_LOG_VERBOSE(g_logAddQ) << this
-            << " m_addEvents.push_back(" << *ev << ")";
-        m_addEventsSize++;
-        m_addEvents.push_back(ev);
-        tickleLocked();
+        // Find or allocate an event and get it put into the right
+        // queue, either the new queue for initial add or queue it
+        // up for the thread that has already been working with
+        // the event... note, the event hasn't been fully
+        // initialized yet, so don't release the lock at the end
+        // of this snippet even though we are done with the
+        // shared collection datastructures (since the event
+        // itself doesn't have a lock)
+        AsyncEvent* ev;
+        RegisteredEvents::iterator it = m_registeredEvents.find(fd);
+        if (it == m_registeredEvents.end()) {
+            ev = &m_registeredEvents[fd];
+            event_set(&ev->m_ev, fd, events, &IOManagerEvent::eventCb, this);
+            MORDOR_LOG_VERBOSE(g_logReg) << this
+                << " m_registeredEvents[fd: " << fd << "] set " << *ev;
+            MORDOR_LOG_VERBOSE(g_logAddQ) << this
+                << " m_addEvents.push_back(" << *ev << ")";
+            m_addEventsSize++;
+            m_addEvents.push_back(ev);
+            id = NULL;
+        } else {
+            ev = &it->second;
+
+            // Double registration of the same event type isn't allowed
+            MORDOR_ASSERT(!(ev->m_events & events));
+
+            // If the event is already in a queue being passed to a thread
+            // we shouldn't requeue it.  The changes get merged and will
+            // be processed correctly
+            if (!ev->m_queued) {
+                MORDOR_LOG_VERBOSE(g_logModQ) << this
+                    << " m_modEvents[" << ev->m_tid << "].push_back("
+                    << *ev << ")";
+                m_modEvents[ev->m_tid].push_back(ev);
+                id = &ev->m_tid;
+            }
+        }
+
+        ev->m_events |= events;
+        ev->m_queued = true;
+
+        // Prep up the read callback state
+        if (events == EV_READ) {
+            ev->m_read.set(dg);
+        }
+
+        // Prep up the write callback state
+        if (events == EV_WRITE) {
+            ev->m_write.set(dg);
+        }
+    } // lock released
+
+    if (id) {
+        tickle(*id);
     } else {
-        ev = &it->second;
-
-        // Double registration of the same event type isn't allowed
-        MORDOR_ASSERT(!(ev->m_events & events));
-
-        // If the event is already in a queue being passed to a thread
-        // we shouldn't requeue it.  The changes get merged and will
-        // be processed correctly
-        if (!ev->m_queued) {
-            MORDOR_LOG_VERBOSE(g_logModQ) << this
-                << " m_modEvents[" << ev->m_tid << "].push_back("
-                << *ev << ")";
-            m_modEvents[ev->m_tid].push_back(ev);
-            tickleLocked(ev->m_tid);
-        }
-    }
-
-    ev->m_events |= events;
-    ev->m_queued = true;
-
-    // Prep up the read callback state
-    if (events == EV_READ) {
-        ev->m_schedulerRead = Scheduler::getThis();
-        if (dg) {
-            MORDOR_LOG_VERBOSE(g_log) << this
-                << " register EV_READ dg " << *ev;
-            ev->m_dgRead = dg;
-            ev->m_fiberRead.reset();
-        } else {
-            MORDOR_LOG_VERBOSE(g_log) << this
-                << " register EV_READ fiber " << *ev;
-            ev->m_dgRead = NULL;
-            ev->m_fiberRead = Fiber::getThis();
-        }
-    }
-
-    // Prep up the write callback state
-    if (events == EV_WRITE) {
-        ev->m_schedulerWrite = Scheduler::getThis();
-        if (dg) {
-            MORDOR_LOG_VERBOSE(g_log) << this
-                << " register EV_WRITE dg " << *ev;
-            ev->m_dgWrite = dg;
-            ev->m_fiberWrite.reset();
-        } else {
-            MORDOR_LOG_VERBOSE(g_log) << this
-                << " register EV_WRITE fiber " << *ev;
-            ev->m_dgWrite = dg;
-            ev->m_fiberWrite = Fiber::getThis();
-        }
+        tickle();
     }
 }
 
@@ -134,29 +163,60 @@ IOManagerEvent::cancelEvent(int fd, Event events)
     // both, so removing this assert would be safe
     MORDOR_ASSERT(events == EV_READ || events == EV_WRITE);
 
-    boost::mutex::scoped_lock lock(m_mutex);
-    RegisteredEvents::iterator it = m_registeredEvents.find(fd);
-    if (it != m_registeredEvents.end()) {
-        AsyncEvent* ev = &it->second;
-        MORDOR_ASSERT(ev->m_events & events);
-        MORDOR_ASSERT(ev->m_ev.ev_fd == fd);
+    // We *CAN NOT* call Scheduler::schedule() while holding our lock.
+    // This will can lead to cyclic lock acquistion if we do this
+    // at the same time as the scheduler is holding its lock and then
+    // calls tickle.  Save off the scheduler and dispatch state, unlock
+    // our lock, and then schedule.
+    AsyncEventDispatch readState;
+    AsyncEventDispatch writeState;
 
-        scheduleEvent(ev, events);
+    // Keep track if we need to
+    boost::thread::id* id = NULL;
 
-        // If already in a queue, these changes will be picked up so there
-        // is no reason to requeue it.  Note, that the event is possibly
-        // in the add queue if a register was quickly followed by a
-        // cancel
-        if (!ev->m_queued) {
-            // If not in a queue, this is guaranteed to have received
-            // a threadid
-            MORDOR_LOG_VERBOSE(g_log) << this
-                << " m_modEvents[" << ev->m_tid << "].push_back("
-                << *ev << ")";
-            m_modEvents[ev->m_tid].push_back(ev);
-            tickleLocked(ev->m_tid);
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        RegisteredEvents::iterator it = m_registeredEvents.find(fd);
+        if (it != m_registeredEvents.end()) {
+            AsyncEvent* ev = &it->second;
+            MORDOR_ASSERT(ev->m_events & events);
+            MORDOR_ASSERT(ev->m_ev.ev_fd == fd);
+
+            if ((events & EV_READ) && (ev->m_events & EV_READ)) {
+                readState.transfer(ev->m_read);
+            }
+
+            if ((events & EV_WRITE) && (ev->m_events & EV_WRITE)) {
+                writeState.transfer(ev->m_write);
+            }
+
+            ev->m_events &= ~events;
+
+            MORDOR_LOG_VERBOSE(g_logReg) << this
+                << " m_registeredEvents[fd: " << fd << "] still " << *ev;
+
+            // If already in a queue, these changes will be picked up so there
+            // is no reason to requeue it.  Note, that the event is possibly
+            // in the add queue if a register was quickly followed by a
+            // cancel
+            if (!ev->m_queued) {
+                // If not in a queue, this is guaranteed to have received
+                // a threadid
+                MORDOR_LOG_VERBOSE(g_log) << this
+                    << " m_modEvents[" << ev->m_tid << "].push_back("
+                    << *ev << ")";
+                m_modEvents[ev->m_tid].push_back(ev);
+                id = &ev->m_tid;
+            }
         }
+    } // lock released
+
+    if (id) {
+        tickle(*id);
     }
+
+    readState.schedule();
+    writeState.schedule();
 }
 
 Timer::ptr
@@ -191,6 +251,10 @@ IOManagerEvent::idle()
 
         addTickle();
 
+        MORDOR_LOG_VERBOSE(g_log) << this
+            << " event_base_loop(" << t_evBase
+            << ") ticklefd: " << t_tickleState->m_fds[1];
+
         // Run the event loop. All the fds that have activity will have
         // their fibers or delegates scheduled as part of their callbacks.
         // By the time this returns, all events will have been processed.
@@ -212,6 +276,12 @@ IOManagerEvent::idle()
 
     cleanupThread();
 
+    // We possibly need to tickle the other threads if there was 1 lingering
+    // event and other threads are blocked in the event_base_loop waiting
+    // only for tickle notifications.  This can happen because when they
+    // called checkDone() it returned false because we still had at least
+    // 1 event at the time, even though it was later removed.
+    tickle();
     MORDOR_LOG_DEBUG(g_log) << this << " idle() done";
 }
 
@@ -227,6 +297,7 @@ void
 IOManagerEvent::tickleLocked()
 {
     MORDOR_LOG_VERBOSE(g_log) << this << " tickleLocked()";
+    //std::list<TickleState*> ThreadTickleState;
     for (ThreadTickleState::iterator it(m_threadTickleState.begin());
          it != m_threadTickleState.end(); ++it) {
         tickleLocked(it->second);
@@ -260,7 +331,7 @@ IOManagerEvent::tickleLocked(TickleState* ts)
         ts->m_tickled = true;
         int rc = write(ts->m_fds[1], "T", 1);
         MORDOR_LOG_VERBOSE(g_log) << this
-            << " write(" << ts->m_fds << ", 1): "
+            << " tickleLocked write( fd: " << ts->m_fds[1] << ", 1): "
             << rc << " (" << errno << ")";
         MORDOR_VERIFY(rc == 1);
     }
@@ -391,6 +462,9 @@ IOManagerEvent::processAdds()
         // This can happen if someone does an registerEvent() followed
         // by a cancleEvent() before we get here
         if (ev->m_events == 0) {
+            MORDOR_LOG_VERBOSE(g_logReg) << this
+                << " m_registeredEvents[fd: " << ev->m_ev.ev_fd
+                << "] erase " << *ev;
             m_registeredEvents.erase(ev->m_ev.ev_fd);
             continue;
         }
@@ -444,6 +518,9 @@ IOManagerEvent::processMods()
                       &IOManagerEvent::eventCb, this);
             addEvent(ev);
         } else {
+            MORDOR_LOG_VERBOSE(g_logReg) << this
+                << " m_registeredEvents[fd: " << ev->m_ev.ev_fd
+                << "] erase " << *ev;
             m_registeredEvents.erase(ev->m_ev.ev_fd);
         }
     }
@@ -519,57 +596,58 @@ IOManagerEvent::addEvent(AsyncEvent* ev)
 }
 
 void
-IOManagerEvent::scheduleEvent(AsyncEvent* ev, int events)
-{
-    MORDOR_LOG_VERBOSE(g_log) << "scheduleEvent " << *ev;
-
-    if ((events & EV_READ) && (ev->m_events & EV_READ)) {
-        if (ev->m_dgRead) {
-            ev->m_schedulerRead->schedule(ev->m_dgRead);
-        } else {
-            ev->m_schedulerRead->schedule(ev->m_fiberRead);
-        }
-        ev->m_dgRead = NULL;
-        ev->m_fiberRead.reset();
-    }
-
-    if ((events & EV_WRITE) && (ev->m_events & EV_WRITE)) {
-        if (ev->m_dgWrite) {
-            ev->m_schedulerWrite->schedule(ev->m_dgWrite);
-        } else {
-            ev->m_schedulerWrite->schedule(ev->m_fiberWrite);
-        }
-        ev->m_dgWrite = NULL;
-        ev->m_fiberWrite.reset();
-    }
-
-    ev->m_events &= ~events;
-}
-
-void
 IOManagerEvent::eventCb(int fd, short events, void* arg)
 {
     IOManagerEvent* self = (IOManagerEvent*) arg;
     MORDOR_LOG_VERBOSE(g_log) << self
         << " eventCb(" << fd << ", " << events << ")";
 
-    boost::mutex::scoped_lock lock(self->m_mutex);
-    RegisteredEvents::iterator it = self->m_registeredEvents.find(fd);
-    if (it != self->m_registeredEvents.end()) {
-        AsyncEvent* ev = &it->second;
-        scheduleEvent(ev, events);
+    // We *CAN NOT* call Scheduler::schedule() while holding our lock.
+    // This will can lead to cyclic lock acquistion if we do this
+    // at the same time as the scheduler is holding its lock and then
+    // calls tickle.  Save off the scheduler and dispatch state, unlock
+    // our lock, and then schedule.
+    AsyncEventDispatch readState;
+    AsyncEventDispatch writeState;
 
-        // While both our events and libevents both have one shot semantics,
-        // iomanager events are one shot for each type, whereas libevent
-        // is one shot for either, which means that we need to reregister
-        // this event with libevent if we haven't received all the
-        // registered event types.
-        if (ev->m_events != 0) {
-            self->addEvent(ev);
-        } else {
-            self->m_registeredEvents.erase(it);
+    {
+        boost::mutex::scoped_lock lock(self->m_mutex);
+        RegisteredEvents::iterator it = self->m_registeredEvents.find(fd);
+        if (it != self->m_registeredEvents.end()) {
+            AsyncEvent* ev = &it->second;
+            MORDOR_ASSERT(ev->m_tid == boost::this_thread::get_id());
+
+            if ((events & EV_READ) && (ev->m_events & EV_READ)) {
+                readState.transfer(ev->m_read);
+            }
+
+            if ((events & EV_WRITE) && (ev->m_events & EV_WRITE)) {
+                writeState.transfer(ev->m_write);
+            }
+
+            ev->m_events &= ~events;
+
+            // While both our events and libevents both have one shot semantics,
+            // iomanager events are one shot for each type, whereas libevent
+            // is one shot for either, which means that we need to reregister
+            // this event with libevent if we haven't received all the
+            // registered event types.
+            if (ev->m_events != 0) {
+                MORDOR_LOG_VERBOSE(g_logReg) << self
+                    << " m_registeredEvents[fd: " << ev->m_ev.ev_fd
+                    << "] still " << *ev;
+                self->addEvent(ev);
+            } else {
+                MORDOR_LOG_VERBOSE(g_logReg) << self
+                    << " m_registeredEvents[fd: " << ev->m_ev.ev_fd
+                    << "] erase " << *ev;
+                self->m_registeredEvents.erase(it);
+            }
         }
-    }
+    } // lock released
+
+    readState.schedule();
+    writeState.schedule();
 }
 
 struct ev_events
