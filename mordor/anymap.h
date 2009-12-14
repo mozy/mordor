@@ -19,6 +19,9 @@ public:
 
 class anymap
 {
+public:
+    typedef boost::shared_ptr<anymap> ptr;
+
 private:
     class anymaptypeinfo
     {
@@ -48,6 +51,28 @@ public:
             val = typename TagType::value_type();
         }
         return *boost::any_cast<typename TagType::value_type>(&val);
+    }
+
+    template <class TagType>
+    size_t erase(const TagType &)
+    {
+        return m_map.erase(typeid(typename TagType::tag_type));
+    }
+
+    void clear()
+    {
+        m_map.clear();
+    }
+
+    size_t size() const
+    {
+        return m_map.size();
+    }
+
+
+    bool empty() const
+    {
+        return m_map.empty();
     }
 
 private:
