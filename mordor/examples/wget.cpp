@@ -12,6 +12,7 @@
 #include "mordor/http/auth.h"
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
+#include "mordor/http/proxy.h"
 #include "mordor/iomanager.h"
 #include "mordor/socket.h"
 #include "mordor/streams/socket.h"
@@ -20,6 +21,11 @@
 #include "mordor/streams/transfer.h"
 
 using namespace Mordor;
+
+static URI uriForProxy(const URI &uri, const URI &proxy)
+{
+    return proxy;
+}
 
 int main(int argc, const char *argv[])
 {
@@ -32,8 +38,20 @@ int main(int argc, const char *argv[])
         MORDOR_ASSERT(!uri.schemeDefined() || uri.scheme() == "http" || uri.scheme() == "https");
 
         HTTP::StreamBroker::ptr streamBroker(new HTTP::SocketStreamBroker(&ioManager));
+        streamBroker.reset(new HTTP::SSLStreamBroker(streamBroker));
         HTTP::ConnectionBroker::ptr connectionBroker(new HTTP::ConnectionCache(streamBroker));
         HTTP::RequestBroker::ptr requestBroker(new HTTP::BaseRequestBroker(connectionBroker));
+
+        if (argc >= 3) {
+            streamBroker.reset(new HTTP::ProxyStreamBroker(streamBroker,
+                boost::bind(&uriForProxy, _1, URI(argv[2])), requestBroker));
+            streamBroker.reset(new HTTP::SSLStreamBroker(streamBroker));
+            connectionBroker.reset(new HTTP::ConnectionCache(streamBroker));
+            connectionBroker.reset(new HTTP::ProxyConnectionBroker(connectionBroker,
+                boost::bind(&uriForProxy, _1, URI(argv[2]))));
+            requestBroker.reset(new HTTP::BaseRequestBroker(connectionBroker));
+        }
+
         requestBroker.reset(new HTTP::RedirectRequestBroker(requestBroker));
 
         HTTP::Request requestHeaders;

@@ -896,12 +896,12 @@ ClientRequest::ensureResponse()
             m_conn->m_priorResponseClosed = true;
             MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
             MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
-            if (!hasBody && !connect && m_requestState == COMPLETE)
+            if (!hasBody && m_requestState == COMPLETE)
                 m_conn->m_pendingRequests.pop_front();
             m_conn->scheduleAllWaitingRequests();
             m_conn->scheduleAllWaitingResponses();
         }
-        m_responseState = INFLIGHT;
+        m_responseState = connect ? COMPLETE : INFLIGHT;
 
         if (!hasBody && !connect) {
             MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " no response body";

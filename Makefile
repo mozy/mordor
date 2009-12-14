@@ -407,6 +407,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/http/multipart.o						\
 	mordor/http/oauth.o						\
 	mordor/http/http_parser.o					\
+	mordor/http/proxy.o						\
 	mordor/http/server.o						\
 	mordor/iomanager_$(IOMANAGER).o					\
 	mordor/json.o							\
