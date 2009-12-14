@@ -172,6 +172,18 @@ private:
     ConnectionBroker::ptr m_connectionBroker;
 };
 
+struct CircularRedirectException : Exception
+{
+    CircularRedirectException(const URI &uri)
+        : m_uri(uri)
+    {}
+
+    URI uri() { return m_uri; }
+
+private:
+    URI m_uri;
+};
+
 class RedirectRequestBroker : public RequestBrokerFilter
 {
 public:
