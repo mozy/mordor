@@ -4,14 +4,44 @@
 
 #include "proxy.h"
 
+#include "mordor/config.h"
+
 namespace Mordor {
 namespace HTTP {
+
+static ConfigVar<std::string>::ptr g_httpProxy =
+    Config::lookup("http.proxy", std::string(),
+    "HTTP Proxy Server");
+
+static URI defaultProxyCallback(const URI &uri)
+{
+    MORDOR_ASSERT(uri.schemeDefined());
+    MORDOR_ASSERT(uri.scheme() == "http" || uri.scheme() == "https");
+    try {
+        URI result(g_httpProxy->val());
+        if (result.authority.hostDefined())
+            result.scheme(uri.scheme());
+        result.path.segments.clear();
+        result.path.type = URI::Path::RELATIVE;
+        result.authority.userinfoDefined(false);
+        // Avoid infinite recursion
+        if (result == uri)
+            return URI();
+        return result;
+    } catch (std::invalid_argument &)
+    {
+        return URI();
+    }
+}
 
 ProxyConnectionBroker::ProxyConnectionBroker(ConnectionBroker::ptr parent,
     boost::function<URI (const URI &)> proxyForURIDg)
     : m_parent(parent),
       m_dg(proxyForURIDg)
-{}
+{
+    if (!m_dg)
+        m_dg = &defaultProxyCallback;
+}
 
 std::pair<ClientConnection::ptr, bool>
 ProxyConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
@@ -24,19 +54,22 @@ ProxyConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
 }
 
 ProxyStreamBroker::ProxyStreamBroker(StreamBroker::ptr parent,
-    boost::function<URI (const URI &)> proxyForURIDg,
-    RequestBroker::ptr requestBroker)
-    : m_parent(parent),
+    RequestBroker::ptr requestBroker,
+    boost::function<URI (const URI &)> proxyForURIDg)
+    : StreamBrokerFilter(parent),
       m_requestBroker(requestBroker),
       m_dg(proxyForURIDg)
-{}
+{
+    if (!m_dg)
+        m_dg = &defaultProxyCallback;
+}
 
 Stream::ptr
 ProxyStreamBroker::getStream(const Mordor::URI &uri)
 {
     URI proxy = m_dg(uri);
     if (!proxy.isDefined() || !(proxy.schemeDefined() && proxy.scheme() == "https"))
-        return m_parent->getStream(uri);
+        return parent()->getStream(uri);
     std::ostringstream os;
     if (!uri.authority.hostDefined())
         MORDOR_THROW_EXCEPTION(std::invalid_argument("No host defined"));

@@ -37,20 +37,7 @@ int main(int argc, const char *argv[])
         MORDOR_ASSERT(uri.authority.hostDefined());
         MORDOR_ASSERT(!uri.schemeDefined() || uri.scheme() == "http" || uri.scheme() == "https");
 
-        HTTP::StreamBroker::ptr streamBroker(new HTTP::SocketStreamBroker(&ioManager));
-        streamBroker.reset(new HTTP::SSLStreamBroker(streamBroker));
-        HTTP::ConnectionBroker::ptr connectionBroker(new HTTP::ConnectionCache(streamBroker));
-        HTTP::RequestBroker::ptr requestBroker(new HTTP::BaseRequestBroker(connectionBroker));
-
-        if (argc >= 3) {
-            streamBroker.reset(new HTTP::ProxyStreamBroker(streamBroker,
-                boost::bind(&uriForProxy, _1, URI(argv[2])), requestBroker));
-            streamBroker.reset(new HTTP::SSLStreamBroker(streamBroker));
-            connectionBroker.reset(new HTTP::ConnectionCache(streamBroker));
-            connectionBroker.reset(new HTTP::ProxyConnectionBroker(connectionBroker,
-                boost::bind(&uriForProxy, _1, URI(argv[2]))));
-            requestBroker.reset(new HTTP::BaseRequestBroker(connectionBroker));
-        }
+        HTTP::RequestBroker::ptr requestBroker = HTTP::defaultRequestBroker(&ioManager);
 
         requestBroker.reset(new HTTP::RedirectRequestBroker(requestBroker));
 

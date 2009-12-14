@@ -7,9 +7,28 @@
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/socket.h"
 #include "mordor/streams/ssl.h"
+#include "proxy.h"
 
 namespace Mordor {
 namespace HTTP {
+
+RequestBroker::ptr defaultRequestBroker(IOManager *ioManager,
+                                        Scheduler *scheduler,
+                                        ConnectionBroker::ptr &connBroker)
+{
+    StreamBroker::ptr socketBroker(new SocketStreamBroker(ioManager, scheduler));
+    StreamBrokerFilter::ptr sslBroker(new SSLStreamBroker(socketBroker));
+    ConnectionCache::ptr connectionBroker(new ConnectionCache(sslBroker));
+    connBroker = connectionBroker;
+    RequestBroker::ptr requestBroker(new BaseRequestBroker(connectionBroker));
+
+    socketBroker.reset(new ProxyStreamBroker(socketBroker, requestBroker));
+    sslBroker->parent(socketBroker);
+    connectionBroker.reset(new ProxyConnectionBroker(connectionBroker));
+    requestBroker.reset(new BaseRequestBroker(connectionBroker));
+    return requestBroker;
+}
+
 
 Stream::ptr
 SocketStreamBroker::getStream(const URI &uri)
@@ -83,7 +102,7 @@ SocketStreamBroker::cancelPending()
 Stream::ptr
 SSLStreamBroker::getStream(const URI &uri)
 {
-    Stream::ptr result = m_parent->getStream(uri);
+    Stream::ptr result = parent()->getStream(uri);
     if (uri.schemeDefined() && uri.scheme() == "https") {
         SSLStream::ptr sslStream(new SSLStream(result, true, true, m_sslCtx));
         result = sslStream;

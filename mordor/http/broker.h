@@ -23,6 +23,25 @@ public:
     virtual void cancelPending() {}
 };
 
+class StreamBrokerFilter : public StreamBroker
+{
+public:
+    typedef boost::shared_ptr<StreamBrokerFilter> ptr;
+
+public:
+    StreamBrokerFilter(StreamBroker::ptr parent)
+        : m_parent(parent)
+    {}
+
+    StreamBroker::ptr parent() const { return m_parent; }
+    void parent(StreamBroker::ptr parent) { m_parent = parent; }
+
+    void cancelPending() { m_parent->cancelPending(); }
+
+private:
+    StreamBroker::ptr m_parent;
+};
+
 class SocketStreamBroker : public StreamBroker
 {
 public:
@@ -48,23 +67,21 @@ private:
     Scheduler *m_scheduler;
 };
 
-class SSLStreamBroker : public StreamBroker
+class SSLStreamBroker : public StreamBrokerFilter
 {
 public:
     SSLStreamBroker(StreamBroker::ptr parent,
         SSL_CTX *sslCtx = NULL, bool verifySslCert = false,
         bool verifySslCertHost = false)
-        : m_parent(parent),
+        : StreamBrokerFilter(parent),
           m_sslCtx(sslCtx),
           m_verifySslCert(verifySslCert),
           m_verifySslCertHost(verifySslCertHost)
     {}
 
     Stream::ptr getStream(const URI &uri);
-    void cancelPending() { m_parent->cancelPending(); }
 
 private:
-    StreamBroker::ptr m_parent;
     SSL_CTX *m_sslCtx;
     bool m_verifySslCert, m_verifySslCertHost;
 };
@@ -195,6 +212,11 @@ public:
         bool forceNewConnection = false);
     bool checkResponse(ClientRequest::ptr request, Request &requestHeaders);
 };
+
+RequestBroker::ptr defaultRequestBroker(IOManager *ioManager = NULL,
+                                        Scheduler *scheduler = NULL,
+                                        ConnectionBroker::ptr &connBroker =
+                                        ConnectionBroker::ptr());
 
 }}
 
