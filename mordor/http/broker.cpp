@@ -11,7 +11,7 @@
 namespace Mordor {
 namespace HTTP {
 
-std::pair<Stream::ptr, bool>
+Stream::ptr
 SocketStreamBroker::getStream(const URI &uri)
 {
     if (m_cancelled)
@@ -63,16 +63,7 @@ SocketStreamBroker::getStream(const URI &uri)
         }
     }
     Stream::ptr stream(new SocketStream(socket));
-    if (uri.schemeDefined() && uri.scheme() == "https") {
-        SSLStream::ptr sslStream(new SSLStream(stream, true, true, m_sslCtx));
-        stream = sslStream;
-        sslStream->connect();
-        if (m_verifySslCert)
-            sslStream->verifyPeerCertificate();
-        if (m_verifySslCertHost)
-            sslStream->verifyPeerCertificate(uri.authority.host());
-    }
-    return std::make_pair(stream, false);    
+    return stream;
 }
 
 void
@@ -89,15 +80,31 @@ SocketStreamBroker::cancelPending()
     }
 }
 
-static bool least(const std::pair<ClientConnection::ptr, bool> &lhs,
-                  const std::pair<ClientConnection::ptr, bool> &rhs)
+Stream::ptr
+SSLStreamBroker::getStream(const URI &uri)
 {
-    if (lhs.first && rhs.first)
-        return lhs.first->outstandingRequests() <
-            rhs.first->outstandingRequests();
-    if (!lhs.first)
+    Stream::ptr result = m_parent->getStream(uri);
+    if (uri.schemeDefined() && uri.scheme() == "https") {
+        SSLStream::ptr sslStream(new SSLStream(result, true, true, m_sslCtx));
+        result = sslStream;
+        sslStream->connect();
+        if (m_verifySslCert)
+            sslStream->verifyPeerCertificate();
+        if (m_verifySslCertHost)
+            sslStream->verifyPeerCertificate(uri.authority.host());
+    }
+    return result;
+}
+
+static bool least(const ClientConnection::ptr &lhs,
+                  const ClientConnection::ptr &rhs)
+{
+    if (lhs && rhs)
+        return lhs->outstandingRequests() <
+            rhs->outstandingRequests();
+    if (!lhs)
         return false;
-    if (!rhs.first)
+    if (!rhs)
         return true;
     MORDOR_NOTREACHED();
 }
@@ -116,7 +123,7 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
         for (it = m_conns.begin(); it != m_conns.end();) {
             for (it2 = it->second.first.begin();
                 it2 != it->second.first.end();) {
-                if (it2->first && !it2->first->newRequestsAllowed()) {
+                if (*it2 && !(*it2)->newRequestsAllowed()) {
                     it2 = it->second.first.erase(it2);
                 } else {
                     ++it2;
@@ -150,12 +157,12 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
                     it2 = std::min_element(connsForThisUri.begin(),
                         connsForThisUri.end(), &least);
                     // No connection has completed yet (but it's in progress)
-                    if (!it2->first) {
+                    if (!*it2) {
                         // Wait for somebody to let us try again
                         it->second.second->wait();
                     } else {
                         // Return the existing, completed connection
-                        return *it2;
+                        return std::make_pair(*it2, false);
                     }
                 } else {
                     // No existing connections
@@ -164,7 +171,7 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
             }
         }
         // Create a new (blank) connection
-        m_conns[schemeAndAuthority].first.push_back(result);
+        m_conns[schemeAndAuthority].first.push_back(ClientConnection::ptr());
         if (it == m_conns.end()) {
             // This is the first connection for this schemeAndAuthority
             it = m_conns.find(schemeAndAuthority);
@@ -177,20 +184,19 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
 
     // Establish a new connection
     try {
-        std::pair<Stream::ptr, bool> stream =
-            m_streamBroker->getStream(schemeAndAuthority);
+        Stream::ptr stream = m_streamBroker->getStream(schemeAndAuthority);
         {
             FiberMutex::ScopedLock lock(m_mutex);
             result = std::make_pair(ClientConnection::ptr(
-                new ClientConnection(stream.first)), stream.second);
+                new ClientConnection(stream)), false);
             // Assign this connection to the first blank connection for this
             // schemeAndAuthority
             // it should still be valid, even if the map changed
             for (it2 = it->second.first.begin();
                 it2 != it->second.first.end();
                 ++it2) {
-                if (!it2->first) {
-                    *it2 = result;
+                if (!*it2) {
+                    *it2 = result.first;
                     break;
                 }
             }
@@ -206,7 +212,7 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
         for (it2 = it->second.first.begin();
             it2 != it->second.first.end();
             ++it2) {
-            if (!it2->first) {
+            if (!*it2) {
                 it->second.first.erase(it2);
                 break;
             }
@@ -231,8 +237,8 @@ ConnectionCache::closeConnections()
         for (ConnectionList::iterator it2 = it->second.first.begin();
             it2 != it->second.first.end();
             ++it2) {
-            if (it2->first) {
-                Stream::ptr connStream = it2->first->stream();
+            if (*it2) {
+                Stream::ptr connStream = (*it2)->stream();
                 connStream->cancelRead();
                 connStream->cancelWrite();
             }
@@ -269,31 +275,41 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection)
 {
     URI &currentUri = requestHeaders.requestLine.uri;
     URI originalUri = currentUri;
-    MORDOR_ASSERT(originalUri.authority.hostDefined());
-    requestHeaders.request.host = originalUri.authority.host();
+    bool connect = requestHeaders.requestLine.method == CONNECT;
+    MORDOR_ASSERT(connect || originalUri.authority.hostDefined());
+    MORDOR_ASSERT(!connect || !requestHeaders.request.host.empty());
+    if (!connect)
+        requestHeaders.request.host = originalUri.authority.host();
+    else
+        originalUri = "http://" + requestHeaders.request.host;
     while (true) {
         std::pair<ClientConnection::ptr, bool> conn =
-            m_connectionBroker->getConnection(originalUri, forceNewConnection);
+            m_connectionBroker->getConnection(
+                connect ? originalUri : currentUri, forceNewConnection);
         try {
             // Fix up our URI for use with/without proxies
-            if (conn.second && !currentUri.authority.hostDefined()) {
-                currentUri.authority = originalUri.authority;
-                if (originalUri.schemeDefined())
-                    currentUri.scheme(originalUri.scheme());
-            } else if (!conn.second && currentUri.authority.hostDefined()) {
-                currentUri.schemeDefined(false);
-                currentUri.authority.hostDefined(false);
+            if (!connect) {
+                if (conn.second && !currentUri.authority.hostDefined()) {
+                    currentUri.authority = originalUri.authority;
+                    if (originalUri.schemeDefined())
+                        currentUri.scheme(originalUri.scheme());
+                } else if (!conn.second && currentUri.authority.hostDefined()) {
+                    currentUri.schemeDefined(false);
+                    currentUri.authority.hostDefined(false);
+                }
             }
 
             ClientRequest::ptr request = conn.first->request(requestHeaders);
-            currentUri = originalUri;
+            if (!connect)
+                currentUri = originalUri;
             return request;
         } catch (SocketException &) {
             continue;
         } catch (PriorRequestFailedException &) {
             continue;
         } catch (...) {
-            currentUri = originalUri;
+            if (!connect)
+                currentUri = originalUri;
             throw;
         }
         MORDOR_NOTREACHED();

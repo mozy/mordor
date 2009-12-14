@@ -19,28 +19,23 @@ public:
 public:
     virtual ~StreamBroker() {}
 
-    virtual std::pair<Stream::ptr, bool> getStream(const URI &uri) = 0;
+    virtual Stream::ptr getStream(const URI &uri) = 0;
     virtual void cancelPending() {}
 };
 
 class SocketStreamBroker : public StreamBroker
 {
 public:
-    SocketStreamBroker(IOManager *ioManager = NULL, Scheduler *scheduler = NULL,
-        SSL_CTX *sslCtx = NULL, bool verifySslCert = false,
-        bool verifySslCertHost = false)
+    SocketStreamBroker(IOManager *ioManager = NULL, Scheduler *scheduler = NULL)
         : connectTimeout(~0ull),
           sendTimeout(~0ull),
           receiveTimeout(~0ull),
           m_cancelled(false),
           m_ioManager(ioManager),
-          m_scheduler(scheduler),
-          m_sslCtx(sslCtx),
-          m_verifySslCert(verifySslCert),
-          m_verifySslCertHost(verifySslCertHost)
+          m_scheduler(scheduler)
     {}
 
-    std::pair<Stream::ptr, bool> getStream(const URI &uri);
+    Stream::ptr getStream(const URI &uri);
     void cancelPending();
 
     unsigned long long connectTimeout, sendTimeout, receiveTimeout;
@@ -51,6 +46,25 @@ private:
     std::list<Socket::ptr> m_pending;
     IOManager *m_ioManager;
     Scheduler *m_scheduler;
+};
+
+class SSLStreamBroker : public StreamBroker
+{
+public:
+    SSLStreamBroker(StreamBroker::ptr parent,
+        SSL_CTX *sslCtx = NULL, bool verifySslCert = false,
+        bool verifySslCertHost = false)
+        : m_parent(parent),
+          m_sslCtx(sslCtx),
+          m_verifySslCert(verifySslCert),
+          m_verifySslCertHost(verifySslCertHost)
+    {}
+
+    Stream::ptr getStream(const URI &uri);
+    void cancelPending() { m_parent->cancelPending(); }
+
+private:
+    StreamBroker::ptr m_parent;
     SSL_CTX *m_sslCtx;
     bool m_verifySslCert, m_verifySslCertHost;
 };
@@ -86,7 +100,7 @@ private:
     StreamBroker::ptr m_streamBroker;
     size_t m_connectionsPerHost;
 
-    typedef std::list<std::pair<ClientConnection::ptr, bool> > ConnectionList;
+    typedef std::list<ClientConnection::ptr> ConnectionList;
     std::map<URI, std::pair<ConnectionList, boost::shared_ptr<FiberCondition> > > m_conns;
 };
 
