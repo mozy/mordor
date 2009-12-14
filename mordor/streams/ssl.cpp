@@ -624,7 +624,7 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
 }
 
 void
-SSLStream::flushBuffer()
+SSLStream::flushBuffer(bool flushParent)
 {
     char *writeBuf;
     size_t toWrite = BIO_get_mem_data(m_writeBio, &writeBuf);
@@ -638,12 +638,14 @@ SSLStream::flushBuffer()
     }
     int dummy = BIO_reset(m_writeBio);
     dummy = 0;
+    if (flushParent)
+        parent()->flush();
 }
 
 void
 SSLStream::wantRead(FiberMutex::ScopedLock &lock)
 {
-    flushBuffer();
+    flushBuffer(true);
     BUF_MEM *bm;
     BIO_get_mem_ptr(m_readBio, &bm);
     MORDOR_ASSERT(bm->length == 0);

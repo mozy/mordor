@@ -66,7 +66,7 @@ public:
     void verifyPeerCertificate(const std::string &hostname);
 
 private:
-    void flushBuffer();
+    void flushBuffer(bool flushParent = false);
     void wantRead(FiberMutex::ScopedLock &lock);
 
 private:
