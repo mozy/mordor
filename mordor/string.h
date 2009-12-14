@@ -27,6 +27,7 @@ std::string hmacSha1(const std::string &text, std::string key);
 
 void hexstringFromData(const void *data, size_t len, void *output);
 std::string hexstringFromData(const void *data, size_t len);
+std::string hexstringFromData(const std::string &data);
 
 void replace(std::string &str, char find, char replaceWith);
 void replace(std::string &str, char find, const std::string &replaceWith);

@@ -252,6 +252,12 @@ hexstringFromData(const void *data, size_t len)
     return result;
 }
 
+std::string
+hexstringFromData(const std::string &data)
+{
+    return hexstringFromData(data.c_str(), data.size());
+}
+
 void
 replace(std::string &str, char find, char replaceWith)
 {
