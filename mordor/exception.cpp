@@ -185,6 +185,9 @@ static void throwSocketException(error_t error)
 {
     switch (error) {
         case WSA(ECONNABORTED):
+#ifdef WINDOWS
+        case ERROR_CONNECTION_ABORTED:
+#endif
             throw boost::enable_current_exception(ConnectionAbortedException())
                 << errinfo_nativeerror(error);
         case WSA(ECONNRESET):
