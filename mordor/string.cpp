@@ -224,21 +224,19 @@ hmacSha1(const std::string &text, std::string key)
 }
 
 void
-hexstringFromData(const void *data, size_t len, void *output)
+hexstringFromData(const void *data, size_t len, char *output)
 {
     const unsigned char *buf = (const unsigned char *)data;
-    char *hex = (char *)output;
     size_t i, j;
     for (i = j = 0; i < len; ++i) {
         char c;
         c = (buf[i] >> 4) & 0xf;
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        hex[j++] = c;
+        output[j++] = c;
         c = (buf[i] & 0xf);
         c = (c > 9) ? c + 'a' - 10 : c + '0';
-        hex[j++] = c;
+        output[j++] = c;
     }
-    hex[j] = '\0';
 }
 
 std::string

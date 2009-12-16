@@ -25,7 +25,8 @@ std::string sha1sum(const void *data, size_t len);
 std::string hmacMd5(const std::string &text, std::string key);
 std::string hmacSha1(const std::string &text, std::string key);
 
-void hexstringFromData(const void *data, size_t len, void *output);
+// Output must be of size len * 2, and will *not* be null-terminated
+void hexstringFromData(const void *data, size_t len, char *output);
 std::string hexstringFromData(const void *data, size_t len);
 std::string hexstringFromData(const std::string &data);
 
