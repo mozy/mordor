@@ -5,6 +5,7 @@
 //
 
 #include "netbench.h"
+#include <iostream>
 
 #include "mordor/atomic.h"
 #include "mordor/config.h"
