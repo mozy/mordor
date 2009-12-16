@@ -236,6 +236,7 @@ ClientConnection::scheduleAllWaitingResponses()
 void
 ClientConnection::invariant() const
 {
+#ifdef DEBUG
     // MORDOR_ASSERT(m_mutex.locked());
     bool seenFirstUnrequested = false;
     for (std::list<ClientRequest *>::const_iterator it(m_pendingRequests.begin());
@@ -275,6 +276,7 @@ ClientConnection::invariant() const
         MORDOR_ASSERT(std::find<std::list<ClientRequest *>::const_iterator>
             (m_pendingRequests.begin(), end, request) != end);
     }
+#endif
 }
 
 
