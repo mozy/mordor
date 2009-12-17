@@ -100,6 +100,22 @@ MORDOR_UNITTEST(BufferedStream, partialReadGuarantee)
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 8);
 }
 
+MORDOR_UNITTEST(BufferedStream, partialReadRawPointer)
+{
+    MemoryStream::ptr baseStream(new MemoryStream(Buffer("0123456789")));
+    TestStream::ptr testStream(new TestStream(baseStream));
+    BufferedStream::ptr bufferedStream(new BufferedStream(testStream));
+    testStream->maxReadSize(2);
+
+    char output[6];
+    memset(output, 0, 6);
+
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 5), 5u);
+    MORDOR_TEST_ASSERT_EQUAL((const char *)output, "01234");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 6);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 5);
+}
+
 MORDOR_UNITTEST(BufferedStream, write)
 {
     MemoryStream::ptr baseStream(new MemoryStream());

@@ -53,6 +53,16 @@ BufferedStream::read(void *buffer, size_t length)
     return readInternal(buffer, length);
 }
 
+// Buffer keeps track of its position automatically
+static void advance(Buffer &buffer, size_t amount)
+{}
+
+// void * does not
+static void advance(void *&buffer, size_t amount)
+{
+    (unsigned char *&)buffer += amount;
+}
+
 template <class T>
 size_t
 BufferedStream::readInternal(T &buffer, size_t length)
@@ -97,6 +107,7 @@ BufferedStream::readInternal(T &buffer, size_t length)
             buffered = std::min(m_readBuffer.readAvailable(), remaining);
             m_readBuffer.copyOut(buffer, buffered);
             m_readBuffer.consume(buffered);
+            advance(buffer, buffered);
             remaining -= buffered;
         } while (remaining > 0 && !m_allowPartialReads && result != 0);
     }
