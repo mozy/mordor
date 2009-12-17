@@ -498,7 +498,10 @@ ClientRequest::cancel(bool abort)
         notify->parent(Stream::ptr(new Stream()));
     }
     Stream::ptr responseStream = m_responseStream.lock();
+    ClientRequest::ptr self;
     if (responseStream) {
+        // notify may be holding the last reference to this, so keep ourself in scope
+        self = shared_from_this();
         NotifyStream::ptr notify =
             boost::dynamic_pointer_cast<NotifyStream>(responseStream);
         MORDOR_ASSERT(notify);

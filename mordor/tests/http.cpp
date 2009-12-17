@@ -9,6 +9,7 @@
 #include "mordor/http/parser.h"
 #include "mordor/http/server.h"
 #include "mordor/scheduler.h"
+#include "mordor/streams/cat.h"
 #include "mordor/streams/duplex.h"
 #include "mordor/streams/limited.h"
 #include "mordor/streams/memory.h"
@@ -1743,6 +1744,88 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseAbandonRequest)
     MemoryStream responseBody;
     transferStream(response, responseBody);
     MORDOR_TEST_ASSERT(responseBody.buffer() == "hello");
+}
+
+MORDOR_UNITTEST(HTTPClient, simpleResponseAbandonStream)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 5\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "hello")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    // Verify response characteristics
+    MORDOR_TEST_ASSERT(request->hasResponseBody());
+    Stream::ptr response = request->responseStream();
+    request.reset();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsWrite());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
+    MORDOR_TEST_ASSERT_EQUAL(response->size(), 5);
+
+    // Everything should clean up properly
+    response.reset();
+}
+
+static void throwSocketException()
+{
+    MORDOR_THROW_EXCEPTION(ConnectionResetException());
+}
+
+MORDOR_UNITTEST(HTTPClient, simpleResponseExceptionInStream)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 250005\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "hello")));
+    Stream::ptr randomStream(new RandomStream());
+    randomStream.reset(new LimitedStream(randomStream, 250000));
+    std::vector<Stream::ptr> streams;
+    streams.push_back(responseStream);
+    streams.push_back(randomStream);
+    Stream::ptr completeResponseStream(new CatStream(streams));
+    TestStream::ptr testStream(new TestStream(completeResponseStream));
+    testStream->onRead(&throwSocketException, 100000);
+    DuplexStream::ptr duplexStream(new DuplexStream(testStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    // Verify response characteristics
+    MORDOR_TEST_ASSERT(request->hasResponseBody());
+    Stream::ptr response = request->responseStream();
+    request.reset();
+    MORDOR_TEST_ASSERT_EXCEPTION(transferStream(response, NullStream::get()),
+        ConnectionResetException);
 }
 
 MORDOR_UNITTEST(HTTPClient, emptyResponseCompleteBeforeRequestComplete)

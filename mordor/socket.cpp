@@ -707,7 +707,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
                 << len << "): " << sent;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", " << len
-                << "): (" << lastError() << ")";
+                << "): (" << dwLastError << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(dwLastError, "WSASend");
         }
@@ -1096,7 +1096,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
                 << len << "): " << recvd;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
-                << len << "): (" << lastError() << ")";
+                << len << "): (" << dwLastError << ")";
             m_ioManager->unregisterEvent(&m_receiveEvent);
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(dwLastError, "WSARecv");
         }
