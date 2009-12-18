@@ -420,6 +420,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/statistics.o						\
 	mordor/streams/buffer.o						\
 	mordor/streams/buffered.o					\
+	mordor/streams/cat.o						\
 	mordor/streams/crypto.o						\
 	mordor/streams/fd.o						\
 	mordor/streams/file.o						\

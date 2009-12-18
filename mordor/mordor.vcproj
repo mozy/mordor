@@ -323,6 +323,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\cat.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\chunked.cpp"
 				>
 			</File>
@@ -595,6 +599,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -629,10 +637,6 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\socket.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\streams\ssl.cpp"
@@ -718,6 +722,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\buffered.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\cat.h"
 				>
 			</File>
 			<File
