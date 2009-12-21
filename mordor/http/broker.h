@@ -194,6 +194,7 @@ struct CircularRedirectException : Exception
     CircularRedirectException(const URI &uri)
         : m_uri(uri)
     {}
+    ~CircularRedirectException() throw() {}
 
     URI uri() { return m_uri; }
 
@@ -215,8 +216,7 @@ public:
 
 RequestBroker::ptr defaultRequestBroker(IOManager *ioManager = NULL,
                                         Scheduler *scheduler = NULL,
-                                        ConnectionBroker::ptr &connBroker =
-                                        ConnectionBroker::ptr());
+                                        ConnectionBroker::ptr *connBroker = NULL);
 
 }}
 

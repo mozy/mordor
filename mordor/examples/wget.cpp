@@ -22,10 +22,12 @@
 
 using namespace Mordor;
 
+/*
 static URI uriForProxy(const URI &uri, const URI &proxy)
 {
     return proxy;
 }
+*/
 
 int main(int argc, const char *argv[])
 {

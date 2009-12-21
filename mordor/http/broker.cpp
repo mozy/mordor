@@ -14,12 +14,13 @@ namespace HTTP {
 
 RequestBroker::ptr defaultRequestBroker(IOManager *ioManager,
                                         Scheduler *scheduler,
-                                        ConnectionBroker::ptr &connBroker)
+                                        ConnectionBroker::ptr *connBroker)
 {
     StreamBroker::ptr socketBroker(new SocketStreamBroker(ioManager, scheduler));
     StreamBrokerFilter::ptr sslBroker(new SSLStreamBroker(socketBroker));
     ConnectionCache::ptr connectionBroker(new ConnectionCache(sslBroker));
-    connBroker = connectionBroker;
+    if (connBroker != NULL)
+        *connBroker = connectionBroker;
     RequestBroker::ptr requestBroker(new BaseRequestBroker(connectionBroker));
 
     socketBroker.reset(new ProxyStreamBroker(socketBroker, requestBroker));
