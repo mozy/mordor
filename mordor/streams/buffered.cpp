@@ -31,7 +31,7 @@ BufferedStream::close(CloseType type)
         m_readBuffer.clear();
     try {
         if ((type & WRITE) && m_writeBuffer.readAvailable())
-            flush();
+            flush(false);
     } catch (...) {
         if (ownsParent())
             parent()->close(type);
@@ -67,7 +67,8 @@ template <class T>
 size_t
 BufferedStream::readInternal(T &buffer, size_t length)
 {
-    MORDOR_ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
+    if (supportsSeek())
+        flush(false);
     size_t remaining = length;
 
     size_t buffered = std::min(m_readBuffer.readAvailable(), remaining);
@@ -118,7 +119,6 @@ BufferedStream::readInternal(T &buffer, size_t length)
 size_t
 BufferedStream::write(const Buffer &buffer, size_t length)
 {
-    MORDOR_ASSERT(!m_readBuffer.readAvailable() || !supportsSeek());
     m_writeBuffer.copyIn(buffer, length);
     size_t result = flushWrite(length);
     // Partial writes not allowed
@@ -129,7 +129,6 @@ BufferedStream::write(const Buffer &buffer, size_t length)
 size_t
 BufferedStream::write(const void *buffer, size_t length)
 {
-    MORDOR_ASSERT(!m_readBuffer.readAvailable() || !supportsSeek());
     m_writeBuffer.reserve(std::max(m_bufferSize, length));
     m_writeBuffer.copyIn(buffer, length);
     size_t result = flushWrite(length);
@@ -145,11 +144,16 @@ BufferedStream::flushWrite(size_t length)
     {
         size_t result;
         try {
+            if (m_readBuffer.readAvailable() && supportsSeek()) {
+                parent()->seek(-(long long)m_readBuffer.readAvailable(), CURRENT);
+                m_readBuffer.clear();
+            }
             MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
                 << m_writeBuffer.readAvailable() << ")";
             result = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
             MORDOR_LOG_DEBUG(g_log) << this << " parent()->write("
                 << m_writeBuffer.readAvailable() << "): " << result;
+            m_writeBuffer.consume(result);
         } catch (...) {
             // If this entire write is still in our buffer,
             // back it out and report the error
@@ -171,7 +175,6 @@ BufferedStream::flushWrite(size_t length)
                 return length;
             }
         }
-        m_writeBuffer.consume(result);
     }
     return length;
 }
@@ -179,24 +182,50 @@ BufferedStream::flushWrite(size_t length)
 long long
 BufferedStream::seek(long long offset, Anchor anchor)
 {
-    // My head asplodes!  Deal with it when someone actually does random access
-    // read and writes;
-    MORDOR_ASSERT(!(m_readBuffer.readAvailable() && m_writeBuffer.readAvailable()));
-    if (offset == 0 && anchor == CURRENT) {
-        MORDOR_LOG_VERBOSE(g_log) << this << " parent()->seek(0, CURRENT) - "
-            << m_readBuffer.readAvailable() << " + "
-            << m_writeBuffer.readAvailable();
-        return parent()->seek(offset, anchor)
-            - m_readBuffer.readAvailable()
-            + m_writeBuffer.readAvailable();
+    MORDOR_ASSERT(parent()->supportsTell());
+    long long parentPos = parent()->tell();
+    long long bufferedPos = parentPos - m_readBuffer.readAvailable()
+        + m_writeBuffer.readAvailable();
+    long long parentSize = parent()->supportsSize() ? -1ll : parent()->size();
+    // Check for no change in position
+    if (offset == 0 && anchor == CURRENT ||
+        offset == bufferedPos && anchor == BEGIN ||
+        parentSize != -1ll && offset + parentSize == bufferedPos &&
+        anchor == END)
+        return bufferedPos;
+
+    MORDOR_ASSERT(supportsSeek());
+    flush(false);
+    MORDOR_ASSERT(m_writeBuffer.readAvailable() == 0u);
+    switch (anchor) {
+        case BEGIN:
+            MORDOR_ASSERT(offset >= 0);
+            if (offset >= bufferedPos && offset <= parentPos) {
+                m_readBuffer.consume((size_t)(offset - bufferedPos));
+                return offset;
+            }
+            m_readBuffer.clear();
+            break;
+        case CURRENT:
+            if (offset > 0 && offset <= (long long)m_readBuffer.readAvailable()) {
+                m_readBuffer.consume((size_t)offset);
+                return bufferedPos + offset;
+            }
+            offset -= m_readBuffer.readAvailable();
+            m_readBuffer.clear();
+            break;
+        case END:
+            if (parentSize == -1ll)
+                throw std::invalid_argument("Can't seek from end without known size");
+            if (parentSize + offset >= bufferedPos && parentSize + offset <= parentPos) {
+                m_readBuffer.consume((size_t)(parentSize + offset - bufferedPos));
+                return parentSize + offset;
+            }
+            m_readBuffer.clear();
+            break;
+        default:
+            MORDOR_NOTREACHED();
     }
-    flush();
-    // TODO: optimized forward seek
-    if (anchor == CURRENT) {        
-        // adjust the buffer having modified the actual stream position
-        offset -= m_readBuffer.readAvailable();
-    }
-    m_readBuffer.clear();
     return parent()->seek(offset, anchor);
 }
 
@@ -204,8 +233,8 @@ long long
 BufferedStream::size()
 {
     long long size = parent()->size();
-    if (supportsSeek()) {
-        return std::max(size, seek(0, CURRENT));
+    if (parent()->supportsTell()) {
+        return std::max(size, tell());
     } else {
         // not a seekable stream; we can only write to the end
         size += m_writeBuffer.readAvailable();
@@ -216,16 +245,28 @@ BufferedStream::size()
 void
 BufferedStream::truncate(long long size)
 {
-    MORDOR_ASSERT(!m_readBuffer.readAvailable() || !supportsSeek());
-    flush();
-    // TODO: truncate m_readBuffer at the end
+    if (!parent()->supportsTell() ||
+        parent()->tell() + (long long)m_writeBuffer.readAvailable() >= size)
+        flush(false);
+    // TODO: truncate/clear m_readBuffer only if necessary
+    m_readBuffer.clear();
     parent()->truncate(size);
 }
 
 void
 BufferedStream::flush()
 {
+    flush(true);
+}
+
+void
+BufferedStream::flush(bool flushParent)
+{
     while (m_writeBuffer.readAvailable()) {
+        if (m_readBuffer.readAvailable() && supportsSeek()) {
+            parent()->seek(-(long long)m_readBuffer.readAvailable(), CURRENT);
+            m_readBuffer.clear();
+        }
         MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
             << m_writeBuffer.readAvailable() << ")";
         size_t result = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
@@ -234,13 +275,15 @@ BufferedStream::flush()
         MORDOR_ASSERT(result > 0);
         m_writeBuffer.consume(result);
     }
-    parent()->flush();
+    if (flushParent)
+        parent()->flush();
 }
 
 ptrdiff_t
 BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 {
-    MORDOR_ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
+    if (supportsSeek())
+        flush(false);
     if (sanitySize == (size_t)~0)
         sanitySize = 2 * m_bufferSize;
     ++sanitySize;
@@ -275,7 +318,8 @@ BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 ptrdiff_t
 BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFound)
 {
-    MORDOR_ASSERT(!m_writeBuffer.readAvailable() || !supportsSeek());
+    if (supportsSeek())
+        flush(false);
     if (sanitySize == (size_t)~0)
         sanitySize = 2 * m_bufferSize;
     sanitySize += str.size();

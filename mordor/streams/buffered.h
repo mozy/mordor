@@ -38,6 +38,7 @@ public:
 private:
     template <class T> size_t readInternal(T &buffer, size_t length);
     size_t flushWrite(size_t length);
+    void flush(bool flushParent);
 
 private:
     size_t m_bufferSize;

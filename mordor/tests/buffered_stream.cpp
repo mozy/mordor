@@ -316,3 +316,179 @@ MORDOR_UNITTEST(BufferedStream, errorOnWrite)
     MORDOR_TEST_ASSERT_EQUAL(baseStream->size(), 10);
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->size(), 10);
 }
+
+MORDOR_UNITTEST(BufferedStream, seek)
+{
+    MemoryStream::ptr baseStream(new MemoryStream(Buffer("abcdefghijklmnopqrstuvwxyz0123456789")));
+    BufferedStream::ptr bufferedStream(new BufferedStream(baseStream));
+    bufferedStream->bufferSize(5);
+
+    // We all start out at 0
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 0);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);
+
+    // Seeking to current position doesn't do anything
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0), 0);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 0);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);
+
+    // Seeking with nothing in the buffer sets both streams to exactly
+    // where we ask
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(1), 1);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 1);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 1);
+
+    // Make sure the data corresponds to where we are
+    Buffer buffer;
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "bc");
+    // Buffered readahead of 5 + 1 (current pos)
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 6);
+    // But we're really at 3
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 3);
+    // Seeking to current position doesn't do anything
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(3), 3);
+    // Even to the underlying stream
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 6);
+    buffer.clear();
+    // Double-check the actual data again
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "de");
+    // It should have been buffered and not touch the baseStream
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 6);
+    // But did change our position
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 5);
+
+    // Seeking outside of the buffer should clear it (and seek the baseStream)
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(0), 0);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 0);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);
+
+    // Double-check actual data
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "ab");
+    // Buffered read-ahead
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 5);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 2);
+
+    // Seek to the end of the buffer
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(5), 5);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 5);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 5);
+
+    // Double-check actual data
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "fg");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 10);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 7);
+
+    // Seek into the buffer should keep the buffer, and not touch the baseStream
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(8), 8);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 10);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 8);
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "ij");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 10);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 10);
+
+    // Relative seek, with no buffer
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(1, Stream::CURRENT), 11);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 11);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 11);
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "lm");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 16);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 13);
+
+    // Relative forward seek into the buffer should keep the buffer, and not touch baseStream
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(1, Stream::CURRENT), 14);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 16);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 14);
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "op");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 16);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 16);
+
+    // Buffer some data
+    bufferedStream->bufferSize(20);
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "qr");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 36);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 18);
+
+    // Absolute seek to beginning of buffer does nothing
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(18), 18);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 36);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 18);
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "st");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 36);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 20);
+
+    // Relative backward seek beyond buffer should discard buffer, and seek baseStream
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->seek(-18, Stream::CURRENT), 2);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 2);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 2);
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 4), 4u);
+    MORDOR_TEST_ASSERT(buffer == "cdef");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 22);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 6);
+}
+
+MORDOR_UNITTEST(BufferedStream, readAndWrite)
+{
+    MemoryStream::ptr baseStream(new MemoryStream(Buffer("abcdefghijklmnopqrstuvwxyz0123456789")));
+    BufferedStream::ptr bufferedStream(new BufferedStream(baseStream));
+    bufferedStream->bufferSize(5);
+
+    Buffer buffer;
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "ab");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 5);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 2);
+
+    // Buffer a write (doesn't touch the read buffer yet)
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->write("CD", 2), 2u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 5);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 4);
+    // Now flush the write, and it should re-seek the baseStream
+    bufferedStream->flush();
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 4);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 4);
+    MORDOR_TEST_ASSERT(baseStream->buffer() == "abCDefghijklmnopqrstuvwxyz0123456789");
+    // Read some into the buffer
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "ef");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 9);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 6);
+    // Buffer a write (doesn't touch the read buffer yet)
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->write("GH", 2), 2u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 9);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 8);
+    // Check that the read buffer is in sync (implicitly flushes)
+    buffer.clear();
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT(buffer == "ij");
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 13);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 10);
+    MORDOR_TEST_ASSERT(baseStream->buffer() == "abCDefGHijklmnopqrstuvwxyz0123456789");
+    // Manual flush does nothing
+    bufferedStream->flush();
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 13);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 10);
+
+    // Extra-large write flushes in progress
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->write("KLMNOPQRS", 9), 9u);
+    MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 19);
+    MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 19);
+    MORDOR_TEST_ASSERT(baseStream->buffer() == "abCDefGHijKLMNOPQRStuvwxyz0123456789");
+}
