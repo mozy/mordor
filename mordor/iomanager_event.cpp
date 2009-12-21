@@ -244,17 +244,19 @@ IOManagerEvent::idle()
     initThread();
 
     while (true) {
+        unsigned long long nextTimeout;
+
         processAdds();
         processMods();
 
         // This needs to be done here instead of as a condition of the loop
         // because we might have things in the registeredEvents that
         // need to be removed via processMods
-        if (checkDone()) {
+        if (checkDone(nextTimeout)) {
             break;
         }
 
-        addTickle();
+        addTickle(nextTimeout);
 
         MORDOR_LOG_VERBOSE(g_log) << this
             << " event_base_loop(" << t_evBase
@@ -425,11 +427,12 @@ IOManagerEvent::cleanupThread()
 }
 
 bool
-IOManagerEvent::checkDone()
+IOManagerEvent::checkDone(unsigned long long& nextTimeout)
 {
     MORDOR_LOG_VERBOSE(g_log) << this
         << " checkDone stopping(): " << stopping();
-    if (stopping()) {
+    nextTimeout = nextTimer();
+    if (nextTimeout == ~0ull && stopping()) {
         boost::mutex::scoped_lock lock(m_mutex);
         MORDOR_LOG_VERBOSE(g_log) << this
             << " checkDone registeredEvents.size() "
@@ -536,11 +539,10 @@ IOManagerEvent::processMods()
 }
 
 void
-IOManagerEvent::addTickle()
+IOManagerEvent::addTickle(unsigned long long nextTimeout)
 {
     struct timeval *tvp = NULL;
     struct timeval tv;
-    unsigned long long nextTimeout = nextTimer();
     if (nextTimeout != ~0ull) {
         tvp = &tv;
         tvp->tv_sec = nextTimeout / 1000000;

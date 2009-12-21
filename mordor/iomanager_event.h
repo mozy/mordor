@@ -101,8 +101,8 @@ protected:
 private:
     void initThread();
     void cleanupThread();
-    void addTickle();
-    bool checkDone();
+    void addTickle(unsigned long long nextTimeout);
+    bool checkDone(unsigned long long& nextTimeout);
     void processAdds();
     void processMods();
     static void tickled(int fd, short events, void* self);
