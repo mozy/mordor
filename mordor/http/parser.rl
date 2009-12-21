@@ -46,7 +46,6 @@ static boost::posix_time::time_input_facet rfc850Facet_in("%A, %d-%b-%y %H:%M:%S
 static boost::posix_time::time_input_facet ansiFacet_in("%a %b %e %H:%M:%S %Y",
         1 /* starting refcount, so this never gets deleted */);
 
-static
 boost::posix_time::ptime
 parseHttpDate(const char *str, size_t size)
 {
