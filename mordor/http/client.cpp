@@ -529,8 +529,10 @@ ClientRequest::cancel(bool abort)
             close = true;
         }
     }
-    if (close)
-        m_conn->m_stream->close();
+    if (close) {
+        m_conn->m_stream->cancelRead();
+        m_conn->m_stream->cancelWrite();
+    }
 }
 
 void

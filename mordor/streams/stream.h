@@ -113,7 +113,7 @@ public:
     /// Must be called from a different Fiber/Thread than the one that is
     /// blocked. This is safe to call on any Stream, but may not have any
     /// effect.
-    virtual void cancelRead() { MORDOR_NOTREACHED(); }
+    virtual void cancelRead() {}
 
     /// @brief Write data to the Stream
     /// @details
@@ -145,7 +145,7 @@ public:
     /// Must be called from a different Fiber/Thread than the one that is
     /// blocked. This is safe to call on any Stream, but may not have any
     /// effect.
-    virtual void cancelWrite() { MORDOR_NOTREACHED(); }
+    virtual void cancelWrite() {}
 
     /// @brief Change the current stream pointer
     /// @param offset Where to seek to

@@ -1199,6 +1199,67 @@ MORDOR_UNITTEST(HTTPClient, simpleRequestBody)
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
 }
 
+namespace {
+struct DummyException {};
+}
+
+static void throwDummyException()
+{
+    MORDOR_THROW_EXCEPTION(DummyException());
+}
+
+static void throwSocketException()
+{
+    MORDOR_THROW_EXCEPTION(ConnectionResetException());
+}
+
+MORDOR_UNITTEST(HTTPClient, simpleRequestBodyExceptionInStream)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    TestStream::ptr testStream(new TestStream(requestStream));
+    testStream->onWrite(&throwSocketException, 200);
+    testStream->onClose(boost::bind(&throwDummyException));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, testStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.method = PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+    requestHeaders.entity.contentLength = 500000;
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    // Nothing has been flushed yet
+    MORDOR_TEST_ASSERT_EQUAL(requestStream->size(), 0);
+    Stream::ptr requestBody = request->requestStream();
+    // Verify stream characteristics
+    MORDOR_TEST_ASSERT(!requestBody->supportsRead());
+    MORDOR_TEST_ASSERT(requestBody->supportsWrite());
+    MORDOR_TEST_ASSERT(!requestBody->supportsSeek());
+    MORDOR_TEST_ASSERT(requestBody->supportsSize());
+    MORDOR_TEST_ASSERT(!requestBody->supportsTruncate());
+    MORDOR_TEST_ASSERT(!requestBody->supportsFind());
+    MORDOR_TEST_ASSERT(!requestBody->supportsUnread());
+    MORDOR_TEST_ASSERT_EQUAL(requestBody->size(), 500000);
+
+    // Force a flush (of the headers)
+    requestBody->flush();
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "PUT / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "Content-Length: 500000\r\n"
+        "\r\n");
+
+    // Write the body
+    RandomStream randomStream;
+    MORDOR_TEST_ASSERT_EXCEPTION(transferStream(randomStream, requestBody, 500000), ConnectionResetException);
+}
+
 MORDOR_UNITTEST(HTTPClient, multipleCloseRequestBody)
 {
     MemoryStream::ptr requestStream(new MemoryStream());
@@ -1607,11 +1668,17 @@ MORDOR_UNITTEST(HTTPClient, cancelResponseSingle)
     MORDOR_TEST_ASSERT_EXCEPTION(request2->ensureResponse(), PriorRequestFailedException);
     MORDOR_TEST_ASSERT_EXCEPTION(request2->ensureResponse(), PriorRequestFailedException);
 
+    /* This assertion no longer holds, because instead of closing the connection
+       (gracefully), we cancelRead and cancelWrite to avoid possible exceptions.
+       DuplexStream doesn't do anything when cancelling, so the data can still
+       be read
+
     // Verify response can't be read (exception; when using a real socket it might let us
     // read to EOF)
     MemoryStream responseBody;
     MORDOR_TEST_ASSERT_EXCEPTION(transferStream(request1->responseStream(), responseBody),
         BrokenPipeException);
+    */
 
     MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), PriorRequestFailedException);
 }
@@ -1783,11 +1850,6 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseAbandonStream)
 
     // Everything should clean up properly
     response.reset();
-}
-
-static void throwSocketException()
-{
-    MORDOR_THROW_EXCEPTION(ConnectionResetException());
 }
 
 MORDOR_UNITTEST(HTTPClient, simpleResponseExceptionInStream)
