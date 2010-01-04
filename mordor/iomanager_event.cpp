@@ -94,7 +94,7 @@ IOManagerEvent::registerEvent(int fd, Event events, Delegate dg)
 
     // Keep track of the thread to tickle, if any.  (avoids holding
     // lock during the write syscall)
-    boost::thread::id* id;
+    boost::thread::id* id = NULL;
     {
         boost::mutex::scoped_lock lock(m_mutex);
 
