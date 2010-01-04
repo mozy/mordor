@@ -64,7 +64,7 @@ parseHttpDate(const char *str, size_t size)
     ATTEMPT_WITH_FACET(&rfc1123Facet_in);
     ATTEMPT_WITH_FACET(&rfc850Facet_in);
     ATTEMPT_WITH_FACET(&ansiFacet_in);
-    MORDOR_NOTREACHED();
+    return result;
 }
 
 static
