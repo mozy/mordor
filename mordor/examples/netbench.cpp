@@ -1,5 +1,6 @@
 #include "netbench.h"
 
+#include <stdio.h>
 #include <sys/resource.h>
 #include <iostream>
 
