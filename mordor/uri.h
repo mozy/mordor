@@ -31,6 +31,8 @@ struct URI
 
     static std::string encode(const std::string &str,
         CharacterClass charClass = UNRESERVED);
+    static std::string decode(const std::string &str,
+        CharacterClass charClass = UNRESERVED);
 
     URI();
     URI(const std::string& uri);

@@ -126,6 +126,19 @@ URI::encode(const std::string &str, CharacterClass charClass)
     }
 }
 
+std::string
+URI::decode(const std::string &str, CharacterClass charClass)
+{
+    switch (charClass) {
+		case UNRESERVED:
+		    return unescape(str, false);
+        case QUERYSTRING:
+            return unescape(str, true);
+        default:
+            MORDOR_NOTREACHED();
+    }
+}
+
 %%{
     # See RFC 3986: http://www.ietf.org/rfc/rfc3986.txt
 
