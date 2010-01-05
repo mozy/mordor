@@ -11,6 +11,9 @@ namespace Mordor {
 
 class HandleStream : public Stream
 {
+public:
+    typedef boost::shared_ptr<HandleStream> ptr;
+
 protected:
     HandleStream();
     void init(HANDLE hFile, IOManager *ioManager = NULL,

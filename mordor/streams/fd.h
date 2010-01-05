@@ -9,6 +9,9 @@ namespace Mordor {
 
 class FDStream : public Stream
 {
+public:
+    typedef boost::shared_ptr<FDStream> ptr;
+
 protected:
     FDStream();
     void init(int fd, IOManager *ioManager = NULL, Scheduler *scheduler = NULL,
