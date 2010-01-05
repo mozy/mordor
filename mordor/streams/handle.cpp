@@ -266,9 +266,16 @@ HandleStream::truncate(long long size)
     BOOL ret = SetEndOfFile(m_hFile);
     DWORD lastError = GetLastError();
     seek(pos, BEGIN);
-    if (!ret) {
+    if (!ret)
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(lastError, "SetEndOfFile");
-    }
+}
+
+void
+HandleStream::flush()
+{
+    SchedulerSwitcher switcher(m_scheduler);
+    if (!FlushFileBuffers(m_hFile))
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("FlushFileBuffers");
 }
 
 }
