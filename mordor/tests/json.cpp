@@ -9,6 +9,49 @@ using namespace Mordor::JSON;
 
 // Examples taken from http://www.ietf.org/rfc/rfc4627.txt
 
+MORDOR_UNITTEST(JSON, example1construct)
+{
+    Object root;
+    Object image;
+    image.insert(std::make_pair("Width", Value(800ll)));
+    image.insert(std::make_pair("Height", Value(600ll)));
+    image.insert(std::make_pair("Title", Value(std::string("View from 15th Floor"))));
+    Object thumbnail;
+    thumbnail.insert(std::make_pair("Url", Value(std::string("http://www.example.com/image/481989943"))));
+    thumbnail.insert(std::make_pair("Height", Value(125ll)));
+    thumbnail.insert(std::make_pair("Width", Value(std::string("100"))));
+    image.insert(std::make_pair("Thumbnail", thumbnail));
+    Array ids;
+    ids.push_back(Value(116ll));
+    ids.push_back(Value(943ll));
+    ids.push_back(Value(234ll));
+    ids.push_back(Value(38793ll));
+    image.insert(std::make_pair("IDs", ids));
+    root.insert(std::make_pair("Image", image));
+
+    std::ostringstream os;
+    os << root;
+    MORDOR_TEST_ASSERT_EQUAL(os.str(),
+        "{\n"
+        "    \"Image\" : {\n"
+        "        \"Height\" : 600,\n"
+        "        \"IDs\" : [\n"
+        "            116,\n"
+        "            943,\n"
+        "            234,\n"
+        "            38793\n"
+        "        ],\n"
+        "        \"Thumbnail\" : {\n"
+        "            \"Height\" : 125,\n"
+        "            \"Url\" : \"http://www.example.com/image/481989943\",\n"
+        "            \"Width\" : \"100\"\n"
+        "        },\n"
+        "        \"Title\" : \"View from 15th Floor\",\n"
+        "        \"Width\" : 800\n"
+        "    }\n"
+        "}");
+}
+
 MORDOR_UNITTEST(JSON, example1)
 {
     Value root;
