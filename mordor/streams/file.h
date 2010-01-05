@@ -17,6 +17,8 @@ namespace Mordor {
 class FileStream : public NativeStream
 {
 public:
+    typedef boost::shared_ptr<FileStream> ptr;
+
 #ifdef WINDOWS
     enum AccessFlags {
         READ      = 0x01,
@@ -60,33 +62,36 @@ public:
 
 protected:
     FileStream();
-    void init(const std::string &filename,
+    void init(const std::string &path,
         AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
         IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
 #ifdef WINDOWS
-    void init(const std::wstring &filename,
+    void init(const std::wstring &path,
         AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
         IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
 #endif
 
 public:
-    FileStream(const std::string &filename,
+    FileStream(const std::string &path,
         AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
         IOManager *ioManager = NULL, Scheduler *scheduler = NULL)
-    { init(filename, accessFlags, createFlags, ioManager, scheduler); }
+    { init(path, accessFlags, createFlags, ioManager, scheduler); }
 #ifdef WINDOWS
-    FileStream(const std::wstring &filename,
+    FileStream(const std::wstring &path,
         AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
         IOManager *ioManager = NULL, Scheduler *scheduler = NULL)
-    { init(filename, accessFlags, createFlags, ioManager, scheduler); }
+    { init(path, accessFlags, createFlags, ioManager, scheduler); }
 #endif
 
     bool supportsRead() { return m_supportsRead && NativeStream::supportsRead(); }
     bool supportsWrite() { return m_supportsWrite && NativeStream::supportsWrite(); }
     bool supportsSeek() { return m_supportsSeek && NativeStream::supportsSeek(); }
 
+    std::string path() const { return m_path; }
+
 private:
     bool m_supportsRead, m_supportsWrite, m_supportsSeek;
+    std::string m_path;
 };
 
 }

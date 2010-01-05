@@ -14,8 +14,8 @@ static ConfigVar<std::string>::ptr g_tempDir = Config::lookup(
     std::string(""),
     "Temporary directory (blank for system default)");
 
-TempStream::TempStream(const std::string &prefix, IOManager *ioManager,
-                       Scheduler *scheduler)
+TempStream::TempStream(const std::string &prefix, bool deleteOnClose,
+                       IOManager *ioManager, Scheduler *scheduler)
 {
     std::string tempdir;
     bool absolutePath =
@@ -52,7 +52,8 @@ TempStream::TempStream(const std::string &prefix, IOManager *ioManager,
     if (len == 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetTempFileNameW");
     init(tempfile, FileStream::READWRITE,
-        (FileStream::CreateFlags)(FileStream::OPEN | FileStream::DELETE_ON_CLOSE),
+        (FileStream::CreateFlags)(FileStream::OPEN |
+            (deleteOnClose ? FileStream::DELETE_ON_CLOSE : 0)),
         ioManager, scheduler);
 #else
     if (!absolutePath && tempdir.empty())
@@ -65,9 +66,12 @@ TempStream::TempStream(const std::string &prefix, IOManager *ioManager,
     if (fd < 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("mkstemp");
     init(fd, ioManager, scheduler);
-    int rc = unlink(tempdir.c_str());
-    if (rc != 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("unlink");
+    if (deleteOnClose) {
+        int rc = unlink(tempdir.c_str());
+        if (rc != 0)
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("unlink");
+    }
+    m_path = tempdir;
 #endif
 }
 

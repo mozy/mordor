@@ -16,7 +16,7 @@ FileStream::FileStream()
 {}
 
 void
-FileStream::init(const std::string &filename, AccessFlags accessFlags,
+FileStream::init(const std::string &path, AccessFlags accessFlags,
     CreateFlags createFlags, IOManager *ioManager, Scheduler *scheduler)
 {
     NativeHandle handle;
@@ -36,7 +36,7 @@ FileStream::init(const std::string &filename, AccessFlags accessFlags,
     if (ioManager)
         flags |= FILE_FLAG_OVERLAPPED;
     MORDOR_ASSERT(createFlags >= CREATE_NEW && createFlags <= TRUNCATE_EXISTING);
-    handle = CreateFileW(toUtf16(filename).c_str(),
+    handle = CreateFileW(toUtf16(path).c_str(),
         access,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
@@ -65,11 +65,11 @@ FileStream::init(const std::string &filename, AccessFlags accessFlags,
         default:
             MORDOR_NOTREACHED();
     }
-    handle = open(filename.c_str(), oflags, 0777);
+    handle = open(path.c_str(), oflags, 0777);
     if (handle < 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("open");
     if (createFlags & DELETE_ON_CLOSE) {
-        int rc = unlink(filename.c_str());
+        int rc = unlink(path.c_str());
         if (rc != 0) {
             int error = errno;
             ::close(handle);
@@ -82,11 +82,12 @@ FileStream::init(const std::string &filename, AccessFlags accessFlags,
     m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||
         accessFlags == APPEND;
     m_supportsSeek = accessFlags != APPEND;
+    m_path = path;
 }
 
 #ifdef WINDOWS
 void
-FileStream::init(const std::wstring &filename, AccessFlags accessFlags,
+FileStream::init(const std::wstring &path, AccessFlags accessFlags,
     CreateFlags createFlags, IOManager *ioManager, Scheduler *scheduler)
 {
     NativeHandle handle;
@@ -105,7 +106,7 @@ FileStream::init(const std::wstring &filename, AccessFlags accessFlags,
     if (ioManager)
         flags |= FILE_FLAG_OVERLAPPED;
     MORDOR_ASSERT(createFlags >= CREATE_NEW && createFlags <= TRUNCATE_EXISTING);
-    handle = CreateFileW(filename.c_str(),
+    handle = CreateFileW(path.c_str(),
         access,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
@@ -119,6 +120,7 @@ FileStream::init(const std::wstring &filename, AccessFlags accessFlags,
     m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||
         accessFlags == APPEND;
     m_supportsSeek = accessFlags != APPEND;
+    m_path = toUtf8(path);
 }
 #endif
 
