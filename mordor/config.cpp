@@ -47,12 +47,9 @@ Config::loadFromEnvironment()
         replace(key, '_', '.');
         if (key.find_first_not_of("abcdefghijklmnopqrstuvwxyz.") != std::string::npos)
             continue;
-        ConfigVarBase var(key);
-        ConfigVarBase::ptr ptr(&var, &nop<ConfigVarBase *>);
-        std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator>::iterator it = vars().find(ptr);
-        if (it != vars().end()) {
-            (*it)->fromString(value);
-        }
+        ConfigVarBase::ptr var = lookup(key);
+        if (var)
+            var->fromString(value);
     }
 }
 
@@ -62,9 +59,8 @@ Config::lookup(const std::string &name)
     ConfigVarBase var(name);
     ConfigVarBase::ptr ptr(&var, &nop<ConfigVarBase *>);
     std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator>::iterator it = vars().find(ptr);
-    if (it != vars().end()) {
+    if (it != vars().end())
         return *it;
-    }
     return ConfigVarBase::ptr();
 }
 
