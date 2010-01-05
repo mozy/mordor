@@ -10,7 +10,7 @@
 using namespace Mordor;
 using namespace Mordor::Test;
 
-void
+static void
 singleTimer(int &sequence, int &expected)
 {
     ++sequence;

@@ -54,6 +54,13 @@ IOManagerEPoll::~IOManagerEPoll()
     close(m_tickleFds[1]);
 }
 
+bool
+IOManagerEPoll::stopping()
+{
+    unsigned long long timeout;
+    return stopping(timeout);
+}
+
 void
 IOManagerEPoll::registerEvent(int fd, Event events, boost::function<void ()> dg)
 {
@@ -157,25 +164,36 @@ IOManagerEPoll::registerTimer(unsigned long long us, boost::function<void ()> dg
     return result;
 }
 
+bool
+IOManagerEPoll::stopping(unsigned long long &nextTimeout)
+{
+    nextTimeout = nextTimer();
+    if (nextTimeout == ~0ull && Scheduler::stopping()) {
+        boost::mutex::scoped_lock lock(m_mutex);
+        if (m_pendingEvents.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void
 IOManagerEPoll::idle()
 {
     epoll_event events[64];
     while (true) {
-        if (stopping()) {
-            boost::mutex::scoped_lock lock(m_mutex);
-            if (m_pendingEvents.empty()) {
-                return;
-            }
-        }
+        unsigned long long nextTimeout;
+        if (stopping(nextTimeout))
+            return;
         int rc = -1;
         errno = EINTR;
         while (rc < 0 && errno == EINTR) {
             int timeout = -1;
-            unsigned long long nextTimeout = nextTimer();
             if (nextTimeout != ~0ull)
                 timeout = (int)(nextTimeout / 1000);
             rc = epoll_wait(m_epfd, events, 64, timeout);
+            if (rc < 0 && errno == EINTR)
+                nextTimeout = nextTimer();
         }
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " epoll_wait(" << m_epfd << "): " << rc << " (" << errno << ")";

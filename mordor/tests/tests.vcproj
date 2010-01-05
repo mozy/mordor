@@ -376,6 +376,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\iomanager.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\iomanager_iocp.cpp"
 				>
 			</File>

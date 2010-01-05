@@ -36,6 +36,8 @@ public:
     IOManagerEPoll(int threads = 1, bool useCaller = true);
     ~IOManagerEPoll();
 
+    bool stopping();
+
     void registerEvent(int fd, Event events, boost::function<void ()> dg = NULL);
     void cancelEvent(int fd, Event events);
 
@@ -43,6 +45,7 @@ public:
         bool recurring = false);
 
 protected:
+    bool stopping(unsigned long long &nextTimeout);
     void idle();
     void tickle();
 
