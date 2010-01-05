@@ -13,6 +13,8 @@
 #define strtoll _strtoi64
 #define strtoull _strtoui64
 #define strnicmp _strnicmp
+#define mkdir _mkdir
+#define snprintf _snprintf
 
 #include <windows.h>
 
