@@ -33,6 +33,8 @@ public:
     void truncate(long long size);
     void flush();
 
+    int fd() { return m_fd; }
+
 private:
     IOManager *m_ioManager;
     Scheduler *m_scheduler;
