@@ -184,9 +184,10 @@ Socket::bind(const Address &addr)
 {
     MORDOR_ASSERT(addr.family() == m_family);
     if (::bind(m_sock, addr.name(), addr.nameLen())) {
+        error_t error = lastError();
         MORDOR_LOG_ERROR(g_log) << this << " bind(" << m_sock << ", " << addr
-            << "): (" << lastError() << ")";
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("bind");
+            << "): (" << error << ")";
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "bind");
     }
     MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock << ", " << addr << ")";
 }

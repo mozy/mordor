@@ -43,6 +43,7 @@ typedef int socket_t;
 
 struct SocketException : virtual NativeException {};
 
+struct AddressInUseException : virtual SocketException {};
 struct ConnectionAbortedException : virtual SocketException {};
 struct ConnectionResetException : virtual SocketException {};
 struct ConnectionRefusedException : virtual SocketException {};

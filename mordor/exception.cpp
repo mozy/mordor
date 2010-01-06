@@ -184,6 +184,9 @@ void rethrow_exception(boost::exception_ptr const & ep)
 static void throwSocketException(error_t error)
 {
     switch (error) {
+        case WSA(EADDRINUSE):
+            throw boost::enable_current_exception(AddressInUseException())
+                << errinfo_nativeerror(error);
         case WSA(ECONNABORTED):
 #ifdef WINDOWS
         case ERROR_CONNECTION_ABORTED:
