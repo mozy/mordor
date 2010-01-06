@@ -38,14 +38,22 @@ RandomStream::~RandomStream()
 size_t RandomStream::read(Buffer &buffer, size_t length)
 {
     Buffer::SegmentData data = buffer.writeBuf(length);
+    size_t result = read(data.start(), data.length());
+    buffer.produce(result);
+    return result;
+}
+
+size_t RandomStream::read(void *buffer, size_t length)
+{
 #ifdef WINDOWS
-    if (!::CryptGenRandom(m_hCP, static_cast<DWORD>(length), static_cast<BYTE *>(data.start())))
+    if (length >= 0xffffffffu)
+        length = 0xffffffffu;
+    if (!::CryptGenRandom(m_hCP, static_cast<DWORD>(length), static_cast<BYTE *>(buffer)))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CryptGenRandom");
 #else
-    if (!RAND_bytes(static_cast<unsigned char *>(data.start()), length))
+    if (!RAND_bytes(static_cast<unsigned char *>(buffer), length))
         MORDOR_THROW_EXCEPTION(OpenSSLException());
 #endif
-    buffer.produce(length);
     return length;
 }
 
