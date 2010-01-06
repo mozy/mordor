@@ -439,30 +439,14 @@ ServerRequest::doRequest()
         // Do nothing (this occurs when a pipelined request fails because a prior request closed the connection
     } catch (Assertion &) {
         throw;
-    } catch (std::exception &ex) {
+    } catch (...) {
         MORDOR_LOG_ERROR(g_log) << this << " Unexpected exception: "
-            << typeid(ex).name() << ": " << ex.what();
+            << boost::current_exception_diagnostic_information();
         if (!m_responseDone) {
             try {
-                if (!committed()) {
-                    size_t whatLen = strlen(ex.what());
-                    m_response.status.status = INTERNAL_SERVER_ERROR;
-                    m_response.general.connection.clear();
-                    m_response.general.connection.insert("close");
-                    m_response.general.transferEncoding.clear();
-                    m_response.entity.contentLength = whatLen;
-                    m_response.entity.contentType.type = "text";
-                    m_response.entity.contentType.subtype = "plain";
-                    m_response.entity.contentType.parameters.clear();
-                    if (!m_responseStream) {
-                        m_responseStream = responseStream();
-                    }
-                    MORDOR_ASSERT(m_responseStream);
-                    m_responseStream->write(ex.what(), whatLen);
-                    m_responseStream->close();
-                } else {
-                    finish();
-                }
+                if (!committed())
+                    respondError(shared_from_this(), INTERNAL_SERVER_ERROR);
+                finish();
             } catch(...) {
                 // Swallow any exceptions that happen while trying to report the error
             }
