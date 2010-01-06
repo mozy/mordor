@@ -48,6 +48,13 @@ void startSocketServer(IOManager &ioManager)
         s->bind(*it);
         Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&socketServer, s))));
     }
+
+#ifndef WINDOWS
+    UnixAddress echoaddress("/tmp/echo", SOCK_STREAM);
+    Socket::ptr s = echoaddress.createSocket(ioManager);
+    s->bind(echoaddress);
+    Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&socketServer, s))));
+#endif
 }
 
 void httpRequest(HTTP::ServerRequest::ptr request)
@@ -121,10 +128,14 @@ void startHttpServer(IOManager &ioManager)
 
 int main(int argc, const char *argv[])
 {
-    Config::loadFromEnvironment();
-    IOManager ioManager;
-    startSocketServer(ioManager);
-    startHttpServer(ioManager);
-    ioManager.yieldTo();
+    try {
+        Config::loadFromEnvironment();
+        IOManager ioManager;
+        startSocketServer(ioManager);
+        startHttpServer(ioManager);
+        ioManager.dispatch();
+    } catch (...) {
+        std::cerr << boost::current_exception_diagnostic_information() << std::endl;
+    }
     return 0;
 }

@@ -36,6 +36,7 @@ typedef SOCKET socket_t;
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <sys/un.h>
 typedef size_t iov_len_t;
 typedef int socket_t;
 #endif
@@ -222,6 +223,24 @@ public:
 private:
     sockaddr_in6 sin;
 };
+
+#ifndef WINDOWS
+struct UnixAddress : public Address
+{
+public:
+    UnixAddress(const std::string &path, int type = 0, int protocol = 0);
+
+    const sockaddr *name() const { return (sockaddr*)&sun; }
+    sockaddr *name() { return (sockaddr*)&sun; }
+    socklen_t nameLen() const { return length; }
+
+    std::ostream & insert(std::ostream &os) const;
+
+private:
+    size_t length;
+    struct sockaddr_un sun;
+};
+#endif
 
 struct UnknownAddress : public Address
 {

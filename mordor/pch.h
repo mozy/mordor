@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/uio.h>
+#include <sys/un.h>
 #ifndef OSX
 #include <ucontext.h>
 #endif

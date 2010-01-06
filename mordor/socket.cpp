@@ -1767,6 +1767,35 @@ IPv6Address::insert(std::ostream &os) const
     return os;
 }
 
+#ifndef WINDOWS
+UnixAddress::UnixAddress(const std::string &path, int type, int protocol)
+: Address(type, protocol)
+{
+    sun.sun_family = AF_UNIX;
+    length = path.size() + 1;
+#ifdef LINUX
+    // Abstract namespace; leading NULL, but no trailing NULL
+    if (!path.empty() && path[0] == '\0')
+        --length;
+#endif
+    MORDOR_ASSERT(length <= sizeof(sun.sun_path));
+    memcpy(sun.sun_path, path.c_str(), length);
+    length += offsetof(sockaddr_un, sun_path);
+}
+
+std::ostream &
+UnixAddress::insert(std::ostream &os) const
+{
+#ifdef LINUX
+    if (length > offsetof(sockaddr_un, sun_path) &&
+        sun.sun_path[0] == '\0')
+        return os << "\\0" << std::string(sun.sun_path + 1,
+            length - offsetof(sockaddr_un, sun_path) - 1);
+#endif
+    return os << sun.sun_path;
+}
+#endif
+
 UnknownAddress::UnknownAddress(int family, int type, int protocol)
 : Address(type, protocol)
 {
