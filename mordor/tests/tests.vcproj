@@ -456,6 +456,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\stream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\temp_stream.cpp"
 				>
 			</File>

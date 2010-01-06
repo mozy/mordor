@@ -16,6 +16,8 @@ Stream::read(void *buffer, size_t length)
     size_t result = read(internalBuffer, length);
     MORDOR_ASSERT(result <= length);
     MORDOR_ASSERT(internalBuffer.readAvailable() == result);
+    if (result == 0u)
+        return 0;
     std::vector<iovec> iovs = internalBuffer.readBufs(result);
     MORDOR_ASSERT(!iovs.empty());
     // It wrote directly into our buffer
