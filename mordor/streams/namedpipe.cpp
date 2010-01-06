@@ -10,8 +10,7 @@
 
 namespace Mordor {
 
-void
-NamedPipeStream::init(IOManager *ioManager, Scheduler *scheduler, const std::string &name, Flags flags)
+NamedPipeStream::NamedPipeStream(const std::string &name, Flags flags, IOManager *ioManager, Scheduler *scheduler)
 {
     HANDLE hPipe = CreateNamedPipeW(toUtf16(name).c_str(),
         (DWORD)flags | (ioManager ? FILE_FLAG_OVERLAPPED : 0),
@@ -25,8 +24,7 @@ NamedPipeStream::init(IOManager *ioManager, Scheduler *scheduler, const std::str
     m_supportsWrite = !!(flags & WRITE);
 }
 
-void
-NamedPipeStream::init(IOManager *ioManager, Scheduler *scheduler, const std::wstring &name, Flags flags)
+NamedPipeStream::NamedPipeStream(const std::wstring &name, Flags flags, IOManager *ioManager, Scheduler *scheduler)
 {
     HANDLE hPipe = CreateNamedPipeW(name.c_str(),
         (DWORD)flags | (ioManager ? FILE_FLAG_OVERLAPPED : 0),

@@ -8,32 +8,31 @@
 #include "mordor/http/server.h"
 #include "mordor/iomanager.h"
 #include "mordor/socket.h"
+#ifdef WINDOWS
+#include "mordor/streams/namedpipe.h"
+#endif
 #include "mordor/streams/socket.h"
 #include "mordor/streams/transfer.h"
 
 using namespace Mordor;
 
-void socketConnection(Socket::ptr s)
+void streamConnection(Stream::ptr stream)
 {
-    unsigned char buf[4096];
-    while (true) {
-        size_t rc = s->receive(buf, 4096);
-        if (rc == 0) {
-            s->shutdown();
-            s->close();
-            break;
-        }
-        s->send(buf, rc);
-    }
+    try {
+        transferStream(stream, stream);
+    } catch (UnexpectedEofException &)
+    {}
+    stream->close();
 }
 
-void socketServer(Socket::ptr s)
+void socketServer(Socket::ptr listen)
 {
-    s->listen(10);
+    listen->listen();
 
     while (true) {
-        Socket::ptr newsocket = s->accept();
-        Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&socketConnection, newsocket))));
+        Socket::ptr socket = listen->accept();
+        Stream::ptr stream(new SocketStream(socket));
+        Scheduler::getThis()->schedule(boost::bind(&streamConnection, stream));
     }
 }
 
@@ -101,13 +100,13 @@ void httpRequest(HTTP::ServerRequest::ptr request)
     }
 }
 
-void httpServer(Socket::ptr s)
+void httpServer(Socket::ptr listen)
 {
-    s->listen(10);
+    listen->listen();
 
     while (true) {
-        Socket::ptr newsocket = s->accept();
-        Stream::ptr stream(new SocketStream(newsocket));
+        Socket::ptr socket = listen->accept();
+        Stream::ptr stream(new SocketStream(socket));
         HTTP::ServerConnection::ptr conn(new HTTP::ServerConnection(stream, &httpRequest));
         Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&HTTP::ServerConnection::processRequests, conn))));
     }
@@ -123,8 +122,19 @@ void startHttpServer(IOManager &ioManager)
         Socket::ptr s = (*it)->createSocket(ioManager);
         s->bind(*it);
         Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&httpServer, s))));
-    }    
+    }
 }
+
+#ifdef WINDOWS
+void namedPipeServer(IOManager &ioManager)
+{
+    while (true) {
+        NamedPipeStream::ptr stream(new NamedPipeStream("\\\\.\\pipe\\echo", NamedPipeStream::READWRITE, &ioManager));
+        stream->accept();
+        Scheduler::getThis()->schedule(boost::bind(&streamConnection, stream));
+    }
+}
+#endif
 
 int main(int argc, const char *argv[])
 {
@@ -133,6 +143,10 @@ int main(int argc, const char *argv[])
         IOManager ioManager;
         startSocketServer(ioManager);
         startHttpServer(ioManager);
+#ifdef WINDOWS
+        ioManager.schedule(boost::bind(&namedPipeServer, boost::ref(ioManager)));
+        ioManager.schedule(boost::bind(&namedPipeServer, boost::ref(ioManager)));
+#endif
         ioManager.dispatch();
     } catch (...) {
         std::cerr << boost::current_exception_diagnostic_information() << std::endl;
