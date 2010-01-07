@@ -72,6 +72,10 @@ PipeStream::~PipeStream()
         MORDOR_ASSERT(!otherStream->m_pendingReaderScheduler);
         MORDOR_ASSERT(!otherStream->m_pendingWriter);
         MORDOR_ASSERT(!otherStream->m_pendingWriterScheduler);
+        if (!m_readBuffer.readAvailable())
+            otherStream->m_otherClosed = (CloseType)(otherStream->m_otherClosed | READ);
+        else
+            otherStream->m_otherClosed = (CloseType)(otherStream->m_otherClosed & ~READ);
     }
     if (m_pendingReader) {
         MORDOR_ASSERT(m_pendingReaderScheduler);
@@ -218,8 +222,12 @@ PipeStream::flush()
     while (true) {
         {
             boost::mutex::scoped_lock lock(*m_mutex);
-            if (m_otherStream.expired())
+            if (m_otherStream.expired()) {
+                // See if they read everything before destructing
+                if (m_otherClosed & READ)
+                    return;
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
+            }
             PipeStream::ptr otherStream(m_otherStream);
             if (otherStream->m_closed & READ)
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());

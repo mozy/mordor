@@ -84,7 +84,23 @@ MORDOR_UNITTEST(PipeStream, readerGone)
 
     pipe.second.reset();
     MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->write("a"), BrokenPipeException);
+}
+
+MORDOR_UNITTEST(PipeStream, readerGoneFlush)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+
+    MORDOR_TEST_ASSERT_EQUAL(pipe.first->write("a"), 1u);
+    pipe.second.reset();
     MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->flush(), BrokenPipeException);
+}
+
+MORDOR_UNITTEST(PipeStream, readerGoneReadEverything)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+
+    pipe.second.reset();
+    pipe.first->flush();
 }
 
 MORDOR_UNITTEST(PipeStream, writerGone)

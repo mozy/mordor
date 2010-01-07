@@ -953,13 +953,8 @@ ClientRequest::requestDone()
     notify->notifyOnClose = NULL;
     notify->notifyOnEof = NULL;
     notify->notifyOnException = NULL;
-    if (m_requestStream->supportsSize() && m_requestStream->supportsTell()) {
-        if (m_requestStream->size() !=
-            m_requestStream->tell()) {
-            cancel(true);
-            MORDOR_THROW_EXCEPTION(UnexpectedEofException());
-        }
-    }
+    if (m_requestStream->supportsSize() && m_requestStream->supportsTell())
+        MORDOR_ASSERT(m_requestStream->size() == m_requestStream->tell());
     if (!m_request.general.transferEncoding.empty()) {
         std::ostringstream os;
         os << m_requestTrailer << "\r\n";

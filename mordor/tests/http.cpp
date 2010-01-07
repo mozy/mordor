@@ -1314,7 +1314,9 @@ MORDOR_UNITTEST(HTTPClient, underflowRequestBody)
 
     // Write the body
     MORDOR_TEST_ASSERT_EQUAL(requestBody->write("hel"), 3u);
-    MORDOR_TEST_ASSERT_EXCEPTION(requestBody->close(), UnexpectedEofException);
+#ifdef DEBUG
+    MORDOR_TEST_ASSERT_ASSERTED(requestBody->close());
+#endif
 }
 
 MORDOR_UNITTEST(HTTPClient, overflowRequestBody)

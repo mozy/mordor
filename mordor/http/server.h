@@ -20,6 +20,8 @@ private:
     ServerRequest(boost::shared_ptr<ServerConnection> conn);
 
 public:
+    ~ServerRequest();
+
     const Request &request();
     bool hasRequestBody();
     Stream::ptr requestStream();
@@ -60,6 +62,7 @@ class ServerConnection : public Connection, public boost::enable_shared_from_thi
 {
 public:
     typedef boost::shared_ptr<ServerConnection> ptr;
+
 private:
     friend class ServerRequest;
 public:
@@ -68,15 +71,15 @@ public:
     void processRequests();
 
 private:
-    void scheduleNextRequest(ServerRequest::ptr currentRequest);
-    void scheduleNextResponse(ServerRequest::ptr currentRequest);
+    void scheduleNextRequest(ServerRequest *currentRequest);
+    void scheduleNextResponse(ServerRequest *currentRequest);
     void scheduleAllWaitingResponses();
 
 private:
     boost::function<void (ServerRequest::ptr)> m_dg;
     boost::mutex m_mutex;
-    std::list<ServerRequest::ptr> m_pendingRequests;
-    std::set<ServerRequest::ptr> m_waitingResponses;
+    std::list<ServerRequest *> m_pendingRequests;
+    std::set<ServerRequest *> m_waitingResponses;
     std::runtime_error m_exception;
 
     void invariant() const;
