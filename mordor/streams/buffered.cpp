@@ -188,10 +188,10 @@ BufferedStream::seek(long long offset, Anchor anchor)
         + m_writeBuffer.readAvailable();
     long long parentSize = parent()->supportsSize() ? -1ll : parent()->size();
     // Check for no change in position
-    if (offset == 0 && anchor == CURRENT ||
-        offset == bufferedPos && anchor == BEGIN ||
-        parentSize != -1ll && offset + parentSize == bufferedPos &&
-        anchor == END)
+    if ((offset == 0 && anchor == CURRENT) ||
+        (offset == bufferedPos && anchor == BEGIN) ||
+        (parentSize != -1ll && offset + parentSize == bufferedPos &&
+        anchor == END))
         return bufferedPos;
 
     MORDOR_ASSERT(supportsSeek());
