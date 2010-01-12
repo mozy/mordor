@@ -13,6 +13,7 @@
 #include "mordor/streams/duplex.h"
 #include "mordor/streams/limited.h"
 #include "mordor/streams/memory.h"
+#include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/random.h"
 #include "mordor/streams/test.h"
@@ -1921,6 +1922,50 @@ MORDOR_UNITTEST(HTTPClient, emptyResponseCompleteBeforeRequestComplete)
     request->requestStream()->close();
 }
 
+static void emptyResponseCompleteBeforeRequestCompletePipelinedSecondRequest(
+    ClientConnection::ptr conn, ClientRequest::ptr &request2)
+{
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.entity.contentLength = 5;
+    request2 = conn->request(requestHeaders);
+}
+
+MORDOR_UNITTEST(HTTPClient, emptyResponseCompleteBeforeRequestCompletePipelined)
+{
+    WorkerPool pool;
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n"
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.entity.contentLength = 5;
+
+    ClientRequest::ptr request1 = conn->request(requestHeaders), request2;
+    // Has to happen in a separate fiber because we need to force request1 to
+    // not flush (because there's already another request in the queue, before
+    // this request has completed)
+    pool.schedule(boost::bind(&emptyResponseCompleteBeforeRequestCompletePipelinedSecondRequest,
+        conn, boost::ref(request2)));
+    pool.dispatch();
+
+    MORDOR_TEST_ASSERT_EQUAL(request1->response().status.status, HTTP::OK);
+    request1->requestStream()->write("hello");
+    request1->requestStream()->close();
+    pool.dispatch();
+    MORDOR_TEST_ASSERT_EQUAL(request2->response().status.status, HTTP::OK);
+    request2->requestStream()->write("hello");
+    request2->requestStream()->close();
+}
+
 MORDOR_UNITTEST(HTTPClient, simpleResponseCompleteBeforeRequestComplete)
 {
     MemoryStream::ptr requestStream(new MemoryStream());
@@ -1984,6 +2029,54 @@ MORDOR_UNITTEST(HTTPClient, responseFailBeforeRequestComplete)
     MORDOR_TEST_ASSERT_EXCEPTION(request->response(), IncompleteMessageHeaderException);
     MORDOR_TEST_ASSERT_EXCEPTION(request->response(), IncompleteMessageHeaderException);
     MORDOR_TEST_ASSERT_EXCEPTION(request->response(), IncompleteMessageHeaderException);
+}
+
+static void newRequestWhileFlushing(ClientConnection::ptr conn, int &sequence, NotifyStream::ptr notify)
+{
+    if (notify) {
+        notify->notifyOnFlush = NULL;
+        MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);
+        Scheduler::getThis()->schedule(boost::bind(&newRequestWhileFlushing, conn, boost::ref(sequence), NotifyStream::ptr()));
+        Scheduler::getThis()->schedule(Fiber::getThis());
+        Scheduler::getThis()->yieldTo();
+        return;
+    }
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+}
+
+MORDOR_UNITTEST(HTTPClient, newRequestWhileFlushing)
+{
+    WorkerPool pool;
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n"
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n")));
+    NotifyStream::ptr notifyStream(new NotifyStream(requestStream));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, notifyStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    int sequence = 0;
+    notifyStream->notifyOnFlush = boost::bind(&newRequestWhileFlushing, conn, boost::ref(sequence), notifyStream);
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+    pool.dispatch();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
 }
 
 static void

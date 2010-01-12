@@ -18,6 +18,7 @@ public:
     {}
 
     boost::function<void ()> notifyOnClose;
+    boost::function<void ()> notifyOnFlush;
     boost::function<void ()> notifyOnEof;
     boost::function<void ()> notifyOnException;
 
@@ -59,6 +60,19 @@ public:
                 notifyOnException();
             throw;
         }
+    }
+
+    void flush()
+    {
+        try {
+            parent()->flush();
+        } catch(...) {
+            if (notifyOnException)
+                notifyOnException();
+            throw;
+        }
+        if (notifyOnFlush)
+            notifyOnFlush();
     }
 };
 
