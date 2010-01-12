@@ -66,11 +66,12 @@ public:
 private:
     friend class ServerRequest;
 public:
-    ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg);
+    ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg, size_t maxPipelineDepth = 5);
 
     void processRequests();
 
 private:
+    void scheduleSingleRequest();
     void scheduleNextRequest(ServerRequest *currentRequest);
     void scheduleNextResponse(ServerRequest *currentRequest);
     void scheduleAllWaitingResponses();
@@ -80,7 +81,8 @@ private:
     boost::mutex m_mutex;
     std::list<ServerRequest *> m_pendingRequests;
     std::set<ServerRequest *> m_waitingResponses;
-    std::runtime_error m_exception;
+    bool m_priorRequestFailed, m_priorRequestClosed, m_priorResponseClosed;
+    size_t m_maxPipelineDepth;
 
     void invariant() const;
 };

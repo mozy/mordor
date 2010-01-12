@@ -17,10 +17,13 @@ namespace HTTP {
 
 static Logger::ptr g_log = Log::lookup("mordor:http:server");
 
-ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg)
+ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg, size_t maxPipelineDepth)
 : Connection(stream),
   m_dg(dg),
-  m_exception("")
+  m_priorRequestFailed(false),
+  m_priorRequestClosed(false),
+  m_priorResponseClosed(false),
+  m_maxPipelineDepth(maxPipelineDepth)
 {
     MORDOR_ASSERT(m_dg);
 }
@@ -28,34 +31,47 @@ ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (Ser
 void
 ServerConnection::processRequests()
 {
-    scheduleNextRequest(NULL);
+    boost::mutex::scoped_lock lock(m_mutex);
+    invariant();
+    scheduleSingleRequest();
+}
+
+void
+ServerConnection::scheduleSingleRequest()
+{
+    if ((m_pendingRequests.empty() ||
+        (m_pendingRequests.back()->m_requestDone &&
+        m_pendingRequests.size() < m_maxPipelineDepth)) &&
+        !m_priorRequestFailed && !m_priorRequestClosed && !m_priorResponseClosed) {
+        ServerRequest::ptr requestPtr(new ServerRequest(shared_from_this()));
+        m_pendingRequests.push_back(requestPtr.get());
+        MORDOR_LOG_TRACE(g_log) << this << " " << requestPtr.get() << " scheduling request";
+        Scheduler::getThis()->schedule(boost::bind(&ServerRequest::doRequest, requestPtr));
+    }
 }
 
 void
 ServerConnection::scheduleNextRequest(ServerRequest *request)
 {
+    MORDOR_ASSERT(request);
     bool close = false;
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
-        if (request) {
-            MORDOR_ASSERT(!m_pendingRequests.empty());
-            MORDOR_ASSERT(request == m_pendingRequests.back());
-            MORDOR_ASSERT(!request->m_requestDone);
-            MORDOR_LOG_TRACE(g_log) << this << " " << request << " request complete";
-            request->m_requestDone = true;
-            if (request->m_responseDone) {
-                MORDOR_ASSERT(request == m_pendingRequests.front());
-                m_pendingRequests.pop_front();
-            }
-            close = request->m_willClose;
+        MORDOR_ASSERT(!m_pendingRequests.empty());
+        MORDOR_ASSERT(request == m_pendingRequests.back());
+        MORDOR_ASSERT(!request->m_requestDone);
+        MORDOR_LOG_TRACE(g_log) << this << " " << request << " request complete";
+        request->m_requestDone = true;
+        if (request->m_responseDone) {
+            MORDOR_ASSERT(request == m_pendingRequests.front());
+            m_pendingRequests.pop_front();
         }
+        close = request->m_willClose;
         if (!close) {
-            ServerRequest::ptr requestPtr(new ServerRequest(shared_from_this()));
-            m_pendingRequests.push_back(requestPtr.get());
-            MORDOR_LOG_TRACE(g_log) << this << " " << requestPtr.get() << " scheduling request";
-            Scheduler::getThis()->schedule(boost::bind(&ServerRequest::doRequest, requestPtr));
+            scheduleSingleRequest();
         } else {
+            m_priorRequestClosed = true;
             MORDOR_LOG_TRACE(g_log) << this << " closing";
         }
     }
@@ -80,6 +96,7 @@ ServerConnection::scheduleNextResponse(ServerRequest *request)
             request->m_responseInFlight = false;
             request->m_responseDone = true;
             m_pendingRequests.erase(it);
+            scheduleSingleRequest();
             return;
         }
         ++it;
@@ -88,8 +105,10 @@ ServerConnection::scheduleNextResponse(ServerRequest *request)
             if (waitIt != m_waitingResponses.end()) {
                 request->m_responseInFlight = false;
                 request->m_responseDone = true;
-                if (request->m_requestDone)
+                if (request->m_requestDone) {
                     m_pendingRequests.pop_front();
+                    scheduleSingleRequest();
+                }
                 m_waitingResponses.erase(waitIt);
                 request = *it;
                 request->m_responseInFlight = true;
@@ -99,8 +118,10 @@ ServerConnection::scheduleNextResponse(ServerRequest *request)
             }
         }
         MORDOR_LOG_TRACE(g_log) << this << " flushing";
-        if (request->m_willClose)
+        if (request->m_willClose) {
+            m_priorResponseClosed = true;
             MORDOR_LOG_TRACE(g_log) << this << " closing";
+        }
     }
     m_stream->flush();
     if (request->m_willClose)
@@ -131,7 +152,7 @@ ServerConnection::scheduleNextResponse(ServerRequest *request)
 void
 ServerConnection::scheduleAllWaitingResponses()
 {
-    MORDOR_ASSERT(*m_exception.what());
+    MORDOR_ASSERT(m_priorRequestFailed || m_priorResponseClosed);
     // MORDOR_ASSERT(m_mutex.locked());
     MORDOR_LOG_TRACE(g_log) << this << " scheduling all responses";
 
@@ -325,8 +346,7 @@ ServerRequest::cancel()
     m_aborted = true;
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
     m_conn->invariant();
-    m_conn->m_exception =
-        std::runtime_error("No more requests are possible because a prior request failed");
+    m_conn->m_priorRequestFailed = true;
     std::list<ServerRequest *>::iterator it =
         std::find(m_conn->m_pendingRequests.begin(),
             m_conn->m_pendingRequests.end(), this);
@@ -378,11 +398,13 @@ ServerRequest::doRequest()
                 m_requestDone = true;
                 m_willClose = true;
                 m_responseInFlight = true;
+                m_conn->m_priorRequestClosed = true;
                 m_conn->scheduleNextResponse(this);
                 return;
             }
             if (parser.error() || !parser.complete()) {
                 m_requestDone = true;
+                m_conn->m_priorRequestClosed = true;
                 respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
                 return;
             }
@@ -391,6 +413,7 @@ ServerRequest::doRequest()
             m_requestDone = true;
             m_willClose = true;
             m_responseInFlight = true;
+            m_conn->m_priorRequestClosed = true;
             m_conn->scheduleNextResponse(this);
             return;
         }
@@ -522,7 +545,7 @@ ServerRequest::doRequest()
             }
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
-            m_conn->m_exception = std::runtime_error("No more requests are possible because a prior request failed");
+            m_conn->m_priorRequestFailed = true;
             m_conn->scheduleAllWaitingResponses();
         }
     }
@@ -534,14 +557,32 @@ ServerRequest::commit()
 {
     if (m_committed)
         return;
-    // TODO: need to queue up other people waiting for this response if m_responseInFlight
     m_committed = true;
 
     if (m_response.general.connection.find("close") != m_response.general.connection.end())
         m_willClose = true;
 
-    // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
+    if (m_response.status.ver == Version()) {
+        m_response.status.ver = m_request.requestLine.ver;
+        if (m_response.status.ver == Version())
+            m_response.status.ver = Version(1, 1);
+    }
+    MORDOR_ASSERT(m_response.status.ver == Version(1, 0) ||
+           m_response.status.ver == Version(1, 1));
+
+    if (m_willClose)
+        m_response.general.connection.insert("close");
+    else if (m_response.status.ver == Version(1, 0))
+        m_response.general.connection.insert("Keep-Alive");
+
+    if (m_response.status.reason.empty())
+        m_response.status.reason = reason(m_response.status.status);
+
     const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
+    // Transfer encodings only allowed on HTTP/1.1+
+    MORDOR_ASSERT(m_response.status.ver >= Version(1, 1) || transferEncoding.empty());
+
+    // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
     if (!transferEncoding.empty()) {
         MORDOR_ASSERT(transferEncoding.back().value == "chunked");
         for (ParameterizedList::const_iterator it(transferEncoding.begin());
@@ -575,13 +616,16 @@ ServerRequest::commit()
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (*m_conn->m_exception.what()) {
+        if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseClosed) {
             std::list<ServerRequest *>::iterator it;
             it = std::find(m_conn->m_pendingRequests.begin(), m_conn->m_pendingRequests.end(),
                 this);
             MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());             
             m_conn->m_pendingRequests.erase(it);
-            throw m_conn->m_exception;
+            if (m_conn->m_priorRequestFailed)
+                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+            else
+                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
         }
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
         ServerRequest *request = m_conn->m_pendingRequests.front();
@@ -596,6 +640,10 @@ ServerRequest::commit()
         } else {
             m_responseInFlight = true;
             MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " responding";
+            if (m_willClose) {
+                m_conn->m_priorResponseClosed = true;
+                m_conn->scheduleAllWaitingResponses();
+            }
         }
     }
     // If we weren't the first response in the queue, wait for someone
@@ -610,28 +658,17 @@ ServerRequest::commit()
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (*m_conn->m_exception.what()) {
-            throw m_conn->m_exception;
+        MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
+        MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
+        if (m_conn->m_priorRequestFailed)
+            MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+        else if (m_conn->m_priorResponseClosed)
+            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+        if (m_willClose) {
+            m_conn->m_priorResponseClosed = true;
+            m_conn->scheduleAllWaitingResponses();
         }
         m_responseInFlight = true;
-    }
-
-    if (m_response.status.ver == Version()) {
-        m_response.status.ver = m_request.requestLine.ver;
-        if (m_response.status.ver == Version())
-            m_response.status.ver = Version(1, 1);
-    }
-    MORDOR_ASSERT(m_response.status.ver == Version(1, 0) ||
-           m_response.status.ver == Version(1, 1));
-
-    if (m_willClose) {
-        m_response.general.connection.insert("close");
-    } else if (m_response.status.ver == Version(1, 0)) {
-        m_response.general.connection.insert("Keep-Alive");
-    }
-
-    if (m_response.status.reason.empty()) {
-        m_response.status.reason = reason(m_response.status.status);
     }
 
     try {
@@ -647,13 +684,13 @@ ServerRequest::commit()
         m_conn->m_stream->write(str.c_str(), str.size());
 
         if (!Connection::hasMessageBody(m_response.general, m_response.entity, m_request.requestLine.method, m_response.status.status, false)) {
-            MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " " << " no respones body";
+            MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " " << " no response body";
             responseDone();
         }
     } catch(...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        m_conn->m_exception = std::runtime_error("No more requests are possible because a prior request failed");
+        m_conn->m_priorRequestFailed = true;
         m_conn->scheduleAllWaitingResponses();        
         throw;
     }
@@ -703,9 +740,8 @@ ServerRequest::responseDone()
     MORDOR_LOG_INFO(g_log) << m_request.requestLine << " " << m_response.status.status;
     m_conn->scheduleNextResponse(this);
     if (!m_requestDone && hasRequestBody() && !m_willClose) {
-        if (!m_requestStream) {
+        if (!m_requestStream)
             m_requestStream = requestStream();
-        }
         MORDOR_ASSERT(m_requestStream);
         transferStream(m_requestStream, NullStream::get());
     }
