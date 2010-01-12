@@ -13,12 +13,16 @@
 #include "config.h"
 #include "fiber.h"
 #include "mordor/streams/file.h"
+#include "mordor/string.h"
 
 namespace Mordor {
 
 static void enableLoggers();
 static void enableStdoutLogging();
 static void enableFileLogging();
+#ifdef WINDOWS
+static void enableDebugLogging();
+#endif
 
 static ConfigVar<std::string>::ptr g_logFatal =
     Config::lookup("log.fatalmask", std::string(".*"), "Regex of loggers to enable fatal for.");
@@ -37,6 +41,10 @@ static ConfigVar<std::string>::ptr g_logTrace =
 
 static ConfigVar<bool>::ptr g_logStdout =
     Config::lookup("log.stdout", false, "Log to stdout");
+#ifdef WINDOWS
+static ConfigVar<bool>::ptr g_logDebugWindow =
+    Config::lookup("log.debug", false, "Log to Debug Window");
+#endif
 static ConfigVar<std::string>::ptr g_logFile =
     Config::lookup("log.file", std::string(""), "Log to file");
 
@@ -58,6 +66,9 @@ static struct Initializer
 
         g_logFile->monitor(&enableFileLogging);
         g_logStdout->monitor(&enableStdoutLogging);
+#ifdef WINDOWS
+        g_logDebugWindow->monitor(&enableDebugLogging);
+#endif
     }
 } g_init;
 
@@ -116,6 +127,21 @@ static void enableStdoutLogging()
     }
 }
 
+#ifdef WINDOWS
+static void enableDebugLogging()
+{
+    static LogSink::ptr debugSink;
+    bool log = g_logDebugWindow->val();
+    if (debugSink.get() && !log) {
+        Log::removeSink(debugSink);
+        debugSink.reset();
+    } else if (!debugSink.get() && log) {
+        debugSink.reset(new DebugLogSink());
+        Log::addSink(debugSink);
+    }
+}
+#endif
+
 static void enableFileLogging()
 {
     static LogSink::ptr fileSink;
@@ -151,6 +177,24 @@ StdoutLogSink::log(const std::string &logger, tid_t thread,
     std::cout << os.str();
     std::cout.flush();
 }
+
+#ifdef WINDOWS
+void
+DebugLogSink::log(const std::string &logger, tid_t thread,
+    void *fiber, Log::Level level,
+    const std::string &str, const char *file, int line)
+{
+    std::wostringstream os;
+    if (file) {
+        os << level << " " << thread << " " << fiber << " "
+            << toUtf16(logger) << " " << toUtf16(file) << ":" << line << " " << toUtf16(str) << std::endl;
+    } else {
+        os << level << " " << thread << " " << fiber << " "
+            << toUtf16(logger) << " " << toUtf16(str) << std::endl;
+    }
+    OutputDebugStringW(os.str().c_str());
+}
+#endif
 
 FileLogSink::FileLogSink(const std::string &file)
 {
@@ -374,5 +418,24 @@ std::ostream &operator <<(std::ostream &os, Log::Level level)
     MORDOR_ASSERT(level >= Log::FATAL && level <= Log::TRACE);
     return os << levelStrs[level];
 }
+
+#ifdef WINDOWS
+static const wchar_t *levelStrsw[] = {
+    L"NONE",
+    L"FATAL",
+    L"ERROR",
+    L"WARN",
+    L"INFO",
+    L"VERBOSE",
+    L"DEBUG",
+    L"TRACE",
+};
+
+std::wostream &operator <<(std::wostream &os, Log::Level level)
+{
+    MORDOR_ASSERT(level >= Log::FATAL && level <= Log::TRACE);
+    return os << levelStrsw[level];
+}
+#endif
 
 }

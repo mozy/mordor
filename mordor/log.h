@@ -88,6 +88,16 @@ public:
         const char *file, int line);
 };
 
+#ifdef WINDOWS
+class DebugLogSink : public LogSink
+{
+public:
+    void log(const std::string &logger, tid_t thread, void *fiber,
+        Log::Level level, const std::string &str,
+        const char *file, int line);
+};
+#endif
+
 class FileLogSink : public LogSink
 {
 public:
@@ -211,6 +221,9 @@ private:
 #define MORDOR_LOG_TRACE(log) MORDOR_LOG_LEVEL(log, ::Mordor::Log::TRACE)
 
 std::ostream &operator <<(std::ostream &os, Mordor::Log::Level level);
+#ifdef WINDOWS
+std::wostream &operator <<(std::wostream &os, Mordor::Log::Level level);
+#endif
 
 }
 
