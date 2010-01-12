@@ -185,6 +185,9 @@ static void throwSocketException(error_t error)
 {
     switch (error) {
         case WSA(EADDRINUSE):
+#ifdef WINDOWS
+        case ERROR_ADDRESS_ALREADY_ASSOCIATED:
+#endif
             throw boost::enable_current_exception(AddressInUseException())
                 << errinfo_nativeerror(error);
         case WSA(ECONNABORTED):
@@ -197,12 +200,18 @@ static void throwSocketException(error_t error)
             throw boost::enable_current_exception(ConnectionResetException())
                 << errinfo_nativeerror(error);
         case WSA(ECONNREFUSED):
+#ifdef WINDOWS
+        case ERROR_CONNECTION_REFUSED:
+#endif
             throw boost::enable_current_exception(ConnectionRefusedException())
                 << errinfo_nativeerror(error);
         case WSA(EHOSTDOWN):
             throw boost::enable_current_exception(HostDownException())
                 << errinfo_nativeerror(error);
         case WSA(EHOSTUNREACH):
+#ifdef WINDOWS
+        case ERROR_HOST_UNREACHABLE:
+#endif
             throw boost::enable_current_exception(HostUnreachableException())
                 << errinfo_nativeerror(error);
         case WSA(ENETDOWN):
@@ -215,6 +224,9 @@ static void throwSocketException(error_t error)
             throw boost::enable_current_exception(NetworkResetException())
                 << errinfo_nativeerror(error);
         case WSA(ENETUNREACH):
+#ifdef WINDOWS
+        case ERROR_NETWORK_UNREACHABLE:
+#endif
             throw boost::enable_current_exception(NetworkUnreachableException())
                 << errinfo_nativeerror(error);
         case WSA(ETIMEDOUT):
