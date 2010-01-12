@@ -343,6 +343,7 @@ RedirectRequestBroker::request(Request &requestHeaders, bool forceNewConnection)
     URI originalUri = currentUri;
     std::list<URI> uris;
     uris.push_back(originalUri);
+    size_t redirects = 0;
     while (true) {
         try {
             ClientRequest::ptr request = RequestBrokerFilter::request(requestHeaders,
@@ -356,6 +357,8 @@ RedirectRequestBroker::request(Request &requestHeaders, bool forceNewConnection)
             case FOUND:
             case TEMPORARY_REDIRECT:
             case MOVED_PERMANENTLY:
+                if (++redirects == m_maxRedirects)
+                    MORDOR_THROW_EXCEPTION(CircularRedirectException(originalUri));
                 currentUri = URI::transform(currentUri,
                     request->response().response.location);
                 if (std::find(uris.begin(), uris.end(), currentUri)

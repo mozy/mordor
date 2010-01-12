@@ -205,13 +205,17 @@ private:
 class RedirectRequestBroker : public RequestBrokerFilter
 {
 public:
-    RedirectRequestBroker(RequestBroker::ptr parent)
-        : RequestBrokerFilter(parent)
+    RedirectRequestBroker(RequestBroker::ptr parent, size_t maxRedirects = 70)
+        : RequestBrokerFilter(parent),
+          m_maxRedirects(maxRedirects)
     {}
 
     ClientRequest::ptr request(Request &requestHeaders,
         bool forceNewConnection = false);
     bool checkResponse(ClientRequest::ptr request, Request &requestHeaders);
+
+private:
+    size_t m_maxRedirects;
 };
 
 RequestBroker::ptr defaultRequestBroker(IOManager *ioManager = NULL,
