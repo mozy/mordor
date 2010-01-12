@@ -787,6 +787,37 @@ MORDOR_UNITTEST(HTTPServer, keepAlive11)
     MORDOR_TEST_ASSERT(response.general.connection.find("close") == response.general.connection.end());
 }
 
+static void
+disconnectDuringResponseServer(const URI &uri, ServerRequest::ptr request)
+{
+    Stream::ptr random(new RandomStream());
+    random.reset(new LimitedStream(random, 4096));
+    request->response().status.status = OK;
+    request->response().general.transferEncoding.push_back("chunked");
+    Stream::ptr response = request->responseStream();
+    response->flush();
+    // Yield so that the request can be cancelled while the response is in progress
+    Scheduler::getThis()->schedule(Fiber::getThis());
+    Scheduler::getThis()->yieldTo();
+    transferStream(random, response);
+    MORDOR_TEST_ASSERT_EXCEPTION(response->flush(), BrokenPipeException);
+}
+
+MORDOR_UNITTEST(HTTPServer, disconnectDuringResponse)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&disconnectDuringResponseServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    // Don't read the response body
+    request->cancel(true);
+}
+
 MORDOR_UNITTEST(HTTPClient, emptyRequest)
 {
     MemoryStream::ptr requestStream(new MemoryStream());
