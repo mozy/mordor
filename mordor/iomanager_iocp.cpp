@@ -201,6 +201,11 @@ IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
         << GetLastError() << ")";
     if (!m_hCompletionPort)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
+    try {
+        if (threads - (useCaller ? 1 : 0)) start();
+    } catch (...) {
+        CloseHandle(m_hCompletionPort);
+    }
 }
 
 IOManagerIOCP::~IOManagerIOCP()
