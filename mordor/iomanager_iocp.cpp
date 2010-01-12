@@ -205,6 +205,7 @@ IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
         if (threads - (useCaller ? 1 : 0)) start();
     } catch (...) {
         CloseHandle(m_hCompletionPort);
+        throw;
     }
 }
 
