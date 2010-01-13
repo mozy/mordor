@@ -394,6 +394,7 @@ endif
 
 LIBMORDOROBJECTS := 							\
 	mordor/config.o							\
+	mordor/date_time.o						\
 	mordor/exception.o						\
 	mordor/fiber.o							\
 	mordor/http/auth.o						\
