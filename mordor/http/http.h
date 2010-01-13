@@ -265,6 +265,11 @@ typedef std::vector<KeyValueWithParameters> ParameterizedKeyValueList;
 
 struct MediaType
 {
+    MediaType() {}
+    MediaType(const std::string &type_, const std::string &subtype_)
+        : type(type_), subtype(subtype_)
+    {}
+
     std::string type;
     std::string subtype;
     StringMap parameters;

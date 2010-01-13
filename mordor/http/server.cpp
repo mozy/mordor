@@ -408,7 +408,23 @@ ServerRequest::doRequest()
                 respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
                 return;
             }
+        } catch (SocketException &) {
+            // EOF or failure; finish up as a dummy response
+            m_requestDone = true;
+            m_willClose = true;
+            m_responseInFlight = true;
+            m_conn->m_priorRequestClosed = true;
+            m_conn->scheduleNextResponse(this);
+            return;
         } catch (BrokenPipeException &) {
+            // EOF or failure; finish up as a dummy response
+            m_requestDone = true;
+            m_willClose = true;
+            m_responseInFlight = true;
+            m_conn->m_priorRequestClosed = true;
+            m_conn->scheduleNextResponse(this);
+            return;
+        } catch (UnexpectedEofException &) {
             // EOF or failure; finish up as a dummy response
             m_requestDone = true;
             m_willClose = true;
@@ -528,7 +544,8 @@ ServerRequest::doRequest()
             m_conn->scheduleNextRequest(this);
         }
         m_conn->m_dg(shared_from_this());
-    } catch (OperationAbortedException) {
+        finish();
+    } catch (OperationAbortedException &) {
         // Do nothing (this occurs when a pipelined request fails because a prior request closed the connection
     } catch (Assertion &) {
         throw;
@@ -611,6 +628,8 @@ ServerRequest::commit()
     } else if (m_response.status.status == PROXY_AUTHENTICATION_REQUIRED) {
         MORDOR_ASSERT(!m_response.response.proxyAuthenticate.empty());
     }
+
+    MORDOR_ASSERT(m_response.status.status != INVALID);
 
     bool wait = false;
     {
@@ -737,7 +756,7 @@ ServerRequest::responseDone()
         MORDOR_LOG_DEBUG(g_log) << m_conn << " " << this << " " << str;
         m_conn->m_stream->write(str.c_str(), str.size());         
     }
-    MORDOR_LOG_INFO(g_log) << m_request.requestLine << " " << m_response.status.status;
+    MORDOR_LOG_INFO(g_log) << m_conn << " " << this << " " << m_request.requestLine << " " << m_response.status.status;
     m_conn->scheduleNextResponse(this);
     if (!m_requestDone && hasRequestBody() && !m_willClose) {
         if (!m_requestStream)

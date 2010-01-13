@@ -484,6 +484,7 @@ unquote(const std::string &str)
     
     action set_request_uri {
         m_uri = &m_request->requestLine.uri;
+        m_path = &m_uri->path;
     }
     
     action save_accept_list_element {
@@ -613,6 +614,7 @@ unquote(const std::string &str)
     
     action set_referer {
         m_uri = &m_request->request.referer;
+        m_path = &m_uri->path;
     }
     
     action save_accept_attribute {
