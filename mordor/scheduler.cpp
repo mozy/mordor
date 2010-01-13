@@ -124,8 +124,11 @@ Scheduler::stop()
         m_stopping = true;
         // A derived class may inhibit stopping while it has things to do in
         // its idle loop, so we can't break early
-        if (stopping())
-            return;
+        if (stopping()) {
+            boost::mutex::scoped_lock lock(m_mutex);
+            if (m_fibers.empty())
+                return;
+        }
     }
 
     if (m_rootThread != boost::thread::id()) {
