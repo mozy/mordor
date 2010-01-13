@@ -269,6 +269,9 @@ Socket::connect(const Address &to)
                 if (m_sendEvent.lastError == ERROR_OPERATION_ABORTED &&
                     m_cancelledSend != ERROR_OPERATION_ABORTED)
                     m_sendEvent.lastError = WSAETIMEDOUT;
+                // WTF, Windows!?
+                if (m_sendEvent.lastError == ERROR_SEM_TIMEOUT)
+                    m_sendEvent.lastError = WSAETIMEDOUT;
                 MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                     << "): (" << m_sendEvent.lastError << ")";
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_sendEvent.lastError, "ConnectEx");
