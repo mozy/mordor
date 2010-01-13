@@ -211,6 +211,66 @@ struct AverageMinMaxStatistic : AverageStatistic<T>
     }
 };
 
+template <class T, class U>
+struct ThroughputStatistic : Statistic
+{
+    ThroughputStatistic(const char *sumunits = NULL, const char *timeunits = NULL, const char *countunits = NULL)
+        : size(sumunits, countunits),
+          time(timeunits, countunits)
+    {
+        m_units = sumunits;
+        m_units.append(1, '/');
+        m_units.append(timeunits);
+        units = m_units.c_str();
+    }
+    ThroughputStatistic(const ThroughputStatistic &copy)
+        : m_units(copy.m_units),
+        size(copy.size),
+        time(copy.time)
+    {
+        units = m_units.c_str();
+    }
+
+    AverageMinMaxStatistic<T> size;
+    AverageMinMaxStatistic<T> time;
+
+    void reset()
+    {
+        size.reset();
+        time.reset();
+    }
+
+    void update(T sizevalue, U timevalue)
+    {
+        size.update(sizevalue);
+        time.update(timevalue);
+    }
+
+    const Statistic *begin() const { return &size; }
+    const Statistic *next(const Statistic *previous) const
+    {
+        if (previous == &size)
+            return &time;
+        else
+            return NULL;
+    }
+
+    std::ostream &serialize(std::ostream &os) const
+    {
+        T localsize = size.sum.sum;
+        U localtime = time.sum.sum;
+        if (localtime)
+            os << (double)localsize / localtime;
+        else
+            os << localtime;
+        return os;
+    }
+
+private:
+    std::string m_units;
+};
+
+
 class Statistics
 {
 public:
