@@ -297,10 +297,10 @@ SSLStream::read(Buffer &b, size_t len)
                         << boost::errinfo_api_function("SSL_read");
                 }
                 if (result == 0) {
-                    MORDOR_LOG_ERROR(g_log) << this << " SSL_read(" << m_ssl.get()
+                    MORDOR_LOG_WARNING(g_log) << this << " SSL_read(" << m_ssl.get()
                         << ", " << toRead << "): " << result << " ("
                         << error << ")";
-                    MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+                    return 0;
                 }
                 MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
