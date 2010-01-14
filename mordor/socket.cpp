@@ -18,6 +18,7 @@
 #include "runtime_linking.h"
 
 #pragma comment(lib, "ws2_32")
+#pragma comment(lib, "mswsock")
 #else
 #include <fcntl.h>
 #include <netdb.h>
@@ -29,6 +30,7 @@ namespace Mordor {
 #ifdef WINDOWS
 
 static LPFN_ACCEPTEX pAcceptEx;
+static LPFN_GETACCEPTEXSOCKADDRS pGetAcceptExSockaddrs;
 static LPFN_CONNECTEX ConnectEx;
 
 namespace {
@@ -49,6 +51,17 @@ static struct Initializer {
                  sizeof(GUID),
                  &pAcceptEx,
                  sizeof(LPFN_ACCEPTEX),
+                 &bytes,
+                 NULL,
+                 NULL);
+
+        GUID getAcceptExSockaddrsGuid = WSAID_GETACCEPTEXSOCKADDRS;
+        WSAIoctl(sock,
+                 SIO_GET_EXTENSION_FUNCTION_POINTER,
+                 &getAcceptExSockaddrsGuid,
+                 sizeof(GUID),
+                 &pGetAcceptExSockaddrs,
+                 sizeof(LPFN_GETACCEPTEXSOCKADDRS),
                  &bytes,
                  NULL,
                  NULL);
@@ -170,7 +183,7 @@ Socket::~Socket()
 {
     if (m_sock != -1) {
         int rc = ::closesocket(m_sock);
-        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::DEBUG) << this
+        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::INFO) << this
             << " close(" << m_sock << "): (" << lastError() << ")";
     }
 #ifdef WINDOWS
@@ -190,6 +203,20 @@ Socket::bind(const Address &addr)
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "bind");
     }
     MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock << ", " << addr << ")";
+}
+
+void
+Socket::bind(Address::ptr addr)
+{
+    MORDOR_ASSERT(addr->family() == m_family);
+    if (::bind(m_sock, addr->name(), addr->nameLen())) {
+        error_t error = lastError();
+        MORDOR_LOG_ERROR(g_log) << this << " bind(" << m_sock << ", " << *addr
+            << "): (" << error << ")";
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "bind");
+    }
+    MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock << ", " << *addr << ")";
+    m_localAddress = addr;
 }
 
 void
@@ -420,7 +447,7 @@ Socket::accept(Socket &target)
     MORDOR_ASSERT(target.m_protocol == m_protocol);
     if (!m_ioManager) {
         socket_t newsock = ::accept(m_sock, NULL, NULL);
-        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::VERBOSE)
+        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::INFO)
             << this << " accept(" << m_sock << "): " << newsock << " ("
             << lastError() << ")";
         if (newsock == -1) {
@@ -434,7 +461,7 @@ Socket::accept(Socket &target)
             m_ioManager->registerEvent(&m_receiveEvent);
             unsigned char addrs[sizeof(SOCKADDR_STORAGE) * 2 + 16];
             DWORD bytes;
-            BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE), &bytes,
+            BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, sizeof(SOCKADDR_STORAGE) + 16, sizeof(SOCKADDR_STORAGE) + 16, &bytes,
                 &m_receiveEvent.overlapped);
             DWORD dwLastError = GetLastError();
             if (!ret && dwLastError != WSA_IO_PENDING) {
@@ -465,8 +492,20 @@ Socket::accept(Socket &target)
                     << m_receiveEvent.lastError << ")";
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_receiveEvent.lastError, "AcceptEx");
             }
-            MORDOR_LOG_VERBOSE(g_log) << this << " accept(" << m_sock << "): "
-                << target.m_sock;
+            sockaddr *localAddr = NULL, *remoteAddr = NULL;
+            INT localAddrLen, remoteAddrLen;
+            if (pGetAcceptExSockaddrs)
+                pGetAcceptExSockaddrs(addrs, 0, sizeof(SOCKADDR_STORAGE) + 16,
+                    sizeof(SOCKADDR_STORAGE) + 16, &localAddr, &localAddrLen,
+                    &remoteAddr, &remoteAddrLen);
+            if (remoteAddr)
+                m_remoteAddress = Address::create(remoteAddr, remoteAddrLen, m_family, m_protocol);
+
+            std::ostringstream os;
+            if (remoteAddr)
+                os << " (" << *m_remoteAddress << ")";
+            MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
+                << target.m_sock << os.str();
             target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
             target.m_ioManager->registerFile((HANDLE)target.m_sock);
         } else {
@@ -552,7 +591,7 @@ Socket::accept(Socket &target)
             }
             newsock = ::accept(m_sock, NULL, NULL);
         }
-        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::VERBOSE)
+        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::INFO)
             << this << " accept(" << m_sock << "): " << newsock
             << " (" << lastError() << ")";
         if (newsock == -1) {
@@ -577,20 +616,6 @@ Socket::shutdown(int how)
     }
     MORDOR_LOG_VERBOSE(g_log) << this << " shutdown(" << m_sock << ", "
         << how << ")";
-}
-
-void
-Socket::close()
-{
-    if (m_sock != -1) {
-        if (::closesocket(m_sock)) {
-            MORDOR_LOG_ERROR(g_log) << this << " close(" << m_sock << "): ("
-                << lastError() << ")";
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("close");
-        }
-        MORDOR_LOG_DEBUG(g_log) << this << " close(" << m_sock << ")";
-        m_sock = -1;
-    }
 }
 
 size_t
@@ -1514,6 +1539,8 @@ Socket::emptyAddress()
 Address::ptr
 Socket::remoteAddress()
 {
+    if (m_remoteAddress)
+        return m_remoteAddress;
     Address::ptr result;
     switch (m_family) {
         case AF_INET:
@@ -1527,16 +1554,17 @@ Socket::remoteAddress()
             break;
     }
     socklen_t namelen = result->nameLen();
-    if (getpeername(m_sock, result->name(), &namelen)) {
+    if (getpeername(m_sock, result->name(), &namelen))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getpeername");
-    }
     MORDOR_ASSERT(namelen <= result->nameLen());
-    return result;
+    return m_remoteAddress = result;
 }
 
 Address::ptr
 Socket::localAddress()
 {
+    if (m_localAddress)
+        return m_localAddress;
     Address::ptr result;
     switch (m_family) {
         case AF_INET:
@@ -1550,11 +1578,10 @@ Socket::localAddress()
             break;
     }
     socklen_t namelen = result->nameLen();
-    if (getsockname(m_sock, result->name(), &namelen)) {
+    if (getsockname(m_sock, result->name(), &namelen))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getsockname");
-    }
     MORDOR_ASSERT(namelen <= result->nameLen());
-    return result;
+    return m_localAddress = result;
 }
 
 int
@@ -1667,25 +1694,8 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     std::vector<Address::ptr> result;
     next = results;
     while (next) {
-        Address::ptr addr;
-        switch (next->ai_family) {
-            case AF_INET:
-                addr.reset(new IPv4Address(next->ai_socktype, next->ai_protocol));
-                MORDOR_ASSERT(next->ai_addrlen <= (size_t)addr->nameLen());
-                memcpy(addr->name(), next->ai_addr, next->ai_addrlen);
-                break;
-            case AF_INET6:
-                addr.reset(new IPv6Address(next->ai_socktype, next->ai_protocol));
-                MORDOR_ASSERT(next->ai_addrlen <= (size_t)addr->nameLen());
-                memcpy(addr->name(), next->ai_addr, next->ai_addrlen);
-                break;
-            default:
-                addr.reset(new UnknownAddress(next->ai_family, next->ai_socktype, next->ai_protocol));
-                MORDOR_ASSERT(next->ai_addrlen <= (size_t)addr->nameLen());
-                memcpy(addr->name(), next->ai_addr, next->ai_addrlen);
-                break;
-        }
-        result.push_back(addr);
+        result.push_back(create(next->ai_addr, (socklen_t)next->ai_addrlen,
+            next->ai_socktype, next->ai_protocol));
         next = next->ai_next;
     }
 #ifdef WINDOWS
@@ -1693,6 +1703,31 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
 #else
     freeaddrinfo(results);
 #endif
+    return result;
+}
+
+Address::ptr
+Address::create(const sockaddr *name, socklen_t nameLen, int type, int protocol)
+{
+    MORDOR_ASSERT(name);
+    Address::ptr result;
+    switch (name->sa_family) {
+        case AF_INET:
+            result.reset(new IPv4Address(type, protocol));
+            MORDOR_ASSERT(nameLen <= result->nameLen());
+            memcpy(result->name(), name, nameLen);
+            break;
+        case AF_INET6:
+            result.reset(new IPv6Address(type, protocol));
+            MORDOR_ASSERT(nameLen <= result->nameLen());
+            memcpy(result->name(), name, nameLen);
+            break;
+        default:
+            result.reset(new UnknownAddress(name->sa_family, type, protocol));
+            MORDOR_ASSERT(nameLen <= result->nameLen());
+            memcpy(result->name(), name, nameLen);
+            break;
+    }
     return result;
 }
 

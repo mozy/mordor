@@ -73,8 +73,7 @@ public:
     void sendTimeout(unsigned long long us) { m_sendTimeout = us; }
 
     void bind(const Address &addr);
-    void bind(const boost::shared_ptr<Address> addr)
-    { bind(*addr.get()); }
+    void bind(const boost::shared_ptr<Address> addr);
     void connect(const Address &to);
     void connect(const boost::shared_ptr<Address> addr)
     { connect(*addr.get()); }
@@ -83,7 +82,6 @@ public:
     Socket::ptr accept();
     void accept(Socket &target);
     void shutdown(int how = SHUT_RDWR);
-    void close();
 
     void getOption(int level, int option, void *result, size_t *len);
     void setOption(int level, int option, const void *value, size_t len);
@@ -126,6 +124,7 @@ private:
     IOManager *m_ioManager;
     unsigned long long m_receiveTimeout, m_sendTimeout;
     error_t m_cancelledSend, m_cancelledReceive;
+    boost::shared_ptr<Address> m_localAddress, m_remoteAddress;
 #ifdef WINDOWS
     // All this, just so a connect/accept can be cancelled on win2k
     bool m_unregistered;
@@ -162,6 +161,8 @@ public:
     static std::vector<ptr>
         lookup(const std::string& host, int family = AF_UNSPEC,
             int type = 0, int protocol = 0);
+    static ptr create(const sockaddr *name, socklen_t nameLen,
+        int type = 0, int protocol = 0);
 
     Socket::ptr createSocket();
     Socket::ptr createSocket(IOManager &ioManager);

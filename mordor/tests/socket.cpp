@@ -86,11 +86,11 @@ static void testShutdownException(bool send, bool shutdown, bool otherEnd)
     conns.connect->connect(conns.address);
     ioManager.dispatch();
 
-    Socket::ptr socketToClose = otherEnd ? conns.accept : conns.connect;
+    Socket::ptr &socketToClose = otherEnd ? conns.accept : conns.connect;
     if (shutdown)
         socketToClose->shutdown(SHUT_RDWR);
     else
-        socketToClose->close();
+        socketToClose.reset();
 
     if (send) {
         if (otherEnd) {
@@ -120,16 +120,6 @@ static void testShutdownException(bool send, bool shutdown, bool otherEnd)
             }
         }
     }
-}
-
-MORDOR_UNITTEST(Socket, sendAfterClose)
-{
-    testShutdownException<BadHandleException>(true, false, false);
-}
-
-MORDOR_UNITTEST(Socket, receiveAfterClose)
-{
-    testShutdownException<BadHandleException>(false, false, false);
 }
 
 MORDOR_UNITTEST(Socket, sendAfterShutdown)
