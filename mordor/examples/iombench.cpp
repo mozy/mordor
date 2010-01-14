@@ -236,7 +236,6 @@ public:
             waitForNextRound(round);
 
             if (m_stop) {
-                conn->close();
                 return;
             }
 
