@@ -665,6 +665,8 @@ Socket::send(const void *buf, size_t len, int flags)
             if (m_sendEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledSend != ERROR_OPERATION_ABORTED)
                 m_sendEvent.lastError = WSAETIMEDOUT;
+            if (m_sendEvent.lastError == ERROR_SEM_TIMEOUT)
+                m_sendEvent.lastError = WSAETIMEDOUT;
             MORDOR_LOG_ERROR(g_log) << this << " send(" << m_sock << ", "
                 << len << "): (" << m_sendEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_sendEvent.lastError, "WSASend");
@@ -757,6 +759,8 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         if (!m_sendEvent.ret) {
             if (m_sendEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledSend != ERROR_OPERATION_ABORTED)
+                m_sendEvent.lastError = WSAETIMEDOUT;
+            if (m_sendEvent.lastError == ERROR_SEM_TIMEOUT)
                 m_sendEvent.lastError = WSAETIMEDOUT;
             MORDOR_LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", "
                 << len << "): (" << m_sendEvent.lastError << ")";
@@ -864,6 +868,8 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
             if (m_sendEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledSend != ERROR_OPERATION_ABORTED)
                 m_sendEvent.lastError = WSAETIMEDOUT;
+            if (m_sendEvent.lastError == ERROR_SEM_TIMEOUT)
+                m_sendEvent.lastError = WSAETIMEDOUT;
             MORDOR_LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", "
                 << len << ", " << to << "): (" << m_sendEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_sendEvent.lastError, "WSASendTo");
@@ -952,6 +958,8 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         if (!m_sendEvent.ret) {
             if (m_sendEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledSend != ERROR_OPERATION_ABORTED)
+                m_sendEvent.lastError = WSAETIMEDOUT;
+            if (m_sendEvent.lastError == ERROR_SEM_TIMEOUT)
                 m_sendEvent.lastError = WSAETIMEDOUT;
             MORDOR_LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", "
                 << len << ", " << to << "): (" << m_sendEvent.lastError << ")";
@@ -1060,6 +1068,8 @@ Socket::receive(void *buf, size_t len, int flags)
             if (m_receiveEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledReceive != ERROR_OPERATION_ABORTED)
                 m_receiveEvent.lastError = WSAETIMEDOUT;
+            if (m_receiveEvent.lastError == ERROR_SEM_TIMEOUT)
+                m_receiveEvent.lastError = WSAETIMEDOUT;
             MORDOR_LOG_ERROR(g_log) << this << " recv(" << m_sock << ", "
                 << len << "): (" << m_receiveEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_receiveEvent.lastError, "WSARecv");
@@ -1146,6 +1156,8 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         if (!m_receiveEvent.ret) {
             if (m_receiveEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledReceive != ERROR_OPERATION_ABORTED)
+                m_receiveEvent.lastError = WSAETIMEDOUT;
+            if (m_receiveEvent.lastError == ERROR_SEM_TIMEOUT)
                 m_receiveEvent.lastError = WSAETIMEDOUT;
             MORDOR_LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", "
                 << len << "): (" << m_receiveEvent.lastError << ")";
@@ -1253,6 +1265,8 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
         if (!m_receiveEvent.ret) {
             if (m_receiveEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledReceive != ERROR_OPERATION_ABORTED)
+                m_receiveEvent.lastError = WSAETIMEDOUT;
+            if (m_receiveEvent.lastError == ERROR_SEM_TIMEOUT)
                 m_receiveEvent.lastError = WSAETIMEDOUT;
             MORDOR_LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", "
                 << len << "): (" << m_receiveEvent.lastError << ")";
@@ -1363,6 +1377,8 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
             if (m_receiveEvent.lastError == ERROR_OPERATION_ABORTED &&
                 m_cancelledReceive != ERROR_OPERATION_ABORTED)
                 m_receiveEvent.lastError = WSAETIMEDOUT;
+            if (m_receiveEvent.lastError == ERROR_SEM_TIMEOUT)
+                m_receiveEvent.lastError = ERROR_SEM_TIMEOUT;
             MORDOR_LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", "
                 << len << "): (" << m_receiveEvent.lastError << ")";
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_receiveEvent.lastError, "WSARecvFrom");
