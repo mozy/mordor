@@ -655,6 +655,10 @@ MORDOR_UNITTEST(HTTP, comments)
     testCommentRoundTrip("(()))()", "((())\\)())");
 }
 
+namespace {
+struct DummyException {};
+}
+
 static void
 httpRequest(ServerRequest::ptr request)
 {
@@ -663,6 +667,10 @@ httpRequest(ServerRequest::ptr request)
         case HEAD:
         case PUT:
         case POST:
+            if (request->request().requestLine.uri == "/exceptionReadingRequest") {
+                MORDOR_ASSERT(request->hasRequestBody());
+                MORDOR_THROW_EXCEPTION(DummyException());
+            }
             request->response().entity.contentLength = request->request().entity.contentLength;
             request->response().entity.contentType = request->request().entity.contentType;
             request->response().general.transferEncoding = request->request().general.transferEncoding;
@@ -785,6 +793,20 @@ MORDOR_UNITTEST(HTTPServer, keepAlive11)
     MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
     MORDOR_TEST_ASSERT_EQUAL(response.status.status, OK);
     MORDOR_TEST_ASSERT(response.general.connection.find("close") == response.general.connection.end());
+}
+
+MORDOR_UNITTEST(HTTPServer, exceptionReadingRequest)
+{
+    Response response;
+    doSingleRequest(
+        "GET /exceptionReadingRequest HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "Content-Length: 5\r\n"
+        "\r\n"
+        "hello",
+        response);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, INTERNAL_SERVER_ERROR);
 }
 
 static void
@@ -1269,10 +1291,6 @@ MORDOR_UNITTEST(HTTPClient, simpleRequestBody)
         "hello");
 
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
-}
-
-namespace {
-struct DummyException {};
 }
 
 static void throwDummyException()
