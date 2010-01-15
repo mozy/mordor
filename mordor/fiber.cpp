@@ -588,8 +588,12 @@ intptr_t
 Fiber::flsGet(size_t key)
 {
 #ifdef WINDOWS
-    if (!g_doesntHaveOSFLS)
-        return (intptr_t)pFlsGetValue((DWORD)key);
+    if (!g_doesntHaveOSFLS) {
+        DWORD lastError = GetLastError();
+        intptr_t result = (intptr_t)pFlsGetValue((DWORD)key);
+        SetLastError(lastError);
+        return result;
+    }
 #endif
     Fiber::ptr self = Fiber::getThis();
     if (self->m_fls.size() <= key)

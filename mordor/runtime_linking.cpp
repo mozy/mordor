@@ -303,6 +303,15 @@ MORDOR_RUNTIME_LINK_DEFINITION(RtlNtStatusToDosError, ULONG, NTAPI,
     return ERROR_CALL_NOT_IMPLEMENTED;
 }
 
+MORDOR_RUNTIME_LINK_DEFINITION(SetFileCompletionNotificationModes, BOOL, WINAPI,
+    (HANDLE FileHandle, UCHAR Flags),
+    (FileHandle, Flags),
+    L"kernel32.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FALSE;
+}
+
 MORDOR_RUNTIME_LINK_DEFINITION(SymFromAddr, BOOL, __stdcall,
     (HANDLE hProcess, DWORD64 Address, PDWORD64 Displacement, PSYMBOL_INFO Symbol),
     (hProcess, Address, Displacement, Symbol),

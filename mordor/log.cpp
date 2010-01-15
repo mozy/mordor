@@ -372,8 +372,8 @@ Logger::log(Log::Level level, const std::string &str,
 {
     if (str.empty() || !enabled(level))
         return;
-    LogDisabler disable;
     error_t error = lastError();
+    LogDisabler disable;
     // TODO: capture timestamp
     Logger::ptr _this = shared_from_this();
 #ifdef WINDOWS

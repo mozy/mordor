@@ -126,6 +126,7 @@ private:
     error_t m_cancelledSend, m_cancelledReceive;
     boost::shared_ptr<Address> m_localAddress, m_remoteAddress;
 #ifdef WINDOWS
+    bool m_skipCompletionPortOnSuccess;
     // All this, just so a connect/accept can be cancelled on win2k
     bool m_unregistered;
     HANDLE m_hEvent;

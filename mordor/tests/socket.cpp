@@ -284,9 +284,16 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
         receivebuf2.reset(new char[std::max<size_t>(sent, 3u)]);
         iov[0].iov_base = &receivebuf2.get()[0];
         iov[1].iov_base = &receivebuf2.get()[2];
-        iov[1].iov_len = (iov_len_t)std::max<size_t>(sent, 3u) - 2;
-        while (sent > 0u)
-            sent -= sock->receive(iov, 2);
+        while (sent > 0u) {
+            size_t iovs = 2;
+            if (sent > 2) {
+                iov[1].iov_len = (iov_len_t)std::max<size_t>(sent, 3u) - 2;
+            } else {
+                iov[0].iov_len = sent;
+                iovs = 1;
+            }
+            sent -= sock->receive(iov, iovs);
+        }
     }
     // Let the main fiber update sent
     Scheduler::getThis()->yieldTo();
@@ -296,6 +303,7 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
         receivebuf2.reset(new char[std::max<size_t>(sent, 3u)]);
         iov[0].iov_base = &receivebuf2.get()[0];
         iov[1].iov_base = &receivebuf2.get()[2];
+        iov[0].iov_len = 2;
         iov[1].iov_len = (iov_len_t)std::max<size_t>(sent, 3u) - 2;
         while (sent > 0u)
             sent -= sock->receive(iov, 2);

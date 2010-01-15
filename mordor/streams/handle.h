@@ -46,6 +46,7 @@ public:
 
 protected:
     IOManagerIOCP *m_ioManager;
+    bool m_skipCompletionPortOnSuccess;
     Scheduler *m_scheduler;
     AsyncEventIOCP m_readEvent;
     AsyncEventIOCP m_writeEvent;

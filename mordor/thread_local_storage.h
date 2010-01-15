@@ -57,7 +57,10 @@ public:
 #ifdef WINDOWS
 #pragma warning(push)
 #pragma warning(disable: 4800)
-        return (T)TlsGetValue(m_key);
+        DWORD lastError = GetLastError();
+        LPVOID result = TlsGetValue(m_key);
+        SetLastError(lastError);
+        return (T)result;
 #pragma warning(pop)
 #else
         return (T)pthread_getspecific(m_key);

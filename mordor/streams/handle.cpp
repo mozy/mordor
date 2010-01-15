@@ -11,6 +11,7 @@ namespace Mordor {
 
 HandleStream::HandleStream()
 : m_ioManager(NULL),
+  m_skipCompletionPortOnSuccess(false),
   m_scheduler(NULL),
   m_pos(0),
   m_hFile(INVALID_HANDLE_VALUE),
@@ -42,6 +43,8 @@ HandleStream::init(HANDLE hFile, IOManager *ioManager, Scheduler *scheduler,
     if (m_ioManager) {
         try {
             m_ioManager->registerFile(m_hFile);
+            m_skipCompletionPortOnSuccess = !!pSetFileCompletionNotificationModes(m_hFile,
+                FILE_SKIP_COMPLETION_PORT_ON_SUCCESS | FILE_SKIP_SET_EVENT_ON_HANDLE);
         } catch(...) {
             if (own) {
                 CloseHandle(m_hFile);
@@ -118,13 +121,18 @@ HandleStream::read(Buffer &b, size_t len)
             m_ioManager->unregisterEvent(&m_readEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
         }
-        Scheduler::getThis()->yieldTo();
-        if (!m_readEvent.ret && m_readEvent.lastError == ERROR_HANDLE_EOF) {
+        if (m_skipCompletionPortOnSuccess && ret) {
+            m_ioManager->unregisterEvent(&m_readEvent);
+            m_readEvent.ret = TRUE;
+            m_readEvent.lastError = ERROR_SUCCESS;
+            m_readEvent.numberOfBytes = read;
+        } else {
+            Scheduler::getThis()->yieldTo();
+        }
+        if (!m_readEvent.ret && m_readEvent.lastError == ERROR_HANDLE_EOF)
             return 0;
-        }
-        if (!m_readEvent.ret) {
+        if (!m_readEvent.ret)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_readEvent.lastError, "ReadFile");
-        }
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
                 m_readEvent.numberOfBytes;
@@ -132,9 +140,8 @@ HandleStream::read(Buffer &b, size_t len)
         b.produce(m_readEvent.numberOfBytes);
         return m_readEvent.numberOfBytes;
     }
-    if (!ret) {
+    if (!ret)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
-    }
     b.produce(read);
     return read;
 }
@@ -176,7 +183,14 @@ HandleStream::write(const Buffer &b, size_t len)
             m_ioManager->unregisterEvent(&m_writeEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
         }
-        Scheduler::getThis()->yieldTo();
+        if (m_skipCompletionPortOnSuccess && ret) {
+            m_ioManager->unregisterEvent(&m_writeEvent);
+            m_writeEvent.ret = TRUE;
+            m_writeEvent.lastError = ERROR_SUCCESS;
+            m_writeEvent.numberOfBytes = written;
+        } else {
+            Scheduler::getThis()->yieldTo();
+        }
         if (!m_writeEvent.ret) {
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_writeEvent.lastError, "WriteFile");
         }
@@ -186,9 +200,8 @@ HandleStream::write(const Buffer &b, size_t len)
         }
         return m_writeEvent.numberOfBytes;
     }
-    if (!ret) {
+    if (!ret)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
-    }
     return written;
 }
 
