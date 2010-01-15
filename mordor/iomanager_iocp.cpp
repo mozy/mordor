@@ -369,9 +369,8 @@ IOManagerIOCP::stopping(unsigned long long &nextTimeout)
 void
 IOManagerIOCP::idle()
 {
-    DWORD numberOfBytes;
-    ULONG_PTR completionKey;
-    OVERLAPPED *overlapped;
+    OVERLAPPED_ENTRY events[64];
+    ULONG count;
     while (true) {
         unsigned long long nextTimeout;
         if (stopping(nextTimeout))
@@ -379,18 +378,19 @@ IOManagerIOCP::idle()
         DWORD timeout = INFINITE;
         if (nextTimeout != ~0ull)
             timeout = (DWORD)(nextTimeout / 1000);
-        BOOL ret = GetQueuedCompletionStatus(m_hCompletionPort,
-            &numberOfBytes, &completionKey, &overlapped, timeout);
-        MORDOR_LOG_DEBUG(g_log) << this << " GetQueuedCompletionStatus("
+        count = 0;
+        BOOL ret = pGetQueuedCompletionStatusEx(m_hCompletionPort,
+            events,
+            64,
+            &count,
+            timeout,
+            FALSE);
+        DWORD lastError = GetLastError();
+        MORDOR_LOG_DEBUG(g_log) << this << " GetQueuedCompletionStatusEx("
             << m_hCompletionPort << ", " << timeout << "): " << ret << ", ("
-            << numberOfBytes << ", " << completionKey << ", " << overlapped
-            << ") (" << GetLastError() << ")";
-        if (ret && completionKey == ~0) {
-            Fiber::yield();
-            continue;
-        }
-        if (!ret && overlapped == NULL) {
-            if (GetLastError() == WAIT_TIMEOUT) {
+            << count << ") (" << lastError << ")";
+        if (!ret && lastError) {
+            if (lastError == WAIT_TIMEOUT) {
                 std::vector<boost::function<void ()> > expired = processTimers();
                 if (!expired.empty()) {
                     schedule(expired.begin(), expired.end());
@@ -398,27 +398,40 @@ IOManagerIOCP::idle()
                 }
                 continue;
             }
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetQueuedCompletionStatus");
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetQueuedCompletionStatusEx");
         }
         std::vector<boost::function<void ()> > expired = processTimers();
         schedule(expired.begin(), expired.end());
 
-        AsyncEventIOCP *e;
-        {
-            boost::mutex::scoped_lock lock(m_mutex);
+        boost::mutex::scoped_lock lock(m_mutex, boost::defer_lock_t());
+        int tickles = 0;
+        for (ULONG i = 0; i < count; ++i) {
+            if (events[i].lpCompletionKey == ~0) {
+                ++tickles;
+                continue;
+            }
+            if (!lock.owns_lock())
+                lock.lock();
+
+            AsyncEventIOCP *e;
             std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
-                m_pendingEvents.find(overlapped);
+                m_pendingEvents.find(events[i].lpOverlapped);
             MORDOR_ASSERT(it != m_pendingEvents.end());
             e = it->second;
             m_pendingEvents.erase(it);
-        }
 
-        e->ret = ret;
-        e->numberOfBytes = numberOfBytes;
-        e->completionKey = completionKey;
-        e->lastError = GetLastError();
-        e->m_scheduler->schedule(e->m_fiber);
-        e->m_fiber.reset();
+            e->lastError = pRtlNtStatusToDosError(e->overlapped.Internal);
+            e->ret = e->lastError ? FALSE : TRUE;
+            e->numberOfBytes = e->overlapped.InternalHigh;
+            e->completionKey = events[i].lpCompletionKey;
+            e->m_scheduler->schedule(e->m_fiber);
+            e->m_fiber.reset();
+        }
+        if (lock.owns_lock())
+            lock.unlock();
+        // We could have possibly retrieved more tickles than we needed;
+        // retickle so other threads will get them
+        while (--tickles > 0) tickle();
         Fiber::yield();
     }
 }

@@ -16,6 +16,8 @@
 #define mkdir _mkdir
 #define snprintf _snprintf
 
+#include <ntstatus.h>
+#define WIN32_NO_STATUS
 #include <windows.h>
 
 #ifdef min

@@ -154,9 +154,8 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
     m_sock = socket(family, type, protocol);
     MORDOR_LOG_DEBUG(g_log) << this << " socket(" << family << ", " << type << ", "
         << protocol << "): " << m_sock << " (" << lastError() << ")";
-    if (m_sock == -1) {
+    if (m_sock == -1)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("socket");
-    }
 #ifdef WINDOWS
     try {
         m_ioManager->registerFile((HANDLE)m_sock);
@@ -643,7 +642,7 @@ Socket::send(const void *buf, size_t len, int flags)
                 << len << "): " << sent;
         if (ret && dwLastError != WSA_IO_PENDING) {
             MORDOR_LOG_ERROR(g_log) << this << " send(" << m_sock << ", " << len
-                << "): (" << lastError() << ")";
+                << "): (" << dwLastError << ")";
             m_ioManager->unregisterEvent(&m_sendEvent);
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(dwLastError, "WSASend");
         }

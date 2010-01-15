@@ -47,6 +47,7 @@
 #include <direct.h>
 #include <lm.h>
 #include <lmcons.h>
+#include <ntstatus.h>
 #include <security.h>
 #include <winerror.h>
 #include <winsock2.h>

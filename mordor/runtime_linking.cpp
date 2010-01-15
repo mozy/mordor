@@ -253,6 +253,29 @@ out:
     return result;
 }
 
+MORDOR_RUNTIME_LINK_DEFINITION(GetQueuedCompletionStatusEx, BOOL, WINAPI,
+    (HANDLE CompletionPort, LPOVERLAPPED_ENTRY lpCompletionPortEntries, ULONG ulCount, PULONG ulNumEntriesRemoved, DWORD dwMilliseconds, BOOL fAlertable),
+    (CompletionPort, lpCompletionPortEntries, ulCount, ulNumEntriesRemoved, dwMilliseconds, fAlertable),
+    L"kernel32.dll")
+{
+    if (ulNumEntriesRemoved)
+        *ulNumEntriesRemoved = 0;
+    if (fAlertable || ulCount == 0 || !ulNumEntriesRemoved || !lpCompletionPortEntries) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    BOOL bRet = GetQueuedCompletionStatus(CompletionPort,
+        &lpCompletionPortEntries->dwNumberOfBytesTransferred,
+        &lpCompletionPortEntries->lpCompletionKey,
+        &lpCompletionPortEntries->lpOverlapped,
+        dwMilliseconds);
+    if (!bRet && !lpCompletionPortEntries->lpOverlapped)
+        return FALSE;
+    lpCompletionPortEntries->Internal = lpCompletionPortEntries->lpOverlapped->Internal;
+    *ulNumEntriesRemoved = 1;
+    return TRUE;
+}
+
 MORDOR_RUNTIME_LINK_DEFINITION(IsThreadAFiber, BOOL, WINAPI,
     (VOID),
     (),
@@ -270,6 +293,14 @@ MORDOR_RUNTIME_LINK_DEFINITION(RtlCaptureStackBackTrace, WORD, NTAPI,
     // TODO: asm implementation for x86
     SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
     return 0;
+}
+
+MORDOR_RUNTIME_LINK_DEFINITION(RtlNtStatusToDosError, ULONG, NTAPI,
+    (NTSTATUS Status),
+    (Status),
+    L"ntdll.dll")
+{
+    return ERROR_CALL_NOT_IMPLEMENTED;
 }
 
 MORDOR_RUNTIME_LINK_DEFINITION(SymFromAddr, BOOL, __stdcall,
