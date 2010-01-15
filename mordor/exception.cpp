@@ -243,6 +243,11 @@ error_t lastError()
     return GetLastError();
 }
 
+void lastError(error_t error)
+{
+    SetLastError(error);
+}
+
 void throwExceptionFromLastError(error_t error)
 {
     switch (error) {
@@ -273,6 +278,11 @@ void throwExceptionFromLastError(error_t error)
 error_t lastError()
 {
     return errno;
+}
+
+void lastError(error_t error)
+{
+    errno = error;
 }
 
 void throwExceptionFromLastError(error_t error)

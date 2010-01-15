@@ -373,6 +373,7 @@ Logger::log(Log::Level level, const std::string &str,
     if (str.empty() || !enabled(level))
         return;
     LogDisabler disable;
+    error_t error = lastError();
     // TODO: capture timestamp
     Logger::ptr _this = shared_from_this();
 #ifdef WINDOWS
@@ -383,18 +384,23 @@ Logger::log(Log::Level level, const std::string &str,
     pid_t thread = getpid();
 #endif
     void *fiber = Fiber::getThis().get();
+    bool somethingLogged = false;
     while (_this) {
         for (std::list<LogSink::ptr>::iterator it(_this->m_sinks.begin());
             it != _this->m_sinks.end();
             ++it) {
+            somethingLogged = true;
             (*it)->log(m_name, thread, fiber, level, str, file, line);
         }
         if (!_this->m_inheritSinks)
             break;
         _this = _this->m_parent.lock();
     }
+    // Restore lastError
+    if (somethingLogged)
+        lastError(error);
     if (level == Log::FATAL)
-        MORDOR_THROW_EXCEPTION(Assertion("Fatal error: " + str));
+        std::terminate();
 }
 
 LogEvent::~LogEvent()

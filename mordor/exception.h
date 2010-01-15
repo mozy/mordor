@@ -65,6 +65,7 @@ struct OperationAbortedException : virtual NativeException {};
 struct BrokenPipeException : virtual NativeException {};
 
 error_t lastError();
+void lastError(error_t error);
 
 void throwExceptionFromLastError(error_t lastError);
 
