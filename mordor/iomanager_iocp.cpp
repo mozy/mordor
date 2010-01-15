@@ -85,16 +85,7 @@ IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
         << "): " << (srcHandle != m_handles + m_inUseCount + 1);
     if (srcHandle != m_handles + m_inUseCount + 1) {
         int index = (int)(srcHandle - m_handles);
-        memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
-        // Manually destruct old object, move others down, and default construct unused one
-        m_dgs[index].~functor();
-        memmove(&m_dgs[index], &m_dgs[index + 1], (m_inUseCount - index) * sizeof(boost::function<void ()>));
-        new(&m_dgs[m_inUseCount]) boost::function<void ()>();
-        // Manually destruct old object, move others down, and default construct unused one
-        m_fibers[index].~shared_ptr<Fiber>();
-        memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
-        new(&m_fibers[m_inUseCount]) Fiber::ptr();
-        memmove(&m_recurring[index], &m_recurring[index + 1], (m_inUseCount - index) * sizeof(bool));
+        removeEntry(index);
 
         if (--m_inUseCount == 0)
             --m_inUseCount;
@@ -119,13 +110,19 @@ IOManagerIOCP::WaitBlock::run()
 
     {
         boost::mutex::scoped_lock lock(m_mutex);
+        if (m_inUseCount == -1) {
+            // The first/final handle was unregistered out from under us
+            // before we could even start
+            if (!SetEvent(m_reconfigured))
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
+        }
         count = m_inUseCount + 1;
         memcpy(handles, m_handles, (count) * sizeof(HANDLE));        
     }
 
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " run " << count;
 
-    while (true) {
+    while (count) {
         dwRet = WaitForMultipleObjects(count, handles, FALSE, INFINITE);
         MORDOR_LOG_LEVEL(g_log, dwRet == WAIT_FAILED ? Log::ERROR : Log::DEBUG)
             << this << " WaitForMultipleObjects(" << count << ", " << handles
@@ -143,9 +140,16 @@ IOManagerIOCP::WaitBlock::run()
         } else if (dwRet >= WAIT_OBJECT_0 + 1 && dwRet < WAIT_OBJECT_0 + MAXIMUM_WAIT_OBJECTS) {
             boost::mutex::scoped_lock lock(m_mutex);
 
+            if (m_inUseCount == -1) {
+                // The final handle was unregistered out from under us
+                if (!SetEvent(m_reconfigured))
+                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
+                break;
+            }
+
             HANDLE handle = handles[dwRet - WAIT_OBJECT_0];
             HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
-            MORDOR_LOG_DEBUG(g_log) << this << " event " << handle << " "
+            MORDOR_LOG_DEBUG(g_log) << this << " Event " << handle << " "
                 << (srcHandle != m_handles + m_inUseCount + 1);
             if (srcHandle != m_handles + m_inUseCount + 1) {
                 int index = (int)(srcHandle - m_handles);
@@ -154,16 +158,7 @@ IOManagerIOCP::WaitBlock::run()
                 else
                     m_schedulers[index]->schedule(m_dgs[index]);
                 if (!m_recurring[index]) {
-                    memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
-                    // Manually destruct old object, move others down, and default construct unused one
-                    m_dgs[index].~functor();
-                    memmove(&m_dgs[index], &m_dgs[index + 1], (m_inUseCount - index) * sizeof(boost::function<void ()>));
-                    new(&m_dgs[m_inUseCount]) boost::function<void ()>();
-                    // Manually destruct old object, move others down, and default construct unused one
-                    m_fibers[index].~shared_ptr<Fiber>();
-                    memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
-                    new(&m_fibers[m_inUseCount]) Fiber::ptr();
-                    memmove(&m_recurring[index], &m_recurring[index + 1], (m_inUseCount - index) * sizeof(bool));
+                    removeEntry(index);
 
                     if (--m_inUseCount == 0) {
                         --m_inUseCount;
@@ -190,6 +185,22 @@ IOManagerIOCP::WaitBlock::run()
         m_outer.m_waitBlocks.erase(it);
         m_outer.tickle();
     }
+}
+
+void
+IOManagerIOCP::WaitBlock::removeEntry(int index)
+{
+    memmove(&m_handles[index], &m_handles[index + 1], (m_inUseCount - index) * sizeof(HANDLE));
+    memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
+    // Manually destruct old object, move others down, and default construct unused one
+    m_dgs[index].~functor();
+    memmove(&m_dgs[index], &m_dgs[index + 1], (m_inUseCount - index) * sizeof(boost::function<void ()>));
+    new(&m_dgs[m_inUseCount]) boost::function<void ()>();
+    // Manually destruct old object, move others down, and default construct unused one
+    m_fibers[index].~shared_ptr<Fiber>();
+    memmove(&m_fibers[index], &m_fibers[index + 1], (m_inUseCount - index) * sizeof(Fiber::ptr));
+    new(&m_fibers[m_inUseCount]) Fiber::ptr();
+    memmove(&m_recurring[index], &m_recurring[index + 1], (m_inUseCount - index) * sizeof(bool));
 }
 
 IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)

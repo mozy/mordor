@@ -51,6 +51,7 @@ private:
 
     private:
         void run();
+        void removeEntry(int index);
 
     private:
         boost::mutex m_mutex;
