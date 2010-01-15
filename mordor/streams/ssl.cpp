@@ -174,7 +174,6 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
         MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
             << boost::errinfo_api_function("SSL_CTX_new");
     }
-    SSL_CTX_set_mode(m_ctx.get(), SSL_MODE_ENABLE_PARTIAL_WRITE);
     // Auto-generate self-signed server cert
     if (!ctx && !client) {
         boost::shared_ptr<X509> cert;
@@ -661,10 +660,9 @@ SSLStream::wantRead(FiberMutex::ScopedLock &lock)
         size_t result;
         Buffer temp;
         try {
-            // Maximum SSL record size
-            MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(16389)";
-            result = parent()->read(temp, 16384 + 5);
-            MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(16389): " << result;
+            MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(32768)";
+            result = parent()->read(temp, 32768);
+            MORDOR_LOG_DEBUG(g_log) << this << " parent()->read(32768): " << result;
         } catch (...) {
             lock.lock();
             m_inRead = false;
