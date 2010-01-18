@@ -21,6 +21,7 @@ BufferedStream::BufferedStream(Stream::ptr parent, bool own)
 {
     m_bufferSize = g_defaultBufferSize->val();
     m_allowPartialReads = false;
+    m_flushMultiplesOfBuffer = false;
 }
 
 void
@@ -148,9 +149,12 @@ BufferedStream::flushWrite(size_t length)
                 parent()->seek(-(long long)m_readBuffer.readAvailable(), CURRENT);
                 m_readBuffer.clear();
             }
+            size_t toWrite = m_writeBuffer.readAvailable();
+            if (m_flushMultiplesOfBuffer)
+                toWrite = toWrite / m_bufferSize * m_bufferSize;
             MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
                 << m_writeBuffer.readAvailable() << ")";
-            result = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
+            result = parent()->write(m_writeBuffer, toWrite);
             MORDOR_LOG_DEBUG(g_log) << this << " parent()->write("
                 << m_writeBuffer.readAvailable() << "): " << result;
             m_writeBuffer.consume(result);

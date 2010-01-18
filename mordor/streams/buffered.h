@@ -19,6 +19,9 @@ public:
     bool allowPartialReads() { return m_allowPartialReads; }
     void allowPartialReads(bool allowPartialReads) { m_allowPartialReads = allowPartialReads; }
 
+    bool flushMultiplesOfBuffer() { return m_flushMultiplesOfBuffer; }
+    void flushMultiplesOfBuffer(bool flushMultiplesOfBuffer ) { m_flushMultiplesOfBuffer = flushMultiplesOfBuffer; }
+
     bool supportsFind() { return supportsRead(); }
     bool supportsUnread() { return supportsRead() && (!supportsWrite() || !supportsSeek()); }
 
@@ -42,7 +45,7 @@ private:
 
 private:
     size_t m_bufferSize;
-    bool m_allowPartialReads;
+    bool m_allowPartialReads, m_flushMultiplesOfBuffer;
     Buffer m_readBuffer, m_writeBuffer;
 };
 
