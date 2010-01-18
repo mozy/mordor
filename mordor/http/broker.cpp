@@ -343,8 +343,18 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
                 currentUri = originalUri;
             return request;
         } catch (SocketException &) {
+            if (!m_retry) {
+                if (!connect)
+                    currentUri = originalUri;
+                throw;
+            }
             continue;
         } catch (PriorRequestFailedException &) {
+            if (!m_retry) {
+                if (!connect)
+                    currentUri = originalUri;
+                throw;
+            }
             continue;
         } catch (...) {
             if (!connect)

@@ -184,9 +184,15 @@ private:
 class BaseRequestBroker : public RequestBroker
 {
 public:
+    typedef boost::shared_ptr<BaseRequestBroker> ptr;
+
+public:
     BaseRequestBroker(ConnectionBroker::ptr connectionBroker)
-        : m_connectionBroker(connectionBroker)
+        : m_connectionBroker(connectionBroker),
+          m_retry(true)
     {}
+
+    void retry(bool retry) { m_retry = retry; }
 
     ClientRequest::ptr request(Request &requestHeaders,
         bool forceNewConnection = false,
@@ -194,6 +200,7 @@ public:
 
 private:
     ConnectionBroker::ptr m_connectionBroker;
+    bool m_retry;
 };
 
 struct CircularRedirectException : Exception
@@ -211,6 +218,9 @@ private:
 
 class RedirectRequestBroker : public RequestBrokerFilter
 {
+public:
+    typedef boost::shared_ptr<RedirectRequestBroker> ptr;
+
 public:
     RedirectRequestBroker(RequestBroker::ptr parent, size_t maxRedirects = 70)
         : RequestBrokerFilter(parent),
