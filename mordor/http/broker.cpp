@@ -24,12 +24,20 @@ RequestBroker::ptr defaultRequestBroker(IOManager *ioManager,
     RequestBroker::ptr requestBroker(new BaseRequestBroker(connectionBroker));
 
     socketBroker.reset(new ProxyStreamBroker(socketBroker, requestBroker));
-    sslBroker->parent(socketBroker);
+    sslBroker->parent(StreamBroker::weak_ptr(socketBroker));
     connectionBroker.reset(new ProxyConnectionBroker(connectionBroker));
     requestBroker.reset(new BaseRequestBroker(connectionBroker));
     return requestBroker;
 }
 
+
+StreamBroker::ptr
+StreamBrokerFilter::parent()
+{
+    if (m_parent)
+        return m_parent;
+    return StreamBroker::ptr(m_weakParent);
+}
 
 Stream::ptr
 SocketStreamBroker::getStream(const URI &uri)
@@ -290,8 +298,17 @@ MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
     return std::make_pair(it->second.first, false);
 }
 
+RequestBroker::ptr
+RequestBrokerFilter::parent()
+{
+    if (m_parent)
+        return m_parent;
+    return RequestBroker::ptr(m_weakParent);
+}
+
 ClientRequest::ptr
-BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection)
+BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
+                           boost::function<void (ClientRequest::ptr)> bodyDg)
 {
     URI &currentUri = requestHeaders.requestLine.uri;
     URI originalUri = currentUri;
@@ -320,6 +337,8 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection)
             }
 
             ClientRequest::ptr request = conn.first->request(requestHeaders);
+            if (bodyDg)
+                bodyDg(request);
             if (!connect)
                 currentUri = originalUri;
             return request;
@@ -337,7 +356,8 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection)
 }
 
 ClientRequest::ptr
-RedirectRequestBroker::request(Request &requestHeaders, bool forceNewConnection)
+RedirectRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
+                               boost::function<void (ClientRequest::ptr)> bodyDg)
 {
     URI &currentUri = requestHeaders.requestLine.uri;
     URI originalUri = currentUri;
@@ -346,17 +366,25 @@ RedirectRequestBroker::request(Request &requestHeaders, bool forceNewConnection)
     size_t redirects = 0;
     while (true) {
         try {
-            ClientRequest::ptr request = RequestBrokerFilter::request(requestHeaders,
-                forceNewConnection);
-            if (request->hasRequestBody()) {
-                currentUri = originalUri;
-                return request;
-            }
+            ClientRequest::ptr request = parent()->request(requestHeaders,
+                forceNewConnection, bodyDg);
+            bool handleRedirect = false;
             switch (request->response().status.status)
             {
             case FOUND:
+                handleRedirect = m_handle302;
+                break;
             case TEMPORARY_REDIRECT:
+                handleRedirect = m_handle307;
+                break;
             case MOVED_PERMANENTLY:
+                handleRedirect = m_handle301;
+                break;
+            default:
+                currentUri = originalUri;
+                return request;
+            }
+            if (handleRedirect) {
                 if (++redirects == m_maxRedirects)
                     MORDOR_THROW_EXCEPTION(CircularRedirectException(originalUri));
                 currentUri = URI::transform(currentUri,
@@ -369,36 +397,16 @@ RedirectRequestBroker::request(Request &requestHeaders, bool forceNewConnection)
                     originalUri = currentUri;
                 request->finish();
                 continue;
-            default:
+            } else {
                 currentUri = originalUri;
                 return request;
             }
-            MORDOR_NOTREACHED();
         } catch (...) {
             currentUri = originalUri;
             throw;
         }
         MORDOR_NOTREACHED();
     }
-}
-
-bool
-RedirectRequestBroker::checkResponse(ClientRequest::ptr request,
-                                     Request &requestHeaders)
-{
-    URI &currentUri = requestHeaders.requestLine.uri;
-    switch (request->response().status.status)
-    {
-    case FOUND:
-    case TEMPORARY_REDIRECT:
-    case MOVED_PERMANENTLY:
-        currentUri = URI::transform(currentUri,
-            request->response().response.location);
-        return true;
-    default:
-        return RequestBrokerFilter::checkResponse(request, requestHeaders);
-    }
-    MORDOR_NOTREACHED();
 }
 
 }}

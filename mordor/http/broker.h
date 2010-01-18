@@ -15,6 +15,7 @@ class StreamBroker
 {
 public:
     typedef boost::shared_ptr<StreamBroker> ptr;
+    typedef boost::weak_ptr<StreamBroker> weak_ptr;
 
 public:
     virtual ~StreamBroker() {}
@@ -29,17 +30,23 @@ public:
     typedef boost::shared_ptr<StreamBrokerFilter> ptr;
 
 public:
-    StreamBrokerFilter(StreamBroker::ptr parent)
-        : m_parent(parent)
+    StreamBrokerFilter(StreamBroker::ptr parent,
+        StreamBroker::weak_ptr weakParent = StreamBroker::weak_ptr())
+        : m_parent(parent),
+          m_weakParent(weakParent)
     {}
 
-    StreamBroker::ptr parent() const { return m_parent; }
-    void parent(StreamBroker::ptr parent) { m_parent = parent; }
+    StreamBroker::ptr parent();
+    void parent(StreamBroker::ptr parent)
+    { m_parent = parent; m_weakParent.reset(); }
+    void parent(StreamBroker::weak_ptr parent)
+    { m_weakParent = parent; m_parent.reset(); }
 
-    void cancelPending() { m_parent->cancelPending(); }
+    void cancelPending() { parent()->cancelPending(); }
 
 private:
     StreamBroker::ptr m_parent;
+    StreamBroker::weak_ptr m_weakParent;
 };
 
 class SocketStreamBroker : public StreamBroker
@@ -144,35 +151,34 @@ class RequestBroker
 {
 public:
     typedef boost::shared_ptr<RequestBroker> ptr;
+    typedef boost::weak_ptr<RequestBroker> weak_ptr;
 
 public:
     virtual ~RequestBroker() {}
 
     virtual ClientRequest::ptr request(Request &requestHeaders,
-        bool forceNewConnection = false) = 0;
-
-    /// @return If the request should be re-tried
-    /// @pre request->hasRequestBody()
-    virtual bool checkResponse(ClientRequest::ptr request,
-        Request &requestHeaders) { return false; }
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL) = 0;
 };
 
 class RequestBrokerFilter : public RequestBroker
 {
 public:
-    RequestBrokerFilter(RequestBroker::ptr parent)
-        : m_parent(parent)
+    RequestBrokerFilter(RequestBroker::ptr parent,
+        RequestBroker::weak_ptr weakParent = RequestBroker::weak_ptr())
+        : m_parent(parent),
+          m_weakParent(weakParent)
     {}
 
-    ClientRequest::ptr request(Request &requestHeaders,
-        bool forceNewConnection = false)
-    { return m_parent->request(requestHeaders, forceNewConnection); }
+    RequestBroker::ptr parent();
 
-    bool checkResponse(ClientRequest::ptr request, Request &requestHeaders)
-    { return m_parent->checkResponse(request, requestHeaders); }
+    ClientRequest::ptr request(Request &requestHeaders,
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL) = 0;
 
 private:
     RequestBroker::ptr m_parent;
+    RequestBroker::weak_ptr m_weakParent;
 };
 
 class BaseRequestBroker : public RequestBroker
@@ -183,7 +189,8 @@ public:
     {}
 
     ClientRequest::ptr request(Request &requestHeaders,
-        bool forceNewConnection = false);
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
 
 private:
     ConnectionBroker::ptr m_connectionBroker;
@@ -207,15 +214,23 @@ class RedirectRequestBroker : public RequestBrokerFilter
 public:
     RedirectRequestBroker(RequestBroker::ptr parent, size_t maxRedirects = 70)
         : RequestBrokerFilter(parent),
-          m_maxRedirects(maxRedirects)
+          m_maxRedirects(maxRedirects),
+          m_handle301(true),
+          m_handle302(true),
+          m_handle307(true)
     {}
 
+    void handlePermanentRedirect(bool handle) { m_handle301 = handle; }
+    void handleFound(bool handle) { m_handle302 = handle; }
+    void handleTemporaryRedirect(bool handle) { m_handle307 = handle; }
+
     ClientRequest::ptr request(Request &requestHeaders,
-        bool forceNewConnection = false);
-    bool checkResponse(ClientRequest::ptr request, Request &requestHeaders);
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
 
 private:
     size_t m_maxRedirects;
+    bool m_handle301, m_handle302, m_handle307;
 };
 
 RequestBroker::ptr defaultRequestBroker(IOManager *ioManager = NULL,
