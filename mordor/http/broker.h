@@ -233,6 +233,23 @@ private:
     bool m_handle301, m_handle302, m_handle307;
 };
 
+class UserAgentRequestBroker : public RequestBrokerFilter
+{
+public:
+    UserAgentRequestBroker(RequestBroker::ptr parent,
+        const ProductAndCommentList &userAgent)
+        : RequestBrokerFilter(parent),
+          m_userAgent(userAgent)
+    {}
+
+    ClientRequest::ptr request(Request &requestHeaders,
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+
+private:
+    ProductAndCommentList m_userAgent;
+};
+
 RequestBroker::ptr defaultRequestBroker(IOManager *ioManager = NULL,
                                         Scheduler *scheduler = NULL,
                                         ConnectionBroker::ptr *connBroker = NULL);

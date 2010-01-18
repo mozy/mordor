@@ -409,4 +409,12 @@ RedirectRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     }
 }
 
+ClientRequest::ptr
+UserAgentRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
+                               boost::function<void (ClientRequest::ptr)> bodyDg)
+{
+    requestHeaders.request.userAgent = m_userAgent;
+    return parent()->request(requestHeaders, forceNewConnection, bodyDg);
+}
+
 }}
