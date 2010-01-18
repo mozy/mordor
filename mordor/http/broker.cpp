@@ -341,6 +341,8 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
                 bodyDg(request);
             if (!connect)
                 currentUri = originalUri;
+            // Force reading the response here to check for connectivity problems
+            request->response();
             return request;
         } catch (SocketException &) {
             if (!m_retry) {
