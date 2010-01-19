@@ -435,7 +435,7 @@ SSLStream::flush()
             }
         }
     }
-    flushBuffer();
+    flushBuffer(true);
 }
 
 void
