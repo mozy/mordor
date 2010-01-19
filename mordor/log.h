@@ -13,7 +13,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 
-#include "mordor/streams/stream.h"
 #include "version.h"
 
 #ifdef WINDOWS
@@ -26,6 +25,8 @@ class Logger;
 class LogSink;
 
 class LoggerIterator;
+
+class Stream;
 
 #ifdef DEBUG
 #undef DEBUG
@@ -57,7 +58,6 @@ public:
     static void clearSinks();
     static void removeSink(boost::shared_ptr<LogSink> sink);
 
-private:
     static boost::shared_ptr<Logger> root();
 };
 
@@ -111,7 +111,7 @@ public:
 
 private:
     std::string m_file;
-    Stream::ptr m_stream;
+    boost::shared_ptr<Stream> m_stream;
 };
 
 struct LogEvent

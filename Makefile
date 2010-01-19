@@ -393,6 +393,7 @@ endif
 
 
 LIBMORDOROBJECTS := 							\
+	mordor/assert.o							\
 	mordor/config.o							\
 	mordor/date_time.o						\
 	mordor/exception.o						\

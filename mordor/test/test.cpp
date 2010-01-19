@@ -138,6 +138,7 @@ runTest(TestListener *listener, const std::string &suite,
 static bool
 runTests(const TestSuites *suites, TestListener *listener)
 {
+    Assertion::throwOnAssertion = true;
     if (g_wait->val()) {
         while (!IsDebuggerPresent())
             sleep(10000ull);

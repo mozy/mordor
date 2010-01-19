@@ -399,8 +399,6 @@ Logger::log(Log::Level level, const std::string &str,
     // Restore lastError
     if (somethingLogged)
         lastError(error);
-    if (level == Log::FATAL)
-        std::terminate();
 }
 
 LogEvent::~LogEvent()

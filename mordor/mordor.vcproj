@@ -303,6 +303,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\assert.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\auth.cpp"
 				>
 			</File>
@@ -459,42 +463,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\xml_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\xml_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\xml_parser.obj"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\xml_parser.obj"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath=".\http\parser.cpp"
 				>
 				<FileConfiguration
@@ -527,6 +495,42 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						ObjectFile="$(IntDir)\http_parser.obj"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\xml\parser.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\xml_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\xml_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\xml_parser.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\xml_parser.obj"
 					/>
 				</FileConfiguration>
 			</File>
@@ -901,11 +905,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\scheduler.h"
+				RelativePath=".\scheduler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\scheduler.h"
+				RelativePath=".\streams\scheduler.h"
 				>
 			</File>
 			<File
@@ -925,11 +929,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
@@ -1002,42 +1006,6 @@
 			>
 		</File>
 		<File
-			RelativePath=".\xml\parser.rl"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug|x64"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|x64"
-				>
-				<Tool
-					Name="Ragel"
-					OutputFileName="xml\$(InputName).cpp"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
 			RelativePath=".\http\parser.rl"
 			>
 			<FileConfiguration
@@ -1070,6 +1038,42 @@
 				<Tool
 					Name="Ragel"
 					OutputFileName="http\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath=".\xml\parser.rl"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|x64"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64"
+				>
+				<Tool
+					Name="Ragel"
+					OutputFileName="xml\$(InputName).cpp"
 				/>
 			</FileConfiguration>
 		</File>
