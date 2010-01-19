@@ -789,6 +789,13 @@ ClientRequest::ensureResponse()
         if (m_conn->m_priorResponseClosed || m_conn->m_priorResponseFailed) {
             m_aborted = true;
             m_responseState = ERROR;
+            if (m_requestState == ClientRequest::COMPLETE) {
+                std::list<ClientRequest *>::iterator it;
+                it = std::find(m_conn->m_pendingRequests.begin(),
+                    m_conn->m_pendingRequests.end(), this);
+                if (it != m_conn->m_pendingRequests.end())
+                    m_conn->m_pendingRequests.erase(it);
+            }
             if (m_conn->m_priorResponseClosed)
                 MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
             else
