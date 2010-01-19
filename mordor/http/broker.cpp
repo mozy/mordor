@@ -345,18 +345,16 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             request->response();
             return request;
         } catch (SocketException &) {
-            if (!m_retry) {
-                if (!connect)
+            if (!connect)
                     currentUri = originalUri;
+            if (!m_retry)
                 throw;
-            }
             continue;
         } catch (PriorRequestFailedException &) {
-            if (!m_retry) {
-                if (!connect)
-                    currentUri = originalUri;
+            if (!connect)
+                currentUri = originalUri;
+            if (!m_retry)                
                 throw;
-            }
             continue;
         } catch (...) {
             if (!connect)
