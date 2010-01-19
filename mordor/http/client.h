@@ -43,6 +43,8 @@ private:
 public:
     ~ClientRequest();
 
+    boost::shared_ptr<ClientConnection> connection() { return m_conn; }
+
     const Request &request();
     bool hasRequestBody() const;
     Stream::ptr requestStream();
