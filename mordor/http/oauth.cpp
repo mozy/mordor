@@ -29,6 +29,12 @@ OAuth::authorize(Request &nextRequest,
     authorization.parameters["realm"] = realm;
 }
 
+static void writeBody(ClientRequest::ptr request, const std::string &body)
+{
+    request->requestStream()->write(body.c_str(), body.size());
+    request->requestStream()->close();
+}
+
 void
 OAuth::getRequestToken()
 {
@@ -60,17 +66,16 @@ OAuth::getRequestToken()
         requestHeaders.entity.contentLength = body.size();
     }
 
+    boost::function<void (ClientRequest::ptr)> bodyDg;
+    if (!body.empty())
+        bodyDg = boost::bind(&writeBody, _1, boost::cref(body));
     ClientRequest::ptr request;
     try {
-        request = m_requestBroker->request(requestHeaders);
+        request = m_requestBroker->request(requestHeaders, false, bodyDg);
         m_requestTokenUri = requestHeaders.requestLine.uri;
     } catch (...) {
         m_requestTokenUri = requestHeaders.requestLine.uri;
         throw;
-    }
-    if (!body.empty()) {
-        request->requestStream()->write(body.c_str(), body.size());
-        request->requestStream()->close();
     }
     if (request->response().status.status != OK)
         MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
@@ -130,17 +135,16 @@ OAuth::getAccessToken(const std::string &verifier)
         requestHeaders.entity.contentLength = body.size();
     }
 
+    boost::function<void (ClientRequest::ptr)> bodyDg;
+    if (!body.empty())
+        bodyDg = boost::bind(&writeBody, _1, boost::cref(body));
     ClientRequest::ptr request;
     try {
-        request = m_requestBroker->request(requestHeaders);
+        request = m_requestBroker->request(requestHeaders, false, bodyDg);
         m_accessTokenUri = requestHeaders.requestLine.uri;
     } catch (...) {
         m_accessTokenUri = requestHeaders.requestLine.uri;
         throw;
-    }
-    if (!body.empty()) {
-        request->requestStream()->write(body.c_str(), body.size());
-        request->requestStream()->close();
     }
     if (request->response().status.status != OK)
         MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
