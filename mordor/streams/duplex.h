@@ -58,7 +58,7 @@ public:
         if (!m_writeParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         return m_writeParent->write(b, len);
     }
-    void flush()
+    void flush(bool flushParent = true)
     {
         if (!m_writeParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         m_writeParent->flush();

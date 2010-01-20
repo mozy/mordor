@@ -43,7 +43,7 @@ public:
     long long seek(long long offset, Anchor anchor = BEGIN) { return m_parent->seek(offset, anchor); }
     long long size() { return m_parent->size(); }
     void truncate(long long size) { m_parent->truncate(size); }
-    void flush() { m_parent->flush(); }
+    void flush(bool flushParent = true) { if (flushParent) m_parent->flush(true); }
     ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true)
     { return m_parent->find(delim, sanitySize, throwIfNotFound); }
     ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)

@@ -57,11 +57,11 @@ public:
         MORDOR_ASSERT(m_type == WRITE);
         return parent()->truncate(size);
     }
-    void flush()
+    void flush(bool flushParent = true)
     {
         if (m_type == READ)
             return;
-        return parent()->flush();
+        return parent()->flush(flushParent);
     }
     ptrdiff_t find(char delim)
     {

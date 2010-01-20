@@ -34,11 +34,11 @@ MORDOR_UNITTEST(SSLStream, basic)
     char buf[6];
     buf[5] = '\0';
     client->write("hello");
-    client->flush();
+    client->flush(false);
     MORDOR_TEST_ASSERT_EQUAL(server->read(buf, 5), 5u);
     MORDOR_TEST_ASSERT_EQUAL((const char *)buf, "hello");
     server->write("world");
-    server->flush();
+    server->flush(false);
     MORDOR_TEST_ASSERT_EQUAL(client->read(buf, 5), 5u);
     MORDOR_TEST_ASSERT_EQUAL((const char *)buf, "world");
 }
@@ -106,10 +106,10 @@ MORDOR_UNITTEST(SSLStream, forceDuplex)
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
     pool.schedule(boost::bind(&accept, sslserver));
     client->write("hello");
-    client->flush();
+    client->flush(false);
     pool.dispatch();
     server->write("world");
-    server->flush();
+    server->flush(false);
     pool.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
 }

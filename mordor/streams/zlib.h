@@ -74,7 +74,7 @@ public:
     void close(CloseType type = BOTH);
     size_t read(Buffer &b, size_t len);
     size_t write(const Buffer &b, size_t len);
-    void flush();
+    void flush(bool flushParent = true);
 
 private:
     void flush(int flush);

@@ -65,10 +65,10 @@ public:
         SchedulerSwitcher switcher(m_truncateScheduler);
         parent()->truncate(size);
     }
-    void flush()
+    void flush(bool flushParent = true)
     {
         SchedulerSwitcher switcher(m_flushScheduler);
-        parent()->flush();
+        parent()->flush(flushParent);
     }
 
 private:

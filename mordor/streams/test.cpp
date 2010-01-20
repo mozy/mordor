@@ -50,11 +50,11 @@ TestStream::write(const Buffer &b, size_t len)
 }
 
 void
-TestStream::flush()
+TestStream::flush(bool flushParent)
 {
     if (m_onFlush)
-        m_onFlush();
-    parent()->flush();
+        m_onFlush(flushParent);
+    parent()->flush(flushParent);
 }
 
 }

@@ -62,10 +62,10 @@ public:
         }
     }
 
-    void flush()
+    void flush(bool flushParent = true)
     {
         try {
-            parent()->flush();
+            parent()->flush(flushParent);
         } catch(...) {
             if (notifyOnException)
                 notifyOnException();

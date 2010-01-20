@@ -40,7 +40,7 @@ public:
     long long seek(long long offset, Anchor anchor = BEGIN);
     long long size();
     void truncate(long long size);
-    void flush();
+    void flush(bool flushParent = true);
 
     HANDLE handle() { return m_hFile; }
 

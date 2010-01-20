@@ -33,7 +33,7 @@ public:
     long long seek(long long offset, Anchor anchor = BEGIN);
     long long size();
     void truncate(long long size);
-    void flush();
+    void flush(bool flushParent = true);
     ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true);
     ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true);
     void unread(const Buffer &b, size_t len = ~0);
@@ -41,7 +41,6 @@ public:
 private:
     template <class T> size_t readInternal(T &buffer, size_t length);
     size_t flushWrite(size_t length);
-    void flush(bool flushParent);
 
 private:
     size_t m_bufferSize;

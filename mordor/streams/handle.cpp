@@ -271,7 +271,7 @@ HandleStream::truncate(long long size)
 }
 
 void
-HandleStream::flush()
+HandleStream::flush(bool flushParent)
 {
     SchedulerSwitcher switcher(m_scheduler);
     if (!FlushFileBuffers(m_hFile))

@@ -227,10 +227,11 @@ ZlibStream::write(const Buffer &b, size_t len)
 }
 
 void
-ZlibStream::flush()
+ZlibStream::flush(bool flushParent)
 {
     flush(Z_SYNC_FLUSH);
-    parent()->flush();
+    if (flushParent)
+        parent()->flush();
 }
 
 void
@@ -271,9 +272,8 @@ ZlibStream::flush(int flush)
 void
 ZlibStream::flushBuffer()
 {
-    while (m_outBuffer.readAvailable() > 0) {
+    while (m_outBuffer.readAvailable() > 0)
         m_outBuffer.consume(parent()->write(m_outBuffer, m_outBuffer.readAvailable()));
-    }
 }
 
 }

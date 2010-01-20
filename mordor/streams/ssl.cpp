@@ -383,7 +383,7 @@ SSLStream::write(const Buffer &b, size_t len)
 }
 
 void
-SSLStream::flush()
+SSLStream::flush(bool flushParent)
 {
     FiberMutex::ScopedLock lock(m_mutex);
     if ( (SSL_get_shutdown(m_ssl.get()) & SSL_SENT_SHUTDOWN) &&
@@ -435,7 +435,7 @@ SSLStream::flush()
             }
         }
     }
-    flushBuffer(true);
+    flushBuffer(flushParent);
 }
 
 void

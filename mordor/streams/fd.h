@@ -34,7 +34,7 @@ public:
     long long seek(long long offset, Anchor anchor);
     long long size();
     void truncate(long long size);
-    void flush();
+    void flush(bool flushParent = true);
 
     int fd() { return m_fd; }
 

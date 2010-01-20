@@ -133,7 +133,7 @@ FDStream::truncate(long long size)
 }
 
 void
-FDStream::flush()
+FDStream::flush(bool flushParent)
 {
     SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);

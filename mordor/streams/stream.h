@@ -177,7 +177,8 @@ public:
     /// fully written to the underlying implementation.  It is safe to call
     /// flush() on any Stream.  In some cases, flush() may not return until
     /// all data has been read from the other end of a pipe-like Stream.
-    virtual void flush() {}
+    /// @param flushParent Also flush() a parent stream(), if there is one
+    virtual void flush(bool flushParent = true) {}
 
     //@{
     /// @brief Find a delimiter by looking ahead in the stream

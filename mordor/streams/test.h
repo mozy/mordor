@@ -35,18 +35,19 @@ public:
     { m_onRead = dg; m_onReadBytes = bytes; }
     void onWrite(boost::function<void ()> dg, long long bytes = 0)
     { m_onWrite = dg; m_onWriteBytes = bytes; }
-    void onFlush(boost::function<void ()> dg)
+    void onFlush(boost::function<void (bool)> dg)
     { m_onFlush = dg; }
 
     void close(CloseType type = BOTH);
     size_t read(Buffer &b, size_t len);
     size_t write(const Buffer &b, size_t len);
-    void flush();
+    void flush(bool flushParent = true);
 
 private:
     size_t m_maxReadSize, m_maxWriteSize;
     boost::function<void (CloseType)> m_onClose;
-    boost::function<void ()> m_onRead, m_onWrite, m_onFlush;
+    boost::function<void ()> m_onRead, m_onWrite;
+    boost::function<void (bool)> m_onFlush;
     long long m_onReadBytes, m_onWriteBytes;
 };
 

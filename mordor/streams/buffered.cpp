@@ -258,12 +258,6 @@ BufferedStream::truncate(long long size)
 }
 
 void
-BufferedStream::flush()
-{
-    flush(true);
-}
-
-void
 BufferedStream::flush(bool flushParent)
 {
     while (m_writeBuffer.readAvailable()) {
