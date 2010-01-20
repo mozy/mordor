@@ -1,6 +1,6 @@
 #ifndef __MORDOR_FIBER_H__
 #define __MORDOR_FIBER_H__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #ifdef WIN32
 #else

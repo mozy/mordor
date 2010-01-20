@@ -1,6 +1,6 @@
 #ifndef __MORDOR_SCHEDULER_H__
 #define __MORDOR_SCHEDULER_H__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #ifdef WIN32
 #else

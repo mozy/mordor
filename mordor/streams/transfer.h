@@ -1,6 +1,6 @@
 #ifndef __MORDOR_TRANSFER_STREAM_H__
 #define __MORDOR_TRANSFER_STREAM_H__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include "stream.h"
 

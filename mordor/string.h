@@ -1,6 +1,6 @@
 #ifndef __MORDOR_STRING_H__
 #define __MORDOR_STRING_H__
-// Copyright (c) 2009 Decho Corp.
+// Copyright (c) 2009 Mozy, Inc.
 
 #include <ostream>
 #include <string>

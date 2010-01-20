@@ -1,4 +1,4 @@
-// Copyright (c) 2010 - Decho Corp.
+// Copyright (c) 2010 - Mozy, Inc.
 
 #include "mordor/pch.h"
 

@@ -1,6 +1,6 @@
 #ifndef __MORDOR_XML_PARSER_H__
 #define __MORDOR_XML_PARSER_H__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include <boost/function.hpp>
 

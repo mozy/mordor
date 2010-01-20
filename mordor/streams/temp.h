@@ -1,6 +1,6 @@
 #ifndef __MORDOR_TEMP_STREAM_H__
 #define __MORDOR_TEMP_STREAM_H__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include "file.h"
 

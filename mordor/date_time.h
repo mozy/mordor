@@ -1,6 +1,6 @@
 #ifndef __MORDOR_DATE_TIME_H__
 #define __MORDOR_DATE_TIME_H__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 

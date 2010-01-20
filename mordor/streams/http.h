@@ -1,6 +1,6 @@
 #ifndef __MORDOR_HTTP_STREAM__
 #define __MORDOR_HTTP_STREAM__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include "filter.h"
 #include "mordor/exception.h"

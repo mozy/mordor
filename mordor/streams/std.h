@@ -1,6 +1,6 @@
 #ifndef __MORDOR_STD_STREAM_H__
 #define __MORDOR_STD_STREAM_H__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include "mordor/version.h"
 

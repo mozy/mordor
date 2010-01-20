@@ -1,6 +1,6 @@
 #ifndef __MORDOR_RANDOM_STREAM_H__
 #define __MORDOR_RANDOM_STREAM_H__
-// Copyright (c) 2009 Decho Corporation
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include "stream.h"
 

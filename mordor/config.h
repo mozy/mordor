@@ -1,6 +1,6 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include "predef.h"
 

@@ -1,6 +1,6 @@
 #ifndef __MORDOR_NAMEDPIPE_STREAM_H__
 #define __MORDOR_NAMEDPIPE_STREAM_H__
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include "handle.h"
 

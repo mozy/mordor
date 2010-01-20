@@ -1,4 +1,4 @@
-// Copyright (c) 2009 - Decho Corp.
+// Copyright (c) 2009 - Mozy, Inc.
 
 #include "mordor/predef.h"
 
