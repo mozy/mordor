@@ -71,10 +71,13 @@ NamedPipeStream::accept()
             m_ioManager->unregisterEvent(&m_readEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ConnectNamedPipe");
         }
-        Scheduler::getThis()->yieldTo();
-        if (!m_readEvent.ret) {
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_readEvent.lastError, "ConnectNamedPipe");
-        }
+        if (ret && m_skipCompletionPortOnSuccess)
+            m_ioManager->unregisterEvent(&m_readEvent);
+        else
+            Scheduler::getThis()->yieldTo();
+        DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_readEvent.overlapped.Internal);
+        if (error)
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ConnectNamedPipe");
     } else {
         if (!ret && GetLastError() == ERROR_PIPE_CONNECTED) {
             return;

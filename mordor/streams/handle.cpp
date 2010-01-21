@@ -121,24 +121,21 @@ HandleStream::read(Buffer &b, size_t len)
             m_ioManager->unregisterEvent(&m_readEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
         }
-        if (m_skipCompletionPortOnSuccess && ret) {
+        if (m_skipCompletionPortOnSuccess && ret)
             m_ioManager->unregisterEvent(&m_readEvent);
-            m_readEvent.ret = TRUE;
-            m_readEvent.lastError = ERROR_SUCCESS;
-            m_readEvent.numberOfBytes = read;
-        } else {
+        else
             Scheduler::getThis()->yieldTo();
-        }
-        if (!m_readEvent.ret && m_readEvent.lastError == ERROR_HANDLE_EOF)
+        DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_readEvent.overlapped.Internal);
+        if (error == ERROR_HANDLE_EOF)
             return 0;
-        if (!m_readEvent.ret)
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_readEvent.lastError, "ReadFile");
+        if (error)
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ReadFile");
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
-                m_readEvent.numberOfBytes;
+                m_readEvent.overlapped.InternalHigh;
         }
-        b.produce(m_readEvent.numberOfBytes);
-        return m_readEvent.numberOfBytes;
+        b.produce(m_readEvent.overlapped.InternalHigh);
+        return m_readEvent.overlapped.InternalHigh;
     }
     if (!ret)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
@@ -183,22 +180,18 @@ HandleStream::write(const Buffer &b, size_t len)
             m_ioManager->unregisterEvent(&m_writeEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
         }
-        if (m_skipCompletionPortOnSuccess && ret) {
+        if (m_skipCompletionPortOnSuccess && ret)
             m_ioManager->unregisterEvent(&m_writeEvent);
-            m_writeEvent.ret = TRUE;
-            m_writeEvent.lastError = ERROR_SUCCESS;
-            m_writeEvent.numberOfBytes = written;
-        } else {
+        else
             Scheduler::getThis()->yieldTo();
-        }
-        if (!m_writeEvent.ret) {
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_writeEvent.lastError, "WriteFile");
-        }
+        DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_writeEvent.overlapped.Internal);
+        if (error)
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "WriteFile");
         if (supportsSeek()) {
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
-                m_writeEvent.numberOfBytes;
+                m_writeEvent.overlapped.InternalHigh;
         }
-        return m_writeEvent.numberOfBytes;
+        return m_writeEvent.overlapped.InternalHigh;
     }
     if (!ret)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");

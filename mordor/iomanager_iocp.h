@@ -22,11 +22,7 @@ struct AsyncEventIOCP
 {
     AsyncEventIOCP();
 
-    BOOL ret;
     OVERLAPPED overlapped;
-    DWORD numberOfBytes;
-    ULONG_PTR completionKey;
-    DWORD lastError;
 
     Scheduler  *m_scheduler;
     boost::thread::id m_thread;
@@ -92,7 +88,10 @@ protected:
 
 private:
     HANDLE m_hCompletionPort;
+#ifdef DEBUG
     std::map<OVERLAPPED *, AsyncEventIOCP*> m_pendingEvents;
+#endif
+    size_t m_pendingEventCount;
     boost::mutex m_mutex;
     std::list<WaitBlock::ptr> m_waitBlocks;
 };

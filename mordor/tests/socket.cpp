@@ -289,7 +289,7 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
             if (sent > 2) {
                 iov[1].iov_len = (iov_len_t)std::max<size_t>(sent, 3u) - 2;
             } else {
-                iov[0].iov_len = sent;
+                iov[0].iov_len = (iov_len_t)sent;
                 iovs = 1;
             }
             sent -= sock->receive(iov, iovs);

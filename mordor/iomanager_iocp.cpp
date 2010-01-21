@@ -7,6 +7,7 @@
 #include <boost/bind.hpp>
 
 #include "assert.h"
+#include "atomic.h"
 #include "exception.h"
 #include "log.h"
 #include "runtime_linking.h"
@@ -206,6 +207,7 @@ IOManagerIOCP::WaitBlock::removeEntry(int index)
 IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
+    m_pendingEventCount = 0;
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
     MORDOR_LOG_LEVEL(g_log, m_hCompletionPort ? Log::VERBOSE : Log::ERROR) << this <<
         " CreateIoCompletionPort(): " << m_hCompletionPort << " ("
@@ -254,11 +256,14 @@ IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
     e->m_thread = boost::this_thread::get_id();
     e->m_fiber = Fiber::getThis();
     MORDOR_LOG_DEBUG(g_log) << this << " registerEvent(" << &e->overlapped << ")";
+    atomicIncrement(m_pendingEventCount);
+#ifdef DEBUG
     {
         boost::mutex::scoped_lock lock(m_mutex);
         MORDOR_ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
         m_pendingEvents[&e->overlapped] = e;
     }
+#endif
 }
 
 void
@@ -266,6 +271,8 @@ IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
 {
     MORDOR_ASSERT(e);
     MORDOR_LOG_DEBUG(g_log) << this << " unregisterEvent(" << &e->overlapped << ")";
+    atomicDecrement(m_pendingEventCount);
+#ifdef DEBUG
     {
         boost::mutex::scoped_lock lock(m_mutex);
         std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
@@ -273,6 +280,7 @@ IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
         MORDOR_ASSERT(it != m_pendingEvents.end());
         m_pendingEvents.erase(it);
     }
+#endif
 }
 
 void
@@ -358,10 +366,10 @@ IOManagerIOCP::stopping(unsigned long long &nextTimeout)
 {
     nextTimeout = nextTimer();
     if (nextTimeout == ~0ull && Scheduler::stopping()) {
+        if (m_pendingEventCount != 0)
+            return false;
         boost::mutex::scoped_lock lock(m_mutex);
-        if (m_pendingEvents.empty() && m_waitBlocks.empty()) {
-            return true;
-        }
+        return m_waitBlocks.empty();
     }
     return false;
 }
@@ -403,32 +411,35 @@ IOManagerIOCP::idle()
         std::vector<boost::function<void ()> > expired = processTimers();
         schedule(expired.begin(), expired.end());
 
+#ifdef DEBUG
         boost::mutex::scoped_lock lock(m_mutex, boost::defer_lock_t());
+#endif
         int tickles = 0;
         for (ULONG i = 0; i < count; ++i) {
             if (events[i].lpCompletionKey == ~0) {
                 ++tickles;
                 continue;
             }
+            AsyncEventIOCP *e = (AsyncEventIOCP *)events[i].lpOverlapped;
+#ifdef DEBUG
             if (!lock.owns_lock())
                 lock.lock();
 
-            AsyncEventIOCP *e;
             std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
                 m_pendingEvents.find(events[i].lpOverlapped);
             MORDOR_ASSERT(it != m_pendingEvents.end());
-            e = it->second;
+            MORDOR_ASSERT(e == it->second);
             m_pendingEvents.erase(it);
+#endif
 
-            e->lastError = pRtlNtStatusToDosError(e->overlapped.Internal);
-            e->ret = e->lastError ? FALSE : TRUE;
-            e->numberOfBytes = e->overlapped.InternalHigh;
-            e->completionKey = events[i].lpCompletionKey;
             e->m_scheduler->schedule(e->m_fiber);
             e->m_fiber.reset();
         }
+#ifdef DEBUG
         if (lock.owns_lock())
             lock.unlock();
+#endif
+        atomicAdd(m_pendingEventCount, (size_t)(-(ptrdiff_t)(count - tickles)));
         // We could have possibly retrieved more tickles than we needed;
         // retickle so other threads will get them
         while (--tickles > 0) tickle();

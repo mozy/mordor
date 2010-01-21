@@ -271,7 +271,6 @@ MORDOR_RUNTIME_LINK_DEFINITION(GetQueuedCompletionStatusEx, BOOL, WINAPI,
         dwMilliseconds);
     if (!bRet && !lpCompletionPortEntries->lpOverlapped)
         return FALSE;
-    lpCompletionPortEntries->Internal = lpCompletionPortEntries->lpOverlapped->Internal;
     *ulNumEntriesRemoved = 1;
     return TRUE;
 }
