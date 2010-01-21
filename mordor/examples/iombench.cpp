@@ -4,8 +4,13 @@
 // Can act as both the client and the server.
 //
 
+#include "mordor/predef.h"
+
 #include "netbench.h"
+
 #include <iostream>
+
+#include <boost/scoped_array.hpp>
 
 #include "mordor/atomic.h"
 #include "mordor/config.h"
@@ -15,7 +20,7 @@
 
 using namespace Mordor;
 
-static ConfigVar<size_t>::ptr g_iomThreads = Config::lookup<size_t>(
+static ConfigVar<int>::ptr g_iomThreads = Config::lookup<int>(
     "iombench.threads", 1, "Number of threads used by the iomanager");
 
 static Logger::ptr g_log = Log::lookup("mordor:iombench");
@@ -24,23 +29,16 @@ class IOMBenchServer : public NetBenchServer
 {
 public:
     IOMBenchServer(IOManager& iom)
-        : m_iom(iom),
-          m_data(NULL)
-    { }
-
-    ~IOMBenchServer()
-    {
-        delete [] m_data;
-    }
+        : m_iom(iom)
+    {}
 
     void run(std::string& host,
              size_t perConnToRead,
              size_t perConnToWrite,
              boost::function<void()> done)
     {
-        Fiber::ptr f(new Fiber(boost::bind(&IOMBenchServer::server, this, host,
-                                           perConnToRead, perConnToWrite)));
-        m_iom.schedule(f);
+        m_iom.schedule(boost::bind(&IOMBenchServer::server, this, host,
+                                   perConnToRead, perConnToWrite));
         done();
     }
 
@@ -52,8 +50,8 @@ public:
 private:
     void server(std::string host, size_t perConnToRead, size_t perConnToWrite)
     {
-        m_data = new char[perConnToWrite];
-        memset(m_data, 'B', perConnToWrite);
+        m_data.reset(new char[perConnToWrite]);
+        memset(m_data.get(), 'B', perConnToWrite);
 
         // figure out the host addr to use
         std::vector<Address::ptr> addrs;
@@ -72,22 +70,21 @@ private:
             Socket::ptr conn;
             try {
                 conn = m_sock->accept();
-            } catch (Exception& ex) {
+            } catch (Exception&) {
                 return;
             }
-            Fiber::ptr f(new Fiber(boost::bind(&IOMBenchServer::handleConn,
+            m_iom.schedule(boost::bind(&IOMBenchServer::handleConn,
                                                this,
                                                conn,
                                                perConnToRead,
-                                               perConnToWrite)));
-            m_iom.schedule(f);
+                                               perConnToWrite));
         }
     }
 
     void handleConn(Socket::ptr conn,
                     size_t perConnToRead, size_t perConnToWrite)
     {
-        char rdata[perConnToRead];
+        boost::scoped_array<char> rdata(new char[perConnToRead]);
 
         size_t n;
         while (true) {
@@ -109,7 +106,7 @@ private:
 private:
     IOManager& m_iom;
     Socket::ptr m_sock;
-    char* m_data;
+    boost::scoped_array<char> m_data;
 };
 
 class IOMBenchClient : public NetBenchClient
@@ -132,8 +129,8 @@ public:
         m_perConnToWrite = perConnToWrite;
 
         // prep the common send buffer
-        m_data = new char[m_perConnToWrite];
-        memset(m_data, 'A', m_perConnToWrite);
+        m_data.reset(new char[m_perConnToWrite]);
+        memset(m_data.get(), 'A', m_perConnToWrite);
 
         // figure out the host addr to use
         std::vector<Address::ptr> addrs;
@@ -162,9 +159,8 @@ public:
             << "iters " << iters;
 
         for (size_t i = 0; i < newClients; i++) {
-            Fiber::ptr f(new Fiber(boost::bind(&IOMBenchClient::client,
-                                               this, newActive > 0)));
-            m_iom.schedule(f);
+            m_iom.schedule(boost::bind(&IOMBenchClient::client,
+                                               this, newActive > 0));
             if (newActive) {
                 newActive--;
             }
@@ -266,7 +262,7 @@ public:
                 n = conn->send(&m_data[n], m_perConnToWrite - n);
             }
 
-            char buf[m_perConnToRead];
+            boost::scoped_array<char> buf(new char[m_perConnToRead]);
             n = 0;
             while (n < m_perConnToRead) {
                 n += conn->receive(&buf[n], m_perConnToRead - n);
@@ -281,7 +277,7 @@ private:
     IOManager& m_iom;
     Address::ptr m_addr;
 
-    char* m_data;
+    boost::scoped_array<char> m_data;
 
     FiberMutex m_mutex;
     FiberCondition m_connectedCond;
@@ -317,7 +313,7 @@ main(int argc, char *argv[])
 
         bench.run(&server, &client);
         iom.stop();
-    } catch (Exception& ex) {
+    } catch (...) {
         std::cerr << "caught: "
                   << boost::current_exception_diagnostic_information() << "\n";
         throw;

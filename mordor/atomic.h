@@ -3,7 +3,7 @@
 
 #include <boost/utility/enable_if.hpp>
 
-#include "version.h"
+#include "predef.h"
 
 namespace Mordor {
 

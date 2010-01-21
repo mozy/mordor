@@ -1,7 +1,11 @@
 #include "netbench.h"
 
+#include "mordor/version.h"
+
 #include <stdio.h>
+#ifndef WINDOWS
 #include <sys/resource.h>
+#endif
 #include <iostream>
 
 #include <boost/bind.hpp>
@@ -36,6 +40,7 @@ NetBench::NetBench(int argc, char* argv[])
 void
 NetBench::parseOptions(int argc, char* argv[])
 {
+#ifndef WINDOWS
     int c;
     extern char *optarg;
 
@@ -72,6 +77,12 @@ NetBench::parseOptions(int argc, char* argv[])
                 exit(-1);
         }
     }
+#else
+    m_runServer = true;
+    m_runClient = true;
+    m_powTwo = true;
+    m_maxConns = 8000;
+#endif
 
     if (!m_runServer && !m_runClient) {
         std::cerr << "must run either the client or the server\n";
@@ -176,8 +187,8 @@ NetBench::roundDone(size_t actualOps)
 
     // Do all stat math using double to avoid rounding errors
     // during divides
-    double active = std::min(m_totalConns, m_maxActive);
-    double elapsed = diff.total_microseconds();
+    double active = (double)std::min(m_totalConns, m_maxActive);
+    double elapsed = (double)diff.total_microseconds();
     double usAvg = elapsed / (active * m_iters);
     double numOps = active * m_iters;
     double opsSec = (numOps / elapsed) * 1000 * 1000;
