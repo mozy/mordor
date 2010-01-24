@@ -239,7 +239,9 @@ ALLBINS = mordor/examples/cat						\
 	mordor/examples/tunnel						\
 	mordor/examples/udpstats					\
 	mordor/examples/wget						\
-	mordor/tests/run_tests
+	mordor/examples/crypto						\
+	mordor/tests/run_tests						\
+	mordor/tests/pq_tests
 
 
 # clean current build
@@ -278,15 +280,47 @@ lcov:
 	$(Q)lcov -r lcov.info './*' -o lcov.info >/dev/null 2>&1
 	$(Q)mkdir -p lcov && cd lcov && genhtml ../lcov.info >/dev/null && tar -czf lcov.tgz *
 
-TESTSOBJECTS := $(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/tests/*.cpp))
+TESTDATA := $(patsubst $(SRCDIR)/%,$(CURDIR)/%,$(wildcard $(SRCDIR)/mordor/tests/data/*))
 
-$(TESTSOBJECTS): mordor/pch.h.gch
+TESTOBJECTS :=								\
+	mordor/tests/run_tests.o					\
+	mordor/tests/buffer.o						\
+	mordor/tests/buffered_stream.o					\
+	mordor/tests/chunked_stream.o					\
+	mordor/tests/coroutine.o					\
+	mordor/tests/efs_stream.o					\
+	mordor/tests/fibers.o						\
+	mordor/tests/fibersync.o					\
+	mordor/tests/fls.o						\
+	mordor/tests/hmac.o						\
+	mordor/tests/http.o						\
+	mordor/tests/iomanager.o					\
+	mordor/tests/json.o						\
+	mordor/tests/log.o						\
+	mordor/tests/memory_stream.o					\
+	mordor/tests/oauth.o						\
+	mordor/tests/pipe_stream.o					\
+	mordor/tests/scheduler.o					\
+	mordor/tests/socket.o						\
+	mordor/tests/ssl_stream.o					\
+	mordor/tests/stream.o						\
+	mordor/tests/temp_stream.o					\
+	mordor/tests/timer.o						\
+	mordor/tests/transfer_stream.o					\
+	mordor/tests/uri.o						\
+	mordor/tests/zlib.o
+
+$(TESTDATA): $(CURDIR)/%: $(SRCDIR)/%
+	$(Q)mkdir -p $(@D)
+	$(Q)cp -f $< $@
+
+$(TESTOBJECTS): mordor/pch.h.gch
+>>>>>>> 3f06bc7... libmordorpq:Makefile
 
 mordor/tests/run_tests:							\
-	$(TESTSOBJECTS)							\
+	$(TESTOBJECTS)							\
 	mordor/test/libmordortest.a					\
-        mordor/libmordor.a						\
-	mordor/pch.h.gch
+        mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
 endif
@@ -454,3 +488,29 @@ ifeq ($(Q),@)
 	@echo ar $@
 endif
 	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
+
+LIBMORDORPQOBJECTS :=							\
+	mordor/pq.o
+
+$(LIBMORDORPQOBJECTS): mordor/pch.h.gch
+
+mordor/libmordorpq.a: $(LIBMORDORPQOBJECTS)
+ifeq ($(Q),@)
+	@echo ar $@
+endif
+	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
+
+PQTESTOBJECTS :=							\
+	mordor/tests/pq.o
+
+$(PQTESTOBJECTS): mordor/pch.h.gch
+
+mordor/tests/pq_tests:							\
+	$(PQTESTOBJECTS)						\
+	mordor/libmordorpq.a						\
+	mordor/test/libmordortest.a					\
+        mordor/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(COMPLINK) -lpq
