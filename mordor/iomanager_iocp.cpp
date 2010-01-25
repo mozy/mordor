@@ -125,7 +125,7 @@ IOManagerIOCP::WaitBlock::run()
 
     while (count) {
         dwRet = WaitForMultipleObjects(count, handles, FALSE, INFINITE);
-        MORDOR_LOG_LEVEL(g_log, dwRet == WAIT_FAILED ? Log::ERROR : Log::DEBUG)
+        MORDOR_LOG_LEVEL(g_logWaitBlock, dwRet == WAIT_FAILED ? Log::ERROR : Log::DEBUG)
             << this << " WaitForMultipleObjects(" << count << ", " << handles
             << "): " << dwRet << " (" << GetLastError() << ")";
         if (dwRet == WAIT_OBJECT_0) {
@@ -150,7 +150,7 @@ IOManagerIOCP::WaitBlock::run()
 
             HANDLE handle = handles[dwRet - WAIT_OBJECT_0];
             HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
-            MORDOR_LOG_DEBUG(g_log) << this << " Event " << handle << " "
+            MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " Event " << handle << " "
                 << (srcHandle != m_handles + m_inUseCount + 1);
             if (srcHandle != m_handles + m_inUseCount + 1) {
                 int index = (int)(srcHandle - m_handles);
