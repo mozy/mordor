@@ -70,6 +70,26 @@ MORDOR_UNITTEST(IOManager, waitBlockUnregisterAndFire)
     CloseHandle(hEvent);
 }
 
+// This test can also only be truly tested under a debugger, by freezing
+// the run thread after it has processed the event, but before it terminates
+MORDOR_UNITTEST(IOManager, waitBlockFireThenUnregister)
+{
+    HANDLE hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (!hEvent)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
+    bool fired = false;
+    IOManager ioManager;
+    ioManager.registerEvent(hEvent, boost::bind(&handleEvent,
+        boost::ref(fired)));
+    SetEvent(hEvent);
+    while (!fired) {
+        ioManager.schedule(Fiber::getThis());
+        ioManager.yieldTo();
+    }
+    ioManager.unregisterEvent(hEvent);
+    CloseHandle(hEvent);
+}
+
 MORDOR_UNITTEST(IOManager, waitBlockUnregisterOtherFires)
 {
     HANDLE hEvent1 = CreateEventW(NULL, TRUE, FALSE, NULL);

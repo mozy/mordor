@@ -81,6 +81,8 @@ bool
 IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
 {
     boost::mutex::scoped_lock lock(m_mutex);
+    if (m_inUseCount == -1)
+        return false;
     HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " unregisterEvent(" << handle
         << "): " << (srcHandle != m_handles + m_inUseCount + 1);
