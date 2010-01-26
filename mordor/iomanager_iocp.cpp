@@ -77,21 +77,29 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
 }
 
 typedef boost::function<void ()> functor;
-bool
+size_t
 IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     if (m_inUseCount == -1)
         return false;
+    size_t unregistered = 0;
     HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
-    MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " unregisterEvent(" << handle
-        << "): " << (srcHandle != m_handles + m_inUseCount + 1);
-    if (srcHandle != m_handles + m_inUseCount + 1) {
+    while (srcHandle != m_handles + m_inUseCount + 1) {
+        ++unregistered;
+        MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " unregisterEvent(" << handle
+            << "): " << (srcHandle != m_handles + m_inUseCount + 1);
         int index = (int)(srcHandle - m_handles);
         removeEntry(index);
 
-        if (--m_inUseCount == 0)
+        if (--m_inUseCount == 0) {
             --m_inUseCount;
+            break;
+        }
+        srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
+    }
+
+    if (unregistered) {
         if (!ResetEvent(m_reconfigured))
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ResetEvent");
         if (!SetEvent(m_handles[0]))
@@ -99,9 +107,8 @@ IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
         lock.unlock();
         if (WaitForSingleObject(m_reconfigured, INFINITE) == WAIT_FAILED)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WaitForSingleObject");
-        return true;
     }
-    return false;
+    return unregistered;
 }
 
 void
@@ -305,22 +312,19 @@ IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg, bool re
     MORDOR_ASSERT(result);
 }
 
-bool
+size_t
 IOManagerIOCP::unregisterEvent(HANDLE handle)
 {
     MORDOR_ASSERT(handle);
     boost::mutex::scoped_lock lock(m_mutex);
+    size_t result = 0;
     for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();
         it != m_waitBlocks.end();
         ++it) {
-        if ((*it)->unregisterEvent(handle)) {
-            MORDOR_LOG_DEBUG(g_log) << this << " unregisterEvent(" << handle
-                << "): 1";
-            return true;
-        }
+        result += (*it)->unregisterEvent(handle);
     }
-    MORDOR_LOG_DEBUG(g_log) << this << " unregisterEvent(" << handle << "): 0";
-    return false;
+    MORDOR_LOG_DEBUG(g_log) << this << " unregisterEvent(" << handle << "): " << result;
+    return result;
 }
 
 void

@@ -1483,7 +1483,7 @@ Socket::cancelAccept()
     if (pAcceptEx) {
         m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
     } else {
-        m_unregistered = m_ioManager->unregisterEvent(m_hEvent);
+        m_unregistered = !!m_ioManager->unregisterEvent(m_hEvent);
         m_scheduler->schedule(m_fiber);
     }
 #else
@@ -1502,7 +1502,7 @@ Socket::cancelConnect()
     if (ConnectEx) {
         m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
     } else {
-        m_unregistered = m_ioManager->unregisterEvent(m_hEvent);
+        m_unregistered = !!m_ioManager->unregisterEvent(m_hEvent);
         m_scheduler->schedule(m_fiber);
     }
 #else

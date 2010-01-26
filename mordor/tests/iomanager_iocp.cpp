@@ -148,4 +148,40 @@ MORDOR_UNITTEST(IOManager, waitBlockMultipleFire)
     MORDOR_ASSERT(fired3);
 }
 
+MORDOR_UNITTEST(IOManager, waitBlockDuplicate)
+{
+    HANDLE hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (!hEvent)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
+    bool fired1 = false, fired2 = false;
+    IOManager ioManager;
+    ioManager.registerEvent(hEvent, boost::bind(&handleEvent,
+        boost::ref(fired1)));
+    ioManager.registerEvent(hEvent, boost::bind(&handleEvent,
+        boost::ref(fired2)));
+    SetEvent(hEvent);
+    ioManager.dispatch();
+    MORDOR_ASSERT(fired1);
+    MORDOR_ASSERT(fired2);
+    CloseHandle(hEvent);
+}
+
+MORDOR_UNITTEST(IOManager, waitBlockDuplicateUnregister)
+{
+    HANDLE hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (!hEvent)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
+    bool fired1 = false, fired2 = false;
+    IOManager ioManager;
+    ioManager.registerEvent(hEvent, boost::bind(&handleEvent,
+        boost::ref(fired1)));
+    ioManager.registerEvent(hEvent, boost::bind(&handleEvent,
+        boost::ref(fired2)));
+    MORDOR_TEST_ASSERT_EQUAL(ioManager.unregisterEvent(hEvent), 2u);
+    ioManager.dispatch();
+    MORDOR_ASSERT(!fired1);
+    MORDOR_ASSERT(!fired2);
+    CloseHandle(hEvent);
+}
+
 #endif

@@ -43,7 +43,7 @@ private:
 
         bool registerEvent(HANDLE handle, boost::function<void ()> dg,
             bool recurring);
-        bool unregisterEvent(HANDLE handle);
+        size_t unregisterEvent(HANDLE handle);
 
     private:
         void run();
@@ -75,7 +75,7 @@ public:
         bool recurring = false);
     void registerEvent(HANDLE handle, bool recurring = false)
     { registerEvent(handle, NULL, recurring); }
-    bool unregisterEvent(HANDLE handle);
+    size_t unregisterEvent(HANDLE handle);
     void cancelEvent(HANDLE hFile, AsyncEventIOCP *e);
 
     Timer::ptr registerTimer(unsigned long long us,
