@@ -239,7 +239,6 @@ ALLBINS = mordor/examples/cat						\
 	mordor/examples/tunnel						\
 	mordor/examples/udpstats					\
 	mordor/examples/wget						\
-	mordor/examples/crypto						\
 	mordor/tests/run_tests
 
 
@@ -279,13 +278,7 @@ lcov:
 	$(Q)lcov -r lcov.info './*' -o lcov.info >/dev/null 2>&1
 	$(Q)mkdir -p lcov && cd lcov && genhtml ../lcov.info >/dev/null && tar -czf lcov.tgz *
 
-TESTDATA := $(patsubst $(SRCDIR)/%,$(CURDIR)/%,$(wildcard $(SRCDIR)/mordor/tests/data/*))
-
 TESTSOBJECTS := $(patsubst $(SRCDIR)/%.cpp,%.o,$(wildcard $(SRCDIR)/mordor/tests/*.cpp))
-
-$(TESTDATA): $(CURDIR)/%: $(SRCDIR)/%
-	$(Q)mkdir -p $(@D)
-	$(Q)cp -f $< $@
 
 $(TESTSOBJECTS): mordor/pch.h.gch
 
@@ -293,7 +286,6 @@ mordor/tests/run_tests:							\
 	$(TESTSOBJECTS)							\
 	mordor/test/libmordortest.a					\
         mordor/libmordor.a						\
-	$(TESTDATA)							\
 	mordor/pch.h.gch
 ifeq ($(Q),@)
 	@echo ld $@
@@ -308,8 +300,7 @@ EXAMPLEOBJECTS :=							\
 	mordor/examples/simpleclient.o					\
 	mordor/examples/tunnel.o					\
 	mordor/examples/udpstats.o					\
-	mordor/examples/wget.o					\
-	mordor/examples/crypto.o
+	mordor/examples/wget.o
 
 $(EXAMPLEOBJECTS): mordor/pch.h.gch
 
@@ -357,13 +348,6 @@ endif
 	$(COMPLINK)
 
 mordor/examples/wget: mordor/examples/wget.o				\
-	mordor/libmordor.a
-ifeq ($(Q),@)
-	@echo ld $@
-endif
-	$(COMPLINK)
-
-mordor/examples/crypto: mordor/examples/crypto.o				\
 	mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
@@ -423,7 +407,6 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/buffer.o						\
 	mordor/streams/buffered.o					\
 	mordor/streams/cat.o						\
-	mordor/streams/crypto.o						\
 	mordor/streams/fd.o						\
 	mordor/streams/file.o						\
 	mordor/streams/hash.o						\

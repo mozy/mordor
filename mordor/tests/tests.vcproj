@@ -89,7 +89,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)&#x0D;&#x0A;"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -164,7 +164,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)&#x0D;&#x0A;"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -241,7 +241,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)&#x0D;&#x0A;"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -319,7 +319,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)data&#x0D;&#x0A;copy /y $(ProjectDir)data\* $(TargetDir)data&#x0D;&#x0A;$(TargetPath)&#x0D;&#x0A;"
+				CommandLine=""
 			/>
 		</Configuration>
 	</Configurations>
@@ -345,10 +345,6 @@
 			</File>
 			<File
 				RelativePath=".\coroutine.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\crypto.cpp"
 				>
 			</File>
 			<File
