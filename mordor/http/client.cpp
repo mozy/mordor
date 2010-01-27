@@ -289,6 +289,7 @@ ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &request)
   m_cancelled(false),
   m_aborted(false),
   m_badResponse(false),
+  m_noResponse(false),
   m_incompleteResponse(false),
   m_badTrailer(false),
   m_incompleteTrailer(false),
@@ -819,7 +820,11 @@ ClientRequest::ensureResponse()
         if (!skip) {
             // Read and parse headers
             ResponseParser parser(m_response);
-            parser.run(m_conn->m_stream);
+            unsigned long long read = parser.run(m_conn->m_stream);
+            if (read == 0ull) {
+                m_noResponse = true;
+                MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+            }
             if (parser.error()) {
                 m_badResponse = true;
                 MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
@@ -834,6 +839,8 @@ ClientRequest::ensureResponse()
                 MORDOR_LOG_VERBOSE(g_log) << m_conn << " " << this << " " << m_response.status;
             }
         }
+        if (m_noResponse)
+            MORDOR_THROW_EXCEPTION(UnexpectedEofException());
         if (m_badResponse)
             MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
         if (m_incompleteResponse)

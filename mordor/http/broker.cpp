@@ -356,6 +356,12 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             if (!m_retry)                
                 throw;
             continue;
+        } catch (UnexpectedEofException &) {
+            if (!connect)
+                currentUri = originalUri;
+            if (!m_retry)
+                throw;
+            continue;
         } catch (...) {
             if (!connect)
                 currentUri = originalUri;

@@ -77,7 +77,7 @@ private:
     Response m_response;
     EntityHeaders m_requestTrailer, m_responseTrailer;
     State m_requestState, m_responseState;
-    bool m_cancelled, m_aborted, m_badResponse, m_incompleteResponse, m_badTrailer, m_incompleteTrailer, m_hasResponseBody;
+    bool m_cancelled, m_aborted, m_badResponse, m_noResponse, m_incompleteResponse, m_badTrailer, m_incompleteTrailer, m_hasResponseBody;
     Stream::ptr m_requestStream;
     boost::weak_ptr<Stream> m_responseStream;
     Multipart::ptr m_requestMultipart;
