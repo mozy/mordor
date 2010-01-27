@@ -18,13 +18,13 @@ RequestBroker::ptr defaultRequestBroker(IOManager *ioManager,
 {
     StreamBroker::ptr socketBroker(new SocketStreamBroker(ioManager, scheduler));
     StreamBrokerFilter::ptr sslBroker(new SSLStreamBroker(socketBroker));
-    ConnectionCache::ptr connectionBroker(new ConnectionCache(sslBroker));
+    ConnectionBroker::ptr connectionBroker(new ConnectionCache(sslBroker));
     if (connBroker != NULL)
         *connBroker = connectionBroker;
-    RequestBroker::ptr requestBroker(new BaseRequestBroker(connectionBroker));
+    RequestBroker::ptr requestBroker(new BaseRequestBroker(ConnectionBroker::weak_ptr(connectionBroker)));
 
     socketBroker.reset(new ProxyStreamBroker(socketBroker, requestBroker));
-    sslBroker->parent(StreamBroker::weak_ptr(socketBroker));
+    sslBroker->parent(socketBroker);
     connectionBroker.reset(new ProxyConnectionBroker(connectionBroker));
     requestBroker.reset(new BaseRequestBroker(connectionBroker));
     return requestBroker;
@@ -319,9 +319,12 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         requestHeaders.request.host = originalUri.authority.host();
     else
         originalUri = "http://" + requestHeaders.request.host;
+    ConnectionBroker::ptr connectionBroker = m_connectionBroker;
+    if (!connectionBroker)
+        connectionBroker = m_weakConnectionBroker.lock();
     while (true) {
         std::pair<ClientConnection::ptr, bool> conn =
-            m_connectionBroker->getConnection(
+            connectionBroker->getConnection(
                 connect ? originalUri : currentUri, forceNewConnection);
         try {
             // Fix up our URI for use with/without proxies

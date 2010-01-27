@@ -97,6 +97,7 @@ class ConnectionBroker
 {
 public:
     typedef boost::shared_ptr<ConnectionBroker> ptr;
+    typedef boost::weak_ptr<ConnectionBroker> weak_ptr;
 
 public:
     virtual ~ConnectionBroker() {}
@@ -191,6 +192,10 @@ public:
         : m_connectionBroker(connectionBroker),
           m_retry(true)
     {}
+    BaseRequestBroker(ConnectionBroker::weak_ptr connectionBroker)
+        : m_weakConnectionBroker(connectionBroker),
+          m_retry(true)
+    {}
 
     void retry(bool retry) { m_retry = retry; }
 
@@ -200,6 +205,7 @@ public:
 
 private:
     ConnectionBroker::ptr m_connectionBroker;
+    ConnectionBroker::weak_ptr m_weakConnectionBroker;
     bool m_retry;
 };
 
