@@ -140,6 +140,13 @@ WorkerPool.  IOManager and WorkerPool both inherit from Scheduler, which is the
 base functionality for cooperatively scheduling Fibers.  Pretty cool, eh?
 
 
+Dependencies
+
+boost 1.40
+OpenSSL
+Zlib
+Ragel (compile-time only)
+
 License
 
 Mordor is MIT Licensed, and Copyright (c) 2009 Mozy, Inc.  See LICENSE for
