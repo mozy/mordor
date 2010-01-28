@@ -239,7 +239,6 @@ ALLBINS = mordor/examples/cat						\
 	mordor/examples/tunnel						\
 	mordor/examples/udpstats					\
 	mordor/examples/wget						\
-	mordor/examples/crypto						\
 	mordor/tests/run_tests						\
 	mordor/tests/pq_tests
 
