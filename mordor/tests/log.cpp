@@ -12,7 +12,9 @@ class TestLogSink : public LogSink
 public:
     typedef boost::shared_ptr<TestLogSink> ptr;
 
-    void log(const std::string &logger, tid_t thread, void *fiber,
+    void log(const std::string &logger,
+             boost::posix_time::ptime now, unsigned long long elapsed,
+             tid_t thread, void *fiber,
              Log::Level level, const std::string &str,
              const char* file, int line)
     {

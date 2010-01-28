@@ -10,6 +10,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 
@@ -75,7 +76,9 @@ public:
 public:
 
     virtual ~LogSink() {}
-    virtual void log(const std::string &logger, tid_t thread, void *fiber,
+    virtual void log(const std::string &logger,
+        boost::posix_time::ptime now, unsigned long long elapsed,
+        tid_t thread, void *fiber,
         Log::Level level, const std::string &str,
         const char *file, int line) = 0;
 };
@@ -83,7 +86,9 @@ public:
 class StdoutLogSink : public LogSink
 {
 public:
-    void log(const std::string &logger, tid_t thread, void *fiber,
+    void log(const std::string &logger,
+        boost::posix_time::ptime now, unsigned long long elapsed,
+        tid_t thread, void *fiber,
         Log::Level level, const std::string &str,
         const char *file, int line);
 };
@@ -92,7 +97,9 @@ public:
 class DebugLogSink : public LogSink
 {
 public:
-    void log(const std::string &logger, tid_t thread, void *fiber,
+    void log(const std::string &logger,
+        boost::posix_time::ptime now, unsigned long long elapsed,
+        tid_t thread, void *fiber,
         Log::Level level, const std::string &str,
         const char *file, int line);
 };
@@ -103,7 +110,9 @@ class FileLogSink : public LogSink
 public:
     FileLogSink(const std::string &file);
 
-    void log(const std::string &logger, tid_t thread, void *fiber,
+    void log(const std::string &logger,
+        boost::posix_time::ptime now, unsigned long long elapsed,
+        tid_t thread, void *fiber,
         Log::Level level, const std::string &str,
         const char *file, int line);
 

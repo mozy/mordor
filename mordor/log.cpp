@@ -14,6 +14,7 @@
 #include "fiber.h"
 #include "mordor/streams/file.h"
 #include "mordor/string.h"
+#include "timer.h"
 
 namespace Mordor {
 
@@ -50,12 +51,16 @@ static ConfigVar<std::string>::ptr g_logFile =
 
 static FiberLocalStorage<bool> f_logDisabled;
 
+static unsigned long long g_start;
+
 namespace {
 
 static struct Initializer
 {
     Initializer()
     {
+        g_start = TimerManager::now();
+
         g_logFatal->monitor(&enableLoggers);
         g_logError->monitor(&enableLoggers);
         g_logWarn->monitor(&enableLoggers);
@@ -162,36 +167,32 @@ static void enableFileLogging()
 }
 
 void
-StdoutLogSink::log(const std::string &logger, tid_t thread,
-    void *fiber, Log::Level level,
-    const std::string &str, const char *file, int line)
+StdoutLogSink::log(const std::string &logger,
+        boost::posix_time::ptime now, unsigned long long elapsed,
+        tid_t thread, void *fiber,
+        Log::Level level, const std::string &str,
+        const char *file, int line)
 {
     std::ostringstream os;
-    if (file) {
-        os << level << " " << thread << " " << fiber << " "
-            << logger << " " << file << ":" << line << " " << str << std::endl;
-    } else {
-        os << level << " " << thread << " " << fiber << " "
-            << logger << " " << str << std::endl;
-    }
+    os << now << " " << elapsed << " " << level << " " << thread << " "
+        << fiber << " " << logger << " " << file << ":" << line << " "
+        << str << std::endl;
     std::cout << os.str();
     std::cout.flush();
 }
 
 #ifdef WINDOWS
 void
-DebugLogSink::log(const std::string &logger, tid_t thread,
-    void *fiber, Log::Level level,
-    const std::string &str, const char *file, int line)
+DebugLogSink::log(const std::string &logger,
+        boost::posix_time::ptime now, unsigned long long elapsed,
+        tid_t thread, void *fiber,
+        Log::Level level, const std::string &str,
+        const char *file, int line)
 {
     std::wostringstream os;
-    if (file) {
-        os << level << " " << thread << " " << fiber << " "
-            << toUtf16(logger) << " " << toUtf16(file) << ":" << line << " " << toUtf16(str) << std::endl;
-    } else {
-        os << level << " " << thread << " " << fiber << " "
-            << toUtf16(logger) << " " << toUtf16(str) << std::endl;
-    }
+    os << now << " " << elapsed << " " << level << " " << thread << " "
+        << fiber << " " << toUtf16(logger) << " " << toUtf16(file)
+        << ":" << line << " " << toUtf16(str) << std::endl;
     OutputDebugStringW(os.str().c_str());
 }
 #endif
@@ -204,18 +205,16 @@ FileLogSink::FileLogSink(const std::string &file)
 }
 
 void
-FileLogSink::log(const std::string &logger, tid_t thread,
-    void *fiber, Log::Level level,
-    const std::string &str, const char *file, int line)
+FileLogSink::log(const std::string &logger,
+        boost::posix_time::ptime now, unsigned long long elapsed,
+        tid_t thread, void *fiber,
+        Log::Level level, const std::string &str,
+        const char *file, int line)
 {
     std::ostringstream os;
-    if (file) {
-        os << level << " " << thread << " " << fiber << " "
-            << logger << " " << file << ":" << line << " " << str << std::endl;
-    } else {
-        os << level << " " << thread << " " << fiber << " "
-            << logger << " " << str << std::endl;
-    }
+    os << now << " " << elapsed << " " << level << " " << thread << " "
+        << fiber << " " << logger << " " << file << ":" << line << " "
+        << str << std::endl;
     std::string logline = os.str();
     m_stream->write(logline.c_str(), logline.size());
     m_stream->flush();
@@ -374,7 +373,8 @@ Logger::log(Log::Level level, const std::string &str,
         return;
     error_t error = lastError();
     LogDisabler disable;
-    // TODO: capture timestamp
+    unsigned long long elapsed = TimerManager::now() - g_start;
+    boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
     Logger::ptr _this = shared_from_this();
 #ifdef WINDOWS
     DWORD thread = GetCurrentThreadId();
@@ -390,7 +390,7 @@ Logger::log(Log::Level level, const std::string &str,
             it != _this->m_sinks.end();
             ++it) {
             somethingLogged = true;
-            (*it)->log(m_name, thread, fiber, level, str, file, line);
+            (*it)->log(m_name, now, elapsed, thread, fiber, level, str, file, line);
         }
         if (!_this->m_inheritSinks)
             break;
