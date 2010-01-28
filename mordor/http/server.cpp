@@ -195,9 +195,8 @@ ServerConnection::invariant() const
     for (std::set<ServerRequest *>::const_iterator it(m_waitingResponses.begin());
         it != m_waitingResponses.end();
         ++it) {
-        ServerRequest *request = *it;
-        MORDOR_ASSERT(!request->m_responseDone);
-        MORDOR_ASSERT(!request->m_responseInFlight);
+        MORDOR_ASSERT(!(*it)->m_responseDone);
+        MORDOR_ASSERT(!(*it)->m_responseInFlight);
     }
 }
 
