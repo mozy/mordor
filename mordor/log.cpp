@@ -25,8 +25,6 @@ static void enableFileLogging();
 static void enableDebugLogging();
 #endif
 
-static ConfigVar<std::string>::ptr g_logFatal =
-    Config::lookup("log.fatalmask", std::string(".*"), "Regex of loggers to enable fatal for.");
 static ConfigVar<std::string>::ptr g_logError =
     Config::lookup("log.errormask", std::string(".*"), "Regex of loggers to enable error for.");
 static ConfigVar<std::string>::ptr g_logWarn =
@@ -61,7 +59,6 @@ static struct Initializer
     {
         g_start = TimerManager::now();
 
-        g_logFatal->monitor(&enableLoggers);
         g_logError->monitor(&enableLoggers);
         g_logWarn->monitor(&enableLoggers);
         g_logInfo->monitor(&enableLoggers);
@@ -79,14 +76,12 @@ static struct Initializer
 
 }
 
-static void enableLogger(Logger::ptr logger, const boost::regex &fatalRegex,
+static void enableLogger(Logger::ptr logger,
     const boost::regex &errorRegex, const boost::regex &warnRegex,
     const boost::regex &infoRegex, const boost::regex &verboseRegex,
     const boost::regex &debugRegex, const boost::regex &traceRegex)
 {
-    Log::Level level = Log::NONE;
-    if (boost::regex_match(logger->name(), fatalRegex))
-        level = Log::FATAL;
+    Log::Level level = Log::FATAL;
     if (boost::regex_match(logger->name(), errorRegex))
         level = Log::ERROR;
     if (boost::regex_match(logger->name(), warnRegex))
@@ -106,14 +101,13 @@ static void enableLogger(Logger::ptr logger, const boost::regex &fatalRegex,
 
 static void enableLoggers()
 {
-    boost::regex fatalRegex("^" + g_logFatal->val() + "$");
     boost::regex errorRegex("^" + g_logError->val() + "$");
     boost::regex warnRegex("^" + g_logWarn->val() + "$");
     boost::regex infoRegex("^" + g_logInfo->val() + "$");
     boost::regex verboseRegex("^" + g_logVerbose->val() + "$");
     boost::regex debugRegex("^" + g_logDebug->val() + "$");
     boost::regex traceRegex("^" + g_logTrace->val() + "$");
-    Log::visit(boost::bind(&enableLogger, _1, boost::cref(fatalRegex),
+    Log::visit(boost::bind(&enableLogger, _1,
         boost::cref(errorRegex), boost::cref(warnRegex),
         boost::cref(infoRegex), boost::cref(verboseRegex),
         boost::cref(debugRegex), boost::cref(traceRegex)));
@@ -327,6 +321,7 @@ LoggerLess::operator ()(const Logger::ptr &lhs,
 
 Logger::Logger()
 : m_name(":"),
+  m_level(Log::INFO),
   m_inheritSinks(false)
 {}
 
@@ -340,7 +335,7 @@ Logger::Logger(const std::string &name, Logger::ptr parent)
 bool
 Logger::enabled(Log::Level level)
 {
-    return m_level >= level && !f_logDisabled;
+    return level == Log::FATAL || m_level >= level && !f_logDisabled;
 }
 
 void
