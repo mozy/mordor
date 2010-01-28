@@ -332,6 +332,11 @@ ClientRequest::requestStream()
         return m_requestStream;
     MORDOR_ASSERT(!m_requestMultipart);
     MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
+    if (!hasRequestBody()) {
+        m_requestStream = Stream::ptr(&NullStream::get(), &nop<Stream *>);
+        m_requestStream.reset(new LimitedStream(m_requestStream, 0));
+        return m_requestStream;
+    }
     MORDOR_ASSERT(m_requestState == INFLIGHT);
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
@@ -489,14 +494,17 @@ ClientRequest::cancel(bool abort)
     }
     m_aborted = true;
     if (m_requestStream) {
-        // Break the circular reference
-        NotifyStream::ptr notify =
-            boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
-        MORDOR_ASSERT(notify);
-        notify->notifyOnClose = NULL;
-        notify->notifyOnEof = NULL;
-        notify->notifyOnException = NULL;
-        notify->parent(Stream::ptr(new Stream()));
+        FilterStream *filter = static_cast<FilterStream *>(m_requestStream.get());
+        if (filter->parent().get() != &NullStream::get()) {
+            // Break the circular reference
+            NotifyStream::ptr notify =
+                boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
+            MORDOR_ASSERT(notify);
+            notify->notifyOnClose = NULL;
+            notify->notifyOnEof = NULL;
+            notify->notifyOnException = NULL;
+            notify->parent(Stream::ptr(new Stream()));
+        }
     }
     Stream::ptr responseStream = m_responseStream.lock();
     ClientRequest::ptr self;
