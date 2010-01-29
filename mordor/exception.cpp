@@ -267,6 +267,9 @@ void throwExceptionFromLastError(error_t error)
         case WSAESHUTDOWN:
             throw boost::enable_current_exception(BrokenPipeException())
                 << errinfo_nativeerror(error);
+        case ERROR_SHARING_VIOLATION:
+            throw boost::enable_current_exception(SharingViolation())
+                << errinfo_nativeerror(error);
         default:
             throwSocketException(error);
             throw boost::enable_current_exception(NativeException())

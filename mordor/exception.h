@@ -63,6 +63,7 @@ struct FileNotFoundException : virtual NativeException {};
 struct BadHandleException : virtual NativeException {};
 struct OperationAbortedException : virtual NativeException {};
 struct BrokenPipeException : virtual NativeException {};
+struct SharingViolation : virtual NativeException {};
 
 error_t lastError();
 void lastError(error_t error);
