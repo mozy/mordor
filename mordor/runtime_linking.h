@@ -3,6 +3,9 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
 #include <dbghelp.h>
+#include <lm.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
 #define MORDOR_RUNTIME_LINK_DECLARATION(Name, ReturnType, CallingConvention, ArgTypes) \
     typedef ReturnType (CallingConvention * LPFN_##Name) ArgTypes;              \
