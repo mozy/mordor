@@ -348,19 +348,24 @@ Scheduler::run()
                 Fiber::ptr f = it->fiber;
                 boost::function<void ()> dg = it->dg;
 
-                if (f) {
-                    if (f->state() != Fiber::TERM) {
-                        MORDOR_LOG_DEBUG(g_log) << this << " running " << f;
-                        f->yieldTo();
+                try {
+                    if (f) {
+                        if (f->state() != Fiber::TERM) {
+                            MORDOR_LOG_DEBUG(g_log) << this << " running " << f;
+                            f->yieldTo();
+                        }
+                    } else if (dg) {
+                        if (!dgFiber)
+                            dgFiber.reset(new Fiber(dg));
+                        dgFiber->reset(dg);
+                        MORDOR_LOG_DEBUG(g_log) << this << " running " << dg;
+                        dgFiber->yieldTo();
+                        if (dgFiber->state() != Fiber::TERM)
+                            dgFiber.reset();
                     }
-                } else if (dg) {
-                    if (!dgFiber)
-                        dgFiber.reset(new Fiber(dg));
-                    dgFiber->reset(dg);
-                    MORDOR_LOG_DEBUG(g_log) << this << " running " << dg;
-                    dgFiber->yieldTo();
-                    if (dgFiber->state() != Fiber::TERM)
-                        dgFiber.reset();
+                } catch (...) {
+                    MORDOR_LOG_FATAL(Log::root()) << boost::current_exception_diagnostic_information();
+                    throw;
                 }
             }
             continue;
