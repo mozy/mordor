@@ -364,6 +364,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\future.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\hmac.cpp"
 				>
 			</File>

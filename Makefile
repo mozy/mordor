@@ -291,6 +291,7 @@ TESTOBJECTS :=								\
 	mordor/tests/fibers.o						\
 	mordor/tests/fibersync.o					\
 	mordor/tests/fls.o						\
+	mordor/tests/future.o						\
 	mordor/tests/hmac.o						\
 	mordor/tests/http.o						\
 	mordor/tests/iomanager.o					\

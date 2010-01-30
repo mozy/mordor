@@ -77,6 +77,7 @@
 
 // C++ Headers
 #include <algorithm>
+#include <bitset>
 #include <iostream>
 #include <limits>
 #include <list>
