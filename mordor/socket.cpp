@@ -270,7 +270,6 @@ Socket::connect(const Address &to)
                     MORDOR_NOTREACHED();
             }
 
-            ptr self = shared_from_this();
             m_ioManager->registerEvent(&m_sendEvent);
             BOOL bRet = ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped);
             if (!bRet && GetLastError() != WSA_IO_PENDING) {
@@ -377,7 +376,6 @@ Socket::connect(const Address &to)
             return;
         }
         if (errno == EINPROGRESS) {
-            ptr self = shared_from_this();
             m_ioManager->registerEvent(m_sock, IOManager::WRITE);
             if (m_cancelledSend) {
                 MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
@@ -462,7 +460,6 @@ Socket::accept(Socket &target)
         }
         target.m_sock = newsock;
     } else {
-        ptr self = shared_from_this();
 #ifdef WINDOWS
         if (pAcceptEx) {
             m_ioManager->registerEvent(&m_receiveEvent);
@@ -648,7 +645,6 @@ Socket::send(const void *buf, size_t len, int flags)
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
         wsabuf.len = (unsigned int)len;
-        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         DWORD sent;
         int ret = WSASend(m_sock, &wsabuf, 1, &sent, flags,
@@ -692,7 +688,6 @@ Socket::send(const void *buf, size_t len, int flags)
     } else
 #endif
     {
-        ptr self = shared_from_this();
         if (len > 0x7fffffff)
             len = 0x7fffffff;
         int rc = ::send(m_sock, (const char*)buf, (socklen_t)len, flags);
@@ -741,7 +736,6 @@ Socket::send(const iovec *bufs, size_t len, int flags)
 
 #ifdef WINDOWS
     if (m_ioManager) {
-        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         MORDOR_ASSERT(len <= 0xffffffff);
         DWORD sent;
@@ -797,7 +791,6 @@ Socket::send(const iovec *bufs, size_t len, int flags)
         return sent;
     }
 #else
-    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = (iovec*)bufs;
@@ -848,7 +841,6 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
         wsabuf.len = (unsigned int)len;
-        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         DWORD sent;
         int ret = WSASendTo(m_sock, &wsabuf, 1, &sent, flags,
@@ -895,7 +887,6 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
     {
         int rc = ::sendto(m_sock, (const char*)buf, (socklen_t)len, flags, to.name(), to.nameLen());
 #ifndef WINDOWS
-        ptr self = shared_from_this();
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::WRITE);
             if (m_cancelledSend) {
@@ -937,7 +928,6 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
     MORDOR_ASSERT(to.family() == family());
 #ifdef WINDOWS
     if (m_ioManager) {
-        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         MORDOR_ASSERT(len <= 0xffffffff);
         DWORD sent;
@@ -997,7 +987,6 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
         return sent;
     }
 #else
-    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = (iovec*)bufs;
@@ -1049,7 +1038,6 @@ Socket::receive(void *buf, size_t len, int flags)
         WSABUF wsabuf;
         wsabuf.buf = (char*)buf;
         wsabuf.len = (unsigned int)len;
-        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
         DWORD recvd;
         int ret = WSARecv(m_sock, &wsabuf, 1, &recvd, (LPDWORD)&flags,
@@ -1095,7 +1083,6 @@ Socket::receive(void *buf, size_t len, int flags)
     {
         int rc = ::recv(m_sock, (char*)buf, (socklen_t)len, flags);
 #ifndef WINDOWS
-        ptr self = shared_from_this();
         while (m_ioManager && rc == -1 && errno == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::READ);
             if (m_cancelledReceive) {
@@ -1136,7 +1123,6 @@ Socket::receive(iovec *bufs, size_t len, int flags)
 {
 #ifdef WINDOWS
     if (m_ioManager) {
-        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
         MORDOR_ASSERT(len <= 0xffffffff);
         DWORD recvd;
@@ -1194,7 +1180,6 @@ Socket::receive(iovec *bufs, size_t len, int flags)
         return received;
     }
 #else
-    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = bufs;
@@ -1246,7 +1231,6 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
     wsabuf.len = (unsigned int)len;
     int namelen = from.nameLen();
     if (m_ioManager) {
-        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_sendEvent);
         DWORD recvd;
         int ret = WSARecvFrom(m_sock, &wsabuf, 1, &recvd, (LPDWORD)flags,
@@ -1302,7 +1286,6 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
         return sent;
     }
 #else
-    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     iovec iov;
@@ -1355,7 +1338,6 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
 #ifdef WINDOWS
     int namelen = from.nameLen();
     if (m_ioManager) {
-        ptr self = shared_from_this();
         m_ioManager->registerEvent(&m_receiveEvent);
         MORDOR_ASSERT(len <= 0xffffffff);
         DWORD recvd;
@@ -1412,7 +1394,6 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
         return sent;
     }
 #else
-    ptr self = shared_from_this();
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = bufs;
