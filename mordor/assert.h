@@ -28,7 +28,13 @@ private:
         ::std::terminate();                                                     \
     }
 
-#define MORDOR_NOTREACHED() MORDOR_THROW_EXCEPTION(::Mordor::Assertion("Not Reached"))
+#define MORDOR_NOTREACHED()                                                     \
+{                                                                               \
+    MORDOR_LOG_FATAL(::Mordor::Log::root()) << "NOT REACHED";                   \
+    if (::Mordor::Assertion::throwOnAssertion)                                  \
+        MORDOR_THROW_EXCEPTION(::Mordor::Assertion("Not Reached"));             \
+    ::std::terminate();                                                         \
+}
 
 #ifdef DEBUG
 #define MORDOR_ASSERT MORDOR_VERIFY
