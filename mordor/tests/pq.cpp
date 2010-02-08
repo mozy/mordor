@@ -189,15 +189,6 @@ MORDOR_UNITTEST(PQ, queryForBooleanPreparedBlocking)
 MORDOR_UNITTEST(PQ, queryForBooleanPreparedAsync)
 { IOManager ioManager; queryForParam("SELECT id FROM users WHERE awesome=$1::boolean", false, 1u, 2, "constant", &ioManager); }
 
-MORDOR_UNITTEST(PQ, queryForNullBlocking)
-{ queryForParam("SELECT id FROM users WHERE company=$1", Null(), 1u, 2); }
-MORDOR_UNITTEST(PQ, queryForNullAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE company=$1", Null(), 1u, 2, std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForNullPreparedBlocking)
-{ queryForParam("SELECT id FROM users WHERE company=$1::text", Null(), 1u, 2, "constant"); }
-MORDOR_UNITTEST(PQ, queryForNullPreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE company=$1::text", Null(), 1u, 2, "constant", &ioManager); }
-
 MORDOR_UNITTEST(PQ, queryForCharBlocking)
 { queryForParam("SELECT id FROM users WHERE gender=$1", 'M', 2u, 1); }
 MORDOR_UNITTEST(PQ, queryForCharAsync)
