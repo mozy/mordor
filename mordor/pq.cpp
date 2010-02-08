@@ -385,6 +385,17 @@ PreparedStatement::bind(size_t param, const std::string &value)
 }
 
 void
+PreparedStatement::bind(size_t param, const char *value)
+{
+    ensure(param);
+    m_paramValues[param - 1] = value;
+    m_params[param - 1] = m_paramValues[param - 1].c_str();
+    m_paramLengths[param - 1] = m_paramValues[param - 1].size();
+    m_paramFormats[param - 1] = 1;
+    setType(param, 0);
+}
+
+void
 PreparedStatement::bind(size_t param, bool value)
 {
     ensure(param);

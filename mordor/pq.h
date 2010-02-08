@@ -196,6 +196,7 @@ private:
 
 public:
     void bind(size_t param, const Null &);
+    void bind(size_t param, const char *value);
     void bind(size_t param, const std::string &value);
     void bind(size_t param, bool value);
     void bind(size_t param, char value);
