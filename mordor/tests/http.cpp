@@ -986,7 +986,7 @@ MORDOR_UNITTEST(HTTPClient, emptyResponseBody)
     MORDOR_ASSERT(!request->responseStream());
 }
 
-MORDOR_UNITTEST(HTTPClient, incompleteResponseBody)
+MORDOR_UNITTEST(HTTPClient, incompleteResponseHeaders)
 {
     MemoryStream::ptr requestStream(new MemoryStream());
     MemoryStream::ptr responseStream(new MemoryStream(Buffer(
@@ -1050,6 +1050,46 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseBody)
 
     response.reset();
     MORDOR_TEST_ASSERT(!request->responseStream());
+}
+
+MORDOR_UNITTEST(HTTPClient, incompleteResponseBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 5\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "hel")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    // Verify response characteristics
+    MORDOR_TEST_ASSERT(request->hasResponseBody());
+    Stream::ptr response = request->responseStream();
+    MORDOR_TEST_ASSERT(response->supportsRead());
+    MORDOR_TEST_ASSERT(!response->supportsWrite());
+    MORDOR_TEST_ASSERT(!response->supportsSeek());
+    MORDOR_TEST_ASSERT(response->supportsSize());
+    MORDOR_TEST_ASSERT(!response->supportsTruncate());
+    MORDOR_TEST_ASSERT(!response->supportsFind());
+    MORDOR_TEST_ASSERT(!response->supportsUnread());
+    MORDOR_TEST_ASSERT_EQUAL(response->size(), 5);
+
+    // Verify response itself
+    MemoryStream responseBody;
+    MORDOR_TEST_ASSERT_EXCEPTION(transferStream(response, responseBody),
+        UnexpectedEofException);
 }
 
 MORDOR_UNITTEST(HTTPClient, readPastEof)

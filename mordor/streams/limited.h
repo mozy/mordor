@@ -9,7 +9,13 @@ namespace Mordor {
 class LimitedStream : public MutatingFilterStream
 {
 public:
+    typedef boost::shared_ptr<LimitedStream> ptr;
+
+public:
     LimitedStream(Stream::ptr parent, long long size, bool own = true);
+
+    bool strict() { return m_strict; }
+    void strict(bool strict) { m_strict = strict; }
 
     bool supportsTell() { return true; }
     bool supportsSize() { return true; }
@@ -24,6 +30,7 @@ public:
 
 private:
     long long m_pos, m_size;
+    bool m_strict;
 };
 
 }

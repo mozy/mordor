@@ -11,7 +11,8 @@ namespace Mordor {
 LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
 : MutatingFilterStream(parent, own),
   m_pos(0),
-  m_size(size)
+  m_size(size),
+  m_strict(false)
 {
     MORDOR_ASSERT(size >= 0);
 }
@@ -24,6 +25,8 @@ LimitedStream::read(Buffer &b, size_t len)
 
     len = (size_t)std::min<long long>(len, m_size - m_pos);
     size_t result = parent()->read(b, len);
+    if (result == 0 && m_strict)
+        MORDOR_THROW_EXCEPTION(UnexpectedEofException());
     m_pos += result;
     return result;
 }

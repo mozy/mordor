@@ -118,7 +118,9 @@ Connection::getStream(const GeneralHeaders &general,
     }
     if (stream != baseStream) {
     } else if (entity.contentLength != ~0ull) {
-        stream.reset(new LimitedStream(stream, entity.contentLength));
+        LimitedStream::ptr limited(new LimitedStream(stream, entity.contentLength));
+        limited->strict(true);
+        stream = limited;
     } else if (entity.contentType.type == "multipart") {
         // Getting stream to pass to multipart; self-delimiting
     } else {
