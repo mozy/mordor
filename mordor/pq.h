@@ -26,15 +26,18 @@ struct Exception : virtual ::Mordor::Exception
 private:
     std::string m_message;
 };
-struct BadConnectionException : virtual Exception {};
 
 #define DEFINE_MORDOR_PQ_EXCEPTION(Exception, Base)                             \
 struct Exception : Base                                                         \
 {                                                                               \
+    Exception()                                                                 \
+    {}                                                                          \
     Exception(const std::string &message)                                       \
         : Base(message)                                                         \
     {}                                                                          \
 };
+
+DEFINE_MORDOR_PQ_EXCEPTION(ConnectionException, Exception);
 
 DEFINE_MORDOR_PQ_EXCEPTION(DataException, Exception);
 DEFINE_MORDOR_PQ_EXCEPTION(ArraySubscriptError, DataException);
@@ -316,7 +319,8 @@ private:
 class Connection : boost::noncopyable
 {
 public:
-    Connection(const std::string &conninfo, IOManager *ioManager, bool connectImmediately = true);
+    Connection(const std::string &conninfo, IOManager *ioManager = NULL,
+        bool connectImmediately = true);
 
     ConnStatusType status();
 
@@ -366,6 +370,8 @@ public:
     template <class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3, const T4 &param4, const T5 &param5, const T6 &param6, const T7 &param7, const T8 &param8, const T9 &param9)
     { return prepare(command).execute(param1, param2, param3, param4, param5, param6, param7, param8, param9); }
+
+    const PGconn *conn() const { return m_conn.get(); }
 
 private:
     const std::string &m_conninfo;

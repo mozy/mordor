@@ -25,14 +25,13 @@ std::string g_badConnString;
 
 int main(int argc, const char **argv)
 {
-    if (argc < 3) {
+    if (argc < 2) {
         std::cerr << "Usage: " << argv[0]
-            << " <good connection string> <bad connection string>"
+            << " <connection string>"
             << std::endl;
         return 1;
     }
     g_goodConnString = argv[1];
-    g_badConnString = argv[2];
     Config::loadFromEnvironment();
     std::string newDirectory = argv[0];
 #ifdef WINDOWS
@@ -45,7 +44,7 @@ int main(int argc, const char **argv)
     StdoutListener listener;
     bool result;
     if (argc > 3) {
-        result = runTests(testsForArguments(argc - 3, argv + 3), listener);
+        result = runTests(testsForArguments(argc - 2, argv + 2), listener);
     } else {
         result = runTests(listener);
     }
@@ -74,6 +73,64 @@ MORDOR_UNITTEST(PQ, constantQueryPreparedBlocking)
 { constantQuery("constant"); }
 MORDOR_UNITTEST(PQ, constantQueryPreparedAsync)
 { IOManager ioManager; constantQuery("constant", &ioManager); }
+
+MORDOR_UNITTEST(PQ, invalidConnStringBlocking)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage"), ConnectionException);
+}
+MORDOR_UNITTEST(PQ, invalidConnStringAsync)
+{
+    IOManager ioManager;
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage", &ioManager), ConnectionException);
+}
+
+MORDOR_UNITTEST(PQ, invalidConnString2Blocking)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage="), ConnectionException);
+}
+MORDOR_UNITTEST(PQ, invalidConnString2Async)
+{
+    IOManager ioManager;
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage=", &ioManager), ConnectionException);
+}
+
+MORDOR_UNITTEST(PQ, invalidConnString3Blocking)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("host=garbage"), ConnectionException);
+}
+MORDOR_UNITTEST(PQ, invalidConnString3Async)
+{
+    IOManager ioManager;
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("host=garbage", &ioManager), ConnectionException);
+}
+
+MORDOR_UNITTEST(PQ, badConnStringBlocking)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn(g_badConnString), ConnectionException);
+}
+MORDOR_UNITTEST(PQ, badConnStringAsync)
+{
+    IOManager ioManager;
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn(g_badConnString, &ioManager), ConnectionException);
+}
+
+void queryAfterDisconnect(IOManager *ioManager = NULL)
+{
+    Connection conn(g_goodConnString, ioManager);
+
+    close(PQsocket(conn.conn()));
+    MORDOR_TEST_ASSERT_EXCEPTION(conn.execute("SELECT 1"), ConnectionException);
+    conn.reset();
+    Result result = conn.execute("SELECT 1");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<int>(0, 0), 1);
+}
+
+MORDOR_UNITTEST(PQ, queryAfterDisconnectBlocking)
+{ queryAfterDisconnect(); }
+MORDOR_UNITTEST(PQ, queryAfterDisconnectAsync)
+{ IOManager ioManager; queryAfterDisconnect(&ioManager); }
 
 void fillUsers(Connection &conn)
 {

@@ -22,8 +22,9 @@ namespace PQ {
 
 static void throwException(PGconn *conn)
 {
-    MORDOR_LOG_ERROR(g_log) << conn << " connection error";
-    MORDOR_THROW_EXCEPTION(Exception(PQerrorMessage(conn)));
+    const char *error = PQerrorMessage(conn);
+    MORDOR_LOG_ERROR(g_log) << conn << " connection error: " << error;
+    MORDOR_THROW_EXCEPTION(ConnectionException(error));
 }
 
 static void throwException(PGresult *result)
@@ -31,7 +32,7 @@ static void throwException(PGresult *result)
     std::string message = PQresultErrorMessage(result);
     const char *sqlstate = PQresultErrorField(result, PG_DIAG_SQLSTATE);
 
-    MORDOR_LOG_ERROR(g_log) << result << sqlstate << ": " << message;
+    MORDOR_LOG_ERROR(g_log) << result << " " << sqlstate << ": " << message;
     if (!sqlstate || strlen(sqlstate) != 5)
         MORDOR_THROW_EXCEPTION(Exception(message));
     switch (sqlstate[0]) {
@@ -209,9 +210,9 @@ Connection::connect()
         if (!m_conn)
             MORDOR_THROW_EXCEPTION(std::bad_alloc());
         if (status() == CONNECTION_BAD)
-            MORDOR_THROW_EXCEPTION(BadConnectionException());
+            throwException(m_conn.get());
         if (PQsetnonblocking(m_conn.get(), 1))
-            MORDOR_THROW_EXCEPTION(BadConnectionException());
+            throwException(m_conn.get());
         int fd = PQsocket(m_conn.get());
         PostgresPollingStatusType whatToPoll = PGRES_POLLING_WRITING;
         while (true) {
@@ -227,7 +228,7 @@ Connection::connect()
                     Scheduler::getThis()->yieldTo();
                     break;
                 case PGRES_POLLING_FAILED:
-                    MORDOR_THROW_EXCEPTION(BadConnectionException());
+                    throwException(m_conn.get());
                 case PGRES_POLLING_OK:
                     MORDOR_LOG_INFO(g_log) << m_conn.get() << " PQconnectStart(\""
                         << m_conninfo << "\")";
@@ -242,7 +243,7 @@ Connection::connect()
         if (!m_conn)
             MORDOR_THROW_EXCEPTION(std::bad_alloc());
         if (status() == CONNECTION_BAD)
-            MORDOR_THROW_EXCEPTION(BadConnectionException());
+            throwException(m_conn.get());
     }
     MORDOR_LOG_INFO(g_log) << m_conn.get() << " PQconnectdb(\"" << m_conninfo << "\")";
 }
@@ -252,7 +253,7 @@ Connection::reset()
 {
     if (m_ioManager) {
         if (!PQresetStart(m_conn.get()))
-            MORDOR_THROW_EXCEPTION(BadConnectionException());
+            throwException(m_conn.get());
         int fd = PQsocket(m_conn.get());
         PostgresPollingStatusType whatToPoll = PGRES_POLLING_WRITING;
         while (true) {
@@ -268,7 +269,7 @@ Connection::reset()
                     Scheduler::getThis()->yieldTo();
                     break;
                 case PGRES_POLLING_FAILED:
-                    MORDOR_THROW_EXCEPTION(BadConnectionException());
+                    throwException(m_conn.get());
                 case PGRES_POLLING_OK:
                     MORDOR_LOG_INFO(g_log) << m_conn.get() << " PQresetStart()";
                     return;
@@ -280,7 +281,7 @@ Connection::reset()
     } else {
         PQreset(m_conn.get());
         if (status() == CONNECTION_BAD)
-            MORDOR_THROW_EXCEPTION(BadConnectionException());
+            throwException(m_conn.get());
     }
     MORDOR_LOG_INFO(g_log) << m_conn.get() << " PQreset()";
 }
