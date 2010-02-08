@@ -279,17 +279,17 @@ Socket::connect(const Address &to)
                 m_ioManager->unregisterEvent(&m_sendEvent);
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ConnectEx");
             }
-            if (m_cancelledSend) {
-                MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
-                        << "): (" << m_cancelledSend << ")";
-                m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-                Scheduler::getThis()->yieldTo();
-                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "ConnectEx");
-            }
             if (m_skipCompletionPortOnSuccess && bRet) {
                 m_ioManager->unregisterEvent(&m_sendEvent);
                 m_sendEvent.overlapped.Internal = STATUS_SUCCESS;
             } else {
+                if (m_cancelledSend) {
+                    MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                            << "): (" << m_cancelledSend << ")";
+                    m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
+                    Scheduler::getThis()->yieldTo();
+                    MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "ConnectEx");
+                }
                 Timer::ptr timeout;
                 if (m_sendTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
@@ -476,17 +476,17 @@ Socket::accept(Socket &target)
                 m_ioManager->unregisterEvent(&m_receiveEvent);
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("AcceptEx");
             }
-            if (m_cancelledReceive) {
-                MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): (" 
-                    << m_cancelledReceive << ")";
-                m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-                Scheduler::getThis()->yieldTo();
-                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "AcceptEx");
-            }
             if (m_skipCompletionPortOnSuccess && ret) {
                 m_ioManager->unregisterEvent(&m_receiveEvent);
                 m_receiveEvent.overlapped.Internal = STATUS_SUCCESS;
             } else {
+                if (m_cancelledReceive) {
+                    MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): (" 
+                        << m_cancelledReceive << ")";
+                    m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
+                    Scheduler::getThis()->yieldTo();
+                    MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "AcceptEx");
+                }
                 Timer::ptr timeout;
                 if (m_receiveTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
@@ -659,16 +659,16 @@ Socket::send(const void *buf, size_t len, int flags)
             m_ioManager->unregisterEvent(&m_sendEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSASend");
         }
-        if (m_cancelledSend) {
-            MORDOR_LOG_ERROR(g_log) << this << " send(" << m_sock << ", " << len
-                << "): (" << m_cancelledSend << ")";
-            m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-            Scheduler::getThis()->yieldTo();
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASend");
-        }
         if (m_skipCompletionPortOnSuccess && ret == 0) {
             m_ioManager->unregisterEvent(&m_sendEvent);
         } else {
+            if (m_cancelledSend) {
+                MORDOR_LOG_ERROR(g_log) << this << " send(" << m_sock << ", " << len
+                    << "): (" << m_cancelledSend << ")";
+                m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
+                Scheduler::getThis()->yieldTo();
+                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASend");
+            }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
@@ -753,16 +753,16 @@ Socket::send(const iovec *bufs, size_t len, int flags)
             m_ioManager->unregisterEvent(&m_sendEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSASend");
         }
-        if (m_cancelledSend) {
-            MORDOR_LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", " << len
-                << "): (" << m_cancelledSend << ")";
-            m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-            Scheduler::getThis()->yieldTo();
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASend");
-        }
         if (m_skipCompletionPortOnSuccess && ret == 0) {
             m_ioManager->unregisterEvent(&m_sendEvent);
         } else {
+            if (m_cancelledSend) {
+                MORDOR_LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", " << len
+                    << "): (" << m_cancelledSend << ")";
+                m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
+                Scheduler::getThis()->yieldTo();
+                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASend");
+            }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
@@ -860,16 +860,16 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
             m_ioManager->unregisterEvent(&m_sendEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSASendTo");
         }
-        if (m_cancelledSend) {
-            MORDOR_LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", " << len
-                << ", " << to << "): (" << m_cancelledSend << ")";
-            m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-            Scheduler::getThis()->yieldTo();
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASendTo");
-        }
         if (m_skipCompletionPortOnSuccess && ret == 0) {
             m_ioManager->unregisterEvent(&m_sendEvent);
         } else {
+            if (m_cancelledSend) {
+                MORDOR_LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", " << len
+                    << ", " << to << "): (" << m_cancelledSend << ")";
+                m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
+                Scheduler::getThis()->yieldTo();
+                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASendTo");
+            }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
@@ -950,18 +950,18 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
             m_ioManager->unregisterEvent(&m_sendEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSASendTo");
         }
-        if (m_cancelledSend) {
-            MORDOR_LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", " << len
-                << ", " << to << "): (" << m_cancelledSend << ")";
-            m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-            Scheduler::getThis()->yieldTo();
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASendTo");
-        }
         if (m_skipCompletionPortOnSuccess && ret == 0) {
             m_ioManager->unregisterEvent(&m_sendEvent);
             m_sendEvent.overlapped.Internal = STATUS_SUCCESS;
             m_sendEvent.overlapped.InternalHigh = sent;
         } else {
+            if (m_cancelledSend) {
+                MORDOR_LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", " << len
+                    << ", " << to << "): (" << m_cancelledSend << ")";
+                m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
+                Scheduler::getThis()->yieldTo();
+                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASendTo");
+            }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
@@ -1060,16 +1060,16 @@ Socket::receive(void *buf, size_t len, int flags)
             m_ioManager->unregisterEvent(&m_receiveEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSARecv");
         }
-        if (m_cancelledReceive) {
-            MORDOR_LOG_ERROR(g_log) << this << " recv(" << m_sock << ", " << len
-                << "): (" << m_cancelledReceive << ")";
-            m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-            Scheduler::getThis()->yieldTo();
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecv");
-        }
         if (m_skipCompletionPortOnSuccess && ret == 0) {
             m_ioManager->unregisterEvent(&m_receiveEvent);
         } else {
+            if (m_cancelledReceive) {
+                MORDOR_LOG_ERROR(g_log) << this << " recv(" << m_sock << ", " << len
+                    << "): (" << m_cancelledReceive << ")";
+                m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
+                Scheduler::getThis()->yieldTo();
+                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecv");
+            }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
@@ -1148,18 +1148,18 @@ Socket::receive(iovec *bufs, size_t len, int flags)
             m_ioManager->unregisterEvent(&m_receiveEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSARecv");
         }
-        if (m_cancelledReceive) {
-            MORDOR_LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", " << len
-                << "): (" << m_cancelledReceive << ")";
-            m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-            Scheduler::getThis()->yieldTo();
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecv");
-        }
         if (m_skipCompletionPortOnSuccess && ret == 0) {
             m_ioManager->unregisterEvent(&m_receiveEvent);
             m_receiveEvent.overlapped.Internal = STATUS_SUCCESS;
             m_receiveEvent.overlapped.InternalHigh = recvd;
         } else {
+            if (m_cancelledReceive) {
+                MORDOR_LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", " << len
+                    << "): (" << m_cancelledReceive << ")";
+                m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
+                Scheduler::getThis()->yieldTo();
+                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecv");
+            }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
@@ -1258,16 +1258,16 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
             m_ioManager->unregisterEvent(&m_receiveEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSARecvFrom");
         }
-        if (m_cancelledReceive) {
-            MORDOR_LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", " << len
-                << "): (" << m_cancelledReceive << ")";
-            m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-            Scheduler::getThis()->yieldTo();
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecvFrom");
-        }
         if (m_skipCompletionPortOnSuccess && ret == 0) {
             m_ioManager->unregisterEvent(&m_receiveEvent);
         } else {
+            if (m_cancelledReceive) {
+                MORDOR_LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", " << len
+                    << "): (" << m_cancelledReceive << ")";
+                m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
+                Scheduler::getThis()->yieldTo();
+                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecvFrom");
+            }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
@@ -1368,16 +1368,16 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
             m_ioManager->unregisterEvent(&m_receiveEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSARecvFrom");
         }
-        if (m_cancelledReceive) {
-            MORDOR_LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", " << len
-                << "): (" << m_cancelledReceive << ")";
-            m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-            Scheduler::getThis()->yieldTo();
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecvFrom");
-        }
         if (m_skipCompletionPortOnSuccess && ret == 0) {
             m_ioManager->unregisterEvent(&m_receiveEvent);
         } else {
+            if (m_cancelledReceive) {
+                MORDOR_LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", " << len
+                    << "): (" << m_cancelledReceive << ")";
+                m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
+                Scheduler::getThis()->yieldTo();
+                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecvFrom");
+            }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(

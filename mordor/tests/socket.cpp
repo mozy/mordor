@@ -207,6 +207,40 @@ MORDOR_UNITTEST(Socket, cancelAccept)
     MORDOR_TEST_ASSERT_EXCEPTION(conns.listen->accept(), OperationAbortedException);
 }
 
+MORDOR_UNITTEST(Socket, cancelSend)
+{
+    IOManager ioManager;
+    Connection conns = establishConn(ioManager);
+    ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
+    conns.connect->connect(conns.address);
+    ioManager.dispatch();
+
+    boost::scoped_array<char> array(new char[65536]);
+    struct iovec iov;
+    iov.iov_base = array.get();
+    iov.iov_len = 65536;
+    conns.connect->cancelSend();
+    MORDOR_TEST_ASSERT_EXCEPTION(while (conns.connect->send(iov.iov_base, 65536)) {}, OperationAbortedException);
+    MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->send(&iov, 1), OperationAbortedException);
+}
+
+MORDOR_UNITTEST(Socket, cancelReceive)
+{
+    IOManager ioManager;
+    Connection conns = establishConn(ioManager);
+    ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
+    conns.connect->connect(conns.address);
+    ioManager.dispatch();
+
+    char buf[3];
+    struct iovec iov;
+    iov.iov_base = buf;
+    iov.iov_len = 3;
+    conns.connect->cancelReceive();
+    MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->receive(iov.iov_base, 3), OperationAbortedException);
+    MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->receive(&iov, 1), OperationAbortedException);
+}
+
 MORDOR_UNITTEST(Socket, sendReceive)
 {
     IOManager ioManager;

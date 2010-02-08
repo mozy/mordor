@@ -281,6 +281,9 @@ IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
     MORDOR_ASSERT(e);
     MORDOR_LOG_DEBUG(g_log) << this << " unregisterEvent(" << &e->overlapped << ")";
     atomicDecrement(m_pendingEventCount);
+    e->m_thread = boost::thread::id();
+    e->m_scheduler = NULL;
+    e->m_fiber.reset();
 #ifdef DEBUG
     {
         boost::mutex::scoped_lock lock(m_mutex);
@@ -336,8 +339,12 @@ IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
         << &e->overlapped << ")";
 
     if (!pCancelIoEx(hFile, &e->overlapped)) {
-        if (GetLastError() == ERROR_CALL_NOT_IMPLEMENTED) {
-            if (e->m_thread == boost::this_thread::get_id()) {
+        DWORD lastError = GetLastError();
+        if (lastError == ERROR_CALL_NOT_IMPLEMENTED) {
+            if (e->m_thread == boost::thread::id()) {
+                // Nothing to cancel
+                return;
+            } else if (e->m_thread == boost::this_thread::get_id()) {
                 if (!CancelIo(hFile))
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIo");
             } else {
@@ -348,7 +355,7 @@ IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
                 if (!CancelIo(hFile))
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIo");
             }
-        } else if (GetLastError() == ERROR_NOT_FOUND) {
+        } else if (lastError == ERROR_NOT_FOUND) {
             // Nothing to cancel
         } else {
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIoEx");
@@ -439,6 +446,8 @@ IOManagerIOCP::idle()
 #endif
 
             e->m_scheduler->schedule(e->m_fiber);
+            e->m_thread = boost::thread::id();
+            e->m_scheduler = NULL;
             e->m_fiber.reset();
         }
 #ifdef DEBUG
