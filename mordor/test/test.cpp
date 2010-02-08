@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include <boost/regex.hpp>
+
 #include "mordor/config.h"
 #include "mordor/sleep.h"
 
@@ -188,25 +190,22 @@ Test::testsForArguments(int argc, const char **argv)
     TestSuites tests;
     const TestSuites &all = allTests();
     for (int i = 0; i < argc; ++i) {
-        std::string suite = argv[i];
-        std::string test;
-        size_t offset = suite.find("::");
-        if (offset != std::string::npos) {
-            test = suite.substr(offset + 2);
-            suite = suite.substr(0, offset);
-        }
-        TestSuites::const_iterator suiteIt = all.find(suite);
-        if (suiteIt != all.end()) {
-            if (test.empty()) {
-                tests[suite] = suiteIt->second;
+        boost::regex regex("^" + std::string(argv[i]) + "$");
+        for (TestSuites::const_iterator j(all.begin());
+            j != all.end();
+            ++j) {
+            if (boost::regex_match(j->first, regex)) {
+                tests[j->first] = j->second;
             } else {
-                TestSuite::second_type::const_iterator testIt =
-                    suiteIt->second.second.find(test);
-                if (testIt != suiteIt->second.second.end()) {
-                    tests[suite].first = suiteIt->second.first;
-                    tests[suite].second[test] = testIt->second;
+                for (std::map<std::string, TestDg>::const_iterator k(j->second.second.begin());
+                    k != j->second.second.end();
+                    ++k) {
+                    if (boost::regex_match(j->first + "::" + k->first, regex)) {
+                        tests[j->first].first = j->second.first;
+                        tests[j->first].second[k->first] = k->second;
+                    }
                 }
-            }                
+            }
         }
     }
     return tests;
