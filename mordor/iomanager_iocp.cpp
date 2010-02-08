@@ -32,7 +32,7 @@ IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
     if (!m_handles[0])
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
     m_reconfigured = CreateEventW(NULL, FALSE, FALSE, NULL);
-    MORDOR_LOG_VERBOSE(g_logWaitBlock) << this << " CreateEventW(): "
+    MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " CreateEventW(): "
         << m_reconfigured << " (" << GetLastError() << ")";
     if (!m_reconfigured) {
         CloseHandle(m_handles[0]);
@@ -301,6 +301,7 @@ IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg, bool re
     MORDOR_LOG_DEBUG(g_log) << this << " registerEvent(" << handle << ", " << dg
         << ")";
     MORDOR_ASSERT(handle);
+    MORDOR_ASSERT(handle != INVALID_HANDLE_VALUE);
     MORDOR_ASSERT(Scheduler::getThis());
 
     boost::mutex::scoped_lock lock(m_mutex);
