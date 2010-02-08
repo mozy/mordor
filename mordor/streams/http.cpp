@@ -100,6 +100,9 @@ HTTPStream::read(Buffer &buffer, size_t length)
         } catch (SocketException &) {
             parent(Stream::ptr());
             continue;
+        } catch (UnexpectedEofException &) {
+            parent(Stream::ptr());
+            continue;
         }
     }
 }
