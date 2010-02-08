@@ -335,7 +335,7 @@ Logger::Logger(const std::string &name, Logger::ptr parent)
 bool
 Logger::enabled(Log::Level level)
 {
-    return level == Log::FATAL || m_level >= level && !f_logDisabled;
+    return level == Log::FATAL || (m_level >= level && !f_logDisabled);
 }
 
 void
