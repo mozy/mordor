@@ -134,9 +134,9 @@ MORDOR_UNITTEST(PQ, queryAfterDisconnectAsync)
 
 void fillUsers(Connection &conn)
 {
-    conn.execute("CREATE TEMPORARY TABLE users (id INTEGER, name TEXT, height SMALLINT, awesome BOOLEAN, company TEXT, gender CHAR, efficiency REAL, crazy DOUBLE PRECISION)");
-    conn.execute("INSERT INTO users VALUES (1, 'cody', 72, true, 'Mozy', 'M', .9, .75)");
-    conn.execute("INSERT INTO users VALUES (2, 'brian', 70, false, NULL, 'M', .9, .25)");
+    conn.execute("CREATE TEMPORARY TABLE users (id INTEGER, name TEXT, height SMALLINT, awesome BOOLEAN, company TEXT, gender CHAR, efficiency REAL, crazy DOUBLE PRECISION, sometime TIMESTAMP)");
+    conn.execute("INSERT INTO users VALUES (1, 'cody', 72, true, 'Mozy', 'M', .9, .75, '2009-05-19 15:53:45.123456')");
+    conn.execute("INSERT INTO users VALUES (2, 'brian', 70, false, NULL, 'M', .9, .25, NULL)");
 }
 
 template <class ParamType, class ExpectedType>
@@ -215,3 +215,27 @@ MORDOR_UNITTEST(PQ, queryForDoublePreparedBlocking)
 { queryForParam("SELECT crazy FROM users WHERE crazy=$1::DOUBLE PRECISION", .75, 1u, .75, "constant"); }
 MORDOR_UNITTEST(PQ, queryForDoublePreparedAsync)
 { IOManager ioManager; queryForParam("SELECT crazy FROM users WHERE crazy=$1::DOUBLE PRECISION", .75, 1u, .75, "constant", &ioManager); }
+
+static const boost::posix_time::ptime thetime(
+    boost::gregorian::date(2009, 05, 19),
+    boost::posix_time::hours(15) + boost::posix_time::minutes(53) +
+    boost::posix_time::seconds(45) + boost::posix_time::microseconds(123456));
+
+static const boost::posix_time::ptime nulltime;
+
+MORDOR_UNITTEST(PQ, queryForTimestampBlocking)
+{ queryForParam("SELECT sometime FROM users WHERE sometime=$1", thetime, 1u, thetime); }
+MORDOR_UNITTEST(PQ, queryForTimestampAsync)
+{ IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime=$1", thetime, 1u, thetime, std::string(), &ioManager); }
+MORDOR_UNITTEST(PQ, queryForTimestampPreparedBlocking)
+{ queryForParam("SELECT sometime FROM users WHERE sometime=$1::TIMESTAMP", thetime, 1u, thetime, "constant"); }
+MORDOR_UNITTEST(PQ, queryForTimestampPreparedAsync)
+{ IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime=$1::TIMESTAMP", thetime, 1u, thetime, "constant", &ioManager); }
+MORDOR_UNITTEST(PQ, queryForNullTimestampBlocking)
+{ queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime); }
+MORDOR_UNITTEST(PQ, queryForNullTimestampAsync)
+{ IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, std::string(), &ioManager); }
+MORDOR_UNITTEST(PQ, queryForNullTimestampPreparedBlocking)
+{ queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, "constant"); }
+MORDOR_UNITTEST(PQ, queryForNullTimestampPreparedAsync)
+{ IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, "constant", &ioManager); }

@@ -3,6 +3,7 @@
 // Copyright (c) 2010 Mozy, Inc.
 
 #include <boost/noncopyable.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include <postgresql/libpq-fe.h>
@@ -208,6 +209,7 @@ public:
     void bind(size_t param, long long value);
     void bind(size_t param, float value);
     void bind(size_t param, double value);
+    void bind(size_t param, const boost::posix_time::ptime &value);
     void bindUntyped(size_t param, const std::string &value);
 
     Result execute();

@@ -15,6 +15,8 @@
 #define INT4OID 23
 #define FLOAT4OID 700
 #define FLOAT8OID 701
+#define TIMESTAMPOID 1114
+#define TIMESTAMPTZOID 1184
 
 namespace Mordor {
 
@@ -582,6 +584,25 @@ PreparedStatement::bind(size_t param, double value)
     setType(param, FLOAT8OID);
 }
 
+static const boost::posix_time::ptime postgres_epoch(boost::gregorian::date(2000, 1, 1));
+
+void
+PreparedStatement::bind(size_t param, const boost::posix_time::ptime &value)
+{
+    if (value.is_not_a_date_time()) {
+        bind(param, Null());
+        return;
+    }
+    ensure(param);
+    m_paramValues[param - 1].resize(8);
+    long long ticks = (value - postgres_epoch).total_microseconds();
+    *(long long *)&m_paramValues[param - 1][0] = htonll(*(long long *)&ticks);
+    m_params[param - 1] = m_paramValues[param - 1].c_str();
+    m_paramLengths[param - 1] = m_paramValues[param - 1].size();
+    m_paramFormats[param - 1] = 1;
+    setType(param, TIMESTAMPOID);
+}
+
 void
 PreparedStatement::bindUntyped(size_t param, const std::string &value)
 {
@@ -838,6 +859,21 @@ Result::get<double>(size_t row, size_t column) const
         default:
             MORDOR_NOTREACHED();
     }
+}
+
+template<>
+boost::posix_time::ptime
+Result::get<boost::posix_time::ptime>(size_t row, size_t column) const
+{
+    MORDOR_ASSERT(getType(column) == TIMESTAMPOID ||
+        getType(column) == TIMESTAMPTZOID);
+    if (PQgetlength(m_result.get(), (int)row, (int)column) == 0)
+        return boost::posix_time::ptime();
+    MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
+    long long microseconds = htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
+    return postgres_epoch +
+        boost::posix_time::seconds(microseconds / 1000000) +
+        boost::posix_time::microseconds(microseconds % 1000000);
 }
 
 }}
