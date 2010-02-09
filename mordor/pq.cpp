@@ -13,6 +13,8 @@
 #define INT8OID 20
 #define INT2OID 21
 #define INT4OID 23
+#define FLOAT4OID 700
+#define FLOAT8OID 701
 
 namespace Mordor {
 
@@ -557,6 +559,30 @@ PreparedStatement::bind(size_t param, long long value)
 }
 
 void
+PreparedStatement::bind(size_t param, float value)
+{
+    ensure(param);
+    m_paramValues[param - 1].resize(4);
+    *(int *)&m_paramValues[param - 1][0] = htonl(*(int *)&value);
+    m_params[param - 1] = m_paramValues[param - 1].c_str();
+    m_paramLengths[param - 1] = m_paramValues[param - 1].size();
+    m_paramFormats[param - 1] = 1;
+    setType(param, FLOAT4OID);
+}
+
+void
+PreparedStatement::bind(size_t param, double value)
+{
+    ensure(param);
+    m_paramValues[param - 1].resize(8);
+    *(long long *)&m_paramValues[param - 1][0] = htonll(*(long long *)&value);
+    m_params[param - 1] = m_paramValues[param - 1].c_str();
+    m_paramLengths[param - 1] = m_paramValues[param - 1].size();
+    m_paramFormats[param - 1] = 1;
+    setType(param, FLOAT8OID);
+}
+
+void
 PreparedStatement::bindUntyped(size_t param, const std::string &value)
 {
     ensure(param);
@@ -727,6 +753,7 @@ bool
 Result::get<bool>(size_t row, size_t column) const
 {
     MORDOR_ASSERT(getType(column) == BOOLOID);
+    MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 1);
     return !!*PQgetvalue(m_result.get(), (int)row, (int)column);
 }
 
@@ -735,6 +762,7 @@ char
 Result::get<char>(size_t row, size_t column) const
 {
     MORDOR_ASSERT(getType(column) == CHAROID);
+    MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 1);
     return *PQgetvalue(m_result.get(), (int)row, (int)column);
 }
 
@@ -744,10 +772,13 @@ Result::get<long long>(size_t row, size_t column) const
 {
     switch (getType(column)) {
         case INT8OID:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
             return htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
         case INT2OID:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 2);
             return htons(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
         case INT4OID:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
             return htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
         default:
             MORDOR_NOTREACHED();
@@ -759,6 +790,7 @@ short
 Result::get<short>(size_t row, size_t column) const
 {
     MORDOR_ASSERT(getType(column) == INT2OID);
+    MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 2);
     return htons(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
 }
 
@@ -768,9 +800,41 @@ Result::get<int>(size_t row, size_t column) const
 {
     switch (getType(column)) {
         case INT2OID:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 2);
             return htons(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
         case INT4OID:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
             return htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+        default:
+            MORDOR_NOTREACHED();
+    }
+}
+
+template <>
+float
+Result::get<float>(size_t row, size_t column) const
+{
+    MORDOR_ASSERT(getType(column) == FLOAT4OID);
+    MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
+    int temp = htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+    return *(float *)&temp;
+}
+
+template <>
+double
+Result::get<double>(size_t row, size_t column) const
+{
+    int templ;
+    long long templl;
+    switch (getType(column)) {
+        case FLOAT4OID:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
+            templ = htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return *(float *)&templ;
+        case FLOAT8OID:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
+            templl = htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return *(double *)&templl;
         default:
             MORDOR_NOTREACHED();
     }

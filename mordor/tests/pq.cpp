@@ -43,7 +43,7 @@ int main(int argc, const char **argv)
 
     StdoutListener listener;
     bool result;
-    if (argc > 3) {
+    if (argc > 2) {
         result = runTests(testsForArguments(argc - 2, argv + 2), listener);
     } else {
         result = runTests(listener);
@@ -134,9 +134,9 @@ MORDOR_UNITTEST(PQ, queryAfterDisconnectAsync)
 
 void fillUsers(Connection &conn)
 {
-    conn.execute("CREATE TEMPORARY TABLE users (id INTEGER, name TEXT, height SMALLINT, awesome BOOLEAN, company TEXT, gender CHAR)");
-    conn.execute("INSERT INTO users VALUES (1, 'cody', 72, true, 'Mozy', 'M')");
-    conn.execute("INSERT INTO users VALUES (2, 'brian', 70, false, NULL, 'M')");
+    conn.execute("CREATE TEMPORARY TABLE users (id INTEGER, name TEXT, height SMALLINT, awesome BOOLEAN, company TEXT, gender CHAR, efficiency REAL, crazy DOUBLE PRECISION)");
+    conn.execute("INSERT INTO users VALUES (1, 'cody', 72, true, 'Mozy', 'M', .9, .75)");
+    conn.execute("INSERT INTO users VALUES (2, 'brian', 70, false, NULL, 'M', .9, .25)");
 }
 
 template <class ParamType, class ExpectedType>
@@ -197,3 +197,21 @@ MORDOR_UNITTEST(PQ, queryForCharPreparedBlocking)
 { queryForParam("SELECT id FROM users WHERE gender=$1::CHAR", 'M', 2u, 1, "constant"); }
 MORDOR_UNITTEST(PQ, queryForCharPreparedAsync)
 { IOManager ioManager; queryForParam("SELECT id FROM users WHERE gender=$1::CHAR", 'M', 2u, 1, "constant", &ioManager); }
+
+MORDOR_UNITTEST(PQ, queryForFloatBlocking)
+{ queryForParam("SELECT efficiency FROM users WHERE efficiency=$1", .9f, 2u, .9f); }
+MORDOR_UNITTEST(PQ, queryForFloatAsync)
+{ IOManager ioManager; queryForParam("SELECT efficiency FROM users WHERE efficiency=$1", .9f, 2u, .9f, std::string(), &ioManager); }
+MORDOR_UNITTEST(PQ, queryForFloatPreparedBlocking)
+{ queryForParam("SELECT efficiency FROM users WHERE efficiency=$1::REAL", .9f, 2u, .9f, "constant"); }
+MORDOR_UNITTEST(PQ, queryForFloatPreparedAsync)
+{ IOManager ioManager; queryForParam("SELECT efficiency FROM users WHERE efficiency=$1::REAL", .9f, 2u, .9f, "constant", &ioManager); }
+
+MORDOR_UNITTEST(PQ, queryForDoubleBlocking)
+{ queryForParam("SELECT crazy FROM users WHERE crazy=$1", .75, 1u, .75); }
+MORDOR_UNITTEST(PQ, queryForDoubleAsync)
+{ IOManager ioManager; queryForParam("SELECT crazy FROM users WHERE crazy=$1", .75, 1u, .75, std::string(), &ioManager); }
+MORDOR_UNITTEST(PQ, queryForDoublePreparedBlocking)
+{ queryForParam("SELECT crazy FROM users WHERE crazy=$1::DOUBLE PRECISION", .75, 1u, .75, "constant"); }
+MORDOR_UNITTEST(PQ, queryForDoublePreparedAsync)
+{ IOManager ioManager; queryForParam("SELECT crazy FROM users WHERE crazy=$1::DOUBLE PRECISION", .75, 1u, .75, "constant", &ioManager); }

@@ -206,6 +206,8 @@ public:
     void bind(size_t param, short value);
     void bind(size_t param, int value);
     void bind(size_t param, long long value);
+    void bind(size_t param, float value);
+    void bind(size_t param, double value);
     void bindUntyped(size_t param, const std::string &value);
 
     Result execute();
