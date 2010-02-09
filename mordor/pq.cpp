@@ -38,6 +38,29 @@ static void throwException(PGresult *result)
     switch (sqlstate[0]) {
         case '2':
             switch (sqlstate[1]) {
+                case '2':
+                    if (strncmp(sqlstate + 2, "000", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(DataException(message));
+                    else if (strncmp(sqlstate + 2, "02E", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(ArraySubscriptError(message));
+                    else if (strncmp(sqlstate + 2, "021", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(CharacterNotInRepertoireException(message));
+                    else if (strncmp(sqlstate + 2, "008", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(OverflowException(message));
+                    else if (strncmp(sqlstate + 2, "012", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(DivisionByZeroException(message));
+                    else if (strncmp(sqlstate + 2, "005", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(AssignmentError(message));
+                    else if (strncmp(sqlstate + 2, "00B", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(EscapeCharacterConflictException(message));
+                    else if (strncmp(sqlstate + 2, "01E", 3) == 0 ||
+                        strncmp(sqlstate + 2, "01F", 3) == 0 ||
+                        strncmp(sqlstate + 2, "01G", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(InvalidArgumentException(message));
+                    else if (strncmp(sqlstate + 2, "004", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(NullValueNotAllowedException(message));
+                    else
+                        MORDOR_THROW_EXCEPTION(DataException(message));
                 case '3':
                     if (strncmp(sqlstate + 2, "000", 3) == 0)
                         MORDOR_THROW_EXCEPTION(IntegrityConstraintViolationException(message));
@@ -179,6 +202,83 @@ static void throwException(PGresult *result)
                         MORDOR_THROW_EXCEPTION(InvalidObjectDefinitionException(message));
                     else
                         MORDOR_THROW_EXCEPTION(AccessRuleViolationException(message));
+                default:
+                    break;
+            }
+        case '5':
+            switch (sqlstate[1]) {
+                case '3':
+                    if (strncmp(sqlstate + 2, "000", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(InsufficientResourcesException(message));
+                    else if (strncmp(sqlstate + 2, "100", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(DiskFullException(message));
+                    else if (strncmp(sqlstate + 2, "200", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(OutOfMemoryException(message));
+                    else if (strncmp(sqlstate + 2, "300", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(TooManyConnectionsException(message));
+                    else
+                        MORDOR_THROW_EXCEPTION(InsufficientResourcesException(message));
+                case '4':
+                    if (strncmp(sqlstate + 2, "000", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(ProgramLimitExceededException(message));
+                    else if (strncmp(sqlstate + 2, "001", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(StatementTooComplexException(message));
+                    else if (strncmp(sqlstate + 2, "011", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(TooManyColumnsException(message));
+                    else if (strncmp(sqlstate + 2, "023", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(TooManyArgumentsException(message));
+                    else
+                        MORDOR_THROW_EXCEPTION(ProgramLimitExceededException(message));
+                case '7':
+                    if (strncmp(sqlstate + 2, "000", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(OperatorInterventionException(message));
+                    else if (strncmp(sqlstate + 2, "014", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(QueryCanceledException(message));
+                    else if (strncmp(sqlstate + 2, "P01", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(AdminShutdownException(message));
+                    else if (strncmp(sqlstate + 2, "P02", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(CrashShutdownException(message));
+                    else if (strncmp(sqlstate + 2, "P03", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(CannotConnectNowException(message));
+                    else
+                        MORDOR_THROW_EXCEPTION(OperatorInterventionException(message));
+                case '8':
+                    if (strncmp(sqlstate + 2, "030", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(IOError(message));
+                    else if (strncmp(sqlstate + 2, "P01", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(UndefinedFileException(message));
+                    else if (strncmp(sqlstate + 2, "P02", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(DuplicateFileException(message));
+                    else
+                        MORDOR_THROW_EXCEPTION(SystemError(message));
+                default:
+                    break;
+            }
+        case 'F':
+            switch (sqlstate[1]) {
+                case '0':
+                    if (strncmp(sqlstate + 2, "000", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(ConfigFileError(message));
+                    else if (strncmp(sqlstate + 2, "001", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(LockFileExistsException(message));
+                    else
+                        MORDOR_THROW_EXCEPTION(ConfigFileError(message));
+                default:
+                    break;
+            }
+        case 'X':
+            switch (sqlstate[1]) {
+                case 'X':
+                    if (strncmp(sqlstate + 2, "000", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(InternalError(message));
+                    else if (strncmp(sqlstate + 2, "001", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(DataCorruptedException(message));
+                    else if (strncmp(sqlstate + 2, "002", 3) == 0)
+                        MORDOR_THROW_EXCEPTION(IndexCorruptedException(message));
+                    else
+                        MORDOR_THROW_EXCEPTION(InternalError(message));
+                default:
+                    break;
             }
         default:
             break;

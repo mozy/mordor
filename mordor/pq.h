@@ -47,7 +47,7 @@ DEFINE_MORDOR_PQ_EXCEPTION(DivisionByZeroException, DataException);
 DEFINE_MORDOR_PQ_EXCEPTION(AssignmentError, DataException);
 DEFINE_MORDOR_PQ_EXCEPTION(EscapeCharacterConflictException, DataException);
 DEFINE_MORDOR_PQ_EXCEPTION(InvalidArgumentException, DataException);
-DEFINE_MORDOR_PQ_EXCEPTION(InvalidCharacterValueForCastException, DataException);
+DEFINE_MORDOR_PQ_EXCEPTION(NullValueNotAllowedException, DataException);
 
 DEFINE_MORDOR_PQ_EXCEPTION(IntegrityConstraintViolationException, Exception)
 DEFINE_MORDOR_PQ_EXCEPTION(RestrictViolationException, IntegrityConstraintViolationException)
