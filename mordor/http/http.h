@@ -69,7 +69,7 @@ enum Status
 
     CONTINUE                         = 100,
     SWITCHING_PROTOCOL               = 101,
-    
+
     OK                               = 200,
     CREATED                          = 201,
     ACCEPTED                         = 202,
@@ -329,7 +329,7 @@ struct RequestLine
 
     Method method;
     URI uri;
-    Version ver;        
+    Version ver;
 };
 
 struct StatusLine

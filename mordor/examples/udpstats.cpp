@@ -24,7 +24,7 @@ int main(int argc, char **argv)
         IOManager ioManager;
         AverageMinMaxStatistic<size_t> &stats = Statistics::registerStatistic("broadcasts",
             AverageMinMaxStatistic<size_t>("bytes", "packets"));
-    
+
         std::vector<Address::ptr> addresses = Address::lookup(argv[1], AF_UNSPEC, SOCK_DGRAM);
         Socket::ptr sock = addresses[0]->createSocket(ioManager);
         sock->bind(addresses[0]);

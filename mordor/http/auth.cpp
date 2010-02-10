@@ -19,7 +19,7 @@ ClientAuthBroker::request(Request &requestHeaders,
 {
     if (!m_conn)
         m_conn = m_dg();
-    
+
     bool triedWwwAuth = false;
     bool triedProxyAuth = false;
 #ifdef WINDOWS

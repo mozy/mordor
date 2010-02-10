@@ -377,7 +377,7 @@ MORDOR_UNITTEST(Socket, sendReceiveForceAsync)
     ioManager.schedule(Fiber::getThis());
     ioManager.yieldTo();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 10);
-    
+
     // And again
     iovec iov[2];
     iov[0].iov_base = (void *)&sendbuf[0];
@@ -416,5 +416,5 @@ MORDOR_UNITTEST(Socket, sendReceiveForceAsync)
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 18);
     ioManager.schedule(otherfiber);
     ioManager.dispatch();
-    MORDOR_TEST_ASSERT_EQUAL(++sequence, 20);    
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 20);
 }

@@ -12,7 +12,7 @@ namespace Mordor {
 class Stream;
 
 namespace HTTP {
-    
+
 class Connection
 {
 public:

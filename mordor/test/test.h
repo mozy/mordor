@@ -78,8 +78,8 @@ bool runTests(const TestSuites &suites,
 
 // Serialization for assertion reporting
 template <class T>
-struct serializer 
-{  
+struct serializer
+{
     serializer(const T &t) : m_t(t) {}
 
     std::ostream &serialize(std::ostream &os)

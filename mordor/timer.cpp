@@ -188,7 +188,7 @@ TimerManager::processTimers()
             } else {
                 timer->m_dg = NULL;
             }
-        }                        
+        }
     }
     return result;
 }

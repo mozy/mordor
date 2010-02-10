@@ -30,7 +30,7 @@ static std::string escape(const std::string& str, const std::string& allowedChar
 {
     const char *hexdigits = "0123456789ABCDEF";
     std::string result(str);
-    
+
     const char *c = str.c_str();
     const char *end = c + str.length();
     bool differed = false;
@@ -98,13 +98,13 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
                 MORDOR_ASSERT(*c >= '0' && *c <='9');
                 decoded |= *c - '0';
             }
-            result.append(1, decoded);                            
+            result.append(1, decoded);
         } else if (*c == '+' && spaceAsPlus) {
             if (!differed) {
                 result.resize(c - str.c_str());
                 differed = true;
             }
-            result.append(1, ' ');            
+            result.append(1, ' ');
         } else if (differed) {
             result.append(1, *c);
         }
@@ -149,7 +149,7 @@ URI::decode(const std::string &str, CharacterClass charClass)
     reserved = gen_delims | sub_delims;
     unreserved = alpha | digit | "-" | "." | "_" | "~";
     pct_encoded = "%" xdigit xdigit;
-    
+
     action marku { mark = fpc; }
     action save_scheme
     {
@@ -179,7 +179,7 @@ URI::decode(const std::string &str, CharacterClass charClass)
             mark = NULL;
         }
     }
-    
+
     userinfo = (unreserved | pct_encoded | sub_delims | ":")*;
     dec_octet = digit | [1-9] digit | "1" digit{2} | 2 [0-4] digit | "25" [0-5];
     IPv4address = dec_octet "." dec_octet "." dec_octet "." dec_octet;
@@ -193,7 +193,7 @@ URI::decode(const std::string &str, CharacterClass charClass)
                   (((h16 ":"){3} h16)? "::" (h16 ":"){1} ls32) |
                   (((h16 ":"){4} h16)? "::"              ls32) |
                   (((h16 ":"){5} h16)? "::"              h16 ) |
-                  (((h16 ":"){6} h16)? "::"                  );                  
+                  (((h16 ":"){6} h16)? "::"                  );
     IPvFuture = "v" xdigit+ "." (unreserved | sub_delims | ":")+;
     IP_literal = "[" (IPv6address | IPvFuture) "]";
     reg_name = (unreserved | pct_encoded | sub_delims)*;
@@ -212,7 +212,7 @@ URI::decode(const std::string &str, CharacterClass charClass)
     segment = pchar* >marku %save_segment;
     segment_nz = pchar+ >marku %save_segment;
     segment_nz_nc = (pchar - ":")+ >marku %save_segment;
-    
+
     action set_absolute
     {
         m_path->type = URI::Path::ABSOLUTE;
@@ -243,12 +243,12 @@ URI::decode(const std::string &str, CharacterClass charClass)
 
     query = (pchar | "/" | "?")* >marku %save_query;
     fragment = (pchar | "/" | "?")* >marku %save_fragment;
-    
+
     hier_part = ("//" authority path_abempty) | path_absolute | path_rootless | path_empty;
 
     relative_part = ("//" authority path_abempty) | path_absolute | path_noscheme | path_empty;
     relative_ref = relative_part ( "?" query )? ( "#" fragment )?;
-    
+
     absolute_URI = scheme ":" hier_part ( "?" query )? ;
     # Obsolete, but referenced from HTTP, so we translate
     relative_URI = relative_part ( "?" query )?;
@@ -259,7 +259,7 @@ URI::decode(const std::string &str, CharacterClass charClass)
 
 %%{
         machine uri_parser_proper;
-        include uri_parser;    
+        include uri_parser;
         main := URI_reference;
         write data;
 }%%
@@ -299,7 +299,7 @@ public:
     }
 
     bool final() const
-    {    
+    {
         return cs >= uri_parser_proper_first_final;
     }
 
@@ -308,14 +308,14 @@ public:
         return cs == uri_parser_proper_error;
     }
 
-private: 
+private:
     URI *m_uri;
     URI::Path *m_path;
 };
 
 %%{
     machine uri_path_parser;
-    include uri_parser;    
+    include uri_parser;
     main := path;
     write data;
 }%%
@@ -362,7 +362,7 @@ public:
         return cs == uri_path_parser_error;
     }
 
-private: 
+private:
     URI::Path *m_path;
 };
 
@@ -396,7 +396,7 @@ URI::operator=(const std::string& uri)
     parser.run(uri);
     if (parser.error() || !parser.final())
         throw std::invalid_argument("uri");
-    return *this;    
+    return *this;
 }
 
 URI&
@@ -406,7 +406,7 @@ URI::operator=(const Buffer &uri)
     parser.run(uri);
     if (parser.error() || !parser.final())
         throw std::invalid_argument("uri");
-    return *this;  
+    return *this;
 }
 
 void
@@ -565,7 +565,7 @@ URI::Path::removeDotComponents()
         }
     }
 }
-        
+
 void
 URI::Path::normalize(bool emptyPathValid)
 {
@@ -653,7 +653,7 @@ URI::normalize()
 {
     for (size_t i = 0; i < m_scheme.size(); ++i)
         m_scheme[i] = tolower(m_scheme[i]);
-    
+
     if (m_scheme == "http" || m_scheme == "https") {
         authority.normalize("", false, m_scheme.size() == 4 ? 80 : 443, false);
         path.normalize();
@@ -707,15 +707,15 @@ operator<<(std::ostream& os, const URI& uri)
         os << "/";
     }
     os << uri.path.serialize(!uri.schemeDefined());
-    
+
     if (uri.queryDefined()) {
         os << "?" << escape(uri.query(), query);
     }
-    
+
     if (uri.fragmentDefined()) {
         os << "#" << escape(uri.fragment(), query);
     }
-    return os;    
+    return os;
 }
 
 URI
@@ -792,7 +792,7 @@ URI::cmp(const URI &rhs) const
 bool
 URI::operator<(const URI &rhs) const
 {
-    return cmp(rhs) < 0;    
+    return cmp(rhs) < 0;
 }
 
 bool

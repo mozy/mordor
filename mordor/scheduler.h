@@ -74,7 +74,7 @@ public:
     static Scheduler* getThis();
 
     /// Explicitly stop the scheduler
-    
+
     /// This must be called for hybrid and spawned Schedulers.  It can be
     /// called multiple times.
     void stop();
@@ -94,7 +94,7 @@ public:
     void schedule(boost::function<void ()> dg, boost::thread::id thread = boost::thread::id());
 
     /// Schedule multiple items to be executed at once
-    
+
     /// @param begin The first item to schedule
     /// @param end One past the last item to schedule
     template <class InputIterator>
@@ -113,7 +113,7 @@ public:
     }
 
     /// Change the currently executing Fiber to be running on this Scheduler
-    
+
     /// This function can be used to change which Scheduler/thread the
     /// currently executing Fiber is executing on.  This switch is done by
     /// rescheduling this Fiber on this Scheduler, and yielding to the current

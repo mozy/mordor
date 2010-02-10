@@ -70,7 +70,7 @@ Stream::getDelimited(char delim, bool eofIsDelimiter)
     std::string result;
     result.resize(offset + (eofIsDelimiter ? 0 : 1));
 #ifdef DEBUG
-    size_t readResult = 
+    size_t readResult =
 #endif
     read((char *)result.c_str(), result.size());
     MORDOR_ASSERT(readResult == result.size());

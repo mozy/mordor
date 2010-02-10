@@ -455,7 +455,7 @@ Buffer::writeBufs(size_t len)
         Segment& data = *it;
         size_t toProduce = std::min(data.writeAvailable(), remaining);
         SegmentData buf = data.writeBuf().slice(0, toProduce);
-#ifdef WINDOWS    
+#ifdef WINDOWS
         while (buf.length() > 0) {
             iovec wsabuf;
             wsabuf.iov_base = (void *)buf.start();
@@ -551,7 +551,7 @@ void
 Buffer::copyIn(const void *data, size_t len)
 {
     invariant();
-    
+
     while (m_writeIt != m_segments.end() && len > 0) {
         size_t todo = std::min(len, m_writeIt->writeAvailable());
         memcpy(m_writeIt->writeBuf().start(), data, todo);

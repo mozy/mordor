@@ -42,7 +42,7 @@ MORDOR_UNITTEST(BufferedStream, read)
     // satisfied by the buffer
     MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 5);
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 4);
-    
+
     output.clear();
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->read(output, 7), 7u);
     MORDOR_TEST_ASSERT(output == "4567890");
@@ -212,7 +212,7 @@ MORDOR_UNITTEST(BufferedStream, find)
     MemoryStream::ptr baseStream(new MemoryStream(Buffer("01234567890123456789")));
     BufferedStream::ptr bufferedStream(new BufferedStream(baseStream));
     bufferedStream->bufferSize(5);
-    
+
     MORDOR_TEST_ASSERT(bufferedStream->supportsFind());
     MORDOR_TEST_ASSERT_EQUAL(baseStream->tell(), 0);
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 0);

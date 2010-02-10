@@ -51,7 +51,7 @@ parseHttpDate(const char *str, size_t size)
 {
     boost::posix_time::ptime result;
     std::string val(str, size);
-    
+
     #define ATTEMPT_WITH_FACET(facet)                              \
     {                                                              \
         std::istringstream is(val);                                \
@@ -136,7 +136,7 @@ unquote(const std::string &str)
 
 %%{
     machine http_parser;
-    
+
     # See RFC 2616: http://www.w3.org/Protocols/rfc2616/rfc2616.html
 
     action mark { mark = fpc; }
@@ -172,7 +172,7 @@ unquote(const std::string &str)
     comment = "(" ( ctext | quoted_pair | base_comment )* ")";
     qdtext = TEXT -- "\"";
     quoted_string = "\"" ( qdtext | quoted_pair )* "\"";
-    
+
     base64char = ALPHA | DIGIT | '+' | '/';
     base64 = (base64char{4})+ ( (base64char{3} '=') | (base64char{2} '==') )?;
 
@@ -187,7 +187,7 @@ unquote(const std::string &str)
     action save_date {
         MORDOR_ASSERT(m_date);
         *m_date = parseHttpDate(mark, fpc - mark);
-        mark = NULL;                
+        mark = NULL;
     }
 
     wkday = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
@@ -201,7 +201,7 @@ unquote(const std::string &str)
     rfc850_date = weekday "," SP date2 SP time SP "GMT";
     asctime_date = wkday SP date3 SP time SP DIGIT{4};
     HTTP_date = (rfc1123_date | rfc850_date | asctime_date) >mark %save_date;
-    
+
     delta_seconds = DIGIT+;
 
     action save_product_name {
@@ -260,7 +260,7 @@ unquote(const std::string &str)
         MORDOR_ASSERT(m_eTag == & m_tempETag);
         m_eTagSet->insert(m_tempETag);
     }
-    
+
     weak = "W/" %save_weak;
     opaque_tag = quoted_string >mark %save_etag;
     entity_tag = ((weak)? opaque_tag) >start_etag;
@@ -277,7 +277,7 @@ unquote(const std::string &str)
     }
     action save_field_value {
         std::string fieldValue = unfold((char*)mark, (char*)fpc);
-        
+
         StringMap::iterator it = m_entity->extension.find(m_temp1);
         if (it == m_entity->extension.end()) {
             m_entity->extension[m_temp1] = fieldValue;
@@ -292,7 +292,7 @@ unquote(const std::string &str)
     field_name = token >mark %save_field_name;
     field_value = TEXT* >mark %save_field_value;
     message_header = field_name ":" field_value;
-    
+
     action save_string {
         *m_string = std::string(mark, fpc - mark);
         mark = NULL;
@@ -301,7 +301,7 @@ unquote(const std::string &str)
         *m_ulong = strtoull(mark, NULL, 10);
         mark = NULL;
     }
-    
+
     action save_element {
         MORDOR_ASSERT(m_list || m_set);
         if (m_list)
@@ -312,7 +312,7 @@ unquote(const std::string &str)
     }
     element = token >mark %save_element;
     list = (LWS* element ( LWS* ',' LWS* element)* LWS*);
-    
+
     action save_parameterized_list_element {
         ValueWithParameters vp;
         vp.value = std::string(mark, fpc - mark);
@@ -320,12 +320,12 @@ unquote(const std::string &str)
         m_parameters = &m_parameterizedList->back().parameters;
         mark = NULL;
     }
-    
+
     action save_parameter_attribute {
         m_temp1 = std::string(mark, fpc - mark);
         // Don't NULL out here; could be base64 later
     }
-    
+
     action save_parameter_value {
         (*m_parameters)[m_temp1] = unquote(mark, fpc - mark);
         mark = NULL;
@@ -336,7 +336,7 @@ unquote(const std::string &str)
     parameter = attribute '=' value;
     parameterizedListElement = token >mark %save_parameterized_list_element (';' parameter)*;
     parameterizedList = LWS* parameterizedListElement ( LWS* ',' LWS* parameterizedListElement)* LWS*;
-    
+
     action save_auth_scheme {
         if (m_challengeList && ((!m_challengeList->empty() && m_auth == &m_challengeList->back())
             || m_challengeList->empty())) {
@@ -348,7 +348,7 @@ unquote(const std::string &str)
         m_parameters = &m_auth->parameters;
         mark = NULL;
     }
-    
+
     action save_base64_param {
         m_auth->base64 = std::string(mark, fpc - mark);
         mark = NULL;
@@ -360,30 +360,30 @@ unquote(const std::string &str)
     challenge = auth_scheme >mark %save_auth_scheme (SP ((auth_param ( LWS* ',' LWS* auth_param )*) | base64_auth_param))? LWS*;
     credentials = auth_scheme >mark %save_auth_scheme (LWS+ ((auth_param (LWS* ',' LWS* auth_param )*) | base64_auth_param))? LWS*;
     challengeList = LWS* challenge ( LWS* ',' LWS* challenge)* LWS*;
-    
+
     action set_connection {
         m_set = &m_general->connection;
         m_list = NULL;
     }
-    
+
     action set_date {
         m_date = &m_general->date;
     }
-    
+
     action set_proxy_connection {
         m_set = &m_general->proxyConnection;
         m_list = NULL;
     }
-    
+
     action set_trailer {
         m_set = &m_general->trailer;
         m_list = NULL;
     }
-    
+
     action set_transfer_encoding {
         m_parameterizedList = &m_general->transferEncoding;
     }
-    
+
     action save_upgrade_product {
         m_general->upgrade.push_back(m_product);
         m_product = Product();
@@ -396,10 +396,10 @@ unquote(const std::string &str)
     Trailer = 'Trailer:'i @set_trailer list;
     Transfer_Encoding = 'Transfer-Encoding:'i @set_transfer_encoding parameterizedList;
     Upgrade = 'Upgrade:'i LWS* product %save_upgrade_product ( LWS* ',' LWS* product %save_upgrade_product)* LWS*;
-    
+
     general_header = Connection | Date | Proxy_Connection | Trailer | Transfer_Encoding | Upgrade;
     general_header_names = 'Connection'i | 'Date'i | 'Proxy-Connection'i | 'Trailer'i | 'Transfer-Encoding'i | 'Upgrade'i;
-    
+
     action set_content_encoding {
         m_list = &m_entity->contentEncoding;
         m_set = NULL;
@@ -408,7 +408,7 @@ unquote(const std::string &str)
     action set_content_length {
         m_ulong = &m_entity->contentLength;
     }
-    
+
     action save_cr_first_byte_pos {
         m_entity->contentRange.first = strtoull(mark, NULL, 10);
         mark = NULL;
@@ -418,7 +418,7 @@ unquote(const std::string &str)
         m_entity->contentRange.last = strtoull(mark, NULL, 10);
         mark = NULL;
     }
-    
+
     action save_blank_cr {
         m_entity->contentRange.last = 0;
     }
@@ -427,7 +427,7 @@ unquote(const std::string &str)
         m_entity->contentRange.instance = strtoull(mark, NULL, 10);
         mark = NULL;
     }
-    
+
     action set_content_type
     {
         m_parameters = &m_entity->contentType.parameters;
@@ -442,7 +442,7 @@ unquote(const std::string &str)
         m_entity->contentType.subtype = std::string(mark, fpc - mark);
         mark = NULL;
     }
-    
+
     action set_expires
     {
         m_date = &m_entity->expires;
@@ -454,19 +454,19 @@ unquote(const std::string &str)
 
     Content_Encoding = 'Content-Encoding:'i @set_content_encoding list;
     Content_Length = 'Content-Length:'i @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
-    
+
     byte_range_resp_spec = (DIGIT+ >mark %save_cr_first_byte_pos '-' DIGIT+ >mark %save_cr_last_byte_pos) | '*' %save_blank_cr;
     content_range_spec = bytes_unit SP byte_range_resp_spec '/' ( DIGIT+ >mark %save_instance_length | '*');
     Content_Range = 'Content-Range:'i LWS* content_range_spec LWS*;
-    
+
     type = token >mark %save_type;
     subtype = token >mark %save_subtype;
     media_type = type '/' subtype (';' LWS* parameter)*;
     Content_Type = 'Content-Type:'i @set_content_type LWS* media_type LWS*;
-    
+
     Expires = 'Expires:'i @set_expires LWS* HTTP_date LWS*;
     Last_Modified = 'Last-Modified:'i @set_last_modified LWS* HTTP_date LWS*;
-    
+
     entity_header = Content_Encoding | Content_Length | Content_Range | Content_Type | Expires | Last_Modified; # | extension_header;
     entity_header_names = 'Content-Encoding'i | 'Content-Length'i | 'Content-Range'i | 'Content-Type'i | 'Expires'i | 'Last-Modified'i;
 
@@ -481,12 +481,12 @@ unquote(const std::string &str)
         m_request->requestLine.method = parseMethod(mark, fpc);
         mark = NULL;
     }
-    
+
     action set_request_uri {
         m_uri = &m_request->requestLine.uri;
         m_path = &m_uri->path;
     }
-    
+
     action save_accept_list_element {
         if (m_acceptList) {
             AcceptValue av;
@@ -503,7 +503,7 @@ unquote(const std::string &str)
             mark = NULL;
         }
     }
-    
+
     action save_qvalue {
         unsigned int *qvalue = NULL;
         if (m_acceptList) {
@@ -524,17 +524,17 @@ unquote(const std::string &str)
         }
         mark = NULL;
     }
-    
+
     action set_accept_charset {
         m_acceptList = &m_request->request.acceptCharset;
         m_acceptListWithParams = NULL;
     }
-    
+
     action set_accept_encoding {
         m_acceptList = &m_request->request.acceptEncoding;
         m_acceptListWithParams = NULL;
     }
-    
+
     action set_authorization {
         m_challengeList = NULL;
         m_auth = &m_request->request.authorization;
@@ -559,37 +559,37 @@ unquote(const std::string &str)
         m_request->request.expect.back().parameters[m_temp1] = unquote(mark, fpc - mark);
         mark = NULL;
     }
-    
+
     action set_host {
         m_string = &m_request->request.host;
     }
-    
+
     action set_if_match {
         m_eTagSet = &m_request->request.ifMatch;
     }
-    
+
     action set_if_modified_since {
         m_date = &m_request->request.ifModifiedSince;
     }
-    
+
     action set_if_none_match {
         m_eTagSet = &m_request->request.ifNoneMatch;
     }
-    
+
     action set_if_range_entity_tag {
         m_request->request.ifRange = ETag();
         m_eTag = boost::get<ETag>(&m_request->request.ifRange);
     }
-    
+
     action set_if_range_http_date {
         m_request->request.ifRange = boost::posix_time::ptime();
         m_date = boost::get<boost::posix_time::ptime>(&m_request->request.ifRange);
     }
-    
+
     action set_if_unmodified_since {
         m_date = &m_request->request.ifModifiedSince;
     }
-    
+
     action set_proxy_authorization {
         m_challengeList = NULL;
         m_auth = &m_request->request.proxyAuthorization;
@@ -611,40 +611,40 @@ unquote(const std::string &str)
             ~0ull, strtoull(mark, NULL, 10)));
         mark = NULL;
     }
-    
+
     action set_referer {
         m_uri = &m_request->request.referer;
         m_path = &m_uri->path;
     }
-    
+
     action save_accept_attribute {
         m_temp1 = std::string(mark, fpc - mark);
         m_acceptListWithParams->back().acceptParams[m_temp1] = "";
         mark = NULL;
     }
-    
+
     action save_accept_value {
         m_acceptListWithParams->back().acceptParams[m_temp1] = unquote(mark, fpc - mark);
         mark = NULL;
     }
-    
+
     action set_te {
         m_acceptList = NULL;
         m_acceptListWithParams = &m_request->request.te;
     }
-    
+
     action set_user_agent {
         m_productAndCommentList = &m_request->request.userAgent;
     }
-    
+
     acceptListElement = ( token | '*' ) >mark %save_accept_list_element (';q='i qvalue >mark %save_qvalue)?;
     acceptList = LWS* acceptListElement ( LWS* ',' LWS* acceptListElement)* LWS*;
     Accept_Charset = 'Accept-Charset:'i @set_accept_charset acceptList;
-    
+
     Accept_Encoding = 'Accept-Encoding:'i @set_accept_encoding acceptList;
 
     Authorization = 'Authorization:'i @set_authorization LWS* credentials;
-    
+
     expect_params = ';' token >mark %save_expectation_param ( '=' (token | quoted_string) >mark %save_expectation_param_value )?;
     expectation = token >mark %save_expectation ( '=' (token | quoted_string) >mark %save_expectation_value expect_params* )?;
     Expect = 'Expect:'i LWS* expectation ( LWS* ',' LWS* expectation )* LWS*;
@@ -658,13 +658,13 @@ unquote(const std::string &str)
     If_Unmodified_Since = 'If-Unmodified-Since:'i @set_if_unmodified_since LWS* HTTP_date LWS*;
 
     Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization credentials;
-    
+
     byte_range_spec = DIGIT+ >mark %save_first_byte_pos '-' (DIGIT+ >mark %save_last_byte_pos)?;
     suffix_byte_range_spec = '-' DIGIT+ > mark %save_suffix_byte_pos;
     byte_range_set = LWS* (byte_range_spec | suffix_byte_range_spec) ( LWS* ',' LWS* (byte_range_spec | suffix_byte_range_spec))* LWS*;
     ranges_specifier = bytes_unit '=' byte_range_set;
     Range = 'Range:'i LWS* ranges_specifier;
-    
+
     Referer = 'Referer:'i @set_referer LWS* (absolute_URI | relative_URI);
 
     accept_extension = ';' token >mark %save_accept_attribute ('=' (token | quoted_string) >mark %save_accept_value)?;
@@ -672,12 +672,12 @@ unquote(const std::string &str)
     acceptListWithParamsElement = token >mark %save_accept_list_element (';' parameter)* (accept_params)?;
     acceptListWithParams = LWS* acceptListWithParamsElement ( LWS* ',' LWS* acceptListWithParamsElement)* LWS*;
     TE = 'TE:'i @set_te acceptListWithParams;
-    
+
     User_Agent = 'User-Agent:'i @set_user_agent product_and_comment_list;
-    
+
     request_header = Accept_Charset | Accept_Encoding | Authorization | Expect | Host | If_Match | If_Modified_Since | If_None_Match | If_Range | If_Unmodified_Since | Proxy_Authorization | Range | Referer | TE | User_Agent;
     request_header_names = 'Accept-Charset'i | 'Accept-Encoding'i | 'Authorization'i | 'Expect'i | 'Host'i | 'If-Match'i | 'If-Modified-Since'i | 'If-None-Match'i | 'If-Range'i | 'If-Unmodified-Since'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i | 'User-Agent'i;
-    
+
     extension_header = (token - (general_header_names | request_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;
 
@@ -755,7 +755,7 @@ RequestParser::exec()
     machine http_response_parser;
     include http_parser;
     include uri_parser "../uri.rl";
-    
+
     action parse_Status_Code {
         m_response->status.status = (Status)atoi(mark);
         mark = NULL;
@@ -765,7 +765,7 @@ RequestParser::exec()
         m_response->status.reason = std::string(mark, fpc - mark);
         mark = NULL;
     }
-    
+
     action set_accept_ranges
     {
         m_set = &m_response->response.acceptRanges;
@@ -792,7 +792,7 @@ RequestParser::exec()
     action set_www_authenticate {
         m_challengeList = &m_response->response.wwwAuthenticate;
     }
-    
+
     Accept_Ranges = 'Accept-Ranges:'i @set_accept_ranges list;
     ETag = 'ETag:'i @set_etag LWS* entity_tag;
     # This *should* be absolute_URI, but we're generous
@@ -801,10 +801,10 @@ RequestParser::exec()
     Retry_After = 'Retry-After:'i LWS* (HTTP_date %set_retry_after_http_date | delta_seconds >mark %set_retry_after_delta_seconds %save_ulong) LWS*;
     Server = 'Server:'i @set_server product_and_comment_list;
     WWW_Authenticate = 'WWW-Authenticate:'i @set_www_authenticate challengeList;
-    
+
     response_header = Accept_Ranges | ETag | Location | Proxy_Authenticate | Retry_After | Server | WWW_Authenticate;
     response_header_names = 'Accept-Ranges'i | 'ETag'i | 'Location'i | 'Proxy-Authenticate'i | 'Retry-After'i | 'Server'i | 'WWW-Authenticate'i;
-    
+
     extension_header = (token - (general_header_names | response_header_names | entity_header_names)) >mark %save_field_name
         ':' field_value;
 

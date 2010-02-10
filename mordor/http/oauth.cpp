@@ -40,7 +40,7 @@ OAuth::getRequestToken()
 {
     MORDOR_ASSERT(m_requestTokenMethod == GET || m_requestTokenMethod == POST);
     URI::QueryString qs;
- 
+
     qs.insert(std::make_pair("oauth_consumer_key", m_consumerKey));
     qs.insert(std::make_pair("oauth_version", "1.0"));
     if (!m_callbackUri.isDefined())
@@ -204,7 +204,7 @@ OAuth::nonceAndTimestamp(URI::QueryString &params)
             "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         std::ostringstream os;
         boost::posix_time::ptime now =
-            boost::posix_time::second_clock::universal_time();    
+            boost::posix_time::second_clock::universal_time();
         boost::posix_time::time_duration duration = now - start;
         os << duration.total_seconds();
 
@@ -247,14 +247,14 @@ OAuth::sign(const URI &uri, Method method, const std::string &signatureMethod,
         for (it = queryParams.begin(); it != queryParams.end(); ++it)
             combined[it->first].insert(it->second);
     }
-    
+
     os << '&';
     std::string signatureBaseString = os.str();
     os.str("");
     bool first = true;
     for (combinedIt = combined.begin();
         combinedIt != combined.end();
-        ++combinedIt) {        
+        ++combinedIt) {
         for (std::multiset<std::string>::iterator it2 =
             combinedIt->second.begin();
             it2 != combinedIt->second.end();

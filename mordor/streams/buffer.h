@@ -33,7 +33,7 @@ public:
         size_t length() const { return m_length; }
     private:
         void start(void *p) { m_start = p; }
-        void length(size_t l) { m_length = l; }        
+        void length(size_t l) { m_length = l; }
         void *m_start;
         size_t m_length;
     private:

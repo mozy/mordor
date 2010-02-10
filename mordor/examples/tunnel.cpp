@@ -64,7 +64,7 @@ static void outgoingConnection(Stream::ptr client, IOManager &ioManager,
             serverSSL->connect();
             server = serverSSL;
         }
-        connectThem(client, server);        
+        connectThem(client, server);
     } catch (std::exception &ex) {
         std::cerr << typeid(ex).name() << ": " << ex.what( ) << std::endl;
     }
@@ -103,7 +103,7 @@ static void outgoingProxyConnection(Stream::ptr client, IOManager &ioManager,
     try {
         std::vector<Address::ptr> addresses =
         Address::lookup(proxy, AF_UNSPEC, SOCK_STREAM);
-        
+
         HTTP::ClientAuthBroker authBroker(boost::bind(&establishConn,
             boost::ref(ioManager), proxy), "", "", username,
             password);
@@ -152,7 +152,7 @@ int main(int argc, const char *argv[])
         bool ssl = false;
         from = argv[1];
         to = argv[2];
-        
+
         if (argc > 3 && strcmp(argv[3], "-ssl") == 0) {
             ssl = true;
             --argc;
@@ -170,7 +170,7 @@ int main(int argc, const char *argv[])
             outgoing = boost::bind(&outgoingConnection, _1,
                 boost::ref(ioManager), to, ssl);
         }
-        
+
         if (to == "-") {
             Stream::ptr stdIn(new StdinStream());
             Stream::ptr stdOut(new StdoutStream());

@@ -280,7 +280,7 @@ static void fiberProcYieldBack(int &sequence, Fiber::ptr caller,
     MORDOR_TEST_ASSERT(Fiber::getThis() == self);
     MORDOR_TEST_ASSERT(caller != self);
     MORDOR_TEST_ASSERT(caller->state() == Fiber::EXEC);
-    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);    
+    MORDOR_TEST_ASSERT(self->state() == Fiber::EXEC);
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
 }
 

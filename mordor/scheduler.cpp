@@ -156,7 +156,7 @@ Scheduler::stop()
             boost::mutex::scoped_lock lock(m_mutex);
             moreWork = !m_fibers.empty();
         }
-        while (moreWork) {                
+        while (moreWork) {
             // Give this thread's run fiber a chance to kill itself off
             MORDOR_LOG_DEBUG(g_log) << this << " yielding to this thread to stop";
             yieldTo(true);

@@ -145,7 +145,7 @@ MORDOR_UNITTEST(Scheduler, switcherExceptions)
 
     MORDOR_TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);
     MORDOR_TEST_ASSERT_NOT_EQUAL(Scheduler::getThis(), &poolB);
-    
+
     MORDOR_TEST_ASSERT_EXCEPTION(runInContext(poolA, poolB), OperationAbortedException);
 
     MORDOR_TEST_ASSERT_EQUAL(Scheduler::getThis(), &poolA);

@@ -99,7 +99,7 @@ private:
     boost::function<void (typename Coroutine<Result, Arg>::ptr, Arg)> m_dg2;
     Result m_result;
     Arg m_arg;
-    Fiber::ptr m_fiber;    
+    Fiber::ptr m_fiber;
 };
 
 
@@ -129,7 +129,7 @@ public:
     void reset(boost::function<Result (typename Coroutine<Result>::ptr)> dg)
     {
         m_fiber->reset();
-        m_dg = dg;        
+        m_dg = dg;
     }
 
     Result call()
@@ -158,7 +158,7 @@ private:
 private:
     boost::function<Result (typename Coroutine<Result>::ptr)> m_dg;
     Result m_result;
-    Fiber::ptr m_fiber;    
+    Fiber::ptr m_fiber;
 };
 
 }

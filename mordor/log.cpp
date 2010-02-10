@@ -258,7 +258,7 @@ Logger::ptr Log::lookup(const std::string &name)
             log->m_children.insert(child);
             log = child;
         }else{
-            log = *it;            
+            log = *it;
         }
     }
     return log;

@@ -16,7 +16,7 @@ InvalidChunkException::InvalidChunkException(const std::string &line,
                                            Type type)
 : m_line(line),
   m_type(type)
-{}  
+{}
 
 ChunkedStream::ChunkedStream(Stream::ptr parent, bool own)
 : MutatingFilterStream(parent, own),

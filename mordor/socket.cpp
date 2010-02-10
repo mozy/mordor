@@ -65,7 +65,7 @@ static struct Initializer {
                  &bytes,
                  NULL,
                  NULL);
-        
+
         GUID connectExGuid = WSAID_CONNECTEX;
         WSAIoctl(sock,
                  SIO_GET_EXTENSION_FUNCTION_POINTER,
@@ -76,7 +76,7 @@ static struct Initializer {
                  &bytes,
                  NULL,
                  NULL);
-        closesocket(sock);        
+        closesocket(sock);
     }
     ~Initializer()
     {
@@ -100,7 +100,7 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
   m_cancelledReceive(0)
 #ifdef WINDOWS
   , m_hEvent(NULL),
-  m_scheduler(NULL)  
+  m_scheduler(NULL)
 #endif
 {
 #ifdef WINDOWS
@@ -148,7 +148,7 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
   m_cancelledReceive(0)
 #ifdef WINDOWS
   , m_hEvent(NULL),
-  m_scheduler(NULL)  
+  m_scheduler(NULL)
 #endif
 {
     m_sock = socket(family, type, protocol);
@@ -481,7 +481,7 @@ Socket::accept(Socket &target)
                 m_receiveEvent.overlapped.Internal = STATUS_SUCCESS;
             } else {
                 if (m_cancelledReceive) {
-                    MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): (" 
+                    MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
                         << m_cancelledReceive << ")";
                     m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
                     Scheduler::getThis()->yieldTo();
@@ -544,7 +544,7 @@ Socket::accept(Socket &target)
                 m_fiber = Fiber::getThis();
                 m_scheduler = Scheduler::getThis();
                 if (m_cancelledReceive) {
-                    MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): (" 
+                    MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
                         << m_cancelledReceive << ")";
                     if (!m_ioManager->unregisterEvent(m_hEvent))
                         Scheduler::getThis()->yieldTo();
@@ -1488,7 +1488,7 @@ Socket::cancelAccept()
     }
 #else
     cancelIo(IOManager::READ, m_cancelledReceive, ECANCELED);
-#endif 
+#endif
 }
 
 void
@@ -1507,7 +1507,7 @@ Socket::cancelConnect()
     }
 #else
     cancelIo(IOManager::WRITE, m_cancelledSend, ECANCELED);
-#endif 
+#endif
 }
 
 void
@@ -1521,7 +1521,7 @@ Socket::cancelSend()
     m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
 #else
     cancelIo(IOManager::WRITE, m_cancelledSend, ECANCELED);
-#endif 
+#endif
 }
 
 void
@@ -1535,7 +1535,7 @@ Socket::cancelReceive()
     m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
 #else
     cancelIo(IOManager::READ, m_cancelledReceive, ECANCELED);
-#endif 
+#endif
 }
 
 #ifndef WINDOWS
@@ -1827,7 +1827,7 @@ IPv6Address::insert(std::ostream &os) const
     }
     if (!usedZeros && addr[7] == 0)
         os << "::";
-    
+
     os << "]:" << std::dec << (int)htons(sin.sin6_port);
     os.setf(flags, std::ios_base::basefield);
     return os;

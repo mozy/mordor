@@ -117,7 +117,7 @@ MORDOR_UNITTEST(ChunkedStream, invalidChunkData)
     MORDOR_TEST_ASSERT_EQUAL(chunkedStream->read(output, 15), 3u);
     MORDOR_TEST_ASSERT(output == "hel");
     try {
-        chunkedStream->read(output, 15);        
+        chunkedStream->read(output, 15);
         MORDOR_NOTREACHED();
     } catch (const HTTP::InvalidChunkException &ex) {
         MORDOR_TEST_ASSERT_EQUAL(ex.type(), HTTP::InvalidChunkException::FOOTER);

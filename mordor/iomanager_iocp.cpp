@@ -127,7 +127,7 @@ IOManagerIOCP::WaitBlock::run()
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
         }
         count = m_inUseCount + 1;
-        memcpy(handles, m_handles, (count) * sizeof(HANDLE));        
+        memcpy(handles, m_handles, (count) * sizeof(HANDLE));
     }
 
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " run " << count;

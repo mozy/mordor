@@ -15,7 +15,7 @@ public:
     ZlibException(int rc) :
       m_rc(rc)
     {}
-    
+
     int rc() const { return m_rc; }
 
 private:

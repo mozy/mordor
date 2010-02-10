@@ -190,7 +190,7 @@ PipeStream::write(const Buffer &b, size_t len)
                     m_pendingReaderScheduler->schedule(m_pendingReader);
                     m_pendingReader.reset();
                     m_pendingReaderScheduler = NULL;
-                }            
+                }
                 return todo;
             }
             // Wait for the other stream to schedule us

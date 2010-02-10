@@ -6,7 +6,7 @@
 
 using namespace Mordor;
 
-%%{    
+%%{
     machine xml_parser;
 
     action mark { mark = fpc;}
@@ -17,7 +17,7 @@ using namespace Mordor;
     postpop {
         postpop();
     }
-    
+
     Char = '\t' | '\n' | '\r' | [' '-255];
     S = (' ' | '\t' | '\r' | '\n')+;
 
@@ -27,21 +27,21 @@ using namespace Mordor;
     Names = Name (' ' Name)*;
     Nmtoken = NameChar+;
     Nmtokens = Nmtoken (' ' Nmtoken)*;
-    
+
     CharData = [^<&]* - ([^<&]* ']]>' [^<&]*);
-    
+
     CharRef = '&#' [0-9]+ ';' | '&#x' [0-9a-fA-F]+ ';';
     EntityRef = '&' Name ';';
     Reference = EntityRef | CharRef;
     PEReference = '%' Name ';';
-    
+
     action attrib_value
     {
         if (m_attribValue)
             m_attribValue(std::string(mark, fpc-mark));
         mark = NULL;
     }
-    
+
     EntityValue = '"' ([^%&"] | PEReference | Reference)* '"' |
                   "'" ([^%&'] | PEReference | Reference)* '"';
     AttValue = '"' ([^<&"] | Reference)* >mark %attrib_value '"' |
@@ -49,9 +49,9 @@ using namespace Mordor;
     SystemLiteral = ('"' [^"]* '"') | ("'" [^']* "'");
     PubidChar = ' ' | '\r' | '\n' | [a-zA-Z0-9] | ['()+,./:=?;!*#@$_%] | '-';
     PubidLiteral = '"' PubidChar* '"' | "'" (PubidChar* -- "'") "'";
-    
+
     Comment = '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->';
-    
+
     PITarget = Name - ([Xx][Mm][Ll]);
     PI = '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>';
 
@@ -64,7 +64,7 @@ using namespace Mordor;
     EncodingDecl = S 'encoding' Eq ('"' EncName '"' | "'" EncName "'");
     SDDecl = S 'standalone' Eq (("'" ('yes' | 'no') "'") | ('"' ('yes' | 'no') '"'));
     XMLDecl = '<?xml' VersionInfo EncodingDecl? SDDecl? S? '?>';
-    
+
     ExternalID = 'SYSTEM' S SystemLiteral | 'PUBLIC' S PubidLiteral S SystemLiteral;
     #markupdecl = elementdecl | AttlistDecl | EntityDecl | NotationDecl | PI | Comment;
     #intSubset = (markupdecl | DeclSep)*;
@@ -76,7 +76,7 @@ using namespace Mordor;
     CData = (Char* - (Char* ']]>' Char*));
     CDEnd = ']]>';
     CDSect = CDStart CData CDEnd;
-    
+
     action start_tag {
         if (m_startTag)
             m_startTag(std::string(mark, fpc-mark));
@@ -87,7 +87,7 @@ using namespace Mordor;
             m_endTag(std::string(mark, fpc-mark));
         mark = NULL;
     }
-    
+
     action attrib_name
     {
         if (m_attribName)

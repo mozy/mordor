@@ -17,19 +17,19 @@ using namespace Mordor::Test;
 static void
 oauthExampleServer(const URI &uri, ServerRequest::ptr request)
 {
-    MORDOR_TEST_ASSERT_EQUAL(request->request().requestLine.method, POST);        
+    MORDOR_TEST_ASSERT_EQUAL(request->request().requestLine.method, POST);
     MORDOR_TEST_ASSERT_EQUAL(request->request().entity.contentType.type, "application");
     MORDOR_TEST_ASSERT_EQUAL(request->request().entity.contentType.subtype, "x-www-form-urlencoded");
     MemoryStream requestBody;
     transferStream(request->requestStream(), requestBody);
     std::string queryString;
     queryString.resize(requestBody.buffer().readAvailable());
-    requestBody.buffer().copyOut(&queryString[0], requestBody.buffer().readAvailable());        
+    requestBody.buffer().copyOut(&queryString[0], requestBody.buffer().readAvailable());
 
     URI::QueryString qs(queryString);
     if (uri.path == "/request_token") {
         MORDOR_TEST_ASSERT_EQUAL(uri, "https://photos.example.net/request_token");
-        
+
         MORDOR_TEST_ASSERT_EQUAL(qs.size(), 7u);
         URI::QueryString::iterator it = qs.find("oauth_consumer_key");
         MORDOR_TEST_ASSERT(it != qs.end());

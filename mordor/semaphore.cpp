@@ -95,7 +95,7 @@ Semaphore::wait()
             return;
         if (errno != EINTR) {
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("semop");
-        }       
+        }
     }
 #else
     while (true) {

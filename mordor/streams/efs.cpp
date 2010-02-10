@@ -19,7 +19,7 @@ EFSStream::EFSStream(void *context, bool read, bool ownContext)
           m_pos(0),
           m_seekTarget(0)
 {
-    init();    
+    init();
 }
 
 EFSStream::EFSStream(const char *filename, bool read)

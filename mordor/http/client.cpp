@@ -88,7 +88,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
             MORDOR_ASSERT(request->m_fiber);
             MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling request";
             request->m_scheduler->schedule(request->m_fiber);
-        }        
+        }
     }
     if (flush) {
         flush = false;
@@ -220,7 +220,7 @@ ClientConnection::scheduleAllWaitingResponses()
             MORDOR_ASSERT(request->m_scheduler);
             MORDOR_ASSERT(request->m_fiber);
             MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling response";
-            request->m_scheduler->schedule(request->m_fiber);            
+            request->m_scheduler->schedule(request->m_fiber);
             if (request->m_requestState == ClientRequest::COMPLETE)
                 it = m_pendingRequests.erase(it);
             m_waitingResponses.erase(waiting);
@@ -737,7 +737,7 @@ ClientRequest::doRequest()
         MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
         m_conn->m_priorRequestFailed = true;
         m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
-        m_conn->scheduleAllWaitingRequests();        
+        m_conn->scheduleAllWaitingRequests();
         throw;
     }
 }
@@ -774,7 +774,7 @@ ClientRequest::ensureResponse()
             MORDOR_ASSERT(m_scheduler);
             MORDOR_ASSERT(m_fiber);
 #ifdef DEBUG
-            bool inserted = 
+            bool inserted =
 #endif
             m_conn->m_waitingResponses.insert(this).second;
             MORDOR_ASSERT(inserted);
@@ -982,7 +982,7 @@ ClientRequest::requestDone()
         os << m_requestTrailer << "\r\n";
         std::string str = os.str();
         MORDOR_LOG_DEBUG(g_log) << m_conn << " " << this << " " << str;
-        m_conn->m_stream->write(str.c_str(), str.size());        
+        m_conn->m_stream->write(str.c_str(), str.size());
     }
     m_conn->scheduleNextRequest(this);
 }

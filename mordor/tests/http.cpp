@@ -1548,7 +1548,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedRequests)
     requestHeaders.entity.contentLength = 7;
 
     ClientRequest::ptr request1 = conn->request(requestHeaders);
-    
+
     // Start the second request, which will yield to us when it can't use the conn
     Fiber::ptr request2Fiber(new Fiber(boost::bind(&pipelinedRequests,
         conn, boost::ref(sequence))));
@@ -1566,7 +1566,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedRequests)
 
     pool.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
-    
+
     // Both requests have been sent now (flush()es after last request)
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "PUT / HTTP/1.1\r\n"
@@ -1577,7 +1577,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedRequests)
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
         "\r\n");
-    
+
     // Nothing has been read yet
     MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), 0);
 

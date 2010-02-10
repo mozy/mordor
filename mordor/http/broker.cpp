@@ -56,7 +56,7 @@ SocketStreamBroker::getStream(const URI &uri)
     std::vector<Address::ptr> addresses;
     {
         SchedulerSwitcher switcher(m_scheduler);
-        addresses = Address::lookup(os.str(), AF_UNSPEC, SOCK_STREAM);        
+        addresses = Address::lookup(os.str(), AF_UNSPEC, SOCK_STREAM);
     }
     Socket::ptr socket;
     for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
@@ -356,7 +356,7 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         } catch (PriorRequestFailedException &) {
             if (!connect)
                 currentUri = originalUri;
-            if (!m_retry)                
+            if (!m_retry)
                 throw;
             continue;
         } catch (UnexpectedEofException &) {

@@ -138,7 +138,7 @@ public:
     /// (not necessarily the Fiber that was yielded to)
     /// @pre state() == INIT || state() == HOLD
     Fiber::ptr yieldTo(bool yieldToCallerOnTerminate = true);
-    
+
     /// Yield to the calling Fiber
 
     /// yield() returns when the Fiber has been called or yielded to again

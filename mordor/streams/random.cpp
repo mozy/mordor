@@ -11,7 +11,7 @@
 
 namespace Mordor {
 
-RandomStream::RandomStream() 
+RandomStream::RandomStream()
 {
 #ifdef WINDOWS
     BOOL ret = ::CryptAcquireContext(&m_hCP, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT);
@@ -24,7 +24,7 @@ RandomStream::RandomStream()
         } else {
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CryptAcquireContext");
         }
-    }    
+    }
 #endif
 }
 
@@ -34,7 +34,7 @@ RandomStream::~RandomStream()
     ::CryptReleaseContext(m_hCP, 0);
 #endif
 }
-    
+
 size_t RandomStream::read(Buffer &buffer, size_t length)
 {
     Buffer::SegmentData data = buffer.writeBuf(length);

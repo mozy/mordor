@@ -23,7 +23,7 @@ public:
 
     void wait();
 
-    void notify();   
+    void notify();
 
 private:
 #ifdef WINDOWS

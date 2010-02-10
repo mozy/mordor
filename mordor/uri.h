@@ -172,7 +172,7 @@ struct URI
 
 private:
     std::string m_scheme, m_query, m_fragment;
-    bool m_schemeDefined, m_queryDefined, m_fragmentDefined;    
+    bool m_schemeDefined, m_queryDefined, m_fragmentDefined;
 };
 
 std::ostream& operator<<(std::ostream& os, const Mordor::URI::Authority& authority);

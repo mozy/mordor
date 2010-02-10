@@ -313,7 +313,7 @@ ServerRequest::responseStream()
         return m_responseStream;
     MORDOR_ASSERT(!m_responseMultipart);
     MORDOR_ASSERT(m_response.entity.contentType.type != "multipart");
-    commit();    
+    commit();
     return m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
         boost::bind(&ServerRequest::responseDone, this),
@@ -652,7 +652,7 @@ ServerRequest::commit()
             std::list<ServerRequest *>::iterator it;
             it = std::find(m_conn->m_pendingRequests.begin(), m_conn->m_pendingRequests.end(),
                 this);
-            MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());             
+            MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
             m_conn->m_pendingRequests.erase(it);
             if (m_conn->m_priorRequestFailed)
                 MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
@@ -663,7 +663,7 @@ ServerRequest::commit()
         ServerRequest *request = m_conn->m_pendingRequests.front();
         if (request != this) {
 #ifdef DEBUG
-            bool inserted = 
+            bool inserted =
 #endif
             m_conn->m_waitingResponses.insert(this).second;
             MORDOR_ASSERT(inserted);
@@ -723,7 +723,7 @@ ServerRequest::commit()
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         m_conn->m_priorRequestFailed = true;
-        m_conn->scheduleAllWaitingResponses();        
+        m_conn->scheduleAllWaitingResponses();
         throw;
     }
 }
@@ -767,7 +767,7 @@ ServerRequest::responseDone()
         os << m_responseTrailer << "\r\n";
         std::string str = os.str();
         MORDOR_LOG_DEBUG(g_log) << m_conn << " " << this << " " << str;
-        m_conn->m_stream->write(str.c_str(), str.size());         
+        m_conn->m_stream->write(str.c_str(), str.size());
     }
     MORDOR_LOG_INFO(g_log) << m_conn << " " << this << " " << m_request.requestLine << " " << m_response.status.status;
     m_conn->scheduleNextResponse(this);
@@ -856,7 +856,7 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
         else
             previousLast = it->second;
     }
-    if (!fullEntity) {        
+    if (!fullEntity) {
         if (range.size() > 1) {
             MediaType contentType = request->response().entity.contentType;
             request->response().entity.contentLength = ~0;
@@ -906,10 +906,10 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                 cr.last = size - 1;
             } else {
                 cr.first = range.front().first;
-                cr.last = std::min(range.front().second, size - 1);                
+                cr.last = std::min(range.front().second, size - 1);
             }
             request->response().entity.contentLength = cr.last - cr.first + 1;
-            
+
             if (response->supportsSeek()) {
                 try {
                    response->seek(cr.first, Stream::BEGIN);
@@ -930,7 +930,7 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                 }
             }
         }
-    } 
+    }
     if (fullEntity) {
         request->response().entity.contentLength = size;
         if (request->request().requestLine.ver >= Version(1, 1)) {

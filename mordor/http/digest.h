@@ -13,7 +13,7 @@ struct InvalidDigestQopException : virtual InvalidDigestParamsException
 public:
     InvalidDigestQopException(const std::string &message) : m_message(message) {}
     ~InvalidDigestQopException() throw() {}
-    
+
     const char *what() const throw() { return m_message.c_str(); }
 private:
     std::string m_message;

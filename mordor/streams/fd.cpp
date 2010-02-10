@@ -98,7 +98,7 @@ FDStream::write(const Buffer &b, size_t len)
     }
     if (rc < 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("writev");
-    return rc;    
+    return rc;
 }
 
 long long

@@ -112,7 +112,7 @@ runTest(TestListener *listener, const std::string &suite,
 {
     if (listener)
         listener->testStarted(suite, testName);
-    
+
     bool protect = !IsDebuggerPresent();
     protect = protect || g_protect->val();
     if (protect) {

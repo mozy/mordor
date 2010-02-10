@@ -160,29 +160,29 @@ MORDOR_UNITTEST(URI, transform)
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../..")), URI("http://a/"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../../")), URI("http://a/"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../../g")), URI("http://a/g"));
-    
+
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../../../g")), URI("http://a/g"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("../../../../g")), URI("http://a/g"));
-    
+
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("/./g")), URI("http://a/g"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("/../g")), URI("http://a/g"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g.")), URI("http://a/b/c/g."));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI(".g")), URI("http://a/b/c/.g"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g..")), URI("http://a/b/c/g.."));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("..g")), URI("http://a/b/c/..g"));
-    
+
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("./../g")), URI("http://a/b/g"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("./g/.")), URI("http://a/b/c/g/"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g/./h")), URI("http://a/b/c/g/h"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g/../h")), URI("http://a/b/c/h"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x=1/./y")), URI("http://a/b/c/g;x=1/y"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g;x=1/../y")), URI("http://a/b/c/y"));
-    
+
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y/./x")), URI("http://a/b/c/g?y/./x"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g?y/../x")), URI("http://a/b/c/g?y/../x"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g#s/./x")), URI("http://a/b/c/g#s/./x"));
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g#s/../x")), URI("http://a/b/c/g#s/../x"));
-    
+
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("http:g")), URI("http:g"));
 }
 

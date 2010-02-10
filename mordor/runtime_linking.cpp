@@ -224,7 +224,7 @@ MORDOR_RUNTIME_LINK_DEFINITION(GetAddrInfoW, INT, WSAAPI,
                     }
                 }
                 nexta = nexta->ai_next;
-                nextw = nextw->ai_next;            
+                nextw = nextw->ai_next;
             }
         }
     }

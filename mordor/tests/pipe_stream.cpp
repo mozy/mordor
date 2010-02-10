@@ -115,7 +115,7 @@ MORDOR_UNITTEST(PipeStream, writerGone)
 static void blockingRead(Stream::ptr stream, int &sequence)
 {
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
-    MORDOR_TEST_ASSERT_EQUAL(stream->write("hello"), 5u);    
+    MORDOR_TEST_ASSERT_EQUAL(stream->write("hello"), 5u);
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
 }
 
@@ -316,7 +316,7 @@ MORDOR_UNITTEST(PipeStream, threadStress)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
     WorkerPool pool(2);
-    
+
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&threadStress, pipe.first))));
     threadStress(pipe.second);
 }

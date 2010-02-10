@@ -73,7 +73,7 @@ DigestAuth::authorize(const Response &challenge, Request &nextRequest,
         A1 = md5( username + ':' + realm + ':' + password ) + ':' + nonce + ':' + cnonce;
     else
         MORDOR_THROW_EXCEPTION(InvalidDigestAlgorithmException(algorithm));
-    
+
     // compute A2 - our qop is always auth or unspecified
     os.str("");
     os << nextRequest.requestLine.method << ':' << nextRequest.requestLine.uri;
@@ -96,7 +96,7 @@ DigestAuth::authorize(const Response &challenge, Request &nextRequest,
         authorization.parameters["cnonce"] = cnonce;
     } else {
         response = md5( md5(A1) + ':' + nonce + ':' + md5(A2) );
-        
+
     }
     authorization.parameters["response"] = response;
     if (!opaque.empty())

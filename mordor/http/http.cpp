@@ -453,7 +453,7 @@ std::ostream& operator<<(std::ostream& os, const ProductAndCommentList &l)
         if (product)
             os << *product;
         else
-            os << quote(boost::get<std::string>(*it), true, true);        
+            os << quote(boost::get<std::string>(*it), true, true);
     }
     return os;
 }
@@ -535,7 +535,7 @@ std::ostream& operator<<(std::ostream& os, const ContentRange &cr)
     if (cr.first == ~0ull || cr.last == ~0ull)
         os << "*/";
     else
-        os << cr.first << "-" << cr.last << "/";        
+        os << cr.first << "-" << cr.last << "/";
     if (cr.instance == ~0ull)
         os << "*";
     else

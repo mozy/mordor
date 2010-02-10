@@ -76,7 +76,7 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "unlink");
         }
     }
-#endif       
+#endif
     NativeStream::init(handle, ioManager, scheduler);
     m_supportsRead = accessFlags == READ || accessFlags == READWRITE;
     m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||

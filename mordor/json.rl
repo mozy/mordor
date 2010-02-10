@@ -70,7 +70,7 @@ std::string unquote(const std::string &string)
                     break;
                 default:
                     MORDOR_NOTREACHED();
-            }           
+            }
         } else if (differed) {
             result.append(1, *c);
         }
@@ -79,7 +79,7 @@ std::string unquote(const std::string &string)
     return result;
 }
 
-%%{    
+%%{
     machine json_parser;
 
     action mark { mark = fpc;}
@@ -90,13 +90,13 @@ std::string unquote(const std::string &string)
     postpop {
         postpop();
     }
-    
+
     ws = ' ' | '\t' | '\r' | '\n';
-    
+
     unescaped = (any - ('"' | '\\') - cntrl);
     char = unescaped | ('\\' ('"' | '\\' | 'b' | 'f' | 'n' | 'r' | 't' | ('u' [0-9A-Za-z]{4})));
     string = '"' char* '"';
-    
+
     action begin_number
     {
         m_nonIntegral = false;
@@ -113,12 +113,12 @@ std::string unquote(const std::string &string)
             *m_stack.top() = strtoll(mark, NULL, 10);
         }
     }
-    
+
     int = (digit | ([1-9] digit*));
     frac = '.' >set_non_integral digit+;
     exp = 'e'i >set_non_integral ('+' | '-')? digit+;
     number = ('-'? int frac? exp?) >mark >begin_number %parse_number;
-    
+
     action parse_string
     {
         *m_stack.top() = unquote(std::string(mark, fpc - mark));
@@ -148,14 +148,14 @@ std::string unquote(const std::string &string)
     value = string >mark %parse_string | number | '{' @call_parse_object |
         '[' @call_parse_array | 'true' @parse_true | 'false' @parse_false |
         'null' @parse_null;
-    
+
     object = '{' ws* string ws* ':' ws* value ws* (',' ws* string ws* ':' ws* value ws*)* '}';
     array = '[' ws* value ws* (',' ws* value ws*)* ']';
-    
+
     action new_key
     {
         m_stack.push(&boost::get<Object>(*m_stack.top()).insert(std::make_pair(unquote(std::string(mark, fpc - mark)), Value()))->second);
-    }    
+    }
     action new_element
     {
         boost::get<Array>(*m_stack.top()).push_back(Value());
@@ -168,7 +168,7 @@ std::string unquote(const std::string &string)
     action ret {
         fret;
     }
-    
+
     parse_object := parse_object_lbl: ws* string >mark %new_key ws* ':' ws* value %pop_stack ws* (',' ws* string >mark %new_key ws* ':' ws* value %pop_stack ws*)* '}' @ret;
     parse_array := parse_array_lbl: ws* value >new_element %pop_stack ws* (',' ws* value >new_element %pop_stack ws*)* ']' @ret;
 
@@ -336,7 +336,7 @@ public:
             os << '\n' << prefix << "]";
         }
     }
-    
+
     std::ostream &os;
     int depth;
 };
@@ -346,7 +346,7 @@ std::ostream &operator <<(std::ostream &os, const Value &json)
 {
     JSONVisitor visitor(os);
     boost::apply_visitor(visitor, json);
-    return os;    
+    return os;
 }
 
 }}

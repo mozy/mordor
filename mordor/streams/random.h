@@ -25,8 +25,8 @@ public:
 
 private:
 #ifdef WINDOWS
-    HCRYPTPROV m_hCP;        
-#endif 
+    HCRYPTPROV m_hCP;
+#endif
 };
 
 }

@@ -80,7 +80,7 @@ public:
 
     Timer::ptr registerTimer(unsigned long long us,
         boost::function<void ()> dg, bool recurring = false);
-    
+
 protected:
     bool stopping(unsigned long long &nextTimeout);
     void idle();
