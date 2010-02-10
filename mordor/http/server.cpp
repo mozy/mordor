@@ -36,6 +36,20 @@ ServerConnection::processRequests()
     scheduleSingleRequest();
 }
 
+std::vector<const ServerRequest::ptr>
+ServerConnection::requests()
+{
+    std::vector<const ServerRequest::ptr> result;
+    boost::mutex::scoped_lock lock(m_mutex);
+    invariant();
+    for (std::list<ServerRequest *>::const_iterator it(m_pendingRequests.begin());
+        it != m_pendingRequests.end();
+        ++it) {
+        result.push_back((*it)->shared_from_this());
+    }
+    return result;
+}
+
 void
 ServerConnection::scheduleSingleRequest()
 {

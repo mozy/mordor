@@ -62,6 +62,7 @@ class ServerConnection : public Connection, public boost::enable_shared_from_thi
 {
 public:
     typedef boost::shared_ptr<ServerConnection> ptr;
+    typedef boost::weak_ptr<ServerConnection> weak_ptr;
 
 private:
     friend class ServerRequest;
@@ -69,6 +70,8 @@ public:
     ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg, size_t maxPipelineDepth = 5);
 
     void processRequests();
+
+    std::vector<const ServerRequest::ptr> requests();
 
 private:
     void scheduleSingleRequest();
