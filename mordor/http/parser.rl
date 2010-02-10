@@ -218,7 +218,7 @@ unquote(const std::string &str)
         m_product = Product();
     }
     action save_comment {
-		MORDOR_ASSERT(m_productAndCommentList);
+        MORDOR_ASSERT(m_productAndCommentList);
         m_productAndCommentList->push_back(unquote(mark, fpc - mark));
         mark = NULL;
     }
@@ -496,12 +496,12 @@ unquote(const std::string &str)
             mark = NULL;
         } else {
             MORDOR_ASSERT(m_acceptListWithParams);
-		    AcceptValueWithParameters avp;
-		    avp.value = std::string(mark, fpc - mark);
-		    m_acceptListWithParams->push_back(avp);
-		    m_parameters = &m_acceptListWithParams->back().parameters;
-		    mark = NULL;
-	    }
+            AcceptValueWithParameters avp;
+            avp.value = std::string(mark, fpc - mark);
+            m_acceptListWithParams->push_back(avp);
+            m_parameters = &m_acceptListWithParams->back().parameters;
+            mark = NULL;
+        }
     }
     
     action save_qvalue {

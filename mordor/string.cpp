@@ -127,7 +127,7 @@ md5(const std::string &data)
 std::string
 sha1(const std::string &data)
 {
-	return hexstringFromData(sha1sum(data).c_str(), SHA_DIGEST_LENGTH);
+    return hexstringFromData(sha1sum(data).c_str(), SHA_DIGEST_LENGTH);
 }
 
 std::string
@@ -290,38 +290,38 @@ std::vector<std::string>
 split(const std::string &str, char delim, size_t max)
 {
     MORDOR_ASSERT(max > 1);
-	std::vector<std::string> result;
+    std::vector<std::string> result;
 
-	size_t last = 0;
-	size_t pos = str.find(delim);
-	while (pos != std::string::npos) {
-		result.push_back(str.substr(last, pos - last));
-		last = pos + 1;
+    size_t last = 0;
+    size_t pos = str.find(delim);
+    while (pos != std::string::npos) {
+        result.push_back(str.substr(last, pos - last));
+        last = pos + 1;
         if (--max == 1)
             break;
-		pos = str.find(delim, last);
-	}
+        pos = str.find(delim, last);
+    }
     result.push_back(str.substr(last));
-	return result;
+    return result;
 }
 
 std::vector<std::string>
 split(const std::string &str, const char *delims, size_t max)
 {
     MORDOR_ASSERT(max > 1);
-	std::vector<std::string> result;
+    std::vector<std::string> result;
 
-	size_t last = 0;
-	size_t pos = str.find_first_of(delims);
-	while (pos != std::string::npos) {
-		result.push_back(str.substr(last, pos - last));
-		last = pos + 1;
+    size_t last = 0;
+    size_t pos = str.find_first_of(delims);
+    while (pos != std::string::npos) {
+        result.push_back(str.substr(last, pos - last));
+        last = pos + 1;
         if (--max == 1)
             break;
-		pos = str.find_first_of(delims, last);
-	}
+        pos = str.find_first_of(delims, last);
+    }
     result.push_back(str.substr(last));
-	return result;
+    return result;
 }
 
 #ifdef WINDOWS

@@ -44,10 +44,10 @@ static std::string escape(const std::string& str, const std::string& allowedChar
             if (*c == ' ' && spaceAsPlus) {
                 result.append(1, '+');
             } else {
-				result.append(1, '%');
-				result.append(1, hexdigits[(unsigned char)*c >> 4]);
-				result.append(1, hexdigits[*c & 0xf]);
-	        }
+                result.append(1, '%');
+                result.append(1, hexdigits[(unsigned char)*c >> 4]);
+                result.append(1, hexdigits[*c & 0xf]);
+            }
         } else {
             if (differed) {
                 result.append(1, *c);
@@ -117,8 +117,8 @@ std::string
 URI::encode(const std::string &str, CharacterClass charClass)
 {
     switch (charClass) {
-		case UNRESERVED:
-		    return escape(str, unreserved, false);
+        case UNRESERVED:
+            return escape(str, unreserved, false);
         case QUERYSTRING:
             return escape(str, Mordor::queryString, true);
         default:
@@ -130,8 +130,8 @@ std::string
 URI::decode(const std::string &str, CharacterClass charClass)
 {
     switch (charClass) {
-		case UNRESERVED:
-		    return unescape(str, false);
+        case UNRESERVED:
+            return unescape(str, false);
         case QUERYSTRING:
             return unescape(str, true);
         default:
@@ -298,8 +298,8 @@ public:
         return false;
     }
 
-	bool final() const
-	{    
+    bool final() const
+    {    
         return cs >= uri_parser_proper_first_final;
     }
 

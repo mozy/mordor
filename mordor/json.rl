@@ -297,22 +297,22 @@ public:
         if (object.empty()) {
             os << "{ }";
         } else {
-			++depth;
-			std::string prefix(depth * 4, ' ');
-			os << "{\n";
-			for (Object::const_iterator it(object.begin());
-				it != object.end();
-				++it) {
-				if (it != object.begin())
-					os << ",\n";
-				os << prefix << quote(it->first) << " : ";
-				boost::apply_visitor(*this, it->second);
-			}
-			--depth;
-			prefix.clear();
-			prefix.append(depth * 4, ' ');
-			os << '\n' << prefix << "}";
-	    }
+            ++depth;
+            std::string prefix(depth * 4, ' ');
+            os << "{\n";
+            for (Object::const_iterator it(object.begin());
+                it != object.end();
+                ++it) {
+                if (it != object.begin())
+                    os << ",\n";
+                os << prefix << quote(it->first) << " : ";
+                boost::apply_visitor(*this, it->second);
+            }
+            --depth;
+            prefix.clear();
+            prefix.append(depth * 4, ' ');
+            os << '\n' << prefix << "}";
+        }
     }
     void operator()(const Array &array)
     {
@@ -321,20 +321,20 @@ public:
         } else {
             ++depth;
             std::string prefix(depth * 4, ' ');
-			os << "[\n";
-			for (Array::const_iterator it(array.begin());
-				it != array.end();
-				++it) {
-				if (it != array.begin())
-					os << ",\n";
-				os << prefix;
-				boost::apply_visitor(*this, *it);
-			}
-			--depth;
-			prefix.clear();
-			prefix.append(depth * 4, ' ');
-			os << '\n' << prefix << "]";
-	    }
+            os << "[\n";
+            for (Array::const_iterator it(array.begin());
+                it != array.end();
+                ++it) {
+                if (it != array.begin())
+                    os << ",\n";
+                os << prefix;
+                boost::apply_visitor(*this, *it);
+            }
+            --depth;
+            prefix.clear();
+            prefix.append(depth * 4, ' ');
+            os << '\n' << prefix << "]";
+        }
     }
     
     std::ostream &os;

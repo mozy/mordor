@@ -15,7 +15,7 @@ RandomStream::RandomStream()
 {
 #ifdef WINDOWS
     BOOL ret = ::CryptAcquireContext(&m_hCP, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT);
-	if(!ret || !m_hCP) {
+    if(!ret || !m_hCP) {
         if(::GetLastError() == NTE_BAD_KEYSET) {
             ret = ::CryptAcquireContext(&m_hCP, NULL, NULL, PROV_RSA_FULL, CRYPT_NEWKEYSET | CRYPT_VERIFYCONTEXT);
             if(!ret || !m_hCP) {
@@ -24,7 +24,7 @@ RandomStream::RandomStream()
         } else {
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CryptAcquireContext");
         }
-	}    
+    }    
 #endif
 }
 

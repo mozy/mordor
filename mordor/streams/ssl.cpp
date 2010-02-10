@@ -582,15 +582,15 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
                 try {
                     bool success = false;
                     for(int i = 0; i < sk_GENERAL_NAME_num(gens); i++)
-	                {
-		                GENERAL_NAME *gen = sk_GENERAL_NAME_value(gens, i);
-		                if(gen->type != GEN_DNS) continue;
+                    {
+                        GENERAL_NAME *gen = sk_GENERAL_NAME_value(gens, i);
+                        if(gen->type != GEN_DNS) continue;
                         std::string altName((const char *)gen->d.dNSName->data, gen->d.dNSName->length);
                         if (altName == wildcardHostname || altName == hostname) {
                             success = true;
                             break;
                         }
-	                }
+                    }
                     sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
                     if (success)
                         return;
