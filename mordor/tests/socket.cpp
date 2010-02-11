@@ -18,7 +18,7 @@ struct Connection
     Socket::ptr connect;
     Socket::ptr listen;
     Socket::ptr accept;
-    Address::ptr address;
+    IPAddress::ptr address;
 };
 }
 
@@ -32,14 +32,21 @@ Connection
 establishConn(IOManager &ioManager)
 {
     Connection result;
-    std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
+    std::vector<Address::ptr> addresses = Address::lookup("localhost", AF_UNSPEC, SOCK_STREAM);
     MORDOR_TEST_ASSERT(!addresses.empty());
-    // TODO: random port
-    result.address = addresses.front();
+    result.address = boost::dynamic_pointer_cast<IPAddress>(addresses.front());
     result.listen = result.address->createSocket(ioManager);
     unsigned int opt = 1;
     result.listen->setOption(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    result.listen->bind(addresses.front());
+    while (true) {
+        try {
+            // Random port > 1000
+            result.address->port(rand() % 50000 + 1000);
+            result.listen->bind(result.address);
+            break;
+        } catch (AddressInUseException &) {
+        }
+    }
     result.listen->listen();
     result.connect = result.address->createSocket(ioManager);
     return result;
@@ -58,6 +65,7 @@ MORDOR_UNITTEST(Socket, acceptTimeout)
     unsigned long long start = TimerManager::now();
     MORDOR_TEST_ASSERT_EXCEPTION(conns.listen->accept(), TimedOutException);
     MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
+    MORDOR_TEST_ASSERT_EXCEPTION(conns.listen->accept(), TimedOutException);
 }
 
 MORDOR_UNITTEST(Socket, receiveTimeout)
@@ -72,6 +80,23 @@ MORDOR_UNITTEST(Socket, receiveTimeout)
     unsigned long long start = TimerManager::now();
     MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->receive(&buf, 1), TimedOutException);
     MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
+    MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->receive(&buf, 1), TimedOutException);
+}
+
+MORDOR_UNITTEST(Socket, sendTimeout)
+{
+    IOManager ioManager;
+    Connection conns = establishConn(ioManager);
+    conns.connect->sendTimeout(1000000);
+    ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
+    conns.connect->connect(conns.address);
+    ioManager.dispatch();
+    char buf[65536];
+    memset(buf, 0, sizeof(buf));
+    unsigned long long start = TimerManager::now();
+    MORDOR_TEST_ASSERT_EXCEPTION(while (true) conns.connect->send(buf, sizeof(buf)), TimedOutException);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
+    MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->send(buf, sizeof(buf)), TimedOutException);
 }
 
 class DummyException

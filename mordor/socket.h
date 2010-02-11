@@ -182,6 +182,9 @@ private:
 
 struct IPAddress : public Address
 {
+public:
+    typedef boost::shared_ptr<IPAddress> ptr;
+
 protected:
     IPAddress(int type = 0, int protocol = 0);
 public:
