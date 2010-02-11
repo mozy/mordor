@@ -36,10 +36,10 @@ ServerConnection::processRequests()
     scheduleSingleRequest();
 }
 
-std::vector<const ServerRequest::ptr>
+std::vector<ServerRequest::const_ptr>
 ServerConnection::requests()
 {
-    std::vector<const ServerRequest::ptr> result;
+    std::vector<ServerRequest::const_ptr> result;
     boost::mutex::scoped_lock lock(m_mutex);
     invariant();
     for (std::list<ServerRequest *>::const_iterator it(m_pendingRequests.begin());
@@ -246,14 +246,8 @@ ServerRequest::~ServerRequest()
 #endif
 }
 
-const Request &
-ServerRequest::request()
-{
-    return m_request;
-}
-
 bool
-ServerRequest::hasRequestBody()
+ServerRequest::hasRequestBody() const
 {
     if (m_requestStream)
         return true;
@@ -304,12 +298,6 @@ ServerRequest::requestTrailer() const
     MORDOR_ASSERT(!m_request.general.transferEncoding.empty());
     MORDOR_ASSERT(m_requestDone);
     return m_requestTrailer;
-}
-
-Response &
-ServerRequest::response()
-{
-    return m_response;
 }
 
 Stream::ptr

@@ -15,6 +15,7 @@ private:
     friend class ServerConnection;
 public:
     typedef boost::shared_ptr<ServerRequest> ptr;
+    typedef boost::shared_ptr<const ServerRequest> const_ptr;
 
 private:
     ServerRequest(boost::shared_ptr<ServerConnection> conn);
@@ -22,13 +23,14 @@ private:
 public:
     ~ServerRequest();
 
-    const Request &request();
-    bool hasRequestBody();
+    const Request &request() const { return m_request; }
+    bool hasRequestBody() const;
     Stream::ptr requestStream();
     const EntityHeaders &requestTrailer() const;
     Multipart::ptr requestMultipart();
 
-    Response &response();
+    Response &response() { return m_response; }
+    const Response &response() const { return m_response; }
     Stream::ptr responseStream();
     Multipart::ptr responseMultipart();
     EntityHeaders &responseTrailer();
@@ -71,7 +73,7 @@ public:
 
     void processRequests();
 
-    std::vector<const ServerRequest::ptr> requests();
+    std::vector<ServerRequest::const_ptr> requests();
 
 private:
     void scheduleSingleRequest();
