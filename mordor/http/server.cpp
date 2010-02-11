@@ -138,8 +138,14 @@ ServerConnection::scheduleNextResponse(ServerRequest *request)
         }
     }
     m_stream->flush();
-    if (request->m_willClose)
-        m_stream->close();
+    if (request->m_willClose) {
+        try {
+            m_stream->close();
+        } catch (...) {
+            request->cancel();
+            throw;
+        }
+    }
     boost::mutex::scoped_lock lock(m_mutex);
     invariant();
     MORDOR_ASSERT(!m_pendingRequests.empty());
@@ -366,7 +372,6 @@ ServerRequest::cancel()
     MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
     m_conn->m_pendingRequests.erase(it);
     m_conn->scheduleAllWaitingResponses();
-    m_conn->m_stream->close();
 }
 
 void
@@ -407,12 +412,8 @@ ServerRequest::doRequest()
         try {
             unsigned long long consumed = parser.run(m_conn->m_stream);
             if (consumed == 0 && !parser.error() && !parser.complete()) {
-                // EOF; finish up as a dummy response
-                m_requestDone = true;
-                m_willClose = true;
-                m_responseInFlight = true;
-                m_conn->m_priorRequestClosed = true;
-                m_conn->scheduleNextResponse(this);
+                // EOF
+                cancel();
                 return;
             }
             if (parser.error() || !parser.complete()) {
@@ -422,28 +423,13 @@ ServerRequest::doRequest()
                 return;
             }
         } catch (SocketException &) {
-            // EOF or failure; finish up as a dummy response
-            m_requestDone = true;
-            m_willClose = true;
-            m_responseInFlight = true;
-            m_conn->m_priorRequestClosed = true;
-            m_conn->scheduleNextResponse(this);
+            cancel();
             return;
         } catch (BrokenPipeException &) {
-            // EOF or failure; finish up as a dummy response
-            m_requestDone = true;
-            m_willClose = true;
-            m_responseInFlight = true;
-            m_conn->m_priorRequestClosed = true;
-            m_conn->scheduleNextResponse(this);
+            cancel();
             return;
         } catch (UnexpectedEofException &) {
-            // EOF or failure; finish up as a dummy response
-            m_requestDone = true;
-            m_willClose = true;
-            m_responseInFlight = true;
-            m_conn->m_priorRequestClosed = true;
-            m_conn->scheduleNextResponse(this);
+            cancel();
             return;
         }
         if (g_log->enabled(Log::DEBUG)) {
