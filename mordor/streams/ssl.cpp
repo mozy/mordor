@@ -178,7 +178,7 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
     if (!ctx && !client) {
         boost::shared_ptr<X509> cert;
         boost::shared_ptr<EVP_PKEY> pkey;
-        mkcert(cert, pkey, 1024, 0, 365);
+        mkcert(cert, pkey, 1024, rand(), 365);
         SSL_CTX_use_certificate(m_ctx.get(), cert.get());
         SSL_CTX_use_PrivateKey(m_ctx.get(), pkey.get());
     }
