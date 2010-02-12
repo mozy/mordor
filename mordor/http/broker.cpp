@@ -4,6 +4,7 @@
 
 #include "broker.h"
 
+#include "mordor/future.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/socket.h"
 #include "mordor/streams/ssl.h"
@@ -306,6 +307,28 @@ RequestBrokerFilter::parent()
     return RequestBroker::ptr(m_weakParent);
 }
 
+static void doBody(ClientRequest::ptr request,
+    boost::function<void (ClientRequest::ptr)> bodyDg,
+    Future<> &future,
+    boost::exception_ptr &exception, bool &exceptionWasHttp)
+{
+    exceptionWasHttp = false;
+    try {
+        bodyDg(request);
+    } catch (...) {
+        // Request body failed, but not in the HTTP framework; we have to
+        // abort the request so we don't hang waiting for a response (since
+        // the request object is still in scope by the caller, it won't do this
+        // automatically)
+        if (request->requestState() != ClientRequest::ERROR) {
+            exceptionWasHttp = true;
+            request->cancel();
+        }
+        exception = boost::current_exception();
+    }
+    future.signal();
+}
+
 ClientRequest::ptr
 BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
                            boost::function<void (ClientRequest::ptr)> bodyDg)
@@ -340,12 +363,35 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             }
 
             ClientRequest::ptr request = conn.first->request(requestHeaders);
+            Future<> future;
+            boost::exception_ptr exception;
+            bool exceptionWasHttp = false;
             if (bodyDg)
-                bodyDg(request);
+                Scheduler::getThis()->schedule(boost::bind(&doBody,
+                    request, bodyDg, boost::ref(future), boost::ref(exception),
+                    boost::ref(exceptionWasHttp)));
             if (!connect)
                 currentUri = originalUri;
-            // Force reading the response here to check for connectivity problems
-            request->response();
+            try {
+                // Force reading the response here to check for connectivity problems
+                request->response();
+            } catch (...) {
+                if (bodyDg)
+                    future.wait();
+                // Prefer to throw an exception from send, if there was one
+                if (exception)
+                    Mordor::rethrow_exception(exception);
+                throw;
+            }
+            if (bodyDg)
+                future.wait();
+            // Rethrow any exception from bodyDg *if* it didn't come from the
+            // HTTP framework, or directly from a stream within the framework
+            // (i.e. an exception from the user's code)
+            // otherwise, ignore it - we have a response, and we don't really
+            // care that the request didn't complete
+            if (exception && exceptionWasHttp)
+                Mordor::rethrow_exception(exception);
             return request;
         } catch (SocketException &) {
             if (!connect)

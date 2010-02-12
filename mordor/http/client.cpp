@@ -341,7 +341,7 @@ ClientRequest::requestStream()
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ClientRequest::requestDone, this),
-        boost::bind(&ClientRequest::cancel, this, true), false);
+        boost::bind(&ClientRequest::requestFailed, this), false);
 }
 
 Multipart::ptr
@@ -359,7 +359,7 @@ ClientRequest::requestMultipart()
     m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ClientRequest::requestDone, this),
-        boost::bind(&ClientRequest::cancel, this, true), false);
+        boost::bind(&ClientRequest::requestFailed, this), false);
     m_requestMultipart.reset(new Multipart(m_requestStream, it->second));
     m_requestMultipart->multipartFinished = boost::bind(&ClientRequest::requestMultipartDone, shared_from_this());
     return m_requestMultipart;
@@ -985,6 +985,35 @@ ClientRequest::requestDone()
         m_conn->m_stream->write(str.c_str(), str.size());
     }
     m_conn->scheduleNextRequest(this);
+}
+
+void
+ClientRequest::requestFailed()
+{
+    MORDOR_ASSERT(m_requestState == BODY);
+    MORDOR_ASSERT(m_requestStream);
+    MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " request failed";
+    // Break the circular reference
+    NotifyStream::ptr notify =
+        boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
+    MORDOR_ASSERT(notify);
+    notify->notifyOnClose = NULL;
+    notify->notifyOnEof = NULL;
+    notify->notifyOnException = NULL;
+    boost::mutex::scoped_lock lock(m_conn->m_mutex);
+    m_conn->invariant();
+    MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
+    MORDOR_ASSERT(this == *m_conn->m_currentRequest);
+    m_conn->m_priorRequestFailed = true;
+    m_requestState = ERROR;
+    if (m_responseState >= COMPLETE) {
+        MORDOR_ASSERT(this == m_conn->m_pendingRequests.front());
+        m_conn->m_pendingRequests.pop_front();
+        m_conn->m_currentRequest = m_conn->m_pendingRequests.end();
+    } else {
+        ++m_conn->m_currentRequest;
+    }
+    m_conn->scheduleAllWaitingRequests();
 }
 
 void

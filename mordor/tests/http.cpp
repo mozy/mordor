@@ -2171,12 +2171,10 @@ MORDOR_UNITTEST(HTTPClient, newRequestWhileFlushing)
 static void
 zlibCausesPrematureEOFServer(const URI &uri, ServerRequest::ptr request)
 {
-    Stream::ptr random(new RandomStream());
-    random.reset(new LimitedStream(random, 4096));
     request->response().general.transferEncoding.push_back("deflate");
     request->response().general.transferEncoding.push_back("chunked");
     request->response().status.status = OK;
-    transferStream(random, request->responseStream());
+    transferStream(RandomStream(), request->responseStream(), 4096);
     request->responseStream()->close();
 }
 
@@ -2223,4 +2221,53 @@ MORDOR_UNITTEST(HTTPClient, priorResponseFailedPipeline)
     request1->cancel(true);
     pool.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
+}
+
+static void
+serverHangsUpOnRequest(const URI &uri, ServerRequest::ptr request)
+{
+    request->response().status.status = OK;
+    request->response().entity.contentLength = 0;
+    request->response().general.connection.insert("close");
+}
+
+static void
+sendRequest(ClientRequest::ptr request)
+{
+    transferStream(RandomStream(), request->requestStream(), 1024 * 1024);
+    request->requestStream()->close();
+}
+
+MORDOR_UNITTEST(HTTPClient, serverHangsUpOnRequest)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&serverHangsUpOnRequest);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+    requestHeaders.entity.contentLength = 1024 * 1024;
+
+    ClientRequest::ptr request = requestBroker.request(requestHeaders, false, &sendRequest);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+}
+
+static void throwExceptionForRequest(ClientRequest::ptr request)
+{
+    MORDOR_THROW_EXCEPTION(DummyException());
+}
+
+MORDOR_UNITTEST(HTTPClient, sendException)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&serverHangsUpOnRequest);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+    requestHeaders.entity.contentLength = 1024 * 1024;
+
+    MORDOR_TEST_ASSERT_EXCEPTION(
+        requestBroker.request(requestHeaders, false, &throwExceptionForRequest),
+        DummyException);
 }

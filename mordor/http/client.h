@@ -78,6 +78,7 @@ private:
     void doRequest();
     void requestMultipartDone();
     void requestDone();
+    void requestFailed();
     void responseDone();
 
 private:
