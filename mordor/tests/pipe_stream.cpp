@@ -69,12 +69,21 @@ MORDOR_UNITTEST(PipeStream, basicInFibers)
     MORDOR_TEST_ASSERT_EQUAL(pipe.second->read(read, 10), 0u);
 }
 
-MORDOR_UNITTEST(PipeStream, readerClosed)
+MORDOR_UNITTEST(PipeStream, readerClosed1)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
 
     pipe.second->close();
     MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->write("a"), BrokenPipeException);
+    pipe.first->flush();
+}
+
+MORDOR_UNITTEST(PipeStream, readerClosed2)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+
+    MORDOR_TEST_ASSERT_EQUAL(pipe.first->write("a"), 1u);
+    pipe.second->close();
     MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->flush(), BrokenPipeException);
 }
 
@@ -266,6 +275,56 @@ MORDOR_UNITTEST(PipeStream, destructOnBlockingWriter)
     MORDOR_TEST_ASSERT_EQUAL(pipe.second->write("hello"), 5u);
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
     MORDOR_TEST_ASSERT_EXCEPTION(pipe.second->write("world"), BrokenPipeException);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
+}
+
+static void cancelOnBlockingReader(Stream::ptr stream, int &sequence)
+{
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    stream->cancelRead();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+}
+
+MORDOR_UNITTEST(PipeStream, cancelOnBlockingReader)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+    WorkerPool pool;
+    int sequence = 1;
+
+    pool.schedule(Fiber::ptr(new Fiber(boost::bind(&cancelOnBlockingReader,
+        pipe.first, boost::ref(sequence)))));
+
+    Buffer output;
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->read(output, 10), OperationAbortedException);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
+    MORDOR_TEST_ASSERT_EXCEPTION(pipe.first->read(output, 10), OperationAbortedException);
+}
+
+static void cancelOnBlockingWriter(Stream::ptr stream, int &sequence)
+{
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    char buffer[4096];
+    memset(buffer, 0, sizeof(buffer));
+    MORDOR_TEST_ASSERT_EXCEPTION(
+        while (true) stream->write(buffer, 4096),
+        OperationAbortedException);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
+    MORDOR_TEST_ASSERT_EXCEPTION(stream->write(buffer, 4096), OperationAbortedException);
+}
+
+MORDOR_UNITTEST(PipeStream, cancelOnBlockingWriter)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream(5);
+    WorkerPool pool;
+    int sequence = 1;
+
+    pool.schedule(Fiber::ptr(new Fiber(boost::bind(&cancelOnBlockingWriter, pipe.first,
+        boost::ref(sequence)))));
+    pool.schedule(Fiber::getThis());
+    pool.yieldTo();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+    pipe.first->cancelWrite();
+    pool.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
 }
 
