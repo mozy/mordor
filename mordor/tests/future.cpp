@@ -18,13 +18,13 @@ static void setResult(int &result, int value)
 }
 
 template <class T>
-static void signal(T &future)
+void signal(T &future)
 {
     future.signal();
 }
 
 template <>
-static void signal<Future<int> >(Future<int> &future)
+void signal<Future<int> >(Future<int> &future)
 {
     future.result() = 1;
     future.signal();
