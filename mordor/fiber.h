@@ -36,6 +36,10 @@
 #   elif defined(POSIX)
 #       define UCONTEXT_FIBERS
 #   endif
+#elif defined(PPC)
+#   define SETJMP_FIBERS
+#elif defined(ARM)
+#   define SETJMP_FIBERS
 #else
 #   error Platform not supported
 #endif

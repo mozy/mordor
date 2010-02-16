@@ -48,6 +48,10 @@
 #       define X86_64
 #   elif defined(i386)
 #       define X86
+#   elif defined(__ppc__)
+#       define PPC
+#   elif defined(TARGET_CPU_ARM)
+#       define ARM
 #   endif
 #endif
 
