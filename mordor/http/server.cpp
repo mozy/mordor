@@ -300,6 +300,18 @@ ServerRequest::requestTrailer() const
     return m_requestTrailer;
 }
 
+bool
+ServerRequest::hasResponseBody() const
+{
+    if (m_responseStream)
+        return true;
+    return Connection::hasMessageBody(m_response.general,
+        m_response.entity,
+        m_request.requestLine.method,
+        m_response.status.status,
+        false);
+}
+
 Stream::ptr
 ServerRequest::responseStream()
 {
@@ -367,12 +379,15 @@ ServerRequest::finish()
 {
     if (m_responseDone)
         return;
-    if (committed() && Connection::hasMessageBody(m_response.general, m_response.entity,
-        m_request.requestLine.method, m_response.status.status)) {
+    if (committed() && hasResponseBody()) {
         cancel();
         return;
     }
     commit();
+    if (hasResponseBody()) {
+        cancel();
+        return;
+    }
     if (!m_requestDone && hasRequestBody() && !m_willClose) {
         if (m_request.entity.contentType.type == "multipart") {
             if (!m_requestMultipart) {

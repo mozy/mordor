@@ -66,7 +66,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         invariant();
         MORDOR_ASSERT(m_currentRequest != m_pendingRequests.end());
         MORDOR_ASSERT(request == *m_currentRequest);
-        MORDOR_ASSERT(request->m_requestState == ClientRequest::INFLIGHT);
+        MORDOR_ASSERT(request->m_requestState == ClientRequest::BODY);
         MORDOR_LOG_TRACE(g_log) << this << " " << request << " request complete";
         std::list<ClientRequest *>::iterator it(m_currentRequest);
         ++it;
@@ -129,7 +129,7 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
         invariant();
         MORDOR_ASSERT(!m_pendingRequests.empty());
         MORDOR_ASSERT(request == m_pendingRequests.front());
-        MORDOR_ASSERT(request->m_responseState == ClientRequest::INFLIGHT ||
+        MORDOR_ASSERT(request->m_responseState == ClientRequest::BODY ||
             request->m_responseState == ClientRequest::HEADERS);
         request->m_responseState = ClientRequest::COMPLETE;
         MORDOR_LOG_TRACE(g_log) << this << " " << request << " response complete";
@@ -337,7 +337,7 @@ ClientRequest::requestStream()
         m_requestStream.reset(new LimitedStream(m_requestStream, 0));
         return m_requestStream;
     }
-    MORDOR_ASSERT(m_requestState == INFLIGHT);
+    MORDOR_ASSERT(m_requestState == BODY);
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ClientRequest::requestDone, this),
@@ -351,7 +351,7 @@ ClientRequest::requestMultipart()
         return m_requestMultipart;
     MORDOR_ASSERT(m_request.entity.contentType.type == "multipart");
     MORDOR_ASSERT(!m_requestStream);
-    MORDOR_ASSERT(m_requestState == INFLIGHT);
+    MORDOR_ASSERT(m_requestState == BODY);
     StringMap::const_iterator it = m_request.entity.contentType.parameters.find("boundary");
     if (it == m_request.entity.contentType.parameters.end()) {
         MORDOR_THROW_EXCEPTION(MissingMultipartBoundaryException());
@@ -406,7 +406,7 @@ ClientRequest::responseStream()
         m_responseStream = result;
         return result;
     }
-    MORDOR_ASSERT(m_responseState == INFLIGHT);
+    MORDOR_ASSERT(m_responseState == BODY);
     MORDOR_ASSERT(m_response.entity.contentType.type != "multipart");
     result = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
@@ -448,7 +448,7 @@ ClientRequest::responseMultipart()
     // (to avoid circular references)
     MORDOR_ASSERT(!m_hasResponseBody);
     ensureResponse();
-    MORDOR_ASSERT(m_responseState == INFLIGHT);
+    MORDOR_ASSERT(m_responseState == BODY);
     MORDOR_ASSERT(m_response.entity.contentType.type == "multipart");
     StringMap::const_iterator it = m_response.entity.contentType.parameters.find("boundary");
     if (it == m_response.entity.contentType.parameters.end()) {
@@ -722,7 +722,7 @@ ClientRequest::doRequest()
             MORDOR_LOG_VERBOSE(g_log) << m_conn << " " << this << " " << m_request.requestLine;
         }
         m_conn->m_stream->write(str.c_str(), str.size());
-        m_requestState = INFLIGHT;
+        m_requestState = BODY;
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID, false)) {
             MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " no request body";
@@ -745,7 +745,7 @@ ClientRequest::doRequest()
 void
 ClientRequest::ensureResponse()
 {
-    if (m_responseState == INFLIGHT || m_responseState == COMPLETE)
+    if (m_responseState == BODY || m_responseState == COMPLETE)
         return;
     bool wait = false, skip = m_responseState == HEADERS;
     if (!skip) {
@@ -928,7 +928,7 @@ ClientRequest::ensureResponse()
             m_conn->scheduleAllWaitingRequests();
             m_conn->scheduleAllWaitingResponses();
         }
-        m_responseState = connect ? COMPLETE : INFLIGHT;
+        m_responseState = connect ? COMPLETE : BODY;
 
         if (!hasBody && !connect) {
             MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " no response body";
@@ -965,7 +965,7 @@ ClientRequest::requestMultipartDone()
 void
 ClientRequest::requestDone()
 {
-    MORDOR_ASSERT(m_requestState == INFLIGHT);
+    MORDOR_ASSERT(m_requestState == BODY);
     MORDOR_ASSERT(m_requestStream);
     MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " request complete";
     // Break the circular reference
@@ -990,7 +990,7 @@ ClientRequest::requestDone()
 void
 ClientRequest::responseDone()
 {
-    MORDOR_ASSERT(m_responseState == INFLIGHT);
+    MORDOR_ASSERT(m_responseState == BODY);
     MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " response complete";
     // Keep an extra ref to ourself around so we don't destruct if the only ref
     // is in the response stream

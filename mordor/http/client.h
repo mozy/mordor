@@ -26,16 +26,25 @@ class ClientRequest : public boost::enable_shared_from_this<ClientRequest>, boos
 private:
     friend class ClientConnection;
 
-    enum State {
-        WAITING,
-        HEADERS,
-        INFLIGHT,
-        COMPLETE,
-        ERROR
-    };
 public:
     typedef boost::shared_ptr<ClientRequest> ptr;
     typedef boost::weak_ptr<ClientRequest> weak_ptr;
+
+    /// The ClientRequest has a state for sending the request and receiving
+    /// the response.  It progresses through these states (possibly skipping
+    /// some of them).
+    enum State {
+        /// Waiting for a prior request/response to complete
+        WAITING,
+        /// Reading/writing headers
+        HEADERS,
+        /// Reading/writing message body
+        BODY,
+        /// Complete
+        COMPLETE,
+        /// Error
+        ERROR
+    };
 
 private:
     ClientRequest(boost::shared_ptr<ClientConnection> conn, const Request &request);
@@ -44,6 +53,8 @@ public:
     ~ClientRequest();
 
     boost::shared_ptr<ClientConnection> connection() { return m_conn; }
+    State requestState() const { return m_requestState; }
+    State responseState() const { return m_responseState; }
 
     const Request &request();
     bool hasRequestBody() const;

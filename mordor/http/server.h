@@ -31,6 +31,7 @@ public:
 
     Response &response() { return m_response; }
     const Response &response() const { return m_response; }
+    bool hasResponseBody() const;
     Stream::ptr responseStream();
     Multipart::ptr responseMultipart();
     EntityHeaders &responseTrailer();
