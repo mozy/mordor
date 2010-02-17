@@ -2174,7 +2174,8 @@ zlibCausesPrematureEOFServer(const URI &uri, ServerRequest::ptr request)
     request->response().general.transferEncoding.push_back("deflate");
     request->response().general.transferEncoding.push_back("chunked");
     request->response().status.status = OK;
-    transferStream(RandomStream(), request->responseStream(), 4096);
+    RandomStream random;
+    transferStream(random, request->responseStream(), 4096);
     request->responseStream()->close();
 }
 
@@ -2234,7 +2235,8 @@ serverHangsUpOnRequest(const URI &uri, ServerRequest::ptr request)
 static void
 sendRequest(ClientRequest::ptr request)
 {
-    transferStream(RandomStream(), request->requestStream(), 1024 * 1024);
+    RandomStream random;
+    transferStream(random, request->requestStream(), 1024 * 1024);
     request->requestStream()->close();
 }
 
