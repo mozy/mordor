@@ -239,8 +239,7 @@ ALLBINS = mordor/examples/cat						\
 	mordor/examples/tunnel						\
 	mordor/examples/udpstats					\
 	mordor/examples/wget						\
-	mordor/tests/run_tests						\
-	mordor/tests/pq_tests
+	mordor/tests/run_tests
 
 
 # clean current build
@@ -254,7 +253,7 @@ clean:
 	$(Q)find . -name '*.a' | xargs rm -f
 	$(Q)rm -f mordor/pch.h.gch
 	$(Q)rm -f mordor/uri.cpp mordor/http/parser.cpp mordor/xml/parser.cpp mordor/json.cpp
-	$(Q)rm -f $(ALLBINS) mordor/tests/run_tests
+	$(Q)rm -f $(ALLBINS) mordor/tests/run_tests mordor/tests/pq_tests
 	$(Q)rm -rf lcov* html
 
 all: $(ALLBINS)
