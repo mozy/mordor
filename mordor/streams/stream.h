@@ -216,6 +216,7 @@ public:
     /// the delimiter
     /// @pre supportsFind() && supportsRead()
     std::string getDelimited(char delimiter = '\n', bool eofIsDelimiter = false);
+    std::string getDelimited(const std::string &delimiter, bool eofIsDelimiter = false);
 
     /// @brief Return data to the stream to be read again
 

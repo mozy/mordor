@@ -77,4 +77,21 @@ Stream::getDelimited(char delim, bool eofIsDelimiter)
     return result;
 }
 
+std::string
+Stream::getDelimited(const std::string &delim, bool eofIsDelimiter)
+{
+    ptrdiff_t offset = find(delim, ~0, !eofIsDelimiter);
+    eofIsDelimiter = offset < 0;
+    if (offset < 0)
+        offset = -offset - delim.size();
+    std::string result;
+    result.resize(offset + (eofIsDelimiter ? 0 : delim.size()));
+#ifdef DEBUG
+    size_t readResult =
+#endif
+    read((char *)result.c_str(), result.size());
+    MORDOR_ASSERT(readResult == result.size());
+    return result;
+}
+
 }
