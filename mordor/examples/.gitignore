@@ -1,6 +1,7 @@
 cat
 echoserver
 iombench
+memcached_client
 simpleclient
 tunnel
 udpstats

@@ -235,12 +235,12 @@ DEPS := $(shell find $(CURDIR) -name '*.d')
 ALLBINS = mordor/examples/cat						\
 	mordor/examples/echoserver					\
 	mordor/examples/iombench					\
+	mordor/examples/memcached_client				\
 	mordor/examples/simpleclient					\
 	mordor/examples/tunnel						\
 	mordor/examples/udpstats					\
 	mordor/examples/wget						\
 	mordor/tests/run_tests
-
 
 # clean current build
 #
@@ -314,7 +314,6 @@ $(TESTDATA): $(CURDIR)/%: $(SRCDIR)/%
 	$(Q)cp -f $< $@
 
 $(TESTOBJECTS): mordor/pch.h.gch
->>>>>>> 3f06bc7... libmordorpq:Makefile
 
 mordor/tests/run_tests:							\
 	$(TESTOBJECTS)							\
@@ -326,17 +325,6 @@ endif
 	$(COMPLINK)
 
 
-EXAMPLEOBJECTS :=							\
-	mordor/examples/cat.o						\
-	mordor/examples/echoserver.o					\
-	mordor/examples/iombench.o					\
-	mordor/examples/simpleclient.o					\
-	mordor/examples/tunnel.o					\
-	mordor/examples/udpstats.o					\
-	mordor/examples/wget.o
-
-$(EXAMPLEOBJECTS): mordor/pch.h.gch
-
 mordor/examples/cat: mordor/examples/cat.o				\
 	mordor/libmordor.a
 ifeq ($(Q),@)
@@ -345,6 +333,13 @@ endif
 	$(COMPLINK)
 
 mordor/examples/echoserver: mordor/examples/echoserver.o		\
+	mordor/libmordor.a
+ifeq ($(Q),@)
+	@echo ld $@
+endif
+	$(COMPLINK)
+
+mordor/examples/memcached_client: mordor/examples/memcached_client.o		\
 	mordor/libmordor.a
 ifeq ($(Q),@)
 	@echo ld $@
