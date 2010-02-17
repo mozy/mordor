@@ -1757,6 +1757,35 @@ Address::insert(std::ostream &os) const
     return os << "(Unknown addr " << m_type << ")";
 }
 
+bool
+Address::operator<(const Address &rhs) const
+{
+    if (m_type >= rhs.m_type || m_protocol >= rhs.m_protocol)
+        return false;
+    socklen_t minimum = std::min(nameLen(), rhs.nameLen());
+    int result = memcmp(name(), rhs.name(), minimum);
+    if (result < 0)
+        return true;
+    else if (result > 0)
+        return false;
+    if (nameLen() < rhs.nameLen())
+        return true;
+    return false;
+}
+
+bool
+Address::operator==(const Address &rhs) const
+{
+    return m_type == rhs.m_type && m_protocol == rhs.m_protocol &&
+        nameLen() == rhs.nameLen() &&
+        memcmp(name(), rhs.name(), nameLen()) == 0;
+}
+
+bool Address::operator!=(const Address &rhs) const
+{
+    return !(*this == rhs);
+}
+
 IPAddress::IPAddress(int type, int protocol)
 : Address(type, protocol)
 {}
@@ -1852,6 +1881,14 @@ UnknownAddress::UnknownAddress(int family, int type, int protocol)
 std::ostream &operator <<(std::ostream &os, const Address &addr)
 {
     return addr.insert(os);
+}
+
+bool
+operator <(const Address::ptr &lhs, const Address::ptr &rhs)
+{
+    if (!lhs || !rhs)
+        return rhs;
+    return *lhs < *rhs;
 }
 
 }

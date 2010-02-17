@@ -176,6 +176,10 @@ public:
     virtual socklen_t nameLen() const = 0;
     virtual std::ostream & insert(std::ostream &os) const;
 
+    bool operator<(const Address &rhs) const;
+    bool operator==(const Address &rhs) const;
+    bool operator!=(const Address &rhs) const;
+
 private:
     int m_type, m_protocol;
 };
@@ -260,7 +264,9 @@ private:
     sockaddr sa;
 };
 
-std::ostream &operator <<(std::ostream &os, const Mordor::Address &addr);
+std::ostream &operator <<(std::ostream &os, const Address &addr);
+
+bool operator<(const Address::ptr &lhs, const Address::ptr &rhs);
 
 }
 
