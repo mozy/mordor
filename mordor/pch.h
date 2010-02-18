@@ -15,9 +15,7 @@
 #include <sys/types.h>
 #include <execinfo.h>
 #include <netdb.h>
-#include <netinet/in_systm.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <signal.h>
@@ -30,6 +28,8 @@
 #include <sys/uio.h>
 #include <sys/un.h>
 #ifndef OSX
+#include <netinet/ip.h>
+#include <netinet/in_systm.h>
 #include <ucontext.h>
 #endif
 

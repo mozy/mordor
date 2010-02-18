@@ -147,6 +147,20 @@ OpenSSL
 Zlib
 Ragel (compile-time only)
 
+
+Compiling for iPhone SDK
+
+The iPhone SDK does not include OpenSSL headers or binaries. Since mordor relies
+on OpenSSL, you must provide these files yourself. The Xcode project file is
+configured to look for files in an iphone directory in the same directory as the
+project file. 
+
+Specifically, the compiler will look for headers in iphone/include/ and 
+libraries in iphone/lib/. We recommend you create a symbolic link called 
+"iphone" which points to the actual directory containing the include/ and lib/ 
+directories.
+
+
 License
 
 Mordor is MIT Licensed, and Copyright (c) 2009 Mozy, Inc.  See LICENSE for

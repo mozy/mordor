@@ -33,9 +33,11 @@ typedef u_long iov_len_t;
 typedef SOCKET socket_t;
 #else
 #include <sys/socket.h>
-#include <netinet/in_systm.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
+#ifndef OSX
+# include <netinet/in_systm.h>
+# include <netinet/ip.h>
+#endif
 #include <sys/un.h>
 typedef size_t iov_len_t;
 typedef int socket_t;

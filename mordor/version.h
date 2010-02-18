@@ -50,7 +50,7 @@
 #       define X86
 #   elif defined(__ppc__)
 #       define PPC
-#   elif defined(TARGET_CPU_ARM)
+#   elif defined(__arm__)
 #       define ARM
 #   endif
 #endif
