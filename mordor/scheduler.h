@@ -12,7 +12,7 @@
 #include <vector>
 
 #include <boost/bind.hpp>
-#include <boost/exception.hpp>
+#include <boost/exception/all.hpp>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>

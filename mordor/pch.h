@@ -97,7 +97,7 @@
 #endif
 #include <boost/date_time.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <boost/exception.hpp>
+#include <boost/exception/all.hpp>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/regex.hpp>

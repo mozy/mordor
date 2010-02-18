@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/exception.hpp>
+#include <boost/exception/all.hpp>
 
 #include "version.h"
 

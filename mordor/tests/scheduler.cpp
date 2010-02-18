@@ -4,7 +4,7 @@
 
 #include <boost/bind.hpp>
 
-#include <boost/exception.hpp>
+#include <boost/exception/all.hpp>
 #include "mordor/exception.h"
 #include "mordor/scheduler.h"
 #include "mordor/test/test.h"
