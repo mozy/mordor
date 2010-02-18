@@ -356,7 +356,7 @@ IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
                 if (!CancelIo(hFile))
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIo");
             }
-        } else if (lastError == ERROR_NOT_FOUND) {
+        } else if (lastError == ERROR_NOT_FOUND || lastError == ERROR_FILE_NOT_FOUND) {
             // Nothing to cancel
         } else {
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIoEx");
