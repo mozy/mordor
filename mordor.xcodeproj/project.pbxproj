@@ -8,8 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		3CAB29B5112B347400607AEE /* json.rl in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB271E112B096700607AEE /* json.rl */; };
-		3CAB29B6112B347400607AEE /* parser.rl in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB270E112B096700607AEE /* parser.rl */; };
-		3CAB29B7112B347400607AEE /* parser.rl in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB27A1112B096700607AEE /* parser.rl */; };
+		3CAB29B6112B347400607AEE /* http_parser.rl in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB270E112B096700607AEE /* http_parser.rl */; settings = {COMPILER_FLAGS = http; }; };
+		3CAB29B7112B347400607AEE /* xml_parser.rl in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB27A1112B096700607AEE /* xml_parser.rl */; settings = {COMPILER_FLAGS = xml; }; };
 		3CAB29B8112B347400607AEE /* uri.rl in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB279B112B096700607AEE /* uri.rl */; };
 		3CAB29B9112B347400607AEE /* assert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB26D7112B096700607AEE /* assert.cpp */; };
 		3CAB29BA112B347400607AEE /* config.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB26DA112B096700607AEE /* config.cpp */; };
@@ -72,7 +72,7 @@
 			outputFiles = (
 				"$(DERIVED_FILES_DIR)/$(INPUT_FILE_BASE).cpp",
 			);
-			script = "# The default PATH for this shell is /Developer/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin. \n# Ragel is usually in none of those, so let's see if they've extended their PATH\n\nif [ -f ~/.bash_profile ]; then\n  source ~/.bash_profile\nelse\n if [ -f ~/.bash_login ]; then\n   source ~/.bash_login\n else\n  if [ -f ~/.profile ]; then\n    source ~/.profile\n  fi\n fi\nfi\n\nragel -o \"${DERIVED_FILES_DIR}/${INPUT_FILE_BASE}.cpp\" \"${INPUT_FILE_PATH}\"";
+			script = "#!/usr/bin/bash\n# The default PATH for this shell is /Developer/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin. \n# Ragel is usually in none of those, so let's see if they've extended their PATH\n\nif [ -f ~/.bash_profile ]; then\n  source ~/.bash_profile\nelse\n if [ -f ~/.bash_login ]; then\n   source ~/.bash_login\n else\n  if [ -f ~/.profile ]; then\n    source ~/.profile\n  fi\n fi\nfi\n\nragel -o \"${DERIVED_FILES_DIR}/${INPUT_FILE_BASE}.cpp\" \"${INPUT_FILE_PATH}\"";
 		};
 /* End PBXBuildRule section */
 
@@ -132,7 +132,7 @@
 		3CAB270B112B096700607AEE /* oauth.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = oauth.cpp; sourceTree = "<group>"; };
 		3CAB270C112B096700607AEE /* oauth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = oauth.h; sourceTree = "<group>"; };
 		3CAB270D112B096700607AEE /* parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
-		3CAB270E112B096700607AEE /* parser.rl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = parser.rl; sourceTree = "<group>"; };
+		3CAB270E112B096700607AEE /* http_parser.rl */ = {isa = PBXFileReference; explicitFileType = sourcecode; fileEncoding = 4; path = http_parser.rl; sourceTree = "<group>"; };
 		3CAB270F112B096700607AEE /* proxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = proxy.cpp; sourceTree = "<group>"; };
 		3CAB2710112B096700607AEE /* proxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = proxy.h; sourceTree = "<group>"; };
 		3CAB2711112B096700607AEE /* server.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = server.cpp; sourceTree = "<group>"; };
@@ -270,12 +270,12 @@
 		3CAB2798112B096700607AEE /* timer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timer.cpp; sourceTree = "<group>"; };
 		3CAB2799112B096700607AEE /* timer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timer.h; sourceTree = "<group>"; };
 		3CAB279A112B096700607AEE /* uri.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = uri.h; sourceTree = "<group>"; };
-		3CAB279B112B096700607AEE /* uri.rl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = uri.rl; sourceTree = "<group>"; };
+		3CAB279B112B096700607AEE /* uri.rl */ = {isa = PBXFileReference; explicitFileType = sourcecode; fileEncoding = 4; path = uri.rl; sourceTree = "<group>"; };
 		3CAB279C112B096700607AEE /* util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
 		3CAB279D112B096700607AEE /* version.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = version.h; sourceTree = "<group>"; };
 		3CAB279F112B096700607AEE /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		3CAB27A0112B096700607AEE /* parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
-		3CAB27A1112B096700607AEE /* parser.rl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = parser.rl; sourceTree = "<group>"; };
+		3CAB27A1112B096700607AEE /* xml_parser.rl */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp.preprocessed; fileEncoding = 4; path = xml_parser.rl; sourceTree = "<group>"; };
 		3CAB29B1112B340600607AEE /* libmordor.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmordor.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -445,7 +445,7 @@
 				3CAB270B112B096700607AEE /* oauth.cpp */,
 				3CAB270C112B096700607AEE /* oauth.h */,
 				3CAB270D112B096700607AEE /* parser.h */,
-				3CAB270E112B096700607AEE /* parser.rl */,
+				3CAB270E112B096700607AEE /* http_parser.rl */,
 				3CAB270F112B096700607AEE /* proxy.cpp */,
 				3CAB2710112B096700607AEE /* proxy.h */,
 				3CAB2711112B096700607AEE /* server.cpp */,
@@ -572,7 +572,7 @@
 			children = (
 				3CAB279F112B096700607AEE /* .gitignore */,
 				3CAB27A0112B096700607AEE /* parser.h */,
-				3CAB27A1112B096700607AEE /* parser.rl */,
+				3CAB27A1112B096700607AEE /* xml_parser.rl */,
 			);
 			path = xml;
 			sourceTree = "<group>";
@@ -632,8 +632,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				3CAB29B5112B347400607AEE /* json.rl in Sources */,
-				3CAB29B6112B347400607AEE /* parser.rl in Sources */,
-				3CAB29B7112B347400607AEE /* parser.rl in Sources */,
+				3CAB29B6112B347400607AEE /* http_parser.rl in Sources */,
+				3CAB29B7112B347400607AEE /* xml_parser.rl in Sources */,
 				3CAB29B8112B347400607AEE /* uri.rl in Sources */,
 				3CAB29B9112B347400607AEE /* assert.cpp in Sources */,
 				3CAB29BA112B347400607AEE /* config.cpp in Sources */,

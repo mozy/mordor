@@ -252,7 +252,7 @@ clean:
 	$(Q)find . -name '*.o' | xargs rm -f
 	$(Q)find . -name '*.a' | xargs rm -f
 	$(Q)rm -f mordor/pch.h.gch
-	$(Q)rm -f mordor/uri.cpp mordor/http/parser.cpp mordor/xml/parser.cpp mordor/json.cpp
+	$(Q)rm -f mordor/uri.cpp mordor/http/http_parser.cpp mordor/xml/xml_parser.cpp mordor/json.cpp
 	$(Q)rm -f $(ALLBINS) mordor/tests/run_tests mordor/tests/pq_tests
 	$(Q)rm -rf lcov* html
 
@@ -272,8 +272,8 @@ lcov:
 	$(Q)lcov -a lcov.info -a lcov_base.info -o lcov.info >/dev/null
 	$(Q)lcov -r lcov.info '/usr/*' -o lcov.info >/dev/null 2>&1
 	$(Q)lcov -r lcov.info mordor/uri.cpp -o lcov.info >/dev/null 2>&1
-	$(Q)lcov -r lcov.info mordor/http/parser.cpp -o lcov.info >/dev/null 2>&1
-	$(Q)lcov -r lcov.info mordor/xml/parser.cpp -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info mordor/http/http_parser.cpp -o lcov.info >/dev/null 2>&1
+	$(Q)lcov -r lcov.info mordor/xml/xml_parser.cpp -o lcov.info >/dev/null 2>&1
 	$(Q)lcov -r lcov.info 'mordor/examples/*' -o lcov.info >/dev/null 2>&1
 	$(Q)lcov -r lcov.info './*' -o lcov.info >/dev/null 2>&1
 	$(Q)mkdir -p lcov && cd lcov && genhtml ../lcov.info >/dev/null && tar -czf lcov.tgz *
@@ -387,21 +387,7 @@ ifeq ($(Q),@)
 endif
 	$(COMPLINK)
 
-mordor/http/http_parser.o: mordor/http/parser.cpp
-ifeq ($(Q),@)
-	@echo c++ $<
-endif
-	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
-
 mordor/streams/socket_stream.o: mordor/streams/socket.cpp
-ifeq ($(Q),@)
-	@echo c++ $<
-endif
-	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
-
-mordor/xml/xml_parser.o: mordor/xml/parser.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
