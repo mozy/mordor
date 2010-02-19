@@ -131,14 +131,20 @@ Scheduler::stop()
         }
     }
 
+    bool exitOnThisFiber = false;
     if (m_rootThread != boost::thread::id()) {
         // A thread-hijacking scheduler must be stopped
         // from within itself to return control to the
         // original thread
         MORDOR_ASSERT(Scheduler::getThis() == this);
-        // First switch to the correct thread
-        MORDOR_LOG_DEBUG(g_log) << this << " switching to root thread to stop";
-        switchTo(m_rootThread);
+        if (Fiber::getThis() == m_callingFiber) {
+            exitOnThisFiber = true;
+            // First switch to the correct thread
+            MORDOR_LOG_DEBUG(g_log) << this << " switching to root thread to stop";
+            switchTo(m_rootThread);
+        }
+        if (!m_callingFiber)
+            exitOnThisFiber = true;
     } else {
         // A spawned-threads only scheduler cannot be stopped from within
         // itself... who would get control?
@@ -150,7 +156,8 @@ Scheduler::stop()
     }
     if (m_rootFiber)
         tickle();
-    if (Scheduler::getThis() == this) {
+    // Wait for all work to stop on this thread
+    if (exitOnThisFiber) {
         bool moreWork = t_fiber->state() == Fiber::HOLD || !stopping();
         if (!moreWork) {
             boost::mutex::scoped_lock lock(m_mutex);
@@ -167,12 +174,11 @@ Scheduler::stop()
             }
         }
     }
-    if (m_rootThread == boost::this_thread::get_id() ||
+    // Wait for other threads to stop
+    if (exitOnThisFiber ||
         Scheduler::getThis() != this) {
         MORDOR_LOG_DEBUG(g_log) << this << " waiting for other threads to stop";
         m_threads.join_all();
-    } else {
-        MORDOR_NOTREACHED();
     }
     MORDOR_LOG_VERBOSE(g_log) << this << " stopped";
 }
@@ -259,6 +265,7 @@ Scheduler::yieldTo()
     MORDOR_ASSERT(t_fiber.get());
     if (m_rootThread == boost::this_thread::get_id() &&
         (t_fiber->state() == Fiber::INIT || t_fiber->state() == Fiber::TERM)) {
+        m_callingFiber = Fiber::getThis();
         yieldTo(true);
     } else {
         yieldTo(false);
@@ -329,9 +336,9 @@ Scheduler::run()
                 }
                 MORDOR_ASSERT(it->fiber || it->dg);
                 if (it->fiber && it->fiber->state() == Fiber::EXEC) {
-                    ++it;
                     MORDOR_LOG_DEBUG(g_log) << this
                         << " skipping executing fiber " << it->fiber;
+                    ++it;
                     dontIdle = true;
                     continue;
                 }
@@ -377,6 +384,8 @@ Scheduler::run()
 
         if (idleFiber->state() == Fiber::TERM) {
             MORDOR_LOG_DEBUG(g_log) << this << " idle fiber terminated";
+            if (boost::this_thread::get_id() == m_rootThread)
+                m_callingFiber.reset();
             return;
         }
         MORDOR_LOG_DEBUG(g_log) << this << " idling";

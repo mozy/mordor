@@ -77,6 +77,13 @@ public:
 
     /// This must be called for hybrid and spawned Schedulers.  It can be
     /// called multiple times.
+    /// For hybrid or hijacking schedulers, it must be called from within
+    /// the scheduler.  For spawned Schedulers, it must be called from outside
+    /// the Scheduler.
+    /// If called on a hybrid/hijacking scheduler from a Fiber
+    /// that did not create the Scheduler, it will return immediately (the
+    /// Scheduler will yield to the creating Fiber when all work is complete).
+    /// In all other cases stop() will not return until all work is complete.
     void stop();
 
     /// Schedule a Fiber to be executed on the Scheduler
@@ -185,6 +192,7 @@ private:
     std::list<FiberAndThread> m_fibers;
     boost::thread::id m_rootThread;
     Fiber::ptr m_rootFiber;
+    Fiber::ptr m_callingFiber;
     ThreadPool m_threads;
     size_t m_threadCount;
     bool m_stopping;

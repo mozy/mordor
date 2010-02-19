@@ -43,6 +43,22 @@ MORDOR_UNITTEST(Scheduler, idempotentStopSpawn)
     pool.stop();
 }
 
+// When hijacking the calling thread, you can stop() from anywhere within
+// it
+MORDOR_UNITTEST(Scheduler, stopScheduledHijack)
+{
+    WorkerPool pool;
+    pool.schedule(boost::bind(&Scheduler::stop, &pool));
+    pool.dispatch();
+}
+
+MORDOR_UNITTEST(Scheduler, stopScheduledHybrid)
+{
+    WorkerPool pool(2);
+    pool.schedule(boost::bind(&Scheduler::stop, &pool));
+    pool.yieldTo();
+}
+
 // When hijacking the calling thread, you don't need to explicitly start
 // or stop the scheduler; it starts on the first yieldTo, and stops on
 // destruction
@@ -72,6 +88,18 @@ MORDOR_UNITTEST(Scheduler, hijackMultipleDispatch)
     pool.schedule(doNothingFiber);
     MORDOR_TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::INIT);
     pool.dispatch();
+    MORDOR_TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::TERM);
+}
+
+// Just calling stop should still clear all pending work
+MORDOR_UNITTEST(Scheduler, hijackStopOnScheduled)
+{
+    Fiber::ptr doNothingFiber(new Fiber(&doNothing));
+    WorkerPool pool;
+    MORDOR_TEST_ASSERT_EQUAL(Scheduler::getThis(), &pool);
+    pool.schedule(doNothingFiber);
+    MORDOR_TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::INIT);
+    pool.stop();
     MORDOR_TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::TERM);
 }
 
