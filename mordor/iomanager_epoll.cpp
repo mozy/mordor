@@ -220,6 +220,9 @@ IOManagerEPoll::unregisterEvent(int fd, Event events)
     std::map<int, AsyncEvent>::iterator it = m_pendingEvents.find(fd);
     if (it == m_pendingEvents.end())
         return false;
+    // Nothing matching
+    if (!(events & it->second.event.events))
+        return false;
     bool result = false;
     AsyncEvent &e = it->second;
     if ((events & EPOLLIN) && (e.event.events & EPOLLIN)) {
@@ -243,15 +246,15 @@ IOManagerEPoll::unregisterEvent(int fd, Event events)
         result = true;
     }
     e.event.events &= ~events;
-    if (e.event.events == 0) {
-        int rc = epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &e.event);
-        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
-            << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_DEL, " << fd
-            << ", " << (epoll_events_t)e.event.events << "): " << rc << " (" << errno << ")";
+    int op = e.event.events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
+    int rc = epoll_ctl(m_epfd, op, fd, &e.event);
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+        << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", " << fd
+        << ", " << (epoll_events_t)e.event.events << "): " << rc << " (" << errno << ")";
+    if (op == EPOLL_CTL_DEL)
         m_pendingEvents.erase(it);
-        if (rc)
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-    }
+    if (rc)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
     return result;
 }
 
@@ -296,15 +299,15 @@ IOManagerEPoll::cancelEvent(int fd, Event events)
         e.m_fiberError.reset();
     }
     e.event.events &= ~events;
-    if (e.event.events == 0) {
-        int rc = epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &e.event);
-        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
-            << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_DEL, " << fd
-            << ", " << (epoll_events_t)e.event.events << "): " << rc << " (" << errno << ")";
+    int op = e.event.events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
+    int rc = epoll_ctl(m_epfd, op, fd, &e.event);
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+        << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", " << fd
+        << ", " << (epoll_events_t)e.event.events << "): " << rc << " (" << errno << ")";
+    if (op == EPOLL_CTL_DEL)
         m_pendingEvents.erase(it);
-        if (rc)
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-    }
+    if (rc)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
 }
 
 Timer::ptr
@@ -344,7 +347,7 @@ IOManagerEPoll::idle()
         while (rc < 0 && errno == EINTR) {
             int timeout = -1;
             if (nextTimeout != ~0ull)
-                timeout = (int)(nextTimeout / 1000);
+                timeout = (int)(nextTimeout / 1000) + 1;
             rc = epoll_wait(m_epfd, events, 64, timeout);
             if (rc < 0 && errno == EINTR)
                 nextTimeout = nextTimer();
@@ -413,6 +416,7 @@ m_pendingEvents.find(event.data.fd);
                     e.m_schedulerIn->schedule(e.m_fiberIn);
                 e.m_dgIn = NULL;
                 e.m_fiberIn.reset();
+                event.events |= EPOLLIN;
             }
             if (((event.events & EPOLLOUT) ||
                 err) && (e.event.events & EPOLLOUT)) {
@@ -422,19 +426,21 @@ m_pendingEvents.find(event.data.fd);
                     e.m_schedulerOut->schedule(e.m_fiberOut);
                 e.m_dgOut = NULL;
                 e.m_fiberOut.reset();
+                event.events |= EPOLLOUT;
             }
             e.event.events &= ~event.events;
-            if (err || e.event.events == 0) {
-                int rc2 = epoll_ctl(m_epfd, EPOLL_CTL_DEL, event.data.fd,
-                    &e.event);
-                MORDOR_LOG_LEVEL(g_log, rc2 ? Log::ERROR : Log::VERBOSE) << this
-                    << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_DEL, "
-                    << event.data.fd << ", " << (epoll_events_t)e.event.events << "): " << rc2
-                    << " (" << errno << ")";
-                if (rc2)
-                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+
+            int op = e.event.events == 0 ? EPOLL_CTL_DEL : EPOLL_CTL_MOD;
+            int rc2 = epoll_ctl(m_epfd, op, event.data.fd,
+                &e.event);
+            MORDOR_LOG_LEVEL(g_log, rc2 ? Log::ERROR : Log::VERBOSE) << this
+                << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
+                << event.data.fd << ", " << (epoll_events_t)e.event.events << "): " << rc2
+                << " (" << errno << ")";
+            if (rc2)
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+            if (op == EPOLL_CTL_DEL)
                 m_pendingEvents.erase(it);
-            }
         }
         Fiber::yield();
     }
