@@ -19,7 +19,14 @@ class IOManagerEPoll : public Scheduler, public TimerManager
 public:
     enum Event {
         READ = EPOLLIN,
-        WRITE = EPOLLOUT
+        WRITE = EPOLLOUT,
+        // CLOSE and ERROR are for compatibility with legacy apps *only*
+        // If you register for ERROR, and an error happens, no other events
+        // will fire if an ERROR fires
+        // If you register for CLOSE, a WRITE will not fire if a CLOSE
+        // fires
+        CLOSE = EPOLLHUP,
+        ERROR = EPOLLERR
     };
 
 private:
@@ -27,9 +34,9 @@ private:
     {
         epoll_event event;
 
-        Scheduler *m_schedulerIn, *m_schedulerOut;
-        Fiber::ptr m_fiberIn, m_fiberOut;
-        boost::function<void ()> m_dgIn, m_dgOut;
+        Scheduler *m_schedulerIn, *m_schedulerOut, *m_schedulerClose, *m_schedulerError;
+        Fiber::ptr m_fiberIn, m_fiberOut, m_fiberClose, m_fiberError;
+        boost::function<void ()> m_dgIn, m_dgOut, m_dgClose, m_dgError;
     };
 
 public:
@@ -39,6 +46,10 @@ public:
     bool stopping();
 
     void registerEvent(int fd, Event events, boost::function<void ()> dg = NULL);
+    /// Will not cause the event to fire
+    /// @return If the event was successfully unregistered before firing normally
+    bool unregisterEvent(int fd, Event events);
+    /// Will cause the event to fire
     void cancelEvent(int fd, Event events);
 
     Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
