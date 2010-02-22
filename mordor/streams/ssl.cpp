@@ -325,10 +325,16 @@ SSLStream::write(const Buffer &b, size_t len)
     flushBuffer();
     if (len == 0)
         return 0;
-    std::vector<iovec> bufs = b.readBufs(len);
-    int toWrite = (int)std::min<size_t>(0x0fffffff, bufs[0].iov_len);
+    // SSL_write will create at least two SSL records for each call -
+    // one for data, and one tiny one for the checksum or IV or something.
+    // Dealing with lots of extra records can take some serious CPU time
+    // server-side, so we want to provide it with as much data as possible,
+    // even if that means reallocating.  That's why we use Buffer::readBuf
+    // instead of Buffer:readBufs and only give the first buf from the iovec.
+    Buffer::SegmentData buf = b.readBuf(std::min<size_t>(0x7fffffff, len));
+    int toWrite = (int)buf.length();
     while (true) {
-        int result = SSL_write(m_ssl.get(), bufs[0].iov_base, toWrite);
+        int result = SSL_write(m_ssl.get(), buf.start(), toWrite);
         int error = SSL_get_error(m_ssl.get(), result);
         MORDOR_LOG_DEBUG(g_log) << this << " SSL_write(" << m_ssl.get() << ", "
             << toWrite << "): " << result << " (" << error << ")";
