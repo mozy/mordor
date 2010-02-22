@@ -61,40 +61,57 @@ void
 ClientConnection::scheduleNextRequest(ClientRequest *request)
 {
     bool flush = false;
-    {
-        boost::mutex::scoped_lock lock(m_mutex);
+    boost::mutex::scoped_lock lock(m_mutex);
+    invariant();
+    MORDOR_ASSERT(m_currentRequest != m_pendingRequests.end());
+    MORDOR_ASSERT(request == *m_currentRequest);
+    MORDOR_ASSERT(request->m_requestState == ClientRequest::BODY);
+    MORDOR_LOG_TRACE(g_log) << this << " " << request << " request complete";
+    std::list<ClientRequest *>::iterator it(m_currentRequest);
+    ++it;
+    if (it == m_pendingRequests.end()) {
+        // Do *not* advance m_currentRequest, because we can't let someone else
+        // start another request until our flush completes below
+        flush = true;
+        MORDOR_LOG_TRACE(g_log) << this << " flushing";
+    } else {
+        request->m_requestState = ClientRequest::COMPLETE;
+        if (request->m_responseState == ClientRequest::COMPLETE) {
+            MORDOR_ASSERT(request == m_pendingRequests.front());
+            m_pendingRequests.pop_front();
+        }
+        m_currentRequest = it;
+        request = *it;
+        request->m_requestState = ClientRequest::HEADERS;
+        MORDOR_ASSERT(request->m_scheduler);
+        MORDOR_ASSERT(request->m_fiber);
+        MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling request";
+        request->m_scheduler->schedule(request->m_fiber);
+    }
+    if (flush) {
+        // Take a trip through the Scheduler, trying to let someone else
+        // attempt to pipeline
+        if (Scheduler::getThis()) {
+            lock.unlock();
+            Scheduler::getThis()->schedule(Fiber::getThis());
+            Scheduler::getThis()->yieldTo();
+            lock.lock();
+        }
         invariant();
-        MORDOR_ASSERT(m_currentRequest != m_pendingRequests.end());
-        MORDOR_ASSERT(request == *m_currentRequest);
-        MORDOR_ASSERT(request->m_requestState == ClientRequest::BODY);
-        MORDOR_LOG_TRACE(g_log) << this << " " << request << " request complete";
         std::list<ClientRequest *>::iterator it(m_currentRequest);
         ++it;
         if (it == m_pendingRequests.end()) {
-            // Do *not* advance m_currentRequest, because we can't let someone else
-            // start another request until our flush completes below
-            flush = true;
-            MORDOR_LOG_TRACE(g_log) << this << " flushing";
+            // Nope, still the end, we really do have to flush
+            lock.unlock();
         } else {
-            request->m_requestState = ClientRequest::COMPLETE;
-            if (request->m_responseState == ClientRequest::COMPLETE) {
-                MORDOR_ASSERT(request == m_pendingRequests.front());
-                m_pendingRequests.pop_front();
-            }
-            m_currentRequest = it;
-            request = *it;
-            request->m_requestState = ClientRequest::HEADERS;
-            MORDOR_ASSERT(request->m_scheduler);
-            MORDOR_ASSERT(request->m_fiber);
-            MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling request";
-            request->m_scheduler->schedule(request->m_fiber);
+            flush = false;
         }
-    }
-    if (flush) {
-        flush = false;
-        m_stream->flush();
-        boost::mutex::scoped_lock lock(m_mutex);
-        invariant();
+        if (flush) {
+            flush = false;
+            m_stream->flush();
+            lock.lock();
+            invariant();
+        }
         request->m_requestState = ClientRequest::COMPLETE;
         ++m_currentRequest;
         if (request->m_responseState == ClientRequest::COMPLETE) {
@@ -103,6 +120,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
             if (m_priorResponseClosed || m_priorResponseFailed) {
                 MORDOR_ASSERT(m_pendingRequests.empty());
                 flush = true;
+                lock.unlock();
                 MORDOR_LOG_TRACE(g_log) << this << " closing";
             }
         }

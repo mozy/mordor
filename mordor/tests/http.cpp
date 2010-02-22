@@ -1607,6 +1607,61 @@ MORDOR_UNITTEST(HTTPClient, pipelinedRequests)
     MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), responseStream->size());
 }
 
+MORDOR_UNITTEST(HTTPClient, pipelinedEmptyRequests)
+{
+    WorkerPool pool;
+    int sequence = 1;
+
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n"
+        "HTTP/1.1 404 Not Found\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.method = PUT;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "garbage";
+    requestHeaders.entity.contentLength = 0;
+
+    // Start the second request, which will yield to us when it can't use the conn
+    pool.schedule(boost::bind(&pipelinedRequests,
+        conn, boost::ref(sequence)));
+
+    ClientRequest::ptr request1 = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+
+    // Nothing has been sent to the server yet (it's buffered up)
+    MORDOR_TEST_ASSERT_EQUAL(requestStream->size(), 0);
+    pool.dispatch();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
+
+    // Both requests have been sent now (flush()es after last request)
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "PUT / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n"
+        "GET / HTTP/1.1\r\n"
+        "Host: garbage\r\n"
+        "\r\n");
+
+    // Nothing has been read yet
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), 0);
+
+    MORDOR_TEST_ASSERT_EQUAL(request1->response().status.status, OK);
+    pool.dispatch();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 7);
+
+    // Both responses have been read now
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->tell(), responseStream->size());
+}
+
 MORDOR_UNITTEST(HTTPClient, missingTrailerResponse)
 {
     MemoryStream::ptr requestStream(new MemoryStream());
