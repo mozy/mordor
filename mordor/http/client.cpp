@@ -108,13 +108,18 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         }
         if (flush) {
             flush = false;
-            m_stream->flush();
+            try {
+                m_stream->flush();
+            } catch (...) {
+                request->requestFailed();
+                throw;
+            }
             lock.lock();
             invariant();
         }
         request->m_requestState = ClientRequest::COMPLETE;
         ++m_currentRequest;
-        if (request->m_responseState == ClientRequest::COMPLETE) {
+        if (request->m_responseState >= ClientRequest::COMPLETE) {
             MORDOR_ASSERT(request == m_pendingRequests.front());
             m_pendingRequests.pop_front();
             if (m_priorResponseClosed || m_priorResponseFailed) {
@@ -1011,13 +1016,15 @@ ClientRequest::requestFailed()
     MORDOR_ASSERT(m_requestState == BODY);
     MORDOR_ASSERT(m_requestStream);
     MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " request failed";
-    // Break the circular reference
-    NotifyStream::ptr notify =
-        boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
-    MORDOR_ASSERT(notify);
-    notify->notifyOnClose = NULL;
-    notify->notifyOnEof = NULL;
-    notify->notifyOnException = NULL;
+    if (m_requestStream) {
+        // Break the circular reference
+        NotifyStream::ptr notify =
+            boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
+        MORDOR_ASSERT(notify);
+        notify->notifyOnClose = NULL;
+        notify->notifyOnEof = NULL;
+        notify->notifyOnException = NULL;
+    }
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
     m_conn->invariant();
     MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());

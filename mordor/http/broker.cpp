@@ -316,14 +316,11 @@ static void doBody(ClientRequest::ptr request,
     try {
         bodyDg(request);
     } catch (...) {
-        // Request body failed, but not in the HTTP framework; we have to
-        // abort the request so we don't hang waiting for a response (since
-        // the request object is still in scope by the caller, it won't do this
-        // automatically)
-        if (request->requestState() != ClientRequest::ERROR) {
-            exceptionWasHttp = true;
-            request->cancel();
-        }
+        exceptionWasHttp = request->requestState() == ClientRequest::ERROR;
+        // Make sure the request is fully aborted so we don't hang waiting for
+        // a response (since the request object is still in scope by the
+        // caller, it won't do this automatically)
+        request->cancel();
         exception = boost::current_exception();
     }
     future.signal();
@@ -390,7 +387,7 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             // (i.e. an exception from the user's code)
             // otherwise, ignore it - we have a response, and we don't really
             // care that the request didn't complete
-            if (exception && exceptionWasHttp)
+            if (exception && !exceptionWasHttp)
                 Mordor::rethrow_exception(exception);
             return request;
         } catch (SocketException &) {

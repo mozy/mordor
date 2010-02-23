@@ -2280,7 +2280,7 @@ MORDOR_UNITTEST(HTTPClient, priorResponseFailedPipeline)
 }
 
 static void
-serverHangsUpOnRequest(const URI &uri, ServerRequest::ptr request)
+serverHangsUpOnRequestServer(const URI &uri, ServerRequest::ptr request)
 {
     request->response().status.status = OK;
     request->response().entity.contentLength = 0;
@@ -2288,26 +2288,42 @@ serverHangsUpOnRequest(const URI &uri, ServerRequest::ptr request)
 }
 
 static void
-sendRequest(ClientRequest::ptr request)
+sendRequest(ClientRequest::ptr request, unsigned long long length, bool &wroteItAll, bool &excepted)
 {
-    RandomStream random;
-    transferStream(random, request->requestStream(), 1024 * 1024);
-    request->requestStream()->close();
+    try {
+        RandomStream random;
+        transferStream(random, request->requestStream(), length);
+        wroteItAll = true;
+        request->requestStream()->close();
+    } catch (...) {
+        excepted = true;
+        throw;
+    }
 }
 
-MORDOR_UNITTEST(HTTPClient, serverHangsUpOnRequest)
+static void serverHangsUpOnRequest(long long length, bool shouldWriteItAll)
 {
     WorkerPool pool;
-    MockConnectionBroker server(&serverHangsUpOnRequest);
+    MockConnectionBroker server(&serverHangsUpOnRequestServer);
     BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
 
     Request requestHeaders;
     requestHeaders.requestLine.uri = "http://localhost/";
-    requestHeaders.entity.contentLength = 1024 * 1024;
+    requestHeaders.entity.contentLength = length;
 
-    ClientRequest::ptr request = requestBroker.request(requestHeaders, false, &sendRequest);
+    bool wroteItAll = false, excepted = false;
+    ClientRequest::ptr request = requestBroker.request(requestHeaders, false,
+        boost::bind(&sendRequest, _1, length,
+        boost::ref(wroteItAll), boost::ref(excepted)));
+    MORDOR_ASSERT(excepted);
+    MORDOR_TEST_ASSERT_EQUAL(wroteItAll, shouldWriteItAll);
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
 }
+
+MORDOR_UNITTEST(HTTPClient, serverHangsUpOnRequest)
+{ serverHangsUpOnRequest(1024 * 1024, false); }
+MORDOR_UNITTEST(HTTPClient, serverHangsUpOnRequestFlush)
+{ serverHangsUpOnRequest(64 * 1024, true); }
 
 static void throwExceptionForRequest(ClientRequest::ptr request)
 {
@@ -2317,7 +2333,7 @@ static void throwExceptionForRequest(ClientRequest::ptr request)
 MORDOR_UNITTEST(HTTPClient, sendException)
 {
     WorkerPool pool;
-    MockConnectionBroker server(&serverHangsUpOnRequest);
+    MockConnectionBroker server(&serverHangsUpOnRequestServer);
     BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
 
     Request requestHeaders;
