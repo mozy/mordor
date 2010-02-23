@@ -62,7 +62,8 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
     ++m_inUseCount;
     m_handles[m_inUseCount] = hEvent;
     m_schedulers[m_inUseCount] = Scheduler::getThis();
-    m_fibers[m_inUseCount] = Fiber::getThis();
+    if (!dg)
+        m_fibers[m_inUseCount] = Fiber::getThis();
     m_dgs[m_inUseCount] = dg;
     m_recurring[m_inUseCount] = recurring;
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " registerEvent(" << hEvent
