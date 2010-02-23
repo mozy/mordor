@@ -125,7 +125,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
             }
         }
         // Someone else may have queued up while we were flushing
-        if (m_currentRequest != m_pendingRequests.end()) {
+        if (!flush && m_currentRequest != m_pendingRequests.end()) {
             request = *m_currentRequest;
             request->m_requestState = ClientRequest::HEADERS;
             MORDOR_ASSERT(request->m_scheduler);
