@@ -279,7 +279,11 @@ ConnectionCache::closeConnections()
 std::pair<ClientConnection::ptr, bool>
 MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
 {
-    ConnectionCache::iterator it = m_conns.find(uri);
+    URI schemeAndAuthority = uri;
+    schemeAndAuthority.path = URI::Path();
+    schemeAndAuthority.queryDefined(false);
+    schemeAndAuthority.fragmentDefined(false);
+    ConnectionCache::iterator it = m_conns.find(schemeAndAuthority);
     if (it != m_conns.end() && !it->second.first->newRequestsAllowed()) {
         m_conns.erase(it);
         it = m_conns.end();
@@ -287,13 +291,17 @@ MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
     if (it == m_conns.end()) {
         std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
         ClientConnection::ptr client(
-            new ClientConnection(pipes.first));
+            new ClientConnection(pipes.first, m_timerManager));
+        if (m_timerManager) {
+            client->readTimeout(m_readTimeout);
+            client->writeTimeout(m_writeTimeout);
+        }
         ServerConnection::ptr server(
             new ServerConnection(pipes.second, boost::bind(m_dg,
-                uri, _1)));
+                schemeAndAuthority, _1)));
         Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(
             &ServerConnection::processRequests, server))));
-        m_conns[uri] = std::make_pair(client, server);
+        m_conns[schemeAndAuthority] = std::make_pair(client, server);
         return std::make_pair(client, false);
     }
     return std::make_pair(it->second.first, false);

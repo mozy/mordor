@@ -15,6 +15,7 @@
 #include "mordor/streams/limited.h"
 #include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
+#include "mordor/streams/timeout.h"
 #include "mordor/streams/transfer.h"
 #include "mordor/util.h"
 #include "parser.h"
@@ -24,14 +25,20 @@ namespace HTTP {
 
 static Logger::ptr g_log = Log::lookup("mordor:http:client");
 
-ClientConnection::ClientConnection(Stream::ptr stream)
+ClientConnection::ClientConnection(Stream::ptr stream, TimerManager *timerManager)
 : Connection(stream),
+  m_readTimeout(~0ull),
   m_currentRequest(m_pendingRequests.end()),
   m_allowNewRequests(true),
   m_priorRequestFailed(false),
   m_priorResponseFailed(false),
   m_priorResponseClosed(false)
-{}
+{
+    if (timerManager) {
+        m_timeoutStream.reset(new TimeoutStream(m_stream, *timerManager));
+        m_stream = m_timeoutStream;
+    }
+}
 
 ClientRequest::ptr
 ClientConnection::request(const Request &requestHeaders)
@@ -55,6 +62,20 @@ ClientConnection::outstandingRequests()
     boost::mutex::scoped_lock lock(m_mutex);
     invariant();
     return m_pendingRequests.size();
+}
+
+void
+ClientConnection::readTimeout(unsigned long long us)
+{
+    MORDOR_ASSERT(m_timeoutStream);
+    m_readTimeout = us;
+}
+
+void
+ClientConnection::writeTimeout(unsigned long long us)
+{
+    MORDOR_ASSERT(m_timeoutStream);
+    m_timeoutStream->writeTimeout(us);
 }
 
 void
@@ -137,6 +158,9 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
             MORDOR_ASSERT(request->m_fiber);
             MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling request";
             request->m_scheduler->schedule(request->m_fiber);
+        } else {
+            if (m_timeoutStream)
+                m_timeoutStream->readTimeout(m_readTimeout);
         }
     }
     if (flush)
@@ -693,6 +717,9 @@ ClientRequest::doRequest()
             m_conn->m_currentRequest = m_conn->m_pendingRequests.end();
             --m_conn->m_currentRequest;
             m_requestState = HEADERS;
+            // Disable read timeouts while a request is in progress
+            if (m_conn->m_timeoutStream)
+                m_conn->m_timeoutStream->readTimeout(~0ull);
             MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " requesting";
         } else {
             m_scheduler = Scheduler::getThis();

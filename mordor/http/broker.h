@@ -136,8 +136,13 @@ private:
         std::pair<ClientConnection::ptr, ServerConnection::ptr> >
         ConnectionCache;
 public:
-    MockConnectionBroker(boost::function<void (const URI &uri, ServerRequest::ptr)> dg)
-        : m_dg(dg)
+    MockConnectionBroker(boost::function<void (const URI &uri, ServerRequest::ptr)> dg,
+        TimerManager *timerManager = NULL, unsigned long long readTimeout = ~0ull,
+        unsigned long long writeTimeout = ~0ull)
+        : m_dg(dg),
+          m_timerManager(timerManager),
+          m_readTimeout(readTimeout),
+          m_writeTimeout(writeTimeout)
     {}
 
     std::pair<ClientConnection::ptr, bool>
@@ -146,6 +151,8 @@ public:
 private:
     boost::function<void (const URI &uri, ServerRequest::ptr)> m_dg;
     ConnectionCache m_conns;
+    TimerManager *m_timerManager;
+    unsigned long long m_readTimeout, m_writeTimeout;
 };
 
 class RequestBroker

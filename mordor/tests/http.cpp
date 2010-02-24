@@ -9,6 +9,7 @@
 #include "mordor/http/parser.h"
 #include "mordor/http/server.h"
 #include "mordor/scheduler.h"
+#include "mordor/sleep.h"
 #include "mordor/streams/cat.h"
 #include "mordor/streams/duplex.h"
 #include "mordor/streams/limited.h"
@@ -2343,4 +2344,65 @@ MORDOR_UNITTEST(HTTPClient, sendException)
     MORDOR_TEST_ASSERT_EXCEPTION(
         requestBroker.request(requestHeaders, false, &throwExceptionForRequest),
         DummyException);
+}
+
+static void
+serverDelaysFirstResponse(const URI &uri, ServerRequest::ptr request,
+                          TimerManager &timerManager)
+{
+    if (request->request().requestLine.uri == "/delay") {
+        sleep(timerManager, 200000);
+        request->response().status.status = OK;
+        request->response().entity.contentLength = 0;
+    } else {
+        if (request->hasRequestBody())
+            transferStream(request->requestStream(), NullStream::get());
+        request->response().status.status = OK;
+        request->response().entity.contentLength = 0;
+    }
+}
+
+static void sendBodyForPointThreeSecond(ClientRequest::ptr request,
+                                        TimerManager &timerManager)
+{
+    RandomStream random;
+    unsigned long long start = TimerManager::now();
+    // Transfer 64KB at a time, checking our timer
+    while (TimerManager::now() - start < 300000) {
+        transferStream(random, request->requestStream(), 65536);
+        sleep(timerManager, 1000);
+    }
+    request->requestStream()->close();
+}
+
+static void firstRequest(BaseRequestBroker &requestBroker)
+{
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/delay";
+
+    // This should *not* timeout
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+}
+
+MORDOR_UNITTEST(HTTPClient, pipelineTimeout)
+{
+    IOManager ioManager;
+
+    MockConnectionBroker server(boost::bind(&serverDelaysFirstResponse,
+        _1, _2, boost::ref(ioManager)), &ioManager, 100000, ~0ull);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
+
+    ioManager.schedule(boost::bind(&firstRequest, boost::ref(requestBroker)));
+    ioManager.schedule(Fiber::getThis());
+    ioManager.yieldTo();
+
+    Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::PUT;
+    requestHeaders.requestLine.uri = "http://localhost/somethingElse";
+    requestHeaders.general.transferEncoding.push_back("chunked");
+
+    ClientRequest::ptr request = requestBroker.request(requestHeaders, false,
+        boost::bind(&sendBodyForPointThreeSecond, _1, boost::ref(ioManager)));
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
 }

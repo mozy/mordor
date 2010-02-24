@@ -61,10 +61,10 @@ MORDOR_UNITTEST(Socket, acceptTimeout)
 {
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
-    conns.listen->receiveTimeout(1000000);
+    conns.listen->receiveTimeout(100000);
     unsigned long long start = TimerManager::now();
     MORDOR_TEST_ASSERT_EXCEPTION(conns.listen->accept(), TimedOutException);
-    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 100000, TimerManager::now(), 50000);
     MORDOR_TEST_ASSERT_EXCEPTION(conns.listen->accept(), TimedOutException);
 }
 
@@ -72,14 +72,14 @@ MORDOR_UNITTEST(Socket, receiveTimeout)
 {
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
-    conns.connect->receiveTimeout(1000000);
+    conns.connect->receiveTimeout(100000);
     ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
     conns.connect->connect(conns.address);
     ioManager.dispatch();
     char buf;
     unsigned long long start = TimerManager::now();
     MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->receive(&buf, 1), TimedOutException);
-    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 100000, TimerManager::now(), 50000);
     MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->receive(&buf, 1), TimedOutException);
 }
 
@@ -87,7 +87,7 @@ MORDOR_UNITTEST(Socket, sendTimeout)
 {
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
-    conns.connect->sendTimeout(1000000);
+    conns.connect->sendTimeout(100000);
     ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
     conns.connect->connect(conns.address);
     ioManager.dispatch();
@@ -95,7 +95,7 @@ MORDOR_UNITTEST(Socket, sendTimeout)
     memset(buf, 0, sizeof(buf));
     unsigned long long start = TimerManager::now();
     MORDOR_TEST_ASSERT_EXCEPTION(while (true) conns.connect->send(buf, sizeof(buf)), TimedOutException);
-    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 1000000, TimerManager::now(), 100000);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 100000, TimerManager::now(), 50000);
     MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->send(buf, sizeof(buf)), TimedOutException);
 }
 

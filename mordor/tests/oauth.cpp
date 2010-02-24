@@ -27,8 +27,8 @@ oauthExampleServer(const URI &uri, ServerRequest::ptr request)
     requestBody.buffer().copyOut(&queryString[0], requestBody.buffer().readAvailable());
 
     URI::QueryString qs(queryString);
-    if (uri.path == "/request_token") {
-        MORDOR_TEST_ASSERT_EQUAL(uri, "https://photos.example.net/request_token");
+    if (request->request().requestLine.uri == "/request_token") {
+        MORDOR_TEST_ASSERT_EQUAL(uri, "https://photos.example.net");
 
         MORDOR_TEST_ASSERT_EQUAL(qs.size(), 7u);
         URI::QueryString::iterator it = qs.find("oauth_consumer_key");
@@ -57,8 +57,8 @@ oauthExampleServer(const URI &uri, ServerRequest::ptr request)
         qs.insert(std::make_pair("oauth_token", "hh5s93j4hdidpola"));
         qs.insert(std::make_pair("oauth_token_secret", "hdhd0244k9j7ao03"));
         qs.insert(std::make_pair("oauth_callback_confirmed", "true"));
-    } else if (uri.path == "/access_token") {
-        MORDOR_TEST_ASSERT_EQUAL(uri, "https://photos.example.net/access_token");
+    } else if (request->request().requestLine.uri == "/access_token") {
+        MORDOR_TEST_ASSERT_EQUAL(uri, "https://photos.example.net");
 
         MORDOR_TEST_ASSERT_EQUAL(qs.size(), 8u);
         URI::QueryString::iterator it = qs.find("oauth_consumer_key");

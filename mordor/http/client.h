@@ -17,6 +17,8 @@
 namespace Mordor {
 
 class Scheduler;
+class TimeoutStream;
+class TimerManager;
 
 namespace HTTP {
 
@@ -126,12 +128,15 @@ public:
     typedef boost::shared_ptr<ClientConnection> ptr;
 
 public:
-    ClientConnection(Stream::ptr stream);
+    ClientConnection(Stream::ptr stream, TimerManager *timerManager = NULL);
 
     ClientRequest::ptr request(const Request &requestHeaders);
 
     bool newRequestsAllowed();
     size_t outstandingRequests();
+
+    void readTimeout(unsigned long long us);
+    void writeTimeout(unsigned long long us);
 
 private:
     void scheduleNextRequest(ClientRequest *currentRequest);
@@ -141,6 +146,8 @@ private:
 
 private:
     boost::mutex m_mutex;
+    boost::shared_ptr<TimeoutStream> m_timeoutStream;
+    unsigned long long m_readTimeout;
     std::list<ClientRequest *> m_pendingRequests;
     std::list<ClientRequest *>::iterator m_currentRequest;
     std::set<ClientRequest *> m_waitingResponses;
