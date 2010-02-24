@@ -78,13 +78,12 @@ public:
     size_t unregisterEvent(HANDLE handle);
     void cancelEvent(HANDLE hFile, AsyncEventIOCP *e);
 
-    Timer::ptr registerTimer(unsigned long long us,
-        boost::function<void ()> dg, bool recurring = false);
-
 protected:
     bool stopping(unsigned long long &nextTimeout);
     void idle();
     void tickle();
+
+    void onTimerInsertedAtFront() { tickle(); }
 
 private:
     HANDLE m_hCompletionPort;

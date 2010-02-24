@@ -52,13 +52,12 @@ public:
     /// Will cause the event to fire
     void cancelEvent(int fd, Event events);
 
-    Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
-        bool recurring = false);
-
 protected:
     bool stopping(unsigned long long &nextTimeout);
     void idle();
     void tickle();
+
+    void onTimerInsertedAtFront() { tickle(); }
 
 private:
     int m_epfd;

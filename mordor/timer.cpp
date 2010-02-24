@@ -96,11 +96,57 @@ Timer::cancel()
         m_dg = NULL;
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
             m_manager->m_timers.find(shared_from_this());
-        if (it != m_manager->m_timers.end())
-            m_manager->m_timers.erase(it);
+        MORDOR_ASSERT(it != m_manager->m_timers.end());
+        m_manager->m_timers.erase(it);
         return true;
     }
     return false;
+}
+
+bool
+Timer::refresh()
+{
+    boost::mutex::scoped_lock lock(m_manager->m_mutex);
+    if (!m_dg)
+        return false;
+    std::set<Timer::ptr, Timer::Comparator>::iterator it =
+        m_manager->m_timers.find(shared_from_this());
+    MORDOR_ASSERT(it != m_manager->m_timers.end());
+    m_manager->m_timers.erase(it);
+    m_next = TimerManager::now() + m_us;
+    m_manager->m_timers.insert(shared_from_this());
+    lock.unlock();
+    MORDOR_LOG_DEBUG(g_log) << this << " refresh";
+    return true;
+}
+
+bool
+Timer::reset(unsigned long long us, bool fromNow)
+{
+    boost::mutex::scoped_lock lock(m_manager->m_mutex);
+    if (!m_dg)
+        return false;
+    // No change
+    if (us == m_us && !fromNow)
+        return true;
+    std::set<Timer::ptr, Timer::Comparator>::iterator it =
+        m_manager->m_timers.find(shared_from_this());
+    MORDOR_ASSERT(it != m_manager->m_timers.end());
+    m_manager->m_timers.erase(it);
+    unsigned long long start;
+    if (fromNow)
+        start = TimerManager::now();
+    else
+        start = m_next - m_us;
+    m_us = us;
+    m_next = start + m_us;
+    it = m_manager->m_timers.insert(shared_from_this()).first;
+    bool atFront = (it == m_manager->m_timers.begin());
+    lock.unlock();
+    MORDOR_LOG_DEBUG(g_log) << this << " reset to " << m_us;
+    if (atFront)
+        m_manager->onTimerInsertedAtFront();
+    return true;
 }
 
 TimerManager::~TimerManager()
@@ -115,23 +161,16 @@ Timer::ptr
 TimerManager::registerTimer(unsigned long long us, boost::function<void ()> dg,
         bool recurring)
 {
-    bool atFront;
-    return registerTimer(us, dg, recurring, atFront);
-}
-
-Timer::ptr
-TimerManager::registerTimer(unsigned long long us, boost::function<void ()> dg,
-        bool recurring, bool &atFront)
-{
     Timer::ptr result(new Timer(us, dg, recurring, this));
-    {
-        boost::mutex::scoped_lock lock(m_mutex);
-        std::set<Timer::ptr, Timer::Comparator>::iterator it =
-            m_timers.insert(result).first;
-        atFront = (it == m_timers.begin());
-    }
+    boost::mutex::scoped_lock lock(m_mutex);
+    std::set<Timer::ptr, Timer::Comparator>::iterator it =
+        m_timers.insert(result).first;
+    bool atFront = (it == m_timers.begin());
+    lock.unlock();
     MORDOR_LOG_DEBUG(g_log) << result.get() << " registerTimer(" << us
         << ", " << us << ", " << recurring << "): " << atFront;
+    if (atFront)
+        onTimerInsertedAtFront();
     return result;
 }
 

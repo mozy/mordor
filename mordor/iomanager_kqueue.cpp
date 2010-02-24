@@ -112,17 +112,6 @@ IOManagerKQueue::cancelEvent(int fd, Event events)
     m_pendingEvents.erase(it);
 }
 
-Timer::ptr
-IOManagerKQueue::registerTimer(unsigned long long us, boost::function<void ()> dg,
-        bool recurring)
-{
-    bool atFront;
-    Timer::ptr result = TimerManager::registerTimer(us, dg, recurring, atFront);
-    if (atFront)
-        tickle();
-    return result;
-}
-
 void
 IOManagerKQueue::idle()
 {

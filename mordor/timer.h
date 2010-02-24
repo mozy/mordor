@@ -31,6 +31,16 @@ public:
     /// (if non-recurring)
     bool cancel();
 
+    /// Refresh the timer from now
+    /// @return If it was refreshed before firing
+    bool refresh();
+    /// Reset the timer to the new delay
+    /// @param us The delay
+    /// @param fromNow If us should be relative to now, or the original
+    /// starting point
+    /// @return If it was reset before firing
+    bool reset(unsigned long long us, bool fromNow);
+
 private:
     bool m_recurring;
     unsigned long long m_next;
@@ -55,20 +65,19 @@ public:
     virtual Timer::ptr registerTimer(unsigned long long us,
         boost::function<void ()> dg, bool recurring = false);
 
-    // How *long* until the next timer expires; ~0ull if no timers
+    /// @return How long until the next timer expires; ~0ull if no timers
     unsigned long long nextTimer();
     void executeTimers();
 
-    // Return monotonically increasing count of microseconds.  The number returned
-    // isn't guaranteed to be relative to any particular start time, however,
-    // the difference between two successive calls to now() should be
-    // equal to the time that elapsed between calls.  This should be true
-    // even if the system clock is changed.
+    /// @return Monotonically increasing count of microseconds.  The number
+    /// returned isn't guaranteed to be relative to any particular start time,
+    /// however, the difference between two successive calls to now() is
+    /// equal to the time that elapsed between calls.  This is true even if the
+    /// system clock is changed.
     static unsigned long long now();
 
 protected:
-    Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
-        bool recurring, bool &atFront);
+    virtual void onTimerInsertedAtFront() {}
     std::vector<boost::function<void ()> > processTimers();
 
 private:

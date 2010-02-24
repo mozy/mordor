@@ -90,13 +90,12 @@ public:
     void registerEvent(int fd, Event event, Delegate dg = NULL);
     void cancelEvent(int fd, Event events);
 
-    Timer::ptr registerTimer(unsigned long long us, Delegate dg,
-                             bool recurring = false);
-
 protected:
     void idle();
     void tickle();
     void tickle(boost::thread::id id);
+
+    void onTimerInsertedAtFront() { tickle(); }
 
 private:
     void initThread();

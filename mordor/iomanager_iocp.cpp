@@ -365,17 +365,6 @@ IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
     }
 }
 
-Timer::ptr
-IOManagerIOCP::registerTimer(unsigned long long us, boost::function<void ()> dg,
-        bool recurring)
-{
-    bool atFront;
-    Timer::ptr result = TimerManager::registerTimer(us, dg, recurring, atFront);
-    if (atFront)
-        tickle();
-    return result;
-}
-
 bool
 IOManagerIOCP::stopping(unsigned long long &nextTimeout)
 {

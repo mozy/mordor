@@ -310,17 +310,6 @@ IOManagerEPoll::cancelEvent(int fd, Event events)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
 }
 
-Timer::ptr
-IOManagerEPoll::registerTimer(unsigned long long us, boost::function<void ()> dg,
-        bool recurring)
-{
-    bool atFront;
-    Timer::ptr result = TimerManager::registerTimer(us, dg, recurring, atFront);
-    if (atFront)
-        tickle();
-    return result;
-}
-
 bool
 IOManagerEPoll::stopping(unsigned long long &nextTimeout)
 {

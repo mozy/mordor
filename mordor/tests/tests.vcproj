@@ -464,6 +464,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\timeout_stream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\timer.cpp"
 				>
 			</File>

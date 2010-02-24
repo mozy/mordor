@@ -224,19 +224,6 @@ IOManagerEvent::cancelEvent(int fd, Event events)
     writeState.schedule();
 }
 
-Timer::ptr
-IOManagerEvent::registerTimer(unsigned long long us, Delegate dg,
-                              bool recurring)
-{
-    bool atFront;
-    Timer::ptr result = TimerManager::registerTimer(us, dg, recurring,
-                                                    atFront);
-    if (atFront) {
-        tickle();
-    }
-    return result;
-}
-
 void
 IOManagerEvent::idle()
 {

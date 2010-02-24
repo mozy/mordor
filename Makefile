@@ -304,6 +304,7 @@ TESTOBJECTS :=								\
 	mordor/tests/ssl_stream.o					\
 	mordor/tests/stream.o						\
 	mordor/tests/temp_stream.o					\
+	mordor/tests/timeout_stream.o					\
 	mordor/tests/timer.o						\
 	mordor/tests/transfer_stream.o					\
 	mordor/tests/uri.o						\
@@ -314,7 +315,6 @@ $(TESTDATA): $(CURDIR)/%: $(SRCDIR)/%
 	$(Q)cp -f $< $@
 
 $(TESTOBJECTS): mordor/pch.h.gch
->>>>>>> 3f06bc7... libmordorpq:Makefile
 
 mordor/tests/run_tests:							\
 	$(TESTOBJECTS)							\
@@ -454,6 +454,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/std.o						\
 	mordor/streams/stream.o						\
 	mordor/streams/temp.o						\
+	mordor/streams/timeout.o					\
 	mordor/streams/test.o						\
 	mordor/streams/throttle.o					\
 	mordor/streams/transfer.o					\

@@ -45,12 +45,11 @@ public:
     void registerEvent(int fd, Event events, boost::function<void ()> dg = NULL);
     void cancelEvent(int fd, Event events);
 
-    Timer::ptr registerTimer(unsigned long long us, boost::function<void ()> dg,
-        bool recurring = false);
-
 protected:
     void idle();
     void tickle();
+
+    void onTimerInsertedAtFront() { tickle(); }
 
 private:
     int m_kqfd;
