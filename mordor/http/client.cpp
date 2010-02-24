@@ -94,7 +94,6 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         // Do *not* advance m_currentRequest, because we can't let someone else
         // start another request until our flush completes below
         flush = true;
-        MORDOR_LOG_TRACE(g_log) << this << " flushing";
     } else {
         request->m_requestState = ClientRequest::COMPLETE;
         if (request->m_responseState == ClientRequest::COMPLETE) {
@@ -130,6 +129,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         if (flush) {
             flush = false;
             try {
+                MORDOR_LOG_TRACE(g_log) << this << " flushing";
                 m_stream->flush();
             } catch (...) {
                 request->requestFailed();
@@ -788,6 +788,11 @@ ClientRequest::doRequest()
         m_conn->m_priorRequestFailed = true;
         m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
         m_conn->scheduleAllWaitingRequests();
+        // Throw an HTTP exception if we can
+        if (m_conn->m_priorResponseClosed)
+            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+        if (m_conn->m_priorResponseFailed)
+            MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         throw;
     }
 }
@@ -1001,6 +1006,12 @@ ClientRequest::ensureResponse()
             m_conn->scheduleAllWaitingRequests();
             m_conn->scheduleAllWaitingResponses();
         }
+        if (!m_noResponse && !m_badResponse && !m_incompleteResponse) {
+            if (m_conn->m_priorResponseClosed)
+                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+            if (m_conn->m_priorResponseFailed)
+                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+        }
         throw;
     }
 }
@@ -1066,6 +1077,11 @@ ClientRequest::requestFailed()
         ++m_conn->m_currentRequest;
     }
     m_conn->scheduleAllWaitingRequests();
+    // Throw an HTTP exception if we can
+    if (m_conn->m_priorResponseClosed)
+        MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+    if (m_conn->m_priorResponseFailed)
+        MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
 }
 
 void

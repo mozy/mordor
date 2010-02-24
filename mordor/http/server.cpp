@@ -552,6 +552,8 @@ ServerRequest::doRequest()
     } catch (Assertion &) {
         throw;
     } catch (...) {
+        if (m_aborted)
+            return;
         MORDOR_LOG_ERROR(g_log) << this << " Unexpected exception: "
             << boost::current_exception_diagnostic_information();
         if (!m_responseDone) {

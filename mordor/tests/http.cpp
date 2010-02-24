@@ -16,6 +16,7 @@
 #include "mordor/streams/memory.h"
 #include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
+#include "mordor/streams/pipe.h"
 #include "mordor/streams/random.h"
 #include "mordor/streams/test.h"
 #include "mordor/streams/transfer.h"
@@ -2405,4 +2406,50 @@ MORDOR_UNITTEST(HTTPClient, pipelineTimeout)
     ClientRequest::ptr request = requestBroker.request(requestHeaders, false,
         boost::bind(&sendBodyForPointThreeSecond, _1, boost::ref(ioManager)));
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+}
+
+static void
+serverHangsUpAfterReadingRequestServer(ServerRequest::ptr request)
+{
+    if (request->hasRequestBody())
+        transferStream(request->requestStream(), NullStream::get());
+    request->response().status.status = OK;
+    request->response().entity.contentLength = 0;
+    request->response().general.connection.insert("close");
+}
+
+static void firstRequestGetsClosed(ClientConnection::ptr conn)
+{
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/delay";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
+    MORDOR_ASSERT(request->response().general.connection.find("close") !=
+        request->response().general.connection.end());
+}
+
+MORDOR_UNITTEST(HTTPClient, priorResponseCloseWhileRequestInProgress)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    ClientConnection::ptr client(new ClientConnection(pipes.first));
+    ServerConnection::ptr server(new ServerConnection(pipes.second,
+        &serverHangsUpAfterReadingRequestServer));
+    pool.schedule(boost::bind(&ServerConnection::processRequests, server));
+
+    pool.schedule(boost::bind(&firstRequestGetsClosed, client));
+    pool.schedule(Fiber::getThis());
+    pool.yieldTo();
+
+    Request requestHeaders;
+    requestHeaders.requestLine.method = HTTP::PUT;
+    requestHeaders.requestLine.uri = "http://localhost/somethingElse";
+    requestHeaders.general.transferEncoding.push_back("chunked");
+
+    ClientRequest::ptr request = client->request(requestHeaders);
+    RandomStream random;
+    MORDOR_TEST_ASSERT_EXCEPTION(transferStream(random, request->requestStream()),
+        PriorRequestFailedException);
 }

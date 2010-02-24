@@ -128,7 +128,7 @@ PipeStream::read(Buffer &b, size_t len)
             if (m_cancelledRead)
                 MORDOR_THROW_EXCEPTION(OperationAbortedException());
             if (m_closed & READ)
-                MORDOR_THROW_EXCEPTION(BadHandleException());
+                MORDOR_THROW_EXCEPTION(BrokenPipeException());
             PipeStream::ptr otherStream = m_otherStream.lock();
             if (!otherStream && !(m_otherClosed & WRITE))
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
@@ -194,7 +194,7 @@ PipeStream::write(const Buffer &b, size_t len)
             if (m_cancelledWrite)
                 MORDOR_THROW_EXCEPTION(OperationAbortedException());
             if (m_closed & WRITE)
-                MORDOR_THROW_EXCEPTION(BadHandleException());
+                MORDOR_THROW_EXCEPTION(BrokenPipeException());
             PipeStream::ptr otherStream = m_otherStream.lock();
             if (!otherStream || (otherStream->m_closed & READ))
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
