@@ -478,7 +478,7 @@ Fiber::initStack()
     if (m_stack)
         return;
     TimeStatistic<AverageMinMaxStatistic<unsigned int> > stat(g_statAlloc);
-    m_sp = m_stack = CreateFiber(m_stacksize, &native_fiber_entryPoint, &Fiber::entryPoint);
+    m_sp = m_stack = pCreateFiberEx(0, m_stacksize, 0, &native_fiber_entryPoint, &Fiber::entryPoint);
     stat.finish();
     if (!m_stack)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFiber");

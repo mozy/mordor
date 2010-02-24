@@ -28,6 +28,14 @@ MORDOR_RUNTIME_LINK_DEFINITION(ConvertFiberToThread, BOOL, WINAPI,
     return FALSE;
 }
 
+MORDOR_RUNTIME_LINK_DEFINITION(CreateFiberEx, LPVOID, WINAPI,
+    (SIZE_T dwStackCommitSize, SIZE_T dwStackReserveSize, DWORD dwFlags, LPFIBER_START_ROUTINE lpStartAddress, LPVOID lpParameter),
+    (dwStackCommitSize, dwStackReserveSize, dwFlags, lpStartAddress, lpParameter),
+    L"kernel32.dll")
+{
+    return CreateFiber(dwStackCommitSize, lpStartAddress, lpParameter);
+}
+
 MORDOR_RUNTIME_LINK_DEFINITION(FindFirstStreamW, HANDLE, WINAPI,
     (LPCWSTR lpFileName, STREAM_INFO_LEVELS InfoLevel, LPVOID lpFindStreamData, DWORD dwFlags),
     (lpFileName, InfoLevel, lpFindStreamData, dwFlags),
