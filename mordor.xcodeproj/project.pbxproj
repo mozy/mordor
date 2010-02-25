@@ -60,6 +60,8 @@
 		3CAB29E7112B347400607AEE /* zlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB276D112B096700607AEE /* zlib.cpp */; };
 		3CAB29E8112B347400607AEE /* string.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB276F112B096700607AEE /* string.cpp */; };
 		3CAB29E9112B347400607AEE /* timer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2798112B096700607AEE /* timer.cpp */; };
+		E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E29FD2A81136FD1D004BC293 /* timeout.cpp */; };
+		E29FD2AB1136FD1D004BC293 /* timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = E29FD2A91136FD1D004BC293 /* timeout.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -277,6 +279,8 @@
 		3CAB27A0112B096700607AEE /* parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
 		3CAB27A1112B096700607AEE /* xml_parser.rl */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp.preprocessed; fileEncoding = 4; path = xml_parser.rl; sourceTree = "<group>"; };
 		3CAB29B1112B340600607AEE /* libmordor.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmordor.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		E29FD2A81136FD1D004BC293 /* timeout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timeout.cpp; sourceTree = "<group>"; };
+		E29FD2A91136FD1D004BC293 /* timeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timeout.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -458,6 +462,8 @@
 		3CAB2737112B096700607AEE /* streams */ = {
 			isa = PBXGroup;
 			children = (
+				E29FD2A81136FD1D004BC293 /* timeout.cpp */,
+				E29FD2A91136FD1D004BC293 /* timeout.h */,
 				3CAB2738112B096700607AEE /* buffer.cpp */,
 				3CAB2739112B096700607AEE /* buffer.h */,
 				3CAB273A112B096700607AEE /* buffered.cpp */,
@@ -584,6 +590,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E29FD2AB1136FD1D004BC293 /* timeout.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -684,6 +691,7 @@
 				3CAB29E7112B347400607AEE /* zlib.cpp in Sources */,
 				3CAB29E8112B347400607AEE /* string.cpp in Sources */,
 				3CAB29E9112B347400607AEE /* timer.cpp in Sources */,
+				E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
