@@ -8,6 +8,9 @@
 
 namespace Mordor {
 
+bool isDebuggerAttached();
+void debugBreak();
+
 struct Assertion : virtual Exception
 {
     Assertion(const std::string &expr) : m_expr(expr) {}
@@ -25,6 +28,8 @@ private:
         MORDOR_LOG_FATAL(::Mordor::Log::root()) << "ASSERTION: " # x;           \
         if (::Mordor::Assertion::throwOnAssertion)                              \
             MORDOR_THROW_EXCEPTION(::Mordor::Assertion(# x));                   \
+        if (::Mordor::isDebuggerAttached())                                     \
+            ::Mordor::debugBreak();                                             \
         ::std::terminate();                                                     \
     }
 
@@ -33,6 +38,8 @@ private:
     MORDOR_LOG_FATAL(::Mordor::Log::root()) << "NOT REACHED";                   \
     if (::Mordor::Assertion::throwOnAssertion)                                  \
         MORDOR_THROW_EXCEPTION(::Mordor::Assertion("Not Reached"));             \
+    if (::Mordor::isDebuggerAttached())                                         \
+        ::Mordor::debugBreak();                                                 \
     ::std::terminate();                                                         \
 }
 

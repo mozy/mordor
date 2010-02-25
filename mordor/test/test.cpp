@@ -33,51 +33,6 @@ static ConfigVar<bool>::ptr g_wait = Config::lookup(
     "test.waitfordebugger", false,
     "Wait for a debugger to attach before running tests");
 
-#ifdef WINDOWS
-#elif defined(LINUX)
-static bool IsDebuggerPresent()
-{
-    bool result = false;
-    char buffer[1024];
-    snprintf(buffer, 1024, "/proc/%d/status", getpid());
-    int fd = open(buffer, O_RDONLY);
-    if (fd >= 0) {
-        int rc = read(fd, buffer, 1024);
-        if (rc > 0) {
-            const char *tracerPidStr = strstr(buffer, "TracerPid:");
-            if (tracerPidStr) {
-                int tracingPid = atoi(tracerPidStr + 13);
-                if (tracingPid != 0) {
-                    result = true;
-                }
-            }
-        }
-        close(fd);
-    }
-    return result;
-}
-#elif defined(OSX)
-static bool IsDebuggerPresent()
-{
-    int mib[4];
-    kinfo_proc info;
-    size_t size;
-    mib[0] = CTL_KERN;
-    mib[1] = KERN_PROC;
-    mib[2] = KERN_PROC_PID;
-    mib[3] = getpid();
-    size = sizeof(kinfo_proc);
-    info.kp_proc.p_flag = 0;
-    sysctl(mib, 4, &info, &size, NULL, 0);
-    return !!(info.kp_proc.p_flag & P_TRACED);
-}
-#else
-static bool IsDebuggerPresent()
-{
-    return false;
-}
-#endif
-
 void
 Test::registerTest(const std::string &suite, const std::string &testName,
              TestDg test)
@@ -113,7 +68,7 @@ runTest(TestListener *listener, const std::string &suite,
     if (listener)
         listener->testStarted(suite, testName);
 
-    bool protect = !IsDebuggerPresent();
+    bool protect = !isDebuggerAttached();
     protect = protect || g_protect->val();
     if (protect) {
         try {
@@ -142,11 +97,9 @@ runTests(const TestSuites *suites, TestListener *listener)
 {
     Assertion::throwOnAssertion = true;
     if (g_wait->val()) {
-        while (!IsDebuggerPresent())
+        while (!isDebuggerAttached())
             sleep(10000ull);
-#ifdef WINDOWS
-        DebugBreak();
-#endif
+        debugBreak();
     }
     bool result = true;
     if (!suites) suites = g_allTests;
