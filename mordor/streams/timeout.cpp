@@ -5,19 +5,24 @@
 #include "timeout.h"
 
 #include "mordor/exception.h"
+#include "mordor/log.h"
 #include "mordor/socket.h"
 #include "mordor/timer.h"
 
 namespace Mordor {
 
+static Logger::ptr g_log = Log::lookup("mordor:streams:timeout");
+
 static void cancelReadLocal(Stream::ptr stream, bool &flag)
 {
+    MORDOR_LOG_INFO(g_log) << "read timeout";
     stream->cancelRead();
     flag = true;
 }
 
 static void cancelWriteLocal(Stream::ptr stream, bool &flag)
 {
+    MORDOR_LOG_INFO(g_log) << "write timeout";
     stream->cancelWrite();
     flag = true;
 }
@@ -71,6 +76,8 @@ TimeoutStream::read(Buffer &buffer, size_t length)
         result = parent()->read(buffer, length);
     } catch (OperationAbortedException &) {
         lock.lock();
+        if (m_readTimer)
+            m_readTimer->cancel();
         if (m_readTimedOut)
             MORDOR_THROW_EXCEPTION(TimedOutException());
         m_readTimedOut = true;
@@ -98,6 +105,8 @@ TimeoutStream::write(const Buffer &buffer, size_t length)
         result = parent()->write(buffer, length);
     } catch (OperationAbortedException &) {
         lock.lock();
+        if (m_writeTimer)
+            m_writeTimer->cancel();
         if (m_writeTimedOut)
             MORDOR_THROW_EXCEPTION(TimedOutException());
         m_writeTimedOut = true;
