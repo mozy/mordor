@@ -184,7 +184,8 @@ IOManagerEvent::cancelEvent(int fd, Event events)
         RegisteredEvents::iterator it = m_registeredEvents.find(fd);
         if (it != m_registeredEvents.end()) {
             AsyncEvent* ev = &it->second;
-            MORDOR_ASSERT(ev->m_events & events);
+            if (!(ev->m_events & events))
+                return;
             MORDOR_ASSERT(ev->m_ev.ev_fd == fd);
 
             if ((events & EV_READ) && (ev->m_events & EV_READ)) {
