@@ -60,6 +60,7 @@ class TimerManager : public boost::noncopyable
 {
     friend class Timer;
 public:
+    TimerManager();
     virtual ~TimerManager();
 
     virtual Timer::ptr registerTimer(unsigned long long us,
@@ -83,6 +84,7 @@ protected:
 private:
     std::set<Timer::ptr, Timer::Comparator> m_timers;
     boost::mutex m_mutex;
+    bool m_tickled;
 };
 
 }

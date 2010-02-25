@@ -35,8 +35,23 @@ ClientConnection::ClientConnection(Stream::ptr stream, TimerManager *timerManage
   m_priorResponseClosed(false)
 {
     if (timerManager) {
-        m_timeoutStream.reset(new TimeoutStream(m_stream, *timerManager));
-        m_stream = m_timeoutStream;
+        FilterStream::ptr previous;
+        FilterStream::ptr filter = boost::dynamic_pointer_cast<FilterStream>(m_stream);
+        while (filter) {
+            previous = filter;
+            filter = boost::dynamic_pointer_cast<FilterStream>(filter->parent());
+        }
+        // Put the timeout stream as close to the actual source stream as
+        // possible, to avoid registering timeouts for stuff that's going to
+        // complete immediately anyway
+        if (previous) {
+            m_timeoutStream.reset(new TimeoutStream(previous->parent(),
+                *timerManager));
+            previous->parent(m_timeoutStream);
+        } else {
+            m_timeoutStream.reset(new TimeoutStream(m_stream, *timerManager));
+            m_stream = m_timeoutStream;
+        }
     }
 }
 

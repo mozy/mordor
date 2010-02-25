@@ -389,7 +389,7 @@ IOManagerIOCP::idle()
             return;
         DWORD timeout = INFINITE;
         if (nextTimeout != ~0ull)
-            timeout = (DWORD)(nextTimeout / 1000);
+            timeout = (DWORD)(nextTimeout / 1000) + 1;
         count = 0;
         BOOL ret = pGetQueuedCompletionStatusEx(m_hCompletionPort,
             events,
@@ -421,6 +421,7 @@ IOManagerIOCP::idle()
         int tickles = 0;
         for (ULONG i = 0; i < count; ++i) {
             if (events[i].lpCompletionKey == ~0) {
+                MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
                 ++tickles;
                 continue;
             }
@@ -435,6 +436,11 @@ IOManagerIOCP::idle()
             MORDOR_ASSERT(e == it->second);
             m_pendingEvents.erase(it);
 #endif
+
+            MORDOR_LOG_TRACE(g_log) << this << " OVERLAPPED_ENTRY {"
+                << events[i].lpCompletionKey << ", " << events[i].lpOverlapped
+                << ", " << events[i].Internal << ", "
+                << events[i].dwNumberOfBytesTransferred << "}";
 
             e->m_scheduler->schedule(e->m_fiber);
             e->m_thread = boost::thread::id();
