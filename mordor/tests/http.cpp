@@ -2453,3 +2453,60 @@ MORDOR_UNITTEST(HTTPClient, priorResponseCloseWhileRequestInProgress)
     MORDOR_TEST_ASSERT_EXCEPTION(transferStream(random, request->requestStream()),
         PriorRequestFailedException);
 }
+
+MORDOR_UNITTEST(HTTPClient, responseFailedCorrectException)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    TestStream::ptr testStream(new TestStream(responseStream));
+    testStream->onRead(&throwDummyException, 0);
+    DuplexStream::ptr duplexStream(new DuplexStream(testStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->response(), DummyException);
+}
+
+/*
+static void cancelWhileResponseQueued(ClientConnection::ptr conn, ClientRequest::ptr &request)
+{
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+
+    request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->response(), OperationAbortedException);
+}
+
+static void readStuff(Stream::ptr stream)
+{
+    transferStream(stream, NullStream::get());
+}
+
+MORDOR_UNITTEST(HTTPClient, cancelWhileResponseQueued)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    ClientConnection::ptr conn(new ClientConnection(pipes.first));
+
+    ClientRequest::ptr request1, request2;
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+
+    pool.schedule(boost::bind(&readStuff, pipes.second));
+    pool.schedule(boost::bind(&cancelWhileResponseQueued, conn,
+        boost::ref(request2)));
+    request1 = conn->request(requestHeaders);
+    pool.dispatch();
+
+    MORDOR_ASSERT(request2);
+    request2->cancel();
+}
+*/

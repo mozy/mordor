@@ -215,6 +215,7 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
                 MORDOR_ASSERT(request->m_scheduler);
                 MORDOR_ASSERT(request->m_fiber);
                 MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling response";
+                request->m_responseState = ClientRequest::HEADERS;
                 request->m_scheduler->schedule(request->m_fiber);
                 request = NULL;
             } else {
@@ -282,6 +283,7 @@ ClientConnection::scheduleAllWaitingResponses()
             MORDOR_ASSERT(request->m_scheduler);
             MORDOR_ASSERT(request->m_fiber);
             MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling response";
+            request->m_responseState = ClientRequest::HEADERS;
             request->m_scheduler->schedule(request->m_fiber);
             if (request->m_requestState == ClientRequest::COMPLETE)
                 it = m_pendingRequests.erase(it);
@@ -541,15 +543,37 @@ ClientRequest::cancel(bool abort)
     m_cancelled = true;
     if (!abort && m_requestState == WAITING && m_responseState == WAITING) {
         // Just abandon it
+        m_requestState = ERROR;
+        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        m_conn->invariant();
         std::list<ClientRequest *>::iterator it =
             std::find(m_conn->m_pendingRequests.begin(),
             m_conn->m_pendingRequests.end(), this);
         MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
         m_conn->m_pendingRequests.erase(it);
+        std::set<ClientRequest *>::iterator waitIt =
+            m_conn->m_waitingResponses.find(this);
+        if (waitIt != m_conn->m_waitingResponses.end()) {
+            m_conn->m_waitingResponses.erase(waitIt);
+            MORDOR_LOG_TRACE(g_log) << m_conn << " " << this
+                << " scheduling response";
+            m_responseState = ERROR;
+            m_scheduler->schedule(m_fiber);
+        }
         return;
     }
     if (!abort && m_requestState == COMPLETE) {
-        if (m_responseState != COMPLETE) {
+        if (m_responseState == WAITING) {
+            boost::mutex::scoped_lock lock(m_conn->m_mutex);
+            m_conn->invariant();
+            std::set<ClientRequest *>::iterator waitIt =
+                m_conn->m_waitingResponses.find(this);
+            // Nobody else is waiting, we can safely finish() this
+            if (waitIt == m_conn->m_waitingResponses.end()) {
+                finish();
+                return;
+            }
+        } else if (m_responseState != COMPLETE) {
             finish();
             return;
         }
@@ -594,6 +618,17 @@ ClientRequest::cancel(bool abort)
                 m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(it);
             } else {
                 m_conn->m_pendingRequests.erase(it);
+            }
+            if (m_responseState == WAITING) {
+                std::set<ClientRequest *>::iterator waitIt =
+                    m_conn->m_waitingResponses.find(this);
+                if (waitIt != m_conn->m_waitingResponses.end()) {
+                    m_conn->m_waitingResponses.erase(waitIt);
+                    MORDOR_LOG_TRACE(g_log) << m_conn << " " << this
+                        << " scheduling response";
+                    m_responseState = HEADERS;
+                    m_scheduler->schedule(m_fiber);
+                }
             }
             m_conn->scheduleAllWaitingRequests();
             m_conn->scheduleAllWaitingResponses();
@@ -868,7 +903,7 @@ ClientRequest::ensureResponse()
         if (m_conn->m_priorResponseClosed || m_conn->m_priorResponseFailed) {
             m_aborted = true;
             m_responseState = ERROR;
-            if (m_requestState == ClientRequest::COMPLETE) {
+            if (m_requestState >= ClientRequest::COMPLETE) {
                 std::list<ClientRequest *>::iterator it;
                 it = std::find(m_conn->m_pendingRequests.begin(),
                     m_conn->m_pendingRequests.end(), this);
@@ -880,6 +915,8 @@ ClientRequest::ensureResponse()
             else
                 MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         }
+        if (m_cancelled)
+            MORDOR_THROW_EXCEPTION(OperationAbortedException());
         // Probably means that the Scheduler exited in the above yieldTo,
         // and returned to us, because there is no other work to be done
         try {
@@ -1013,10 +1050,11 @@ ClientRequest::ensureResponse()
     } catch (...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
+        bool firstFailure = !m_conn->m_priorResponseFailed;
         m_conn->m_priorResponseFailed = true;
         if (!m_conn->m_pendingRequests.empty() &&
             m_conn->m_pendingRequests.front() == this) {
-            if (m_requestState == COMPLETE)
+            if (m_requestState >= COMPLETE)
                 m_conn->m_pendingRequests.pop_front();
             m_conn->scheduleAllWaitingRequests();
             m_conn->scheduleAllWaitingResponses();
@@ -1024,7 +1062,7 @@ ClientRequest::ensureResponse()
         if (!m_noResponse && !m_badResponse && !m_incompleteResponse) {
             if (m_conn->m_priorResponseClosed)
                 MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-            if (m_conn->m_priorResponseFailed)
+            if (!firstFailure && m_conn->m_priorResponseFailed)
                 MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         }
         throw;
