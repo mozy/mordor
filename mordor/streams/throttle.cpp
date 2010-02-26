@@ -64,7 +64,7 @@ ThrottleStream::write(const Buffer &b, size_t len)
     // Aim for no more than a 10th of a second
     len = std::min<size_t>(throttle / 8 / 10, len);
     size_t result = parent()->write(b, len);
-    m_read = result;
+    m_written = result;
     return result;
 }
 
