@@ -797,6 +797,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\progress.h"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\null.h"
 				>
 			</File>
