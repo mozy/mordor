@@ -900,6 +900,8 @@ ClientRequest::ensureResponse()
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
+        if (m_cancelled)
+            MORDOR_THROW_EXCEPTION(OperationAbortedException());
         if (m_conn->m_priorResponseClosed || m_conn->m_priorResponseFailed) {
             m_aborted = true;
             m_responseState = ERROR;
@@ -915,8 +917,6 @@ ClientRequest::ensureResponse()
             else
                 MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         }
-        if (m_cancelled)
-            MORDOR_THROW_EXCEPTION(OperationAbortedException());
         // Probably means that the Scheduler exited in the above yieldTo,
         // and returned to us, because there is no other work to be done
         try {
