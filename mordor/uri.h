@@ -37,7 +37,7 @@ struct URI
     URI();
     URI(const std::string& uri);
     URI(const char *uri);
-    explicit URI(const Buffer &uri);
+    URI(const Buffer &uri);
 
     URI& operator=(const std::string& uri);
     URI& operator=(const char *uri) { return *this = std::string(uri); }
