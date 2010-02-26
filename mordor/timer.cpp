@@ -232,9 +232,11 @@ TimerManager::processTimers()
             MORDOR_ASSERT(timer->m_dg);
             result.push_back(timer->m_dg);
             if (timer->m_recurring) {
+                MORDOR_LOG_TRACE(g_log) << timer << " expired and refreshed";
                 timer->m_next = nowUs + timer->m_us;
                 m_timers.insert(timer);
             } else {
+                MORDOR_LOG_TRACE(g_log) << timer << " expired";
                 timer->m_dg = NULL;
             }
         }
