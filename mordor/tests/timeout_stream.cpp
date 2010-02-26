@@ -40,10 +40,10 @@ MORDOR_UNITTEST(TimeoutStream, timeoutChangedAfterOpBegan)
     std::pair<Stream::ptr, Stream::ptr> streams = pipeStream();
     TimeoutStream::ptr timeout(new TimeoutStream(streams.first, ioManager));
 
-    timeout->readTimeout(200000);
+    timeout->readTimeout(400000);
     Buffer buffer("test");
-    ioManager.schedule(boost::bind(&TimeoutStream::readTimeout, timeout, 100000));
+    ioManager.schedule(boost::bind(&TimeoutStream::readTimeout, timeout, 200000));
     unsigned long long now = TimerManager::now();
     MORDOR_TEST_ASSERT_EXCEPTION(timeout->read(buffer, 4), TimedOutException);
-    MORDOR_TEST_ASSERT_ABOUT_EQUAL(TimerManager::now() - now, 100000u, 5000);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(TimerManager::now() - now, 200000u, 50000);
 }

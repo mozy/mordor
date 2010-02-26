@@ -87,7 +87,7 @@ MORDOR_UNITTEST(Socket, sendTimeout)
 {
     IOManager ioManager;
     Connection conns = establishConn(ioManager);
-    conns.connect->sendTimeout(100000);
+    conns.connect->sendTimeout(200000);
     ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
     conns.connect->connect(conns.address);
     ioManager.dispatch();
@@ -95,8 +95,7 @@ MORDOR_UNITTEST(Socket, sendTimeout)
     memset(buf, 0, sizeof(buf));
     unsigned long long start = TimerManager::now();
     MORDOR_TEST_ASSERT_EXCEPTION(while (true) conns.connect->send(buf, sizeof(buf)), TimedOutException);
-    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 100000, TimerManager::now(), 50000);
-    MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->send(buf, sizeof(buf)), TimedOutException);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 200000, TimerManager::now(), 500000);
 }
 
 class DummyException
