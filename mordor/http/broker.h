@@ -195,16 +195,14 @@ public:
     typedef boost::shared_ptr<BaseRequestBroker> ptr;
 
 public:
-    BaseRequestBroker(ConnectionBroker::ptr connectionBroker)
+    BaseRequestBroker(ConnectionBroker::ptr connectionBroker, boost::function<bool (size_t)> delayDg = NULL)
         : m_connectionBroker(connectionBroker),
-          m_retry(true)
+          m_delayDg(delayDg)
     {}
-    BaseRequestBroker(ConnectionBroker::weak_ptr connectionBroker)
+    BaseRequestBroker(ConnectionBroker::weak_ptr connectionBroker, boost::function<bool (size_t)> delayDg = NULL)
         : m_weakConnectionBroker(connectionBroker),
-          m_retry(true)
+          m_delayDg(delayDg)
     {}
-
-    void retry(bool retry) { m_retry = retry; }
 
     ClientRequest::ptr request(Request &requestHeaders,
         bool forceNewConnection = false,
@@ -213,7 +211,7 @@ public:
 private:
     ConnectionBroker::ptr m_connectionBroker;
     ConnectionBroker::weak_ptr m_weakConnectionBroker;
-    bool m_retry;
+    boost::function<bool (size_t)> m_delayDg;
 };
 
 struct CircularRedirectException : Exception
@@ -275,7 +273,8 @@ private:
 
 RequestBroker::ptr defaultRequestBroker(IOManager *ioManager = NULL,
                                         Scheduler *scheduler = NULL,
-                                        ConnectionBroker::ptr *connBroker = NULL);
+                                        ConnectionBroker::ptr *connBroker = NULL,
+                                        boost::function<bool (size_t)> delayDg = NULL);
 
 }}
 

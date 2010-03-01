@@ -15,19 +15,20 @@ namespace HTTP {
 
 RequestBroker::ptr defaultRequestBroker(IOManager *ioManager,
                                         Scheduler *scheduler,
-                                        ConnectionBroker::ptr *connBroker)
+                                        ConnectionBroker::ptr *connBroker,
+                                        boost::function<bool (size_t)> delayDg)
 {
     StreamBroker::ptr socketBroker(new SocketStreamBroker(ioManager, scheduler));
     StreamBrokerFilter::ptr sslBroker(new SSLStreamBroker(socketBroker));
     ConnectionBroker::ptr connectionBroker(new ConnectionCache(sslBroker));
     if (connBroker != NULL)
         *connBroker = connectionBroker;
-    RequestBroker::ptr requestBroker(new BaseRequestBroker(ConnectionBroker::weak_ptr(connectionBroker)));
+    RequestBroker::ptr requestBroker(new BaseRequestBroker(ConnectionBroker::weak_ptr(connectionBroker), delayDg));
 
     socketBroker.reset(new ProxyStreamBroker(socketBroker, requestBroker));
     sslBroker->parent(socketBroker);
     connectionBroker.reset(new ProxyConnectionBroker(connectionBroker));
-    requestBroker.reset(new BaseRequestBroker(connectionBroker));
+    requestBroker.reset(new BaseRequestBroker(connectionBroker, delayDg));
     return requestBroker;
 }
 
@@ -350,6 +351,7 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     ConnectionBroker::ptr connectionBroker = m_connectionBroker;
     if (!connectionBroker)
         connectionBroker = m_weakConnectionBroker.lock();
+    size_t retries = 0;
     while (true) {
         std::pair<ClientConnection::ptr, bool> conn =
             connectionBroker->getConnection(
@@ -401,19 +403,19 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         } catch (SocketException &) {
             if (!connect)
                     currentUri = originalUri;
-            if (!m_retry)
+            if (!m_delayDg || !m_delayDg(retries))
                 throw;
             continue;
         } catch (PriorRequestFailedException &) {
             if (!connect)
                 currentUri = originalUri;
-            if (!m_retry)
+            if (!m_delayDg || !m_delayDg(retries))
                 throw;
             continue;
         } catch (UnexpectedEofException &) {
             if (!connect)
                 currentUri = originalUri;
-            if (!m_retry)
+            if (!m_delayDg || !m_delayDg(retries))
                 throw;
             continue;
         } catch (...) {
