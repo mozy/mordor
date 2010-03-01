@@ -15,16 +15,24 @@ static Logger::ptr g_log = Log::lookup("mordor:streams:timeout");
 
 static void cancelReadLocal(Stream::ptr stream, bool &flag)
 {
-    MORDOR_LOG_INFO(g_log) << "read timeout";
-    stream->cancelRead();
-    flag = true;
+    if (!flag) {
+        MORDOR_LOG_INFO(g_log) << "read timeout";
+        stream->cancelRead();
+        flag = true;
+    } else {
+        MORDOR_LOG_DEBUG(g_log) << "read timeout no longer registered";
+    }
 }
 
 static void cancelWriteLocal(Stream::ptr stream, bool &flag)
 {
-    MORDOR_LOG_INFO(g_log) << "write timeout";
-    stream->cancelWrite();
-    flag = true;
+    if (!flag) {
+        MORDOR_LOG_INFO(g_log) << "write timeout";
+        stream->cancelWrite();
+        flag = true;
+    } else {
+        MORDOR_LOG_DEBUG(g_log) << "write timeout no longer registered";
+    }
 }
 
 void
