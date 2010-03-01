@@ -403,19 +403,19 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         } catch (SocketException &) {
             if (!connect)
                     currentUri = originalUri;
-            if (!m_delayDg || !m_delayDg(retries))
+            if (!m_delayDg || !m_delayDg(++retries))
                 throw;
             continue;
         } catch (PriorRequestFailedException &) {
             if (!connect)
                 currentUri = originalUri;
-            if (!m_delayDg || !m_delayDg(retries))
+            if (!m_delayDg || !m_delayDg(++retries))
                 throw;
             continue;
         } catch (UnexpectedEofException &) {
             if (!connect)
                 currentUri = originalUri;
-            if (!m_delayDg || !m_delayDg(retries))
+            if (!m_delayDg || !m_delayDg(++retries))
                 throw;
             continue;
         } catch (...) {
