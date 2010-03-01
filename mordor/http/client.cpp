@@ -461,8 +461,10 @@ Stream::ptr
 ClientRequest::responseStream()
 {
     Stream::ptr result = m_responseStream.lock();
-    if (result || m_hasResponseBody)
+    if (result || m_hasResponseBody) {
+        MORDOR_ASSERT(result);
         return result;
+    }
     ensureResponse();
     if (m_responseState == COMPLETE) {
         m_hasResponseBody = true;

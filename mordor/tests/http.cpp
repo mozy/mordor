@@ -1007,7 +1007,9 @@ MORDOR_UNITTEST(HTTPClient, emptyResponseBody)
     MORDOR_TEST_ASSERT(responseBody.buffer() == "");
 
     response.reset();
-    MORDOR_ASSERT(!request->responseStream());
+#ifdef DEBUG
+    MORDOR_TEST_ASSERT_ASSERTED(request->responseStream());
+#endif
 }
 
 MORDOR_UNITTEST(HTTPClient, incompleteResponseHeaders)
@@ -1073,7 +1075,9 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseBody)
     MORDOR_TEST_ASSERT(responseBody.buffer() == "hello");
 
     response.reset();
-    MORDOR_TEST_ASSERT(!request->responseStream());
+#ifdef DEBUG
+    MORDOR_TEST_ASSERT_ASSERTED(request->responseStream());
+#endif
 }
 
 MORDOR_UNITTEST(HTTPClient, incompleteResponseBody)
