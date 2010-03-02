@@ -20,7 +20,9 @@ public:
         : FilterStream(parent),
           m_timerManager(timerManager),
           m_readTimeout(~0ull),
-          m_writeTimeout(~0ull)
+          m_writeTimeout(~0ull),
+          m_readTimedOut(true),
+          m_writeTimedOut(true)
     {}
 
     unsigned long long readTimeout() const { return m_readTimeout; }
