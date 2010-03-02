@@ -66,16 +66,16 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
-		3CAB29EE112B358A00607AEE /* PBXBuildRule */ = {
+		3CC42A8A113D9F5F000C1B43 /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
 			compilerSpec = com.apple.compilers.proxy.script;
 			filePatterns = "*.rl";
 			fileType = pattern.proxy;
 			isEditable = 1;
 			outputFiles = (
-				"$(DERIVED_FILES_DIR)/$(INPUT_FILE_BASE).cpp",
+				"$(DERIVED_FILES_DIR)/$(CURRENT_ARCH)$(INPUT_FILE_DIR)/$(INPUT_FILE_BASE).cpp",
 			);
-			script = "#!/usr/bin/bash\n# The default PATH for this shell is /Developer/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin. \n# Ragel is usually in none of those, so let's see if they've extended their PATH\n\nif [ -f ~/.bash_profile ]; then\n  source ~/.bash_profile\nelse\n if [ -f ~/.bash_login ]; then\n   source ~/.bash_login\n else\n  if [ -f ~/.profile ]; then\n    source ~/.profile\n  fi\n fi\nfi\n\nragel -o \"${DERIVED_FILES_DIR}/${INPUT_FILE_BASE}.cpp\" \"${INPUT_FILE_PATH}\"";
+			script = "#!/usr/bin/bash\n# The default PATH for this shell is /Developer/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin. \n# Ragel is usually in none of those, so let's see if they've extended their PATH\n\nif [ -f ~/.bash_profile ]; then\n  source ~/.bash_profile\nelse\n if [ -f ~/.bash_login ]; then\n   source ~/.bash_login\n else\n  if [ -f ~/.profile ]; then\n    source ~/.profile\n  fi\n fi\nfi\n\nOUTPUT_FILE=\"${DERIVED_FILES_DIR}/${CURRENT_ARCH}${INPUT_FILE_DIR}/${INPUT_FILE_BASE}.cpp\"\nragel -o \"${OUTPUT_FILE}\" \"${INPUT_FILE_PATH}\"\n";
 		};
 /* End PBXBuildRule section */
 
@@ -610,7 +610,7 @@
 				3CAB29AF112B340500607AEE /* Frameworks */,
 			);
 			buildRules = (
-				3CAB29EE112B358A00607AEE /* PBXBuildRule */,
+				3CC42A8A113D9F5F000C1B43 /* PBXBuildRule */,
 			);
 			dependencies = (
 			);
@@ -796,9 +796,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEPLOYMENT_POSTPROCESSING = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
 				GCC_PREFIX_HEADER = mordor/pch.h;
@@ -809,7 +807,6 @@
 				INSTALL_PATH = /usr/local/lib;
 				PREBINDING = NO;
 				PRODUCT_NAME = mordor;
-				STRIP_INSTALLED_PRODUCT = YES;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				USE_HEADERMAP = NO;
 				ZERO_LINK = NO;
