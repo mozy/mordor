@@ -57,7 +57,7 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
                                         bool recurring)
 {
     boost::mutex::scoped_lock lock(m_mutex);
-    if (m_inUseCount == -1 || m_inUseCount == MAXIMUM_WAIT_OBJECTS)
+    if (m_inUseCount == -1 || m_inUseCount == MAXIMUM_WAIT_OBJECTS - 1)
         return false;
     ++m_inUseCount;
     m_handles[m_inUseCount] = hEvent;
