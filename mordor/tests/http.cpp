@@ -2549,7 +2549,7 @@ public:
     void flush(bool flushParent) {}
 };
 
-MORDOR_UNITTEST(HTTPClient, requestFailOthersWaitingResponse)
+MORDOR_UNITTEST(HTTPClient, requestFailOtherWaitingResponse)
 {
     std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
     // Don't bother flushing and waiting for someone to read it
@@ -2568,4 +2568,47 @@ MORDOR_UNITTEST(HTTPClient, requestFailOthersWaitingResponse)
     request = conn->request(requestHeaders);
     testStream->onWrite(&throwDummyException, 0);
     MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+}
+
+static void waitFor200(ClientRequest::ptr request, int &sequence)
+{
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    ++sequence;
+}
+
+MORDOR_UNITTEST(HTTPClient, requestFailOthersWaitingResponse)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    // Don't bother flushing and waiting for someone to read it
+    Stream::ptr noFlushStream(new NoFlushStream(pipes.first));
+    // Put the bufferedStream *underneath* the testStream, so we make sure
+    // to generate the exception on the write() in doRequest, not in the
+    // flush()
+    BufferedStream::ptr bufferedStream(new BufferedStream(noFlushStream));
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    ClientRequest::ptr request1, request2;
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    int sequence = 0;
+    request1 = conn->request(requestHeaders);
+    request2 = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
+    pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
+    pool.schedule(Fiber::getThis());
+    pool.yieldTo();
+
+    testStream->onWrite(&throwDummyException, 0);
+    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+    // Finish request1 and request2
+    pipes.second->write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+    pipes.second->flush();
+    pool.dispatch();
+    // *both* responses should be complete
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
 }

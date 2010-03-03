@@ -534,7 +534,7 @@ ClientRequest::responseMultipart()
 void
 ClientRequest::cancel(bool abort)
 {
-    if (m_requestState == COMPLETE && m_responseState == COMPLETE)
+    if (m_requestState >= COMPLETE && m_responseState >= COMPLETE)
         return;
     if (m_aborted)
         return;
@@ -834,6 +834,7 @@ ClientRequest::doRequest()
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         m_requestState = ERROR;
+        m_responseState = ERROR;
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
         MORDOR_ASSERT(m_conn->m_currentRequest != m_conn->m_pendingRequests.end());
         m_conn->m_priorRequestFailed = true;
