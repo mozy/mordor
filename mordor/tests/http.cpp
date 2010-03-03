@@ -10,6 +10,7 @@
 #include "mordor/http/server.h"
 #include "mordor/scheduler.h"
 #include "mordor/sleep.h"
+#include "mordor/streams/buffered.h"
 #include "mordor/streams/cat.h"
 #include "mordor/streams/duplex.h"
 #include "mordor/streams/limited.h"
@@ -2536,4 +2537,35 @@ MORDOR_UNITTEST(HTTPClient, abortWhileResponseQueued)
 
     MORDOR_ASSERT(request2);
     request2->cancel(true);
+}
+
+class NoFlushStream : public FilterStream
+{
+public:
+    NoFlushStream(Stream::ptr parent)
+        : FilterStream(parent)
+    {}
+
+    void flush(bool flushParent) {}
+};
+
+MORDOR_UNITTEST(HTTPClient, requestFailOthersWaitingResponse)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    // Don't bother flushing and waiting for someone to read it
+    Stream::ptr noFlushStream(new NoFlushStream(pipes.first));
+    // Put the bufferedStream *underneath* the testStream, so we make sure
+    // to generate the exception on the write() in doRequest, not in the
+    // flush()
+    BufferedStream::ptr bufferedStream(new BufferedStream(noFlushStream));
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    ClientRequest::ptr request;
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+
+    request = conn->request(requestHeaders);
+    testStream->onWrite(&throwDummyException, 0);
+    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
 }

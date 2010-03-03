@@ -836,7 +836,6 @@ ClientRequest::doRequest()
         m_requestState = ERROR;
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
         MORDOR_ASSERT(m_conn->m_currentRequest != m_conn->m_pendingRequests.end());
-        MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
         m_conn->m_priorRequestFailed = true;
         m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
         m_conn->scheduleAllWaitingRequests();
@@ -1107,7 +1106,6 @@ void
 ClientRequest::requestFailed()
 {
     MORDOR_ASSERT(m_requestState == BODY);
-    MORDOR_ASSERT(m_requestStream);
     MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " request failed";
     if (m_requestStream) {
         // Break the circular reference
