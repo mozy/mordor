@@ -10,7 +10,13 @@
 #include "util.h"
 
 #ifndef WINDOWS
+#ifndef OSX
 extern char **environ;
+#endif
+#endif
+
+#ifdef OSX
+#include <crt_externs.h>
 #endif
 
 namespace Mordor {
@@ -32,6 +38,9 @@ Config::loadFromEnvironment()
         std::string key(toUtf8(env, equals - env));
         std::string value(toUtf8(equals + 1));
 #else
+#ifdef OSX
+	char **environ = *_NSGetEnviron();
+#endif
     if (!environ)
         return;
     for (const char *env = *environ; *env; env += strlen(env) + 1) {
