@@ -2663,6 +2663,15 @@ static void waitForOperationAborted(ClientRequest::ptr request, bool &excepted)
     excepted = true;
 }
 
+static void waitForPriorRequestFailedOnRequest(ClientConnection::ptr conn, bool &excepted)
+{
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), PriorRequestFailedException);
+    excepted = true;
+}
+
 MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersAndSelfWaitingResponse)
 {
     WorkerPool pool;
@@ -2692,10 +2701,12 @@ MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersAndSelfWaitingResponse)
     pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
     Scheduler::yield();
 
-    bool excepted = false;
+    bool excepted1 = false;
+    bool excepted2 = false;
     requestHeaders.entity.contentLength = 1;
     ClientRequest::ptr request4 = conn->request(requestHeaders);
-    pool.schedule(boost::bind(&waitForOperationAborted, request4, boost::ref(excepted)));
+    pool.schedule(boost::bind(&waitForOperationAborted, request4, boost::ref(excepted1)));
+    pool.schedule(boost::bind(&waitForPriorRequestFailedOnRequest, conn, boost::ref(excepted2)));
     Scheduler::yield();
     testStream->onWrite(&throwDummyException, 0);
     MORDOR_TEST_ASSERT_EXCEPTION(request4->requestStream()->write("a", 1), DummyException);
@@ -2708,5 +2719,6 @@ MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersAndSelfWaitingResponse)
     pool.dispatch();
     // *all* responses should be complete
     MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
-    MORDOR_ASSERT(excepted);
+    MORDOR_ASSERT(excepted1);
+    MORDOR_ASSERT(excepted2);
 }

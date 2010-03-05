@@ -806,10 +806,14 @@ ClientRequest::doRequest()
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (m_conn->m_priorResponseClosed != ~0ull)
+        if (m_conn->m_priorResponseClosed != ~0ull) {
+            m_requestState = m_responseState = ERROR;
             MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-        if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseFailed != ~0ull)
+        }
+        if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseFailed != ~0ull) {
+            m_requestState = m_responseState = ERROR;
             MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+        }
     }
     MORDOR_ASSERT(m_requestState == HEADERS);
 
