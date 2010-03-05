@@ -36,6 +36,8 @@ public:
     /// the response.  It progresses through these states (possibly skipping
     /// some of them).
     enum State {
+        /// In line, but not actively waiting
+        PENDING,
         /// Waiting for a prior request/response to complete
         WAITING,
         /// Reading/writing headers
@@ -45,7 +47,9 @@ public:
         /// Complete
         COMPLETE,
         /// Error
-        ERROR
+        ERROR,
+        /// Cancelled
+        CANCELED
     };
 
 private:
@@ -72,7 +76,7 @@ public:
 
     Stream::ptr stream();
 
-    void cancel(bool abort = false);
+    void cancel(bool abort = false) { cancel(abort, false); }
     void finish();
     void ensureResponse();
 
@@ -82,16 +86,19 @@ private:
     void requestDone();
     void requestFailed();
     void responseDone();
+    void responseFailed();
+    void cancel(bool abort, bool error);
 
 private:
     boost::shared_ptr<ClientConnection> m_conn;
+    unsigned long long m_requestNumber;
     Scheduler *m_scheduler;
     Fiber::ptr m_fiber;
     Request m_request;
     Response m_response;
     EntityHeaders m_requestTrailer, m_responseTrailer;
     State m_requestState, m_responseState;
-    bool m_cancelled, m_aborted, m_badResponse, m_noResponse, m_incompleteResponse, m_badTrailer, m_incompleteTrailer, m_hasResponseBody;
+    bool m_badResponse, m_noResponse, m_incompleteResponse, m_badTrailer, m_incompleteTrailer, m_hasResponseBody;
     Stream::ptr m_requestStream;
     boost::weak_ptr<Stream> m_responseStream;
     Multipart::ptr m_requestMultipart;
@@ -152,7 +159,8 @@ private:
     std::list<ClientRequest *>::iterator m_currentRequest;
     std::set<ClientRequest *> m_waitingResponses;
     bool m_allowNewRequests;
-    bool m_priorRequestFailed, m_priorResponseFailed, m_priorResponseClosed;
+    bool m_priorRequestFailed;
+    unsigned long long m_requestCount, m_priorResponseFailed, m_priorResponseClosed;
 
     void invariant() const;
 };

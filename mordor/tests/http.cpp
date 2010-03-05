@@ -2587,10 +2587,11 @@ MORDOR_UNITTEST(HTTPClient, requestFailOthersWaitingResponse)
     // to generate the exception on the write() in doRequest, not in the
     // flush()
     BufferedStream::ptr bufferedStream(new BufferedStream(noFlushStream));
+    bufferedStream->allowPartialReads(true);
     TestStream::ptr testStream(new TestStream(bufferedStream));
     ClientConnection::ptr conn(new ClientConnection(testStream));
 
-    ClientRequest::ptr request1, request2;
+    ClientRequest::ptr request1, request2, request3;
     Request requestHeaders;
     requestHeaders.requestLine.uri = "/";
     requestHeaders.request.host = "localhost";
@@ -2598,17 +2599,122 @@ MORDOR_UNITTEST(HTTPClient, requestFailOthersWaitingResponse)
     int sequence = 0;
     request1 = conn->request(requestHeaders);
     request2 = conn->request(requestHeaders);
+    request3 = conn->request(requestHeaders);
     pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
+    pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
     pool.schedule(Fiber::getThis());
     pool.yieldTo();
 
     testStream->onWrite(&throwDummyException, 0);
     MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
-    // Finish request1 and request2
-    pipes.second->write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\nHTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+    // Finish requests 1 through 3
+    pipes.second->write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
     pipes.second->flush();
     pool.dispatch();
-    // *both* responses should be complete
-    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
+    // *all* responses should be complete
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
+}
+
+MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersWaitingResponse)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    // Don't bother flushing and waiting for someone to read it
+    Stream::ptr noFlushStream(new NoFlushStream(pipes.first));
+    // Put the bufferedStream *underneath* the testStream, so we make sure
+    // to generate the exception on the write() in doRequest, not in the
+    // flush()
+    BufferedStream::ptr bufferedStream(new BufferedStream(noFlushStream));
+    bufferedStream->allowPartialReads(true);
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    ClientRequest::ptr request1, request2, request3;
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    int sequence = 0;
+    request1 = conn->request(requestHeaders);
+    request2 = conn->request(requestHeaders);
+    request3 = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
+    pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
+    pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
+    pool.schedule(Fiber::getThis());
+    pool.yieldTo();
+
+    requestHeaders.entity.contentLength = 1;
+    ClientRequest::ptr request4 = conn->request(requestHeaders);
+    testStream->onWrite(&throwDummyException, 0);
+    MORDOR_TEST_ASSERT_EXCEPTION(request4->requestStream()->write("a", 1), DummyException);
+    request4->cancel();
+    // Finish requests 1 through 3
+    pipes.second->write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+    pipes.second->flush();
+    pool.dispatch();
+    // *all* responses should be complete
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
+}
+
+static void waitForOperationAborted(ClientRequest::ptr request, bool &excepted)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(request->response(), OperationAbortedException);
+    excepted = true;
+}
+
+MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersAndSelfWaitingResponse)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    // Don't bother flushing and waiting for someone to read it
+    Stream::ptr noFlushStream(new NoFlushStream(pipes.first));
+    // Put the bufferedStream *underneath* the testStream, so we make sure
+    // to generate the exception on the write() in doRequest, not in the
+    // flush()
+    BufferedStream::ptr bufferedStream(new BufferedStream(noFlushStream));
+    bufferedStream->allowPartialReads(true);
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    ClientRequest::ptr request1, request2, request3;
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    int sequence = 0;
+    request1 = conn->request(requestHeaders);
+    request2 = conn->request(requestHeaders);
+    request3 = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
+    pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
+    pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
+    pool.schedule(Fiber::getThis());
+    pool.yieldTo();
+
+    bool excepted = false;
+    requestHeaders.entity.contentLength = 1;
+    ClientRequest::ptr request4 = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitForOperationAborted, request4, boost::ref(excepted)));
+    pool.schedule(Fiber::getThis());
+    pool.yieldTo();
+    testStream->onWrite(&throwDummyException, 0);
+    MORDOR_TEST_ASSERT_EXCEPTION(request4->requestStream()->write("a", 1), DummyException);
+    request4->cancel();
+    // Finish requests 1 through 3
+    pipes.second->write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+    pipes.second->flush();
+    pool.dispatch();
+    // *all* responses should be complete
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
+    MORDOR_ASSERT(excepted);
 }
