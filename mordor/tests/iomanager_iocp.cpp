@@ -82,10 +82,7 @@ MORDOR_UNITTEST(IOManager, waitBlockFireThenUnregister)
     ioManager.registerEvent(hEvent, boost::bind(&handleEvent,
         boost::ref(fired)));
     SetEvent(hEvent);
-    while (!fired) {
-        ioManager.schedule(Fiber::getThis());
-        ioManager.yieldTo();
-    }
+    while (!fired) Scheduler::yield();
     ioManager.unregisterEvent(hEvent);
     CloseHandle(hEvent);
 }

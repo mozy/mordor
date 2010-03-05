@@ -132,8 +132,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         // attempt to pipeline
         if (Scheduler::getThis()) {
             lock.unlock();
-            Scheduler::getThis()->schedule(Fiber::getThis());
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yield();
             lock.lock();
         }
         invariant();
@@ -802,7 +801,7 @@ ClientRequest::doRequest()
     // If we weren't the first request in the queue, we have to wait for
     // another request to schedule us
     if (!firstRequest) {
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " requesting";
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
@@ -909,7 +908,7 @@ ClientRequest::ensureResponse()
     // If we weren't the first response in the queue, wait for someone
     // else to schedule us
     if (wait) {
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " reading response";
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);

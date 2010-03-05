@@ -136,8 +136,14 @@ public:
     ///
     /// In a hijacking Scheduler, any scheduled work will begin running if
     /// someone yields to the Scheduler.
-    /// @pre Scheduler::getThis() == this
-    void yieldTo();
+    /// @pre Scheduler::getThis() != NULL
+    static void yieldTo();
+
+    /// Yield to the Scheduler to allow other Fibers to execute on this thread
+
+    /// The Scheduler will automatically re-schedule this Fiber.
+    /// @pre Scheduler::getThis() != NULL
+    static void yield();
 
     /// Force a hijacking Scheduler to process scheduled work
 
@@ -352,7 +358,7 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
     }
 
     while (it != end) {
-        scheduler->yieldTo();
+        Scheduler::yieldTo();
         // Figure out who just finished and scheduled us
         for (int i = 0; i < parallelism; ++i) {
             if (current[i] == NULL) {
@@ -372,7 +378,7 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
 
     // Wait for everyone to finish
     while (parallelism > 0) {
-        scheduler->yieldTo();
+        Scheduler::yieldTo();
         --parallelism;
     }
 

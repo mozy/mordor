@@ -325,11 +325,11 @@ Connection::connect()
             switch (whatToPoll) {
                 case PGRES_POLLING_READING:
                     m_ioManager->registerEvent(fd, IOManager::READ);
-                    Scheduler::getThis()->yieldTo();
+                    Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_WRITING:
                     m_ioManager->registerEvent(fd, IOManager::WRITE);
-                    Scheduler::getThis()->yieldTo();
+                    Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_FAILED:
                     throwException(m_conn.get());
@@ -366,11 +366,11 @@ Connection::reset()
             switch (whatToPoll) {
                 case PGRES_POLLING_READING:
                     m_ioManager->registerEvent(fd, IOManager::READ);
-                    Scheduler::getThis()->yieldTo();
+                    Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_WRITING:
                     m_ioManager->registerEvent(fd, IOManager::WRITE);
-                    Scheduler::getThis()->yieldTo();
+                    Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_FAILED:
                     throwException(m_conn.get());
@@ -402,7 +402,7 @@ static void flush(PGconn *conn, IOManager *ioManager)
                 throwException(conn);
             case 1:
                 ioManager->registerEvent(PQsocket(conn), IOManager::WRITE);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 continue;
             default:
                 MORDOR_NOTREACHED();
@@ -418,7 +418,7 @@ static PGresult *nextResult(PGconn *conn, IOManager *ioManager)
         if (PQisBusy(conn)) {
             MORDOR_LOG_DEBUG(g_log) << conn << " PQisBusy()";
             ioManager->registerEvent(PQsocket(conn), IOManager::READ);
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             continue;
         }
         MORDOR_LOG_DEBUG(g_log) << conn << " PQconsumeInput()";

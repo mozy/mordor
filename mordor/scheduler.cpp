@@ -255,21 +255,31 @@ Scheduler::switchTo(boost::thread::id thread)
         }
     }
     schedule(Fiber::getThis(), thread);
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
 }
 
 void
 Scheduler::yieldTo()
 {
-    MORDOR_LOG_DEBUG(g_log) << this << " yielding to scheduler";
+    Scheduler *self = Scheduler::getThis();
+    MORDOR_ASSERT(self);
+    MORDOR_LOG_DEBUG(g_log) << self << " yielding to scheduler";
     MORDOR_ASSERT(t_fiber.get());
-    if (m_rootThread == boost::this_thread::get_id() &&
+    if (self->m_rootThread == boost::this_thread::get_id() &&
         (t_fiber->state() == Fiber::INIT || t_fiber->state() == Fiber::TERM)) {
-        m_callingFiber = Fiber::getThis();
-        yieldTo(true);
+        self->m_callingFiber = Fiber::getThis();
+        self->yieldTo(true);
     } else {
-        yieldTo(false);
+        self->yieldTo(false);
     }
+}
+
+void
+Scheduler::yield()
+{
+    MORDOR_ASSERT(Scheduler::getThis());
+    Scheduler::getThis()->schedule(Fiber::getThis());
+    yieldTo();
 }
 
 void
@@ -477,7 +487,7 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
         scheduler->schedule(f);
     }
 
-    scheduler->yieldTo();
+    Scheduler::yieldTo();
     // Pass the first exception along
     // TODO: group exceptions?
     for(std::vector<boost::exception_ptr>::iterator it2 = exceptions.begin();
@@ -513,7 +523,7 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs,
             scheduler, caller));
         scheduler->schedule(fibers[i]);
     }
-    scheduler->yieldTo();
+    Scheduler::yieldTo();
     // Pass the first exception along
     // TODO: group exceptions?
     for(size_t i = 0; i < dgs.size(); ++i) {
@@ -547,7 +557,7 @@ FiberMutex::lock()
         }
         m_waiters.push_back(std::make_pair(Scheduler::getThis(), Fiber::getThis()));
     }
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
 #ifdef DEBUG
     boost::mutex::scoped_lock scopeLock(m_mutex);
     MORDOR_ASSERT(m_owner == Fiber::getThis());
@@ -597,7 +607,7 @@ FiberCondition::wait()
             Fiber::getThis()));
         m_fiberMutex.unlockNoLock();
     }
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
 #ifdef DEBUG
     boost::mutex::scoped_lock lock2(m_fiberMutex.m_mutex);
     MORDOR_ASSERT(m_fiberMutex.m_owner == Fiber::getThis());
@@ -677,7 +687,7 @@ FiberEvent::wait()
         m_waiters.push_back(std::make_pair(Scheduler::getThis(),
             Fiber::getThis()));
     }
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
 }
 
 void

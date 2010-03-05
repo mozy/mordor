@@ -299,7 +299,7 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
     char receivebuf[5];
     memset(receivebuf, 0, 5);
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
     MORDOR_TEST_ASSERT_EQUAL(sock->receive(receivebuf, 2), 2u);
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 7);
@@ -310,14 +310,14 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
     iov[1].iov_base = &receivebuf[2];
     iov[0].iov_len = 2;
     iov[1].iov_len = 2;
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 9);
     MORDOR_TEST_ASSERT_EQUAL(sock->receive(iov, 2), 4u);
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 11);
     MORDOR_TEST_ASSERT_EQUAL((const char*)receivebuf, "abcd");
 
     // Let the main fiber take control again until he "blocks"
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 13);
     boost::shared_array<char> receivebuf2;
     if (sent > 0u) {
@@ -326,7 +326,7 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
             sent -= sock->receive(receivebuf2.get(), sent);
     }
     // Let the main fiber update sent
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 15);
 
     if (sent > 0u) {
@@ -336,7 +336,7 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
     }
 
     // Let the main fiber take control again until he "blocks"
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 17);
     if (sent > 0u) {
         receivebuf2.reset(new char[std::max<size_t>(sent, 3u)]);
@@ -354,7 +354,7 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
         }
     }
     // Let the main fiber update sent
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 19);
 
     if (sent > 0u) {
@@ -380,16 +380,14 @@ MORDOR_UNITTEST(Socket, sendReceiveForceAsync)
 
     ioManager.schedule(otherfiber);
     // Wait for otherfiber to "block", and return control to us
-    ioManager.schedule(Fiber::getThis());
-    ioManager.yieldTo();
+    Scheduler::yield();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
     // Unblock him, then wait for him to block again
     conns.connect->connect(conns.address);
     ioManager.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
     ioManager.schedule(otherfiber);
-    ioManager.schedule(Fiber::getThis());
-    ioManager.yieldTo();
+    Scheduler::yield();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 6);
 
     // Again
@@ -398,8 +396,7 @@ MORDOR_UNITTEST(Socket, sendReceiveForceAsync)
     ioManager.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 8);
     ioManager.schedule(otherfiber);
-    ioManager.schedule(Fiber::getThis());
-    ioManager.yieldTo();
+    Scheduler::yield();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 10);
 
     // And again

@@ -70,7 +70,7 @@ FDStream::read(Buffer &b, size_t len)
     int rc = readv(m_fd, &bufs[0], bufs.size());
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
         m_ioManager->registerEvent(m_fd, IOManager::READ);
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         rc = readv(m_fd, &bufs[0], bufs.size());
     }
     if (rc < 0)
@@ -90,7 +90,7 @@ FDStream::write(const Buffer &b, size_t len)
     int rc = writev(m_fd, &bufs[0], bufs.size());
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
         m_ioManager->registerEvent(m_fd, IOManager::WRITE);
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         rc = writev(m_fd, &bufs[0], bufs.size());
     }
     if (rc == 0) {

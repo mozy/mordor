@@ -286,14 +286,14 @@ Socket::connect(const Address &to)
                     MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                             << "): (" << m_cancelledSend << ")";
                     m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-                    Scheduler::getThis()->yieldTo();
+                    Scheduler::yieldTo();
                     MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "ConnectEx");
                 }
                 Timer::ptr timeout;
                 if (m_sendTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                         &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 if (timeout)
                     timeout->cancel();
             }
@@ -332,14 +332,14 @@ Socket::connect(const Address &to)
                     MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                             << "): (" << m_cancelledSend << ")";
                     if (!m_ioManager->unregisterEvent(m_hEvent))
-                        Scheduler::getThis()->yieldTo();
+                        Scheduler::yieldTo();
                     MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "connect");
                 }
                 Timer::ptr timeout;
                 if (m_sendTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_sendTimeout,
                         boost::bind(&Socket::cancelConnect, this));
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 m_fiber.reset();
                 m_scheduler = NULL;
                 if (timeout)
@@ -347,7 +347,7 @@ Socket::connect(const Address &to)
                 // The timeout expired, but the event fired before we could
                 // cancel it, so we got scheduled twice
                 if (m_cancelledSend && !m_unregistered)
-                    Scheduler::getThis()->yieldTo();
+                    Scheduler::yieldTo();
                 if (m_cancelledSend) {
                     MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock
                         << ", " << to << "): (" << m_cancelledSend << ")";
@@ -381,7 +381,7 @@ Socket::connect(const Address &to)
                 MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                     << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "connect");
             }
             Timer::ptr timeout;
@@ -389,7 +389,7 @@ Socket::connect(const Address &to)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                     &Socket::cancelIo, this, IOManager::WRITE,
                     boost::ref(m_cancelledSend), ETIMEDOUT));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
             if (m_cancelledSend) {
@@ -481,14 +481,14 @@ Socket::accept(Socket &target)
                     MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
                         << m_cancelledReceive << ")";
                     m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-                    Scheduler::getThis()->yieldTo();
+                    Scheduler::yieldTo();
                     MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "AcceptEx");
                 }
                 Timer::ptr timeout;
                 if (m_receiveTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                         &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 if (timeout)
                     timeout->cancel();
             }
@@ -544,7 +544,7 @@ Socket::accept(Socket &target)
                     MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
                         << m_cancelledReceive << ")";
                     if (!m_ioManager->unregisterEvent(m_hEvent))
-                        Scheduler::getThis()->yieldTo();
+                        Scheduler::yieldTo();
                     MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "accept");
                 }
                 m_unregistered = false;
@@ -552,7 +552,7 @@ Socket::accept(Socket &target)
                 if (m_receiveTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_sendTimeout,
                         boost::bind(&Socket::cancelAccept, this));
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 m_fiber.reset();
                 m_scheduler = NULL;
                 if (timeout)
@@ -560,7 +560,7 @@ Socket::accept(Socket &target)
                 // The timeout expired, but the event fired before we could
                 // cancel it, so we got scheduled twice
                 if (m_cancelledReceive && !m_unregistered)
-                    Scheduler::getThis()->yieldTo();
+                    Scheduler::yieldTo();
                 if (m_cancelledReceive) {
                     MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock
                         << "): (" << m_cancelledReceive << ")";
@@ -586,7 +586,7 @@ Socket::accept(Socket &target)
                 MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
                     << m_cancelledReceive << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::READ);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "accept");
             }
             Timer::ptr timeout;
@@ -594,7 +594,7 @@ Socket::accept(Socket &target)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                     &Socket::cancelIo, this, IOManager::READ,
                     boost::ref(m_cancelledReceive), ETIMEDOUT));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
             if (m_cancelledReceive) {
@@ -662,14 +662,14 @@ Socket::send(const void *buf, size_t len, int flags)
                 MORDOR_LOG_ERROR(g_log) << this << " send(" << m_sock << ", " << len
                     << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASend");
             }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                     &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
         }
@@ -698,7 +698,7 @@ Socket::send(const void *buf, size_t len, int flags)
                 MORDOR_LOG_ERROR(g_log) << this << " send(" << m_sock << ", " << len
                     << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "send");
             }
             Timer::ptr timeout;
@@ -706,7 +706,7 @@ Socket::send(const void *buf, size_t len, int flags)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                     &Socket::cancelIo, this, IOManager::WRITE,
                     boost::ref(m_cancelledSend), ETIMEDOUT));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
             if (m_cancelledSend) {
@@ -754,14 +754,14 @@ Socket::send(const iovec *bufs, size_t len, int flags)
                 MORDOR_LOG_ERROR(g_log) << this << " sendv(" << m_sock << ", " << len
                     << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASend");
             }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                     &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
         }
@@ -802,7 +802,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
             MORDOR_LOG_ERROR(g_log) << this << " send(" << m_sock << ", " << len
                 << "): (" << m_cancelledSend << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "sendmsg");
         }
         Timer::ptr timeout;
@@ -810,7 +810,7 @@ Socket::send(const iovec *bufs, size_t len, int flags)
             timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                 &Socket::cancelIo, this, IOManager::WRITE,
                 boost::ref(m_cancelledSend), ETIMEDOUT));
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         if (timeout)
             timeout->cancel();
         if (m_cancelledSend) {
@@ -859,14 +859,14 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
                 MORDOR_LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", " << len
                     << ", " << to << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASendTo");
             }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                     &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
         }
@@ -893,7 +893,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
                 MORDOR_LOG_ERROR(g_log) << this << " sendto(" << m_sock << ", " << len
                     << ", " << to << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "sendto");
             }
             Timer::ptr timeout;
@@ -901,7 +901,7 @@ Socket::sendTo(const void *buf, size_t len, int flags, const Address &to)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                     &Socket::cancelIo, this, IOManager::WRITE,
                     boost::ref(m_cancelledSend), ETIMEDOUT));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
             if (m_cancelledSend) {
@@ -949,14 +949,14 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
                 MORDOR_LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", " << len
                     << ", " << to << "): (" << m_cancelledSend << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "WSASendTo");
             }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                     &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
         }
@@ -1000,7 +1000,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
             MORDOR_LOG_ERROR(g_log) << this << " sendtov(" << m_sock << ", " << len
                 << ", " << to << "): (" << m_cancelledSend << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::WRITE);
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "sendmsg");
         }
         Timer::ptr timeout;
@@ -1008,7 +1008,7 @@ Socket::sendTo(const iovec *bufs, size_t len, int flags, const Address &to)
             timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                 &Socket::cancelIo, this, IOManager::WRITE,
                 boost::ref(m_cancelledSend), ETIMEDOUT));
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         if (timeout)
             timeout->cancel();
         if (m_cancelledSend) {
@@ -1055,14 +1055,14 @@ Socket::receive(void *buf, size_t len, int flags)
                 MORDOR_LOG_ERROR(g_log) << this << " recv(" << m_sock << ", " << len
                     << "): (" << m_cancelledReceive << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecv");
             }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                     &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
         }
@@ -1089,7 +1089,7 @@ Socket::receive(void *buf, size_t len, int flags)
                 MORDOR_LOG_ERROR(g_log) << this << " recv(" << m_sock << ", " << len
                     << "): (" << m_cancelledReceive << ")";
                 m_ioManager->cancelEvent(m_sock, IOManager::READ);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "recv");
             }
             Timer::ptr timeout;
@@ -1097,7 +1097,7 @@ Socket::receive(void *buf, size_t len, int flags)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                     &Socket::cancelIo, this, IOManager::READ,
                     boost::ref(m_cancelledReceive), ETIMEDOUT));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
             if (m_cancelledReceive) {
@@ -1143,14 +1143,14 @@ Socket::receive(iovec *bufs, size_t len, int flags)
                 MORDOR_LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", " << len
                     << "): (" << m_cancelledReceive << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecv");
             }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                     &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
         }
@@ -1191,7 +1191,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
             MORDOR_LOG_ERROR(g_log) << this << " recvv(" << m_sock << ", " << len
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::READ);
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "recvmsg");
         }
         Timer::ptr timeout;
@@ -1199,7 +1199,7 @@ Socket::receive(iovec *bufs, size_t len, int flags)
             timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                 &Socket::cancelIo, this, IOManager::READ,
                 boost::ref(m_cancelledReceive), ETIMEDOUT));
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         if (timeout)
             timeout->cancel();
         if (m_cancelledReceive) {
@@ -1249,14 +1249,14 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
                 MORDOR_LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", " << len
                     << "): (" << m_cancelledReceive << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecvFrom");
             }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                     &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
         }
@@ -1302,7 +1302,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
             MORDOR_LOG_ERROR(g_log) << this << " recvfrom(" << m_sock << ", " << len
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::READ);
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "recvmsg");
         }
         Timer::ptr timeout;
@@ -1310,7 +1310,7 @@ Socket::receiveFrom(void *buf, size_t len, int *flags, Address &from)
             timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                 &Socket::cancelIo, this, IOManager::READ,
                 boost::ref(m_cancelledReceive), ETIMEDOUT));
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         if (timeout)
             timeout->cancel();
         if (m_cancelledReceive) {
@@ -1357,14 +1357,14 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
                 MORDOR_LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", " << len
                     << "): (" << m_cancelledReceive << ")";
                 m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-                Scheduler::getThis()->yieldTo();
+                Scheduler::yieldTo();
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "WSARecvFrom");
             }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
                 timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                     &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
         }
@@ -1407,7 +1407,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
             MORDOR_LOG_ERROR(g_log) << this << " recvfromv(" << m_sock << ", " << len
                 << "): (" << m_cancelledReceive << ")";
             m_ioManager->cancelEvent(m_sock, IOManager::READ);
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "recvmsg");
         }
         Timer::ptr timeout;
@@ -1415,7 +1415,7 @@ Socket::receiveFrom(iovec *bufs, size_t len, int *flags, Address &from)
             timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
                 &Socket::cancelIo, this, IOManager::READ,
                 boost::ref(m_cancelledReceive), ETIMEDOUT));
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         if (timeout)
             timeout->cancel();
         if (m_cancelledReceive) {

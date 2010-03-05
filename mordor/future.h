@@ -45,7 +45,7 @@ public:
         intptr_t currentValue = atomicCompareAndSwap(m_fiber, newValue, (intptr_t)0);
         // Not signalled yet
         if (currentValue == 0) {
-            m_scheduler->yieldTo();
+            Scheduler::yieldTo();
             // Make sure we got signalled
             MORDOR_ASSERT(m_fiber & 0x1);
         } else if (currentValue == 0x1) {
@@ -126,7 +126,7 @@ public:
         intptr_t currentValue = atomicCompareAndSwap(m_fiber, newValue, (intptr_t)0);
         // Not signalled yet
         if (currentValue == 0) {
-            m_scheduler->yieldTo();
+            Scheduler::yieldTo();
             // Make sure we got signalled
             MORDOR_ASSERT(m_fiber & 0x1);
         } else if (currentValue == 0x1) {
@@ -215,7 +215,7 @@ void waitAll(Iterator first, Iterator last)
         if (!first->startWait())
             ++yieldsNeeded;
     }
-    while (--yieldsNeeded) Scheduler::getThis()->yieldTo();
+    while (--yieldsNeeded) Scheduler::yieldTo();
 }
 
 template <class Iterator>
@@ -241,7 +241,7 @@ size_t waitAny(Iterator first, Iterator last)
     size_t yieldsNeeded = 1;
     if (it == last) {
         --yieldsNeeded;
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         --it;
     }
     while (it != first) {
@@ -257,7 +257,7 @@ size_t waitAny(Iterator first, Iterator last)
         ++yieldsNeeded;
     }
     MORDOR_ASSERT(result != ~0u);
-    while (--yieldsNeeded) Scheduler::getThis()->yieldTo();
+    while (--yieldsNeeded) Scheduler::yieldTo();
     return result;
 }
 

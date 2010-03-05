@@ -112,8 +112,7 @@ MORDOR_UNITTEST(Scheduler, hybridBasic)
     MORDOR_TEST_ASSERT_EQUAL(Scheduler::getThis(), &pool);
     MORDOR_TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::INIT);
     pool.schedule(doNothingFiber);
-    pool.schedule(Fiber::getThis());
-    pool.yieldTo();
+    Scheduler::yield();
     pool.stop();
     MORDOR_TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::TERM);
 }

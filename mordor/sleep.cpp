@@ -23,7 +23,7 @@ sleep(TimerManager &timerManager, unsigned long long us)
     MORDOR_ASSERT(Scheduler::getThis());
     timerManager.registerTimer(us,
         boost::bind(&scheduleMe, Scheduler::getThis(), Fiber::getThis()));
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yieldTo();
 }
 
 void

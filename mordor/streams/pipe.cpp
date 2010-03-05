@@ -156,7 +156,7 @@ PipeStream::read(Buffer &b, size_t len)
             otherStream->m_pendingReaderScheduler = Scheduler::getThis();
         }
         try {
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
         } catch (...) {
             boost::mutex::scoped_lock lock(*m_mutex);
             PipeStream::ptr otherStream = m_otherStream.lock();
@@ -218,7 +218,7 @@ PipeStream::write(const Buffer &b, size_t len)
             otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }
         try {
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
         } catch (...) {
             boost::mutex::scoped_lock lock(*m_mutex);
             PipeStream::ptr otherStream = m_otherStream.lock();
@@ -273,7 +273,7 @@ PipeStream::flush(bool flushParent)
             otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }
         try {
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
         } catch (...) {
             boost::mutex::scoped_lock lock(*m_mutex);
             PipeStream::ptr otherStream = m_otherStream.lock();

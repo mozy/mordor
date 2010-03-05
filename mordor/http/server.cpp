@@ -674,7 +674,7 @@ ServerRequest::commit()
     if (wait) {
         m_scheduler = Scheduler::getThis();
         m_fiber = Fiber::getThis();
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yieldTo();
         m_scheduler = NULL;
         m_fiber.reset();
         MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " responding";

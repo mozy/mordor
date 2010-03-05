@@ -74,7 +74,7 @@ NamedPipeStream::accept()
         if (ret && m_skipCompletionPortOnSuccess)
             m_ioManager->unregisterEvent(&m_readEvent);
         else
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
         DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_readEvent.overlapped.Internal);
         if (error)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ConnectNamedPipe");

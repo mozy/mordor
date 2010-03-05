@@ -822,8 +822,7 @@ disconnectDuringResponseServer(const URI &uri, ServerRequest::ptr request)
     Stream::ptr response = request->responseStream();
     response->flush();
     // Yield so that the request can be cancelled while the response is in progress
-    Scheduler::getThis()->schedule(Fiber::getThis());
-    Scheduler::getThis()->yieldTo();
+    Scheduler::yield();
     transferStream(random, response);
     MORDOR_TEST_ASSERT_EXCEPTION(response->flush(), BrokenPipeException);
 }
@@ -2188,8 +2187,7 @@ static void newRequestWhileFlushing(ClientConnection::ptr conn, int &sequence, N
         notify->notifyOnFlush = NULL;
         MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);
         Scheduler::getThis()->schedule(boost::bind(&newRequestWhileFlushing, conn, boost::ref(sequence), NotifyStream::ptr()));
-        Scheduler::getThis()->schedule(Fiber::getThis());
-        Scheduler::getThis()->yieldTo();
+        Scheduler::yield();
         return;
     }
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
@@ -2400,8 +2398,7 @@ MORDOR_UNITTEST(HTTPClient, pipelineTimeout)
     BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
 
     ioManager.schedule(boost::bind(&firstRequest, boost::ref(requestBroker)));
-    ioManager.schedule(Fiber::getThis());
-    ioManager.yieldTo();
+    Scheduler::yield();
 
     Request requestHeaders;
     requestHeaders.requestLine.method = HTTP::PUT;
@@ -2445,8 +2442,7 @@ MORDOR_UNITTEST(HTTPClient, priorResponseCloseWhileRequestInProgress)
     pool.schedule(boost::bind(&ServerConnection::processRequests, server));
 
     pool.schedule(boost::bind(&firstRequestGetsClosed, client));
-    pool.schedule(Fiber::getThis());
-    pool.yieldTo();
+    Scheduler::yield();
 
     Request requestHeaders;
     requestHeaders.requestLine.method = HTTP::PUT;
@@ -2603,8 +2599,7 @@ MORDOR_UNITTEST(HTTPClient, requestFailOthersWaitingResponse)
     pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
-    pool.schedule(Fiber::getThis());
-    pool.yieldTo();
+    Scheduler::yield();
 
     testStream->onWrite(&throwDummyException, 0);
     MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
@@ -2645,8 +2640,7 @@ MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersWaitingResponse)
     pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
-    pool.schedule(Fiber::getThis());
-    pool.yieldTo();
+    Scheduler::yield();
 
     requestHeaders.entity.contentLength = 1;
     ClientRequest::ptr request4 = conn->request(requestHeaders);
@@ -2696,15 +2690,13 @@ MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersAndSelfWaitingResponse)
     pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
-    pool.schedule(Fiber::getThis());
-    pool.yieldTo();
+    Scheduler::yield();
 
     bool excepted = false;
     requestHeaders.entity.contentLength = 1;
     ClientRequest::ptr request4 = conn->request(requestHeaders);
     pool.schedule(boost::bind(&waitForOperationAborted, request4, boost::ref(excepted)));
-    pool.schedule(Fiber::getThis());
-    pool.yieldTo();
+    Scheduler::yield();
     testStream->onWrite(&throwDummyException, 0);
     MORDOR_TEST_ASSERT_EXCEPTION(request4->requestStream()->write("a", 1), DummyException);
     request4->cancel();

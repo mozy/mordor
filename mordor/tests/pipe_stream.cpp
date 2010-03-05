@@ -320,8 +320,7 @@ MORDOR_UNITTEST(PipeStream, cancelOnBlockingWriter)
 
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&cancelOnBlockingWriter, pipe.first,
         boost::ref(sequence)))));
-    pool.schedule(Fiber::getThis());
-    pool.yieldTo();
+    Scheduler::yield();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
     pipe.first->cancelWrite();
     pool.dispatch();

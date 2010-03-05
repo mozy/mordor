@@ -124,7 +124,7 @@ HandleStream::read(Buffer &b, size_t len)
         if (m_skipCompletionPortOnSuccess && ret)
             m_ioManager->unregisterEvent(&m_readEvent);
         else
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
         DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_readEvent.overlapped.Internal);
         if (error == ERROR_HANDLE_EOF)
             return 0;
@@ -183,7 +183,7 @@ HandleStream::write(const Buffer &b, size_t len)
         if (m_skipCompletionPortOnSuccess && ret)
             m_ioManager->unregisterEvent(&m_writeEvent);
         else
-            Scheduler::getThis()->yieldTo();
+            Scheduler::yieldTo();
         DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_writeEvent.overlapped.Internal);
         if (error)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "WriteFile");
