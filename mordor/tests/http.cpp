@@ -2722,3 +2722,45 @@ MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersAndSelfWaitingResponse)
     MORDOR_ASSERT(excepted1);
     MORDOR_ASSERT(excepted2);
 }
+
+static void waitForPriorRequestFailedOnResponse(ClientRequest::ptr request, bool &excepted)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(request->response(), PriorRequestFailedException);
+    excepted = true;
+}
+
+MORDOR_UNITTEST(HTTPClient, responseFailsAnotherWaitingResponseAnotherWaitingRequest)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    // Don't bother flushing and waiting for someone to read it
+    Stream::ptr noFlushStream(new NoFlushStream(pipes.first));
+    // Put the bufferedStream *underneath* the testStream, so we make sure
+    // to generate the exception on the write() in doRequest, not in the
+    // flush()
+    BufferedStream::ptr bufferedStream(new BufferedStream(noFlushStream));
+    bufferedStream->allowPartialReads(true);
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    ClientRequest::ptr request1, request2, request3;
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    bool excepted1 = false, excepted2 = false;
+    request1 = conn->request(requestHeaders);
+    requestHeaders.entity.contentLength = 5;
+    request2 = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitForPriorRequestFailedOnResponse, request2, boost::ref(excepted1)));
+    pool.schedule(boost::bind(&waitForPriorRequestFailedOnRequest, conn, boost::ref(excepted2)));
+    Scheduler::yield();
+
+    testStream->onRead(&throwDummyException, 0);
+    MORDOR_TEST_ASSERT_EXCEPTION(request1->response(), DummyException);
+    pool.dispatch();
+
+    MORDOR_ASSERT(excepted1);
+    MORDOR_ASSERT(excepted2);
+}

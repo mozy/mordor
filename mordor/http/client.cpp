@@ -294,6 +294,7 @@ ClientConnection::scheduleAllWaitingResponses()
         if (request->m_requestNumber > firstResponseToSchedule) {
             switch (request->m_responseState) {
                 case ClientRequest::PENDING:
+                case ClientRequest::ERROR:
                     ++it;
                     continue;
                 case ClientRequest::WAITING:
@@ -305,7 +306,7 @@ ClientConnection::scheduleAllWaitingResponses()
                     MORDOR_ASSERT(request->m_fiber);
                     MORDOR_ASSERT(request->m_responseState ==
                         ClientRequest::WAITING);
-                    MORDOR_LOG_TRACE(g_log) << this << " "
+                    MORDOR_LOG_TRACE(g_log) << this << "-"
                         << request->m_requestNumber << " scheduling response";
                     request->m_responseState = ClientRequest::ERROR;
                     request->m_scheduler->schedule(request->m_fiber);
