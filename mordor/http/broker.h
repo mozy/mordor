@@ -189,19 +189,28 @@ private:
     RequestBroker::weak_ptr m_weakParent;
 };
 
+/// An exception coming from BaseRequestBroker will be tagged with CONNECTION
+/// if the exception came while trying to establish the connection, HTTP
+/// if the exception came specifically from HTTP communications, or no
+/// ExceptionSource at all if it came from other code
+enum ExceptionSource
+{
+    CONNECTION,
+    HTTP
+};
+typedef boost::error_info<struct tag_source, ExceptionSource > errinfo_source;
+
 class BaseRequestBroker : public RequestBroker
 {
 public:
     typedef boost::shared_ptr<BaseRequestBroker> ptr;
 
 public:
-    BaseRequestBroker(ConnectionBroker::ptr connectionBroker, boost::function<bool (size_t)> delayDg = NULL)
-        : m_connectionBroker(connectionBroker),
-          m_delayDg(delayDg)
+    BaseRequestBroker(ConnectionBroker::ptr connectionBroker)
+        : m_connectionBroker(connectionBroker)
     {}
-    BaseRequestBroker(ConnectionBroker::weak_ptr connectionBroker, boost::function<bool (size_t)> delayDg = NULL)
-        : m_weakConnectionBroker(connectionBroker),
-          m_delayDg(delayDg)
+    BaseRequestBroker(ConnectionBroker::weak_ptr connectionBroker)
+        : m_weakConnectionBroker(connectionBroker)
     {}
 
     ClientRequest::ptr request(Request &requestHeaders,
@@ -211,6 +220,26 @@ public:
 private:
     ConnectionBroker::ptr m_connectionBroker;
     ConnectionBroker::weak_ptr m_weakConnectionBroker;
+};
+
+/// Retries connection error and PriorRequestFailed errors
+class RetryRequestBroker : public RequestBrokerFilter
+{
+public:
+    typedef boost::shared_ptr<BaseRequestBroker> ptr;
+
+public:
+    RetryRequestBroker(RequestBroker::ptr parent,
+        boost::function<bool (size_t)> delayDg = NULL)
+        : RequestBrokerFilter(parent),
+          m_delayDg(delayDg)
+    {}
+
+    ClientRequest::ptr request(Request &requestHeaders,
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+
+private:
     boost::function<bool (size_t)> m_delayDg;
 };
 

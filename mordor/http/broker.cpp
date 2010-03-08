@@ -23,12 +23,16 @@ RequestBroker::ptr defaultRequestBroker(IOManager *ioManager,
     ConnectionBroker::ptr connectionBroker(new ConnectionCache(sslBroker));
     if (connBroker != NULL)
         *connBroker = connectionBroker;
-    RequestBroker::ptr requestBroker(new BaseRequestBroker(ConnectionBroker::weak_ptr(connectionBroker), delayDg));
+    RequestBroker::ptr requestBroker(new BaseRequestBroker(ConnectionBroker::weak_ptr(connectionBroker)));
+    if (delayDg)
+        requestBroker.reset(new RetryRequestBroker(requestBroker, delayDg));
 
     socketBroker.reset(new ProxyStreamBroker(socketBroker, requestBroker));
     sslBroker->parent(socketBroker);
     connectionBroker.reset(new ProxyConnectionBroker(connectionBroker));
-    requestBroker.reset(new BaseRequestBroker(connectionBroker, delayDg));
+    requestBroker.reset(new BaseRequestBroker(connectionBroker));
+    if (delayDg)
+        requestBroker.reset(new RetryRequestBroker(requestBroker, delayDg));
     return requestBroker;
 }
 
@@ -324,6 +328,15 @@ static void doBody(ClientRequest::ptr request,
     exceptionWasHttp = false;
     try {
         bodyDg(request);
+    } catch (boost::exception &ex) {
+        exceptionWasHttp = request->requestState() == ClientRequest::ERROR;
+        if (exceptionWasHttp)
+            ex << errinfo_source(HTTP);
+        // Make sure the request is fully aborted so we don't hang waiting for
+        // a response (since the request object is still in scope by the
+        // caller, it won't do this automatically)
+        request->cancel();
+        exception = boost::current_exception();
     } catch (...) {
         exceptionWasHttp = request->requestState() == ClientRequest::ERROR;
         // Make sure the request is fully aborted so we don't hang waiting for
@@ -351,77 +364,114 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     ConnectionBroker::ptr connectionBroker = m_connectionBroker;
     if (!connectionBroker)
         connectionBroker = m_weakConnectionBroker.lock();
-    size_t retries = 0;
-    while (true) {
-        std::pair<ClientConnection::ptr, bool> conn =
-            connectionBroker->getConnection(
-                connect ? originalUri : currentUri, forceNewConnection);
-        try {
-            // Fix up our URI for use with/without proxies
-            if (!connect) {
-                if (conn.second && !currentUri.authority.hostDefined()) {
-                    currentUri.authority = originalUri.authority;
-                    if (originalUri.schemeDefined())
-                        currentUri.scheme(originalUri.scheme());
-                } else if (!conn.second && currentUri.authority.hostDefined()) {
-                    currentUri.schemeDefined(false);
-                    currentUri.authority.hostDefined(false);
-                }
+    std::pair<ClientConnection::ptr, bool> conn;
+    try {
+        conn = connectionBroker->getConnection(
+            connect ? originalUri : currentUri, forceNewConnection);
+    } catch (boost::exception &ex) {
+        if (!connect)
+            currentUri = originalUri;
+        ex << errinfo_source(CONNECTION);
+        throw;
+    } catch (...) {
+        if (!connect)
+            currentUri = originalUri;
+        throw;
+    }
+    try {
+        // Fix up our URI for use with/without proxies
+        if (!connect) {
+            if (conn.second && !currentUri.authority.hostDefined()) {
+                currentUri.authority = originalUri.authority;
+                if (originalUri.schemeDefined())
+                    currentUri.scheme(originalUri.scheme());
+            } else if (!conn.second && currentUri.authority.hostDefined()) {
+                currentUri.schemeDefined(false);
+                currentUri.authority.hostDefined(false);
             }
+        }
 
-            ClientRequest::ptr request = conn.first->request(requestHeaders);
-            Future<> future;
-            boost::exception_ptr exception;
-            bool exceptionWasHttp = false;
-            if (bodyDg)
-                Scheduler::getThis()->schedule(boost::bind(&doBody,
-                    request, bodyDg, boost::ref(future), boost::ref(exception),
-                    boost::ref(exceptionWasHttp)));
-            if (!connect)
-                currentUri = originalUri;
-            try {
-                // Force reading the response here to check for connectivity problems
-                request->response();
-            } catch (...) {
-                if (bodyDg)
-                    future.wait();
-                // Prefer to throw an exception from send, if there was one
-                if (exception)
-                    Mordor::rethrow_exception(exception);
-                throw;
-            }
+        ClientRequest::ptr request;
+        try {
+            request = conn.first->request(requestHeaders);
+        } catch (boost::exception &ex) {
+            ex << errinfo_source(HTTP);
+            throw;
+        }
+        Future<> future;
+        boost::exception_ptr exception;
+        bool exceptionWasHttp = false;
+        if (bodyDg)
+            Scheduler::getThis()->schedule(boost::bind(&doBody,
+                request, bodyDg, boost::ref(future), boost::ref(exception),
+                boost::ref(exceptionWasHttp)));
+        if (!connect)
+            currentUri = originalUri;
+        try {
+            // Force reading the response here to check for connectivity problems
+            request->response();
+        } catch (boost::exception &ex) {
+            ex << errinfo_source(HTTP);
             if (bodyDg)
                 future.wait();
-            // Rethrow any exception from bodyDg *if* it didn't come from the
-            // HTTP framework, or directly from a stream within the framework
-            // (i.e. an exception from the user's code)
-            // otherwise, ignore it - we have a response, and we don't really
-            // care that the request didn't complete
-            if (exception && !exceptionWasHttp)
+            // Prefer to throw an exception from send, if there was one
+            if (exception)
                 Mordor::rethrow_exception(exception);
-            return request;
-        } catch (SocketException &) {
-            if (!connect)
-                    currentUri = originalUri;
-            if (!m_delayDg || !m_delayDg(++retries))
-                throw;
-            continue;
-        } catch (PriorRequestFailedException &) {
-            if (!connect)
-                currentUri = originalUri;
-            if (!m_delayDg || !m_delayDg(++retries))
-                throw;
-            continue;
-        } catch (UnexpectedEofException &) {
-            if (!connect)
-                currentUri = originalUri;
-            if (!m_delayDg || !m_delayDg(++retries))
-                throw;
-            continue;
-        } catch (...) {
-            if (!connect)
-                currentUri = originalUri;
             throw;
+        } catch (...) {
+            if (bodyDg)
+                future.wait();
+            // Prefer to throw an exception from send, if there was one
+            if (exception)
+                Mordor::rethrow_exception(exception);
+            throw;
+        }
+        if (bodyDg)
+            future.wait();
+        // Rethrow any exception from bodyDg *if* it didn't come from the
+        // HTTP framework, or directly from a stream within the framework
+        // (i.e. an exception from the user's code)
+        // otherwise, ignore it - we have a response, and we don't really
+        // care that the request didn't complete
+        if (exception && !exceptionWasHttp)
+            Mordor::rethrow_exception(exception);
+        return request;
+    } catch (...) {
+        if (!connect)
+            currentUri = originalUri;
+        throw;
+    }
+}
+
+ClientRequest::ptr
+RetryRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
+                           boost::function<void (ClientRequest::ptr)> bodyDg)
+{
+    size_t retries = 0;
+    while (true) {
+        try {
+            return parent()->request(requestHeaders, forceNewConnection, bodyDg);
+        } catch (SocketException &ex) {
+            const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
+            if (!source || *source != HTTP)
+                throw;
+            if (m_delayDg && !m_delayDg(++retries))
+                throw;
+            continue;
+        } catch (PriorRequestFailedException &ex) {
+            const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
+            if (!source || *source != HTTP)
+                throw;
+            if (m_delayDg && !m_delayDg(++retries))
+                throw;
+            continue;
+        } catch (UnexpectedEofException &ex) {
+            const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
+            if (!source || *source != HTTP)
+                throw;
+            if (m_delayDg && !m_delayDg(++retries))
+                throw;
+            continue;
         }
         MORDOR_NOTREACHED();
     }
