@@ -28,6 +28,8 @@ static Logger::ptr g_log = Log::lookup("mordor:http:client");
 ClientConnection::ClientConnection(Stream::ptr stream, TimerManager *timerManager)
 : Connection(stream),
   m_readTimeout(~0ull),
+  m_idleTimeout(~0ull),
+  m_timerManager(timerManager),
   m_currentRequest(m_pendingRequests.end()),
   m_allowNewRequests(true),
   m_priorRequestFailed(false),
@@ -56,6 +58,12 @@ ClientConnection::ClientConnection(Stream::ptr stream, TimerManager *timerManage
     }
 }
 
+ClientConnection::~ClientConnection()
+{
+    if (m_idleTimer)
+        m_idleTimer->cancel();
+}
+
 ClientRequest::ptr
 ClientConnection::request(const Request &requestHeaders)
 {
@@ -80,6 +88,12 @@ ClientConnection::outstandingRequests()
     return m_pendingRequests.size();
 }
 
+bool
+ClientConnection::supportsTimeouts() const
+{
+    return !!m_timerManager;
+}
+
 void
 ClientConnection::readTimeout(unsigned long long us)
 {
@@ -92,6 +106,21 @@ ClientConnection::writeTimeout(unsigned long long us)
 {
     MORDOR_ASSERT(m_timeoutStream);
     m_timeoutStream->writeTimeout(us);
+}
+
+void
+ClientConnection::idleTimeout(unsigned long long us, boost::function<void ()> dg)
+{
+    MORDOR_ASSERT(m_timerManager);
+    boost::mutex::scoped_lock lock(m_mutex);
+    if (m_idleTimer) {
+        m_idleTimer->cancel();
+        m_idleTimer.reset();
+    }
+    m_idleTimeout = us;
+    m_idleDg = dg;
+    if (m_idleTimeout != ~0ull && m_pendingRequests.empty())
+        m_idleTimer = m_timerManager->registerTimer(m_idleTimeout, dg);
 }
 
 void
@@ -230,6 +259,12 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
                 request = NULL;
             }
         } else {
+            if (m_idleTimeout != ~0ull) {
+                MORDOR_ASSERT(!m_idleTimer);
+                MORDOR_ASSERT(m_timerManager);
+                MORDOR_ASSERT(m_idleDg);
+                m_idleTimer = m_timerManager->registerTimer(m_idleTimeout, m_idleDg);
+            }
             request = NULL;
         }
     }
@@ -777,6 +812,10 @@ ClientRequest::doRequest()
         if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseFailed != ~0ull) {
             m_requestState = m_responseState = ERROR;
             MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+        }
+        if (m_conn->m_idleTimer) {
+            m_conn->m_idleTimer->cancel();
+            m_conn->m_idleTimer.reset();
         }
         firstRequest = m_conn->m_currentRequest == m_conn->m_pendingRequests.end();
         m_requestNumber = ++m_conn->m_requestCount;
