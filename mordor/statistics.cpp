@@ -22,8 +22,7 @@ Statistic *Statistics::lookup(const std::string &name)
 static std::ostream &
 dump(std::ostream &os, const Statistic &stat, int level = 0)
 {
-    std::string indent(" ", level * 4);
-    ++level;
+    std::string indent(level++ * 4, ' ');
     os << indent << typeid(stat).name() << ": " << stat;
     if (stat.units)
         os << " " << stat.units;
