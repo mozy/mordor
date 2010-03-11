@@ -2794,3 +2794,32 @@ MORDOR_UNITTEST(HTTPClient, responseCancelsWhileRequestScheduled)
     pool.dispatch();
     MORDOR_ASSERT(excepted);
 }
+
+
+MORDOR_UNITTEST(HTTPClient, responseFailsReadAfterAbort)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 7\r\n"
+        "\r\n"
+        "hello\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    // Put the bufferedStream *underneath* the testStream, so we make sure
+    // to generate the exception on the read() after ensureResponse()
+    BufferedStream::ptr bufferedStream(new BufferedStream(duplexStream));
+    bufferedStream->allowPartialReads(true);
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    request->cancel();
+    Stream::ptr response = request->responseStream();
+    testStream->onRead(&throwDummyException, 0);
+    char buf[7];
+    response->read(buf, 7);
+}

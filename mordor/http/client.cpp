@@ -424,9 +424,6 @@ ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &request)
   m_request(request),
   m_requestState(WAITING),
   m_responseState(PENDING),
-  m_badResponse(false),
-  m_noResponse(false),
-  m_incompleteResponse(false),
   m_badTrailer(false),
   m_incompleteTrailer(false),
   m_hasResponseBody(false)
@@ -919,213 +916,206 @@ ClientRequest::doRequest()
 void
 ClientRequest::ensureResponse()
 {
-    if (m_responseState == BODY || m_responseState == COMPLETE)
+    if (m_priorResponseException)
+        ::Mordor::rethrow_exception(m_priorResponseException);
+    if (m_responseState == BODY || m_responseState >= COMPLETE)
         return;
-    bool wait = false, skip = m_responseState > WAITING;
-    if (!skip) {
-        MORDOR_ASSERT(m_responseState == PENDING);
-        boost::mutex::scoped_lock lock(m_conn->m_mutex);
-        m_conn->invariant();
-        if (m_conn->m_priorResponseFailed <= m_requestNumber ||
-            m_conn->m_priorResponseClosed <= m_requestNumber) {
-            std::list<ClientRequest *>::iterator it;
-            it = std::find(m_conn->m_pendingRequests.begin(),
-                m_conn->m_pendingRequests.end(), this);
-            MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
-            m_conn->m_pendingRequests.erase(it);
-            m_responseState = ERROR;
-            if (m_conn->m_priorResponseClosed <= m_requestNumber)
-                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-            else
-                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
-        }
-        MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
-        ClientRequest *request = m_conn->m_pendingRequests.front();
-        if (request != this) {
-            m_scheduler = Scheduler::getThis();
-            m_fiber = Fiber::getThis();
-            MORDOR_ASSERT(m_scheduler);
-            MORDOR_ASSERT(m_fiber);
-#ifdef DEBUG
-            bool inserted =
-#endif
-            m_conn->m_waitingResponses.insert(this).second;
-            MORDOR_ASSERT(inserted);
-            wait = true;
-            m_responseState = WAITING;
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber<< " waiting for response";
-        } else {
-            m_responseState = HEADERS;
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " reading response";
-        }
-    }
-    // If we weren't the first response in the queue, wait for someone
-    // else to schedule us
-    if (wait) {
-        Scheduler::yieldTo();
-        MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " reading response";
-        // Check for problems that occurred while we were waiting
-        boost::mutex::scoped_lock lock(m_conn->m_mutex);
-        m_conn->invariant();
-        if (m_responseState == CANCELED)
-            MORDOR_THROW_EXCEPTION(OperationAbortedException());
-        if (m_responseState == ERROR) {
-            if (m_conn->m_priorResponseClosed <= m_requestNumber)
-                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-            else
-                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
-        }
-        // Probably means that the Scheduler exited in the above yieldTo,
-        // and returned to us, because there is no other work to be done
-        try {
-            MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
-            MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
-        } catch(...) {
-            m_responseState = PENDING;
-            std::set<ClientRequest *>::iterator it = m_conn->m_waitingResponses.find(this);
-            if (it != m_conn->m_waitingResponses.end())
-                m_conn->m_waitingResponses.erase(it);
-            throw;
-        }
-    }
-
     try {
-        if (!skip) {
+        bool wait = false;
+        MORDOR_ASSERT(m_responseState == PENDING);
+        {
+            boost::mutex::scoped_lock lock(m_conn->m_mutex);
+            m_conn->invariant();
+            if (m_conn->m_priorResponseFailed <= m_requestNumber ||
+                m_conn->m_priorResponseClosed <= m_requestNumber) {
+                std::list<ClientRequest *>::iterator it;
+                it = std::find(m_conn->m_pendingRequests.begin(),
+                    m_conn->m_pendingRequests.end(), this);
+                MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
+                m_conn->m_pendingRequests.erase(it);
+                m_responseState = ERROR;
+                if (m_conn->m_priorResponseClosed <= m_requestNumber)
+                    MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+                else
+                    MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+            }
+            MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
+            ClientRequest *request = m_conn->m_pendingRequests.front();
+            if (request != this) {
+                m_scheduler = Scheduler::getThis();
+                m_fiber = Fiber::getThis();
+                MORDOR_ASSERT(m_scheduler);
+                MORDOR_ASSERT(m_fiber);
+        #ifdef DEBUG
+                bool inserted =
+        #endif
+                m_conn->m_waitingResponses.insert(this).second;
+                MORDOR_ASSERT(inserted);
+                wait = true;
+                m_responseState = WAITING;
+                MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber<< " waiting for response";
+            } else {
+                m_responseState = HEADERS;
+                MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " reading response";
+            }
+        }
+
+        // If we weren't the first response in the queue, wait for someone
+        // else to schedule us
+        if (wait) {
+            Scheduler::yieldTo();
+            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " reading response";
+            // Check for problems that occurred while we were waiting
+            boost::mutex::scoped_lock lock(m_conn->m_mutex);
+            m_conn->invariant();
+            if (m_responseState == CANCELED)
+                MORDOR_THROW_EXCEPTION(OperationAbortedException());
+            if (m_responseState == ERROR) {
+                if (m_conn->m_priorResponseClosed <= m_requestNumber)
+                    MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+                else
+                    MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+            }
+            // Probably means that the Scheduler exited in the above yieldTo,
+            // and returned to us, because there is no other work to be done
+            try {
+                MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
+                MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
+            } catch(...) {
+                m_responseState = PENDING;
+                std::set<ClientRequest *>::iterator it = m_conn->m_waitingResponses.find(this);
+                if (it != m_conn->m_waitingResponses.end())
+                    m_conn->m_waitingResponses.erase(it);
+                throw;
+            }
+        }
+
+        try {
             MORDOR_ASSERT(m_responseState == HEADERS);
             // Read and parse headers
             ResponseParser parser(m_response);
             unsigned long long read = parser.run(m_conn->m_stream);
-            if (read == 0ull) {
-                m_noResponse = true;
+            if (read == 0ull)
                 MORDOR_THROW_EXCEPTION(UnexpectedEofException());
-            }
-            if (parser.error()) {
-                m_badResponse = true;
+            if (parser.error())
                 MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
-            }
-            if (!parser.complete()) {
-                m_incompleteResponse = true;
+            if (!parser.complete())
                 MORDOR_THROW_EXCEPTION(IncompleteMessageHeaderException());
-            }
             if (g_log->enabled(Log::DEBUG)) {
                 MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " " << m_response;
             } else {
                 MORDOR_LOG_VERBOSE(g_log) << m_conn << "-" << m_requestNumber << " " << m_response.status;
             }
-        }
-        if (m_noResponse)
-            MORDOR_THROW_EXCEPTION(UnexpectedEofException());
-        if (m_badResponse)
-            MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
-        if (m_incompleteResponse)
-            MORDOR_THROW_EXCEPTION(IncompleteMessageHeaderException());
 
-        bool close = false;
-        StringSet &connection = m_response.general.connection;
-        if (m_response.status.ver == Version(1, 0)) {
-            if (connection.find("Keep-Alive") == connection.end())
+            bool close = false;
+            StringSet &connection = m_response.general.connection;
+            if (m_response.status.ver == Version(1, 0)) {
+                if (connection.find("Keep-Alive") == connection.end())
+                    close = true;
+            } else if (m_response.status.ver == Version(1, 1)) {
+                if (connection.find("close") != connection.end())
+                    close = true;
+            } else {
+                MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
+            }
+            // NON-STANDARD!!!
+            StringSet &proxyConnection = m_response.general.proxyConnection;
+            if (proxyConnection.find("close") != proxyConnection.end())
                 close = true;
-        } else if (m_response.status.ver == Version(1, 1)) {
-            if (connection.find("close") != connection.end())
-                close = true;
-        } else {
-            MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
-        }
-        // NON-STANDARD!!!
-        StringSet &proxyConnection = m_response.general.proxyConnection;
-        if (proxyConnection.find("close") != proxyConnection.end())
-            close = true;
 
-        ParameterizedList &transferEncoding = m_response.general.transferEncoding;
-        // Remove identity from the Transfer-Encodings
-        for (ParameterizedList::iterator it(transferEncoding.begin());
-            it != transferEncoding.end();
-            ++it) {
-            if (stricmp(it->value.c_str(), "identity") == 0) {
-                it = transferEncoding.erase(it);
-                --it;
-            }
-        }
-        if (!transferEncoding.empty()) {
-            if (stricmp(transferEncoding.back().value.c_str(), "chunked") != 0) {
-                MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("The last transfer-coding is not chunked."));
-            }
-            for (ParameterizedList::const_iterator it(transferEncoding.begin());
-                it + 1 != transferEncoding.end();
+            ParameterizedList &transferEncoding = m_response.general.transferEncoding;
+            // Remove identity from the Transfer-Encodings
+            for (ParameterizedList::iterator it(transferEncoding.begin());
+                it != transferEncoding.end();
                 ++it) {
-                if (stricmp(it->value.c_str(), "chunked") == 0) {
-                    MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("chunked transfer-coding applied multiple times"));
-                } else if (stricmp(it->value.c_str(), "deflate") == 0 ||
-                    stricmp(it->value.c_str(), "gzip") == 0 ||
-                    stricmp(it->value.c_str(), "x-gzip") == 0) {
-                    // Supported transfer-codings
-                } else if (stricmp(it->value.c_str(), "compress") == 0 ||
-                    stricmp(it->value.c_str(), "x-compress") == 0) {
-                    MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("compress transfer-coding is unsupported"));
-                } else {
-                    MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("Unrecognized transfer-coding: " + it->value));
+                if (stricmp(it->value.c_str(), "identity") == 0) {
+                    it = transferEncoding.erase(it);
+                    --it;
                 }
             }
-        }
+            if (!transferEncoding.empty()) {
+                if (stricmp(transferEncoding.back().value.c_str(), "chunked") != 0) {
+                    MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("The last transfer-coding is not chunked."));
+                }
+                for (ParameterizedList::const_iterator it(transferEncoding.begin());
+                    it + 1 != transferEncoding.end();
+                    ++it) {
+                    if (stricmp(it->value.c_str(), "chunked") == 0) {
+                        MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("chunked transfer-coding applied multiple times"));
+                    } else if (stricmp(it->value.c_str(), "deflate") == 0 ||
+                        stricmp(it->value.c_str(), "gzip") == 0 ||
+                        stricmp(it->value.c_str(), "x-gzip") == 0) {
+                        // Supported transfer-codings
+                    } else if (stricmp(it->value.c_str(), "compress") == 0 ||
+                        stricmp(it->value.c_str(), "x-compress") == 0) {
+                        MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("compress transfer-coding is unsupported"));
+                    } else {
+                        MORDOR_THROW_EXCEPTION(InvalidTransferEncodingException("Unrecognized transfer-coding: " + it->value));
+                    }
+                }
+            }
 
-        // If the there is a message body, but it's undelimited, make sure we're
-        // closing the connection
-        bool hasBody = Connection::hasMessageBody(m_response.general, m_response.entity,
-            m_request.requestLine.method, m_response.status.status, false);
-        if (hasBody &&
-            transferEncoding.empty() && m_response.entity.contentLength == ~0ull &&
-            m_response.entity.contentType.type != "multipart") {
-            close = true;
-        }
+            // If the there is a message body, but it's undelimited, make sure we're
+            // closing the connection
+            bool hasBody = Connection::hasMessageBody(m_response.general, m_response.entity,
+                m_request.requestLine.method, m_response.status.status, false);
+            if (hasBody &&
+                transferEncoding.empty() && m_response.entity.contentLength == ~0ull &&
+                m_response.entity.contentType.type != "multipart") {
+                close = true;
+            }
 
-        bool connect = m_request.requestLine.method == CONNECT &&
-            m_response.status.status == OK;
-        if (connect)
-            close = true;
+            bool connect = m_request.requestLine.method == CONNECT &&
+                m_response.status.status == OK;
+            if (connect)
+                close = true;
 
-        if (close) {
+            if (close) {
+                boost::mutex::scoped_lock lock(m_conn->m_mutex);
+                m_conn->invariant();
+                m_conn->m_priorResponseClosed = m_requestNumber;
+                MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
+                MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
+                if (!hasBody && m_requestState >= COMPLETE)
+                    m_conn->m_pendingRequests.pop_front();
+                m_responseState = hasBody ? BODY : COMPLETE;
+                m_conn->scheduleAllWaitingRequests();
+                m_conn->scheduleAllWaitingResponses();
+            } else {
+                m_responseState = connect ? COMPLETE : BODY;
+            }
+
+            if (!hasBody && !connect) {
+                MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " no response body";
+                if (close) {
+                    if (m_conn->m_stream->supportsHalfClose())
+                        m_conn->m_stream->close(Stream::READ);
+                } else {
+                    m_conn->scheduleNextResponse(this);
+                }
+            }
+        } catch (...) {
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
-            m_conn->m_priorResponseClosed = m_requestNumber;
-            MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
-            MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
-            if (!hasBody && m_requestState >= COMPLETE)
-                m_conn->m_pendingRequests.pop_front();
-            m_responseState = hasBody ? BODY : COMPLETE;
-            m_conn->scheduleAllWaitingRequests();
-            m_conn->scheduleAllWaitingResponses();
-        } else {
-            m_responseState = connect ? COMPLETE : BODY;
-        }
-
-        if (!hasBody && !connect) {
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " no response body";
-            if (close) {
-                if (m_conn->m_stream->supportsHalfClose())
-                    m_conn->m_stream->close(Stream::READ);
-            } else {
-                m_conn->scheduleNextResponse(this);
+            bool firstFailure = m_conn->m_priorResponseFailed == ~0ull;
+            if (firstFailure)
+                m_conn->m_priorResponseFailed = m_requestNumber;
+            m_responseState = ERROR;
+            if (!m_conn->m_pendingRequests.empty() &&
+                m_conn->m_pendingRequests.front() == this) {
+                if (m_requestState >= COMPLETE)
+                    m_conn->m_pendingRequests.pop_front();
+                m_conn->scheduleAllWaitingRequests();
+                m_conn->scheduleAllWaitingResponses();
             }
+            if (m_conn->m_priorResponseClosed < m_requestNumber)
+                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+            if (!firstFailure && m_conn->m_priorResponseFailed < m_requestNumber)
+                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+            throw;
         }
     } catch (...) {
-        boost::mutex::scoped_lock lock(m_conn->m_mutex);
-        m_conn->invariant();
-        bool firstFailure = m_conn->m_priorResponseFailed == ~0ull;
-        m_conn->m_priorResponseFailed = m_requestNumber;
-        m_responseState = ERROR;
-        if (!m_conn->m_pendingRequests.empty() &&
-            m_conn->m_pendingRequests.front() == this) {
-            if (m_requestState >= COMPLETE)
-                m_conn->m_pendingRequests.pop_front();
-            m_conn->scheduleAllWaitingRequests();
-            m_conn->scheduleAllWaitingResponses();
-        }
-        if (!m_noResponse && !m_badResponse && !m_incompleteResponse) {
-            if (m_conn->m_priorResponseClosed <= m_requestNumber)
-                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-            if (!firstFailure && m_conn->m_priorResponseFailed <= m_requestNumber)
-                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
-        }
+        m_priorResponseException = boost::current_exception();
         throw;
     }
 }
