@@ -43,16 +43,18 @@ MORDOR_UNITTEST(SSLStream, basic)
     MORDOR_TEST_ASSERT_EQUAL((const char *)buf, "world");
 }
 
-static void writeLotsaData(Stream::ptr stream, unsigned long long toTransfer)
+static void writeLotsaData(Stream::ptr stream, unsigned long long toTransfer, bool &complete)
 {
     RandomStream random;
     MORDOR_TEST_ASSERT_EQUAL(transferStream(random, stream, toTransfer), toTransfer);
     stream->flush();
+    complete = true;
 }
 
-static void readLotsaData(Stream::ptr stream, unsigned long long toTransfer)
+static void readLotsaData(Stream::ptr stream, unsigned long long toTransfer, bool &complete)
 {
     MORDOR_TEST_ASSERT_EQUAL(transferStream(stream, NullStream::get(), toTransfer), toTransfer);
+    complete = true;
 }
 
 MORDOR_UNITTEST(SSLStream, duplexStress)
@@ -68,14 +70,19 @@ MORDOR_UNITTEST(SSLStream, duplexStress)
     sslclient->connect();
     pool.dispatch();
 
-    // Transfer 100 MB
-    long long toTransfer = 100 * 1024 * 1024;
+    // Transfer 1 MB
+    long long toTransfer = 1024 * 1024;
     std::vector<boost::function<void ()> > dgs;
-    dgs.push_back(boost::bind(&writeLotsaData, sslserver, toTransfer));
-    dgs.push_back(boost::bind(&readLotsaData, sslserver, toTransfer));
-    dgs.push_back(boost::bind(&writeLotsaData, sslclient, toTransfer));
-    dgs.push_back(boost::bind(&readLotsaData, sslclient, toTransfer));
+    bool complete1 = false, complete2 = false, complete3 = false, complete4 = false;
+    dgs.push_back(boost::bind(&writeLotsaData, sslserver, toTransfer, boost::ref(complete1)));
+    dgs.push_back(boost::bind(&readLotsaData, sslserver, toTransfer, boost::ref(complete2)));
+    dgs.push_back(boost::bind(&writeLotsaData, sslclient, toTransfer, boost::ref(complete3)));
+    dgs.push_back(boost::bind(&readLotsaData, sslclient, toTransfer, boost::ref(complete4)));
     parallel_do(dgs);
+    MORDOR_ASSERT(complete1);
+    MORDOR_ASSERT(complete2);
+    MORDOR_ASSERT(complete3);
+    MORDOR_ASSERT(complete4);
 }
 
 static void readWorld(Stream::ptr stream, int &sequence)
@@ -99,12 +106,15 @@ MORDOR_UNITTEST(SSLStream, forceDuplex)
     Stream::ptr server = sslserver, client = sslclient;
 
     int sequence = 0;
+    pool.schedule(boost::bind(&accept, sslserver));
+    sslclient->connect();
+    pool.dispatch();
+
     pool.schedule(boost::bind(&readWorld, client,
         boost::ref(sequence)));
     pool.dispatch();
-    // Read is pending
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
-    pool.schedule(boost::bind(&accept, sslserver));
+    // Read is pending
     client->write("hello");
     client->flush(false);
     pool.dispatch();

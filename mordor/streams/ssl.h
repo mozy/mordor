@@ -66,18 +66,12 @@ public:
     void verifyPeerCertificate(const std::string &hostname);
 
 private:
-    void flushBuffer(bool flushParent = false);
-    void wantRead(FiberMutex::ScopedLock &lock);
+    void wantRead();
 
 private:
-    // Need a mutex to serialize access to SSL context from both read/write
-    // and to serialize reads to the underlying stream (write can cause reads)
-    FiberMutex m_mutex;
-    bool m_inRead;
-    FiberCondition m_readCondition;
     boost::shared_ptr<SSL_CTX> m_ctx;
     boost::shared_ptr<SSL> m_ssl;
-    Buffer m_readBuffer;
+    Buffer m_readBuffer, m_writeBuffer;
     BIO *m_readBio, *m_writeBio;
 };
 
