@@ -2764,3 +2764,33 @@ MORDOR_UNITTEST(HTTPClient, responseFailsAnotherWaitingResponseAnotherWaitingReq
     MORDOR_ASSERT(excepted1);
     MORDOR_ASSERT(excepted2);
 }
+
+MORDOR_UNITTEST(HTTPClient, responseCancelsWhileRequestScheduled)
+{
+    WorkerPool pool;
+
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 7\r\n"
+        "\r\n"
+        "hello\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.entity.contentLength = 5;
+
+    bool excepted = false;
+    ClientRequest::ptr request1 = conn->request(requestHeaders);
+
+    pool.schedule(boost::bind(&waitForPriorRequestFailedOnRequest, conn, boost::ref(excepted)));
+    Scheduler::yield();
+    request1->requestStream()->write("hello");
+    request1->requestStream()->close();
+    request1->response();
+    request1->cancel();
+    pool.dispatch();
+    MORDOR_ASSERT(excepted);
+}

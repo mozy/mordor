@@ -846,13 +846,23 @@ ClientRequest::doRequest()
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (m_conn->m_priorResponseClosed != ~0ull) {
+        if (m_conn->m_priorResponseClosed != ~0ull ||
+            m_conn->m_priorRequestFailed ||
+            m_conn->m_priorResponseFailed != ~0ull) {
+            if (m_requestState == HEADERS) {
+                MORDOR_ASSERT(m_conn->m_currentRequest !=
+                    m_conn->m_pendingRequests.end());
+                MORDOR_ASSERT(*m_conn->m_currentRequest == this);
+                m_conn->m_currentRequest =
+                    m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
+                MORDOR_ASSERT(m_conn->m_currentRequest ==
+                    m_conn->m_pendingRequests.end());
+            }
             m_requestState = m_responseState = ERROR;
-            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-        }
-        if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseFailed != ~0ull) {
-            m_requestState = m_responseState = ERROR;
-            MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+            if (m_conn->m_priorResponseClosed != ~0ull)
+                MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+            else
+                MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         }
     }
     MORDOR_ASSERT(m_requestState == HEADERS);
