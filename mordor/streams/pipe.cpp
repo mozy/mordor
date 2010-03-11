@@ -8,8 +8,11 @@
 
 #include "mordor/exception.h"
 #include "mordor/fiber.h"
+#include "mordor/log.h"
 
 namespace Mordor {
+
+static Logger::ptr g_log = Log::lookup("mordor:streams:pipe");
 
 class PipeStream : public Stream
 {
@@ -51,6 +54,8 @@ std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t bufferSize)
     std::pair<PipeStream::ptr, PipeStream::ptr> result;
     result.first.reset(new PipeStream(bufferSize));
     result.second.reset(new PipeStream(bufferSize));
+    MORDOR_LOG_VERBOSE(g_log) << "pipeStream(" << bufferSize << "): {"
+        << result.first << ", " << result.second << "}";
     result.first->m_otherStream = result.second;
     result.second->m_otherStream = result.first;
     result.first->m_mutex.reset(new boost::mutex());
@@ -70,6 +75,7 @@ PipeStream::PipeStream(size_t bufferSize)
 
 PipeStream::~PipeStream()
 {
+    MORDOR_LOG_VERBOSE(g_log) << this << " destructing";
     boost::mutex::scoped_lock lock(*m_mutex);
     PipeStream::ptr otherStream = m_otherStream.lock();
     if (otherStream) {
@@ -84,12 +90,14 @@ PipeStream::~PipeStream()
     }
     if (m_pendingReader) {
         MORDOR_ASSERT(m_pendingReaderScheduler);
+        MORDOR_LOG_DEBUG(g_log) << otherStream << " scheduling read";
         m_pendingReaderScheduler->schedule(m_pendingReader);
         m_pendingReader.reset();
         m_pendingReaderScheduler = NULL;
     }
     if (m_pendingWriter) {
         MORDOR_ASSERT(m_pendingWriterScheduler);
+        MORDOR_LOG_DEBUG(g_log) << otherStream << " scheduling write";
         m_pendingWriterScheduler->schedule(m_pendingWriter);
         m_pendingWriter.reset();
         m_pendingWriterScheduler = NULL;
@@ -106,12 +114,14 @@ PipeStream::close(CloseType type)
         otherStream->m_otherClosed = m_closed;
     if (m_pendingReader && (m_closed & WRITE)) {
         MORDOR_ASSERT(m_pendingReaderScheduler);
+        MORDOR_LOG_DEBUG(g_log) << otherStream << " scheduling read";
         m_pendingReaderScheduler->schedule(m_pendingReader);
         m_pendingReader.reset();
         m_pendingReaderScheduler = NULL;
     }
     if (m_pendingWriter && (m_closed & READ)) {
         MORDOR_ASSERT(m_pendingWriterScheduler);
+        MORDOR_LOG_DEBUG(g_log) << otherStream << " scheduling write";
         m_pendingWriterScheduler->schedule(m_pendingWriter);
         m_pendingWriter.reset();
         m_pendingWriterScheduler = NULL;
@@ -139,19 +149,26 @@ PipeStream::read(Buffer &b, size_t len)
                 m_readBuffer.consume(todo);
                 if (m_pendingWriter) {
                     MORDOR_ASSERT(m_pendingWriterScheduler);
+                    MORDOR_LOG_DEBUG(g_log) << otherStream << " scheduling write";
                     m_pendingWriterScheduler->schedule(m_pendingWriter);
                     m_pendingWriter.reset();
                     m_pendingWriterScheduler = NULL;
                 }
+                MORDOR_LOG_TRACE(g_log) << this << " read(" << len << "): "
+                    << todo;
                 return todo;
             }
 
-            if (m_otherClosed & WRITE)
+            if (m_otherClosed & WRITE) {
+                MORDOR_LOG_TRACE(g_log) << this << " read(" << len << "): "
+                    << 0;
                 return 0;
+            }
 
             // Wait for the other stream to schedule us
             MORDOR_ASSERT(!otherStream->m_pendingReader);
             MORDOR_ASSERT(!otherStream->m_pendingReaderScheduler);
+            MORDOR_LOG_DEBUG(g_log) << this << " waiting to read";
             otherStream->m_pendingReader = Fiber::getThis();
             otherStream->m_pendingReaderScheduler = Scheduler::getThis();
         }
@@ -178,6 +195,7 @@ PipeStream::cancelRead()
     PipeStream::ptr otherStream = m_otherStream.lock();
     if (otherStream && otherStream->m_pendingReader) {
         MORDOR_ASSERT(otherStream->m_pendingReaderScheduler);
+        MORDOR_LOG_DEBUG(g_log) << this << " cancelling read";
         otherStream->m_pendingReaderScheduler->schedule(otherStream->m_pendingReader);
         otherStream->m_pendingReader.reset();
         otherStream->m_pendingReaderScheduler = NULL;
@@ -205,15 +223,19 @@ PipeStream::write(const Buffer &b, size_t len)
                 otherStream->m_readBuffer.copyIn(b, todo);
                 if (m_pendingReader) {
                     MORDOR_ASSERT(m_pendingReaderScheduler);
+                    MORDOR_LOG_DEBUG(g_log) << otherStream << " scheduling read";
                     m_pendingReaderScheduler->schedule(m_pendingReader);
                     m_pendingReader.reset();
                     m_pendingReaderScheduler = NULL;
                 }
+                MORDOR_LOG_TRACE(g_log) << this << " write(" << len << "): "
+                    << todo;
                 return todo;
             }
             // Wait for the other stream to schedule us
             MORDOR_ASSERT(!otherStream->m_pendingWriter);
             MORDOR_ASSERT(!otherStream->m_pendingWriterScheduler);
+            MORDOR_LOG_DEBUG(g_log) << this << " waiting to write";
             otherStream->m_pendingWriter = Fiber::getThis();
             otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }
@@ -240,6 +262,7 @@ PipeStream::cancelWrite()
     PipeStream::ptr otherStream = m_otherStream.lock();
     if (otherStream && otherStream->m_pendingWriter) {
         MORDOR_ASSERT(otherStream->m_pendingWriterScheduler);
+        MORDOR_LOG_DEBUG(g_log) << this << " cancelling write";
         otherStream->m_pendingWriterScheduler->schedule(otherStream->m_pendingWriter);
         otherStream->m_pendingWriter.reset();
         otherStream->m_pendingWriterScheduler = NULL;
@@ -269,6 +292,7 @@ PipeStream::flush(bool flushParent)
             // Wait for the other stream to schedule us
             MORDOR_ASSERT(!otherStream->m_pendingWriter);
             MORDOR_ASSERT(!otherStream->m_pendingWriterScheduler);
+            MORDOR_LOG_DEBUG(g_log) << this << " waiting to flush";
             otherStream->m_pendingWriter = Fiber::getThis();
             otherStream->m_pendingWriterScheduler = Scheduler::getThis();
         }
