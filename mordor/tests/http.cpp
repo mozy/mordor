@@ -2860,3 +2860,40 @@ MORDOR_UNITTEST(HTTPClient, responseFailsAfterLaterResponseFails)
     pool.dispatch();
     MORDOR_ASSERT(excepted);
 }
+
+MORDOR_UNITTEST(HTTPClient, forceSkipsInRequestNumberBecauseIntermediateRequestAborted)
+{
+    WorkerPool pool;
+
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream());
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    BufferedStream::ptr bufferedStream(new BufferedStream(duplexStream));
+    bufferedStream->allowPartialReads(true);
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    testStream->onRead(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+
+    ClientRequest::ptr request1 = conn->request(requestHeaders);
+    ClientRequest::ptr request2 = conn->request(requestHeaders);
+    ClientRequest::ptr request3 = conn->request(requestHeaders);
+    bool excepted = false;
+    pool.schedule(boost::bind(&waitForPriorRequestFailedOnResponse, request3, boost::ref(excepted)));
+    Scheduler::yield();
+
+    requestHeaders.entity.contentLength = 1;
+    ClientRequest::ptr request4 = conn->request(requestHeaders);
+    testStream->onWrite(&throwDummyException, 0);
+    MORDOR_TEST_ASSERT_EXCEPTION(request4->requestStream()->write("a"), DummyException);
+
+    Scheduler::yield();
+    MORDOR_ASSERT(!excepted);
+
+    MORDOR_TEST_ASSERT_EXCEPTION(request1->response(), DummyException);
+
+    pool.dispatch();
+    MORDOR_ASSERT(excepted);
+}

@@ -375,7 +375,9 @@ ClientConnection::invariant() const
         if (lastRequestNumber == 0) {
             lastRequestNumber = request->m_requestNumber;
         } else {
-            MORDOR_ASSERT(++lastRequestNumber == request->m_requestNumber);
+            MORDOR_ASSERT(lastRequestNumber + 1 == request->m_requestNumber ||
+                request->m_requestNumber >= m_priorResponseFailed);
+            lastRequestNumber = request->m_requestNumber;
         }
         MORDOR_ASSERT(request->m_requestState < ClientRequest::COMPLETE ||
             request->m_responseState < ClientRequest::COMPLETE ||
