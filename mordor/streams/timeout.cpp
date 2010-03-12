@@ -13,23 +13,23 @@ namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:streams:timeout");
 
-static void cancelReadLocal(Stream::ptr stream, bool &flag)
+static void cancelReadLocal(Stream::ptr stream, bool &flag, bool &flag2)
 {
     if (!flag) {
         MORDOR_LOG_INFO(g_log) << "read timeout";
         stream->cancelRead();
-        flag = true;
+        flag = flag2 = true;
     } else {
         MORDOR_LOG_DEBUG(g_log) << "read timeout no longer registered";
     }
 }
 
-static void cancelWriteLocal(Stream::ptr stream, bool &flag)
+static void cancelWriteLocal(Stream::ptr stream, bool &flag, bool &flag2)
 {
     if (!flag) {
         MORDOR_LOG_INFO(g_log) << "write timeout";
         stream->cancelWrite();
-        flag = true;
+        flag = flag2 = true;
     } else {
         MORDOR_LOG_DEBUG(g_log) << "write timeout no longer registered";
     }
@@ -50,7 +50,7 @@ TimeoutStream::readTimeout(unsigned long long readTimeout)
     } else if (m_readTimeout != ~0ull && !m_readTimedOut) {
         m_readTimer = m_timerManager.registerTimer(m_readTimeout,
             boost::bind(&cancelReadLocal, parent(),
-            boost::ref(m_readTimedOut)));
+            boost::ref(m_readTimedOut), boost::ref(m_permaReadTimedOut)));
     }
 }
 
@@ -69,7 +69,7 @@ TimeoutStream::writeTimeout(unsigned long long writeTimeout)
     } else if (m_writeTimeout != ~0ull && !m_writeTimedOut) {
         m_writeTimer = m_timerManager.registerTimer(m_writeTimeout,
             boost::bind(&cancelWriteLocal, parent(),
-            boost::ref(m_writeTimedOut)));
+            boost::ref(m_writeTimedOut), boost::ref(m_permaWriteTimedOut)));
     }
 }
 
@@ -77,12 +77,14 @@ size_t
 TimeoutStream::read(Buffer &buffer, size_t length)
 {
     FiberMutex::ScopedLock lock(m_mutex);
+    if (m_permaReadTimedOut)
+        MORDOR_THROW_EXCEPTION(TimedOutException());
     m_readTimedOut = false;
     MORDOR_ASSERT(!m_readTimer);
     if (m_readTimeout != ~0ull)
         m_readTimer = m_timerManager.registerTimer(m_readTimeout,
             boost::bind(&cancelReadLocal, parent(),
-            boost::ref(m_readTimedOut)));
+            boost::ref(m_readTimedOut), boost::ref(m_permaReadTimedOut)));
     lock.unlock();
     size_t result;
     try {
@@ -119,12 +121,14 @@ size_t
 TimeoutStream::write(const Buffer &buffer, size_t length)
 {
     FiberMutex::ScopedLock lock(m_mutex);
+    if (m_permaWriteTimedOut)
+        MORDOR_THROW_EXCEPTION(TimedOutException());
     m_writeTimedOut = false;
     MORDOR_ASSERT(!m_writeTimer);
     if (m_writeTimeout != ~0ull)
         m_writeTimer = m_timerManager.registerTimer(m_writeTimeout,
             boost::bind(&cancelWriteLocal, parent(),
-            boost::ref(m_writeTimedOut)));
+            boost::ref(m_writeTimedOut), boost::ref(m_permaWriteTimedOut)));
     lock.unlock();
     size_t result;
     try {

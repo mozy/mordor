@@ -22,7 +22,9 @@ public:
           m_readTimeout(~0ull),
           m_writeTimeout(~0ull),
           m_readTimedOut(true),
-          m_writeTimedOut(true)
+          m_writeTimedOut(true),
+          m_permaReadTimedOut(false),
+          m_permaWriteTimedOut(false)
     {}
 
     unsigned long long readTimeout() const { return m_readTimeout; }
@@ -36,7 +38,7 @@ public:
 private:
     TimerManager &m_timerManager;
     unsigned long long m_readTimeout, m_writeTimeout;
-    bool m_readTimedOut, m_writeTimedOut;
+    bool m_readTimedOut, m_writeTimedOut, m_permaReadTimedOut, m_permaWriteTimedOut;
     boost::shared_ptr<Timer> m_readTimer, m_writeTimer;
     FiberMutex m_mutex;
 };
