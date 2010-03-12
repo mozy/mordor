@@ -1097,9 +1097,7 @@ ClientRequest::ensureResponse()
         } catch (...) {
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
-            bool firstFailure = m_conn->m_priorResponseFailed == ~0ull;
-            if (firstFailure)
-                m_conn->m_priorResponseFailed = m_requestNumber;
+            m_conn->m_priorResponseFailed = std::min(m_requestNumber, m_conn->m_priorResponseFailed);
             m_responseState = ERROR;
             if (!m_conn->m_pendingRequests.empty() &&
                 m_conn->m_pendingRequests.front() == this) {
@@ -1110,7 +1108,7 @@ ClientRequest::ensureResponse()
             }
             if (m_conn->m_priorResponseClosed < m_requestNumber)
                 MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-            if (!firstFailure && m_conn->m_priorResponseFailed < m_requestNumber)
+            if (m_conn->m_priorResponseFailed < m_requestNumber)
                 MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
             throw;
         }
