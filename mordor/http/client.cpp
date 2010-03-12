@@ -18,6 +18,7 @@
 #include "mordor/streams/timeout.h"
 #include "mordor/streams/transfer.h"
 #include "mordor/util.h"
+#include "mordor/atomic.h"
 #include "parser.h"
 
 namespace Mordor {
@@ -37,6 +38,10 @@ ClientConnection::ClientConnection(Stream::ptr stream, TimerManager *timerManage
   m_priorResponseFailed(~0ull),
   m_priorResponseClosed(~0ull)
 {
+    static Atomic<size_t> connectionCount(0);
+    m_connectionNumber = ++connectionCount;
+    MORDOR_LOG_TRACE(g_log) << "ClientConnection " << m_connectionNumber << " = " << this;
+
     if (timerManager) {
         FilterStream::ptr previous;
         FilterStream::ptr filter = boost::dynamic_pointer_cast<FilterStream>(m_stream);
@@ -132,7 +137,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
     MORDOR_ASSERT(m_currentRequest != m_pendingRequests.end());
     MORDOR_ASSERT(request == *m_currentRequest);
     MORDOR_ASSERT(request->m_requestState == ClientRequest::BODY);
-    MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber << " request complete";
+    MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " request complete";
     std::list<ClientRequest *>::iterator it(m_currentRequest);
     ++it;
     if (it == m_pendingRequests.end()) {
@@ -150,7 +155,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         request->m_requestState = ClientRequest::HEADERS;
         MORDOR_ASSERT(request->m_scheduler);
         MORDOR_ASSERT(request->m_fiber);
-        MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber << " scheduling request";
+        MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " scheduling request";
         request->m_scheduler->schedule(request->m_fiber);
         request->m_scheduler = NULL;
         request->m_fiber.reset();
@@ -176,7 +181,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         if (flush) {
             flush = false;
             try {
-                MORDOR_LOG_TRACE(g_log) << this << " flushing";
+                MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " flushing";
                 m_stream->flush();
             } catch (...) {
                 request->requestFailed();
@@ -195,7 +200,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
                 MORDOR_ASSERT(m_pendingRequests.empty());
                 close = true;
                 lock.unlock();
-                MORDOR_LOG_TRACE(g_log) << this << " closing";
+                MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " closing";
             }
         }
         // Someone else may have queued up while we were flushing
@@ -204,7 +209,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
             request->m_requestState = ClientRequest::HEADERS;
             MORDOR_ASSERT(request->m_scheduler);
             MORDOR_ASSERT(request->m_fiber);
-            MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber << " scheduling request";
+            MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " scheduling request";
             request->m_scheduler->schedule(request->m_fiber);
             request->m_scheduler = NULL;
             request->m_fiber.reset();
@@ -229,7 +234,7 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
         MORDOR_ASSERT(request->m_responseState == ClientRequest::BODY ||
             request->m_responseState == ClientRequest::HEADERS);
         request->m_responseState = ClientRequest::COMPLETE;
-        MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber << " response complete";
+        MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " response complete";
         std::list<ClientRequest *>::iterator it = m_pendingRequests.begin();
         ++it;
         if (request->m_requestState >= ClientRequest::COMPLETE) {
@@ -250,7 +255,7 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
                 request->m_responseState = ClientRequest::HEADERS;
                 MORDOR_ASSERT(request->m_scheduler);
                 MORDOR_ASSERT(request->m_fiber);
-                MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber << " scheduling response";
+                MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " scheduling response";
                 request->m_scheduler->schedule(request->m_fiber);
                 request->m_scheduler = NULL;
                 request->m_fiber.reset();
@@ -270,12 +275,12 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
     }
     if (request) {
         MORDOR_ASSERT(request->m_responseState == ClientRequest::CANCELED);
-        MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber << " skipping response";
+        MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " skipping response";
         request->finish();
     }
     if (close) {
         MORDOR_ASSERT(!request);
-        MORDOR_LOG_TRACE(g_log) << this << " closing";
+        MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " closing";
         m_stream->close();
     }
 }
@@ -286,7 +291,7 @@ ClientConnection::scheduleAllWaitingRequests()
     MORDOR_ASSERT(m_priorRequestFailed || m_priorResponseFailed != ~0ull ||
         m_priorResponseClosed != ~0ull);
     // MORDOR_ASSERT(m_mutex.locked());
-    MORDOR_LOG_TRACE(g_log) << this << " scheduling all requests";
+    MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " scheduling all requests";
 
     for (std::list<ClientRequest *>::iterator it(m_currentRequest);
         it != m_pendingRequests.end();
@@ -296,7 +301,7 @@ ClientConnection::scheduleAllWaitingRequests()
         if (request->m_requestState == ClientRequest::WAITING) {
             MORDOR_ASSERT(request->m_scheduler);
             MORDOR_ASSERT(request->m_fiber);
-            MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber << " scheduling request";
+            MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " scheduling request";
             request->m_scheduler->schedule(request->m_fiber);
             request->m_scheduler = NULL;
             request->m_fiber.reset();
@@ -316,7 +321,7 @@ ClientConnection::scheduleAllWaitingResponses()
 {
     MORDOR_ASSERT(m_priorResponseFailed != ~0ull || m_priorResponseClosed != ~0ull);
     // MORDOR_ASSERT(m_mutex.locked());
-    MORDOR_LOG_TRACE(g_log) << this << " scheduling all responses";
+    MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " scheduling all responses";
     unsigned long long firstResponseToSchedule =
         std::min(m_priorResponseFailed, m_priorResponseClosed);
 
@@ -341,7 +346,7 @@ ClientConnection::scheduleAllWaitingResponses()
                     MORDOR_ASSERT(request->m_fiber);
                     MORDOR_ASSERT(request->m_responseState ==
                         ClientRequest::WAITING);
-                    MORDOR_LOG_TRACE(g_log) << this << "-"
+                    MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-"
                         << request->m_requestNumber << " scheduling response";
                     request->m_responseState = ClientRequest::ERROR;
                     request->m_scheduler->schedule(request->m_fiber);
@@ -607,7 +612,7 @@ ClientRequest::cancel(bool abort, bool error)
 {
     if (m_requestState >= COMPLETE && m_responseState >= COMPLETE)
         return;
-    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+    MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber
         << (abort ? " aborting" : " cancelling");
     if (!abort && m_requestState == WAITING && m_responseState <= WAITING) {
         // Just abandon it
@@ -625,7 +630,7 @@ ClientRequest::cancel(bool abort, bool error)
                 m_conn->m_waitingResponses.find(this);
             MORDOR_ASSERT(waitIt != m_conn->m_waitingResponses.end());
             m_conn->m_waitingResponses.erase(waitIt);
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+            MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber
                 << " scheduling response";
             m_scheduler->schedule(m_fiber);
             m_scheduler = NULL;
@@ -682,7 +687,7 @@ ClientRequest::cancel(bool abort, bool error)
                 m_conn->m_waitingResponses.find(this);
             MORDOR_ASSERT(waitIt != m_conn->m_waitingResponses.end());
             m_conn->m_waitingResponses.erase(waitIt);
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+            MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber
                 << " scheduling response";
             m_scheduler->schedule(m_fiber);
             m_scheduler = NULL;
@@ -826,13 +831,13 @@ ClientRequest::doRequest()
             // Disable read timeouts while a request is in progress
             if (m_conn->m_timeoutStream)
                 m_conn->m_timeoutStream->readTimeout(~0ull);
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " requesting";
+            MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " requesting";
         } else {
             m_scheduler = Scheduler::getThis();
             m_fiber = Fiber::getThis();
             MORDOR_ASSERT(m_scheduler);
             MORDOR_ASSERT(m_fiber);
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " waiting to request";
+            MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " waiting to request";
         }
         if (close)
             m_conn->m_allowNewRequests = false;
@@ -841,7 +846,7 @@ ClientRequest::doRequest()
     // another request to schedule us
     if (!firstRequest) {
         Scheduler::yieldTo();
-        MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " requesting";
+        MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " requesting";
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
@@ -881,19 +886,19 @@ ClientRequest::doRequest()
                 proxyAuth = m_request.request.proxyAuthorization.base64;
                 m_request.request.proxyAuthorization.base64 = "<hidden>";
             }
-            MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber<< " " << m_request;
+            MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber<< " " << m_request;
             if (!webAuth.empty())
                 m_request.request.authorization.base64 = webAuth;
             if (!proxyAuth.empty())
                 m_request.request.proxyAuthorization.base64 = proxyAuth;
         } else {
-            MORDOR_LOG_VERBOSE(g_log) << m_conn << "-" << m_requestNumber << " " << m_request.requestLine;
+            MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_request.requestLine;
         }
         m_conn->m_stream->write(str.c_str(), str.size());
         m_requestState = BODY;
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID, false)) {
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " no request body";
+            MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " no request body";
             m_conn->scheduleNextRequest(this);
         }
     } catch(...) {
@@ -955,10 +960,10 @@ ClientRequest::ensureResponse()
                 MORDOR_ASSERT(inserted);
                 wait = true;
                 m_responseState = WAITING;
-                MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber<< " waiting for response";
+                MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber<< " waiting for response";
             } else {
                 m_responseState = HEADERS;
-                MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " reading response";
+                MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " reading response";
             }
         }
 
@@ -966,7 +971,7 @@ ClientRequest::ensureResponse()
         // else to schedule us
         if (wait) {
             Scheduler::yieldTo();
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " reading response";
+            MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " reading response";
             // Check for problems that occurred while we were waiting
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
@@ -1004,9 +1009,9 @@ ClientRequest::ensureResponse()
             if (!parser.complete())
                 MORDOR_THROW_EXCEPTION(IncompleteMessageHeaderException());
             if (g_log->enabled(Log::DEBUG)) {
-                MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " " << m_response;
+                MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_response;
             } else {
-                MORDOR_LOG_VERBOSE(g_log) << m_conn << "-" << m_requestNumber << " " << m_response.status;
+                MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_response.status;
             }
 
             bool close = false;
@@ -1088,7 +1093,7 @@ ClientRequest::ensureResponse()
             }
 
             if (!hasBody && !connect) {
-                MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " no response body";
+                MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " no response body";
                 if (close) {
                     if (m_conn->m_stream->supportsHalfClose())
                         m_conn->m_stream->close(Stream::READ);
@@ -1132,7 +1137,7 @@ ClientRequest::requestDone()
 {
     MORDOR_ASSERT(m_requestState == BODY);
     MORDOR_ASSERT(m_requestStream);
-    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " request complete";
+    MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " request complete";
     // Break the circular reference
     NotifyStream::ptr notify =
         boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
@@ -1146,7 +1151,7 @@ ClientRequest::requestDone()
         std::ostringstream os;
         os << m_requestTrailer << "\r\n";
         std::string str = os.str();
-        MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " " << str;
+        MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << str;
         m_conn->m_stream->write(str.c_str(), str.size());
     }
     m_conn->scheduleNextRequest(this);
@@ -1156,7 +1161,7 @@ void
 ClientRequest::requestFailed()
 {
     MORDOR_ASSERT(m_requestState == BODY);
-    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " request failed";
+    MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " request failed";
     if (m_requestStream) {
         // Break the circular reference
         NotifyStream::ptr notify =
@@ -1191,7 +1196,7 @@ void
 ClientRequest::responseDone()
 {
     MORDOR_ASSERT(m_responseState == BODY);
-    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " response complete";
+    MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " response complete";
     // Keep an extra ref to ourself around so we don't destruct if the only ref
     // is in the response stream
     ClientRequest::ptr self;
@@ -1232,7 +1237,7 @@ ClientRequest::responseDone()
             m_incompleteTrailer = true;
             return;
         }
-        MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " " << m_responseTrailer;
+        MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_responseTrailer;
     }
     m_conn->scheduleNextResponse(this);
 }

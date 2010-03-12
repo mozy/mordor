@@ -170,6 +170,7 @@ private:
     bool m_allowNewRequests;
     bool m_priorRequestFailed;
     unsigned long long m_requestCount, m_priorResponseFailed, m_priorResponseClosed;
+    size_t m_connectionNumber;
 
     void invariant() const;
 };
