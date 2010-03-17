@@ -2861,6 +2861,64 @@ MORDOR_UNITTEST(HTTPClient, responseFailsAfterLaterResponseFails)
     MORDOR_ASSERT(excepted);
 }
 
+MORDOR_UNITTEST(HTTPClient, cancelWhileReadingHeadersThenFinish)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    BufferedStream::ptr bufferedStream(new BufferedStream(pipes.first));
+    bufferedStream->allowPartialReads(true);
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+    requestHeaders.entity.contentLength = 5;
+
+    int sequence = 0;
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitFor200, request, boost::ref(sequence)));
+    Scheduler::yield();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    testStream->onWrite(&throwDummyException, 0);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->requestStream()->write("hi"), DummyException);
+    request->cancel();
+    pipes.second->write("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n");
+    Scheduler::yield();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    request->finish();
+}
+
+MORDOR_UNITTEST(HTTPClient, abortWhileReadingHeadersThenFinish)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    BufferedStream::ptr bufferedStream(new BufferedStream(pipes.first));
+    bufferedStream->allowPartialReads(true);
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+    requestHeaders.entity.contentLength = 5;
+
+    bool excepted = false;
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitForOperationAborted, request, boost::ref(excepted)));
+    Scheduler::yield();
+    MORDOR_ASSERT(!excepted);
+    testStream->onWrite(&throwDummyException, 0);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->requestStream()->write("hi"), DummyException);
+    request->cancel(true);
+    pipes.second->write("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n");
+    Scheduler::yield();
+    MORDOR_ASSERT(excepted);
+    request->finish();
+}
+
 MORDOR_UNITTEST(HTTPClient, forceSkipsInRequestNumberBecauseIntermediateRequestAborted)
 {
     WorkerPool pool;

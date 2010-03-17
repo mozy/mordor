@@ -664,13 +664,15 @@ ClientRequest::cancel(bool abort, bool error)
         notify->notifyOnException = NULL;
     }
     bool close = false, waiting = m_responseState == WAITING;
+    if (m_responseState != HEADERS)
+        abort = true;
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         m_conn->m_priorResponseFailed = m_requestNumber;
         if (m_requestState < COMPLETE)
             m_requestState = error ? ERROR : CANCELED;
-        if (m_responseState < COMPLETE)
+        if (m_responseState < COMPLETE && abort)
             m_responseState = error ? ERROR : CANCELED;
 
         std::list<ClientRequest *>::iterator it =
@@ -678,10 +680,14 @@ ClientRequest::cancel(bool abort, bool error)
             m_conn->m_pendingRequests.end(), this);
         MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
         close = it == m_conn->m_pendingRequests.begin();
-        if (it == m_conn->m_currentRequest)
-            m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(it);
-        else
-            m_conn->m_pendingRequests.erase(it);
+        if (abort) {
+            if (it == m_conn->m_currentRequest)
+                m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(it);
+            else
+                m_conn->m_pendingRequests.erase(it);
+        } else if (it == m_conn->m_currentRequest) {
+            ++m_conn->m_currentRequest;
+        }
         if (waiting) {
             std::set<ClientRequest *>::iterator waitIt =
                 m_conn->m_waitingResponses.find(this);
@@ -1002,6 +1008,9 @@ ClientRequest::ensureResponse()
             // Read and parse headers
             ResponseParser parser(m_response);
             unsigned long long read = parser.run(m_conn->m_stream);
+            MORDOR_ASSERT(m_responseState == HEADERS || m_responseState > COMPLETE);
+            if (m_responseState > COMPLETE)
+                MORDOR_THROW_EXCEPTION(OperationAbortedException());
             if (read == 0ull)
                 MORDOR_THROW_EXCEPTION(UnexpectedEofException());
             if (parser.error())
