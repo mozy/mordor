@@ -135,8 +135,6 @@ PipeStream::read(Buffer &b, size_t len)
     while (true) {
         {
             boost::mutex::scoped_lock lock(*m_mutex);
-            if (m_cancelledRead)
-                MORDOR_THROW_EXCEPTION(OperationAbortedException());
             if (m_closed & READ)
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
             PipeStream::ptr otherStream = m_otherStream.lock();
@@ -164,6 +162,9 @@ PipeStream::read(Buffer &b, size_t len)
                     << 0;
                 return 0;
             }
+
+            if (m_cancelledRead)
+                MORDOR_THROW_EXCEPTION(OperationAbortedException());
 
             // Wait for the other stream to schedule us
             MORDOR_ASSERT(!otherStream->m_pendingReader);
@@ -209,8 +210,6 @@ PipeStream::write(const Buffer &b, size_t len)
     while (true) {
         {
             boost::mutex::scoped_lock lock(*m_mutex);
-            if (m_cancelledWrite)
-                MORDOR_THROW_EXCEPTION(OperationAbortedException());
             if (m_closed & WRITE)
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
             PipeStream::ptr otherStream = m_otherStream.lock();
@@ -232,6 +231,10 @@ PipeStream::write(const Buffer &b, size_t len)
                     << todo;
                 return todo;
             }
+
+            if (m_cancelledWrite)
+                MORDOR_THROW_EXCEPTION(OperationAbortedException());
+
             // Wait for the other stream to schedule us
             MORDOR_ASSERT(!otherStream->m_pendingWriter);
             MORDOR_ASSERT(!otherStream->m_pendingWriterScheduler);
