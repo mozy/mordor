@@ -42,10 +42,13 @@ public:
     IOManagerKQueue(int threads = 1, bool useCaller = true);
     ~IOManagerKQueue();
 
+    bool stopping();
+
     void registerEvent(int fd, Event events, boost::function<void ()> dg = NULL);
     void cancelEvent(int fd, Event events);
 
 protected:
+    bool stopping(unsigned long long &nextTimeout);
     void idle();
     void tickle();
 

@@ -28,7 +28,6 @@
 		3CAB29C7112B347400607AEE /* oauth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB270B112B096700607AEE /* oauth.cpp */; };
 		3CAB29C8112B347400607AEE /* proxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB270F112B096700607AEE /* proxy.cpp */; };
 		3CAB29C9112B347400607AEE /* server.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2711112B096700607AEE /* server.cpp */; };
-		3CAB29CA112B347400607AEE /* iomanager_event.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2717112B096700607AEE /* iomanager_event.cpp */; };
 		3CAB29CB112B347400607AEE /* log.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB271F112B096700607AEE /* log.cpp */; };
 		3CAB29CC112B347400607AEE /* pch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2723112B096700607AEE /* pch.cpp */; };
 		3CAB29CD112B347400607AEE /* ragel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2728112B096700607AEE /* ragel.cpp */; };
@@ -60,6 +59,7 @@
 		3CAB29E7112B347400607AEE /* zlib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB276D112B096700607AEE /* zlib.cpp */; };
 		3CAB29E8112B347400607AEE /* string.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB276F112B096700607AEE /* string.cpp */; };
 		3CAB29E9112B347400607AEE /* timer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2798112B096700607AEE /* timer.cpp */; };
+		3CAC4A341151622F00F85725 /* iomanager_kqueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB271B112B096700607AEE /* iomanager_kqueue.cpp */; };
 		3CC4CE561138646D001C21F2 /* progress.h in Headers */ = {isa = PBXBuildFile; fileRef = 3CC4CE551138646D001C21F2 /* progress.h */; };
 		E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E29FD2A81136FD1D004BC293 /* timeout.cpp */; };
 		E29FD2AB1136FD1D004BC293 /* timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = E29FD2A91136FD1D004BC293 /* timeout.h */; };
@@ -144,8 +144,6 @@
 		3CAB2714112B096700607AEE /* iomanager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iomanager.h; sourceTree = "<group>"; };
 		3CAB2715112B096700607AEE /* iomanager_epoll.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iomanager_epoll.cpp; sourceTree = "<group>"; };
 		3CAB2716112B096700607AEE /* iomanager_epoll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iomanager_epoll.h; sourceTree = "<group>"; };
-		3CAB2717112B096700607AEE /* iomanager_event.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iomanager_event.cpp; sourceTree = "<group>"; };
-		3CAB2718112B096700607AEE /* iomanager_event.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iomanager_event.h; sourceTree = "<group>"; };
 		3CAB2719112B096700607AEE /* iomanager_iocp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iomanager_iocp.cpp; sourceTree = "<group>"; };
 		3CAB271A112B096700607AEE /* iomanager_iocp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iomanager_iocp.h; sourceTree = "<group>"; };
 		3CAB271B112B096700607AEE /* iomanager_kqueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iomanager_kqueue.cpp; sourceTree = "<group>"; };
@@ -352,8 +350,6 @@
 				3CAB2714112B096700607AEE /* iomanager.h */,
 				3CAB2715112B096700607AEE /* iomanager_epoll.cpp */,
 				3CAB2716112B096700607AEE /* iomanager_epoll.h */,
-				3CAB2717112B096700607AEE /* iomanager_event.cpp */,
-				3CAB2718112B096700607AEE /* iomanager_event.h */,
 				3CAB2719112B096700607AEE /* iomanager_iocp.cpp */,
 				3CAB271A112B096700607AEE /* iomanager_iocp.h */,
 				3CAB271B112B096700607AEE /* iomanager_kqueue.cpp */,
@@ -663,7 +659,6 @@
 				3CAB29C7112B347400607AEE /* oauth.cpp in Sources */,
 				3CAB29C8112B347400607AEE /* proxy.cpp in Sources */,
 				3CAB29C9112B347400607AEE /* server.cpp in Sources */,
-				3CAB29CA112B347400607AEE /* iomanager_event.cpp in Sources */,
 				3CAB29CB112B347400607AEE /* log.cpp in Sources */,
 				3CAB29CC112B347400607AEE /* pch.cpp in Sources */,
 				3CAB29CD112B347400607AEE /* ragel.cpp in Sources */,
@@ -696,6 +691,7 @@
 				3CAB29E8112B347400607AEE /* string.cpp in Sources */,
 				3CAB29E9112B347400607AEE /* timer.cpp in Sources */,
 				E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */,
+				3CAC4A341151622F00F85725 /* iomanager_kqueue.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

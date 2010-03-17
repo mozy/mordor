@@ -64,7 +64,7 @@ ifeq ($(PLATFORM), Darwin)
     DARWIN := 1
     BOOST_EXT := -mt
     BOOST_LIB_FLAGS := -L/opt/local/lib
-    IOMANAGER := event
+    IOMANAGER := kqueue
     UNDERSCORE := _underscore
     GCC_ARCH := $(shell file -L `which gcc` | grep x86_64 -o | uniq)
     ifndef GCC_ARCH
@@ -168,10 +168,6 @@ LIBS := $(BOOST_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_regex$(BOOST_EXT) 
 
 ifeq ($(PLATFORM), FreeBSD)
     LIBS += -lexecinfo
-endif
-
-ifeq ($(IOMANAGER), event)
-    LIBS += -levent
 endif
 
 # compile and link a binary.  this *must* be defined using = and not :=

@@ -42,6 +42,14 @@ IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
         close(m_kqfd);
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     }
+    try {
+        if (threads - (useCaller ? 1 : 0)) start();
+    } catch (...) {
+        close(m_tickleFds[0]);
+        close(m_tickleFds[1]);
+        close(m_kqfd);
+        throw;
+    }    
 }
 
 IOManagerKQueue::~IOManagerKQueue()
@@ -52,6 +60,13 @@ IOManagerKQueue::~IOManagerKQueue()
     close(m_tickleFds[0]);
     MORDOR_LOG_VERBOSE(g_log) << this << " close(" << m_tickleFds[0] << ")";
     close(m_tickleFds[1]);
+}
+
+bool
+IOManagerKQueue::stopping()
+{
+    unsigned long long timeout;
+    return stopping(timeout);
 }
 
 void
@@ -67,6 +82,7 @@ IOManagerKQueue::registerEvent(int fd, Event events,
         m_pendingEvents.find(std::pair<int, Event>(fd, events));
     MORDOR_ASSERT(it == m_pendingEvents.end());
     AsyncEvent& e = m_pendingEvents[std::pair<int, Event>(fd, events)];
+    memset(&e.event, 0, sizeof(struct kevent));
     e.event.ident = fd;
     e.event.flags = EV_ADD;
     e.event.filter = (short)events;
@@ -112,28 +128,38 @@ IOManagerKQueue::cancelEvent(int fd, Event events)
     m_pendingEvents.erase(it);
 }
 
+bool
+IOManagerKQueue::stopping(unsigned long long &nextTimeout)
+{
+    nextTimeout = nextTimer();
+    if (nextTimeout == ~0ull && Scheduler::stopping()) {
+        boost::mutex::scoped_lock lock(m_mutex);
+        if (m_pendingEvents.empty())
+            return true;
+    }
+    return false;
+}
+
 void
 IOManagerKQueue::idle()
 {
     struct kevent events[64];
     while (true) {
-        if (stopping()) {
-            boost::mutex::scoped_lock lock(m_mutex);
-            if (m_pendingEvents.empty()) {
-                return;
-            }
-        }
+        unsigned long long nextTimeout;
+        if (stopping(nextTimeout))
+            return;
         int rc = -1;
         errno = EINTR;
         while (rc < 0 && errno == EINTR) {
             struct timespec *timeout = NULL, timeoutStorage;
-            unsigned long long nextTimeout = nextTimer();
             if (nextTimeout != ~0ull) {
                 timeout = &timeoutStorage;
                 timeout->tv_sec = nextTimeout / 1000000;
                 timeout->tv_nsec = (nextTimeout % 1000000) * 1000;
             }
             rc = kevent(m_kqfd, NULL, 0, events, 64, timeout);
+            if (rc < 0 && errno == EINTR)
+                nextTimeout = nextTimer();
         }
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " kevent(" << m_kqfd << "): " << rc << " (" << errno << ")";
