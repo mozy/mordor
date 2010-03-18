@@ -4,6 +4,7 @@
 
 #include "broker.h"
 
+#include "mordor/atomic.h"
 #include "mordor/future.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/socket.h"
@@ -447,29 +448,34 @@ ClientRequest::ptr
 RetryRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
                            boost::function<void (ClientRequest::ptr)> bodyDg)
 {
-    size_t retries = 0;
+    size_t localRetries = 0;
+    size_t *retries = mp_retries ? mp_retries : &localRetries;
     while (true) {
         try {
-            return parent()->request(requestHeaders, forceNewConnection, bodyDg);
+            ClientRequest::ptr request =
+                parent()->request(requestHeaders, forceNewConnection, bodyDg);
+            // Successful request resets shared retry counter
+            *retries = 0;
+            return request;
         } catch (SocketException &ex) {
             const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
             if (!source || *source != HTTP)
                 throw;
-            if (m_delayDg && !m_delayDg(++retries))
+            if (m_delayDg && !m_delayDg(atomicIncrement(*retries)))
                 throw;
             continue;
         } catch (PriorRequestFailedException &ex) {
             const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
             if (!source || *source != HTTP)
                 throw;
-            if (m_delayDg && !m_delayDg(++retries))
+            if (m_delayDg && !m_delayDg(*retries))
                 throw;
             continue;
         } catch (UnexpectedEofException &ex) {
             const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
             if (!source || *source != HTTP)
                 throw;
-            if (m_delayDg && !m_delayDg(++retries))
+            if (m_delayDg && !m_delayDg(atomicIncrement(*retries)))
                 throw;
             continue;
         }

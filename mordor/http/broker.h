@@ -232,8 +232,11 @@ public:
     RetryRequestBroker(RequestBroker::ptr parent,
         boost::function<bool (size_t)> delayDg = NULL)
         : RequestBrokerFilter(parent),
-          m_delayDg(delayDg)
+          m_delayDg(delayDg),
+          mp_retries(NULL)
     {}
+
+    void sharedRetryCounter(size_t *retries) { mp_retries = retries; }
 
     ClientRequest::ptr request(Request &requestHeaders,
         bool forceNewConnection = false,
@@ -241,6 +244,7 @@ public:
 
 private:
     boost::function<bool (size_t)> m_delayDg;
+    size_t *mp_retries;
 };
 
 struct CircularRedirectException : Exception
