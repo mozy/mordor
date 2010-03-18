@@ -468,7 +468,7 @@ RetryRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
             if (!source || *source != HTTP)
                 throw;
-            if (m_delayDg && !m_delayDg(*retries))
+            if (m_delayDg && !m_delayDg(*retries + 1))
                 throw;
             continue;
         } catch (UnexpectedEofException &ex) {
