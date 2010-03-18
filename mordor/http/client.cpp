@@ -941,11 +941,13 @@ ClientRequest::ensureResponse()
             m_conn->invariant();
             if (m_conn->m_priorResponseFailed <= m_requestNumber ||
                 m_conn->m_priorResponseClosed <= m_requestNumber) {
-                std::list<ClientRequest *>::iterator it;
-                it = std::find(m_conn->m_pendingRequests.begin(),
-                    m_conn->m_pendingRequests.end(), this);
-                MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
-                m_conn->m_pendingRequests.erase(it);
+                if (m_requestState >= COMPLETE) {
+                    std::list<ClientRequest *>::iterator it;
+                    it = std::find(m_conn->m_pendingRequests.begin(),
+                        m_conn->m_pendingRequests.end(), this);
+                    MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
+                    m_conn->m_pendingRequests.erase(it);
+                }
                 m_responseState = ERROR;
                 if (m_conn->m_priorResponseClosed <= m_requestNumber)
                     MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());

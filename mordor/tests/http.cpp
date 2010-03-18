@@ -2955,3 +2955,27 @@ MORDOR_UNITTEST(HTTPClient, forceSkipsInRequestNumberBecauseIntermediateRequestA
     pool.dispatch();
     MORDOR_ASSERT(excepted);
 }
+
+MORDOR_UNITTEST(HTTPClient, priorResponseFailsThenRequestFails)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream());
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    TestStream::ptr testStream(new TestStream(duplexStream));
+    testStream->onRead(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+
+    ClientRequest::ptr request1 = conn->request(requestHeaders);
+
+    requestHeaders.entity.contentLength = 5;
+    ClientRequest::ptr request2 = conn->request(requestHeaders);
+    request2->requestStream()->write("hello");
+    testStream->onWrite(&throwDummyException, 0);
+    MORDOR_TEST_ASSERT_EXCEPTION(request1->response(), DummyException);
+    MORDOR_TEST_ASSERT_EXCEPTION(request2->response(), PriorRequestFailedException);
+    // The DummyException gets translated to a PriorRequestFailedException
+    MORDOR_TEST_ASSERT_EXCEPTION(request2->requestStream()->close(), PriorRequestFailedException);
+}
