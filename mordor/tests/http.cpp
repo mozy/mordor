@@ -3015,3 +3015,31 @@ MORDOR_UNITTEST(HTTPClient, failWhileFlushRequestBody)
     MORDOR_TEST_ASSERT_EXCEPTION(request->requestStream()->close(), DummyException);
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
 }
+
+MORDOR_UNITTEST(HTTPClient, priorResponseClosesWhileWaitingOnResponseAndWritingRequestBody)
+{
+    WorkerPool pool;
+
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream("HTTP/1.1 200 OK\r\nConnection: close\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n"));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+    requestHeaders.entity.contentLength = 5;
+
+    ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->requestStream()->write("hello");
+    request1->requestStream()->close();
+    ClientRequest::ptr request2 = conn->request(requestHeaders);
+    bool excepted = false;
+    pool.schedule(boost::bind(&waitForPriorRequestFailedOnResponse, request2, boost::ref(excepted)));
+    Scheduler::yield();
+
+    MORDOR_TEST_ASSERT_EQUAL(request1->response().status.status, OK);
+    request1->finish();
+    Scheduler::yield();
+    MORDOR_ASSERT(excepted);
+}

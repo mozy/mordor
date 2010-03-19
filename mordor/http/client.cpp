@@ -247,7 +247,7 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
             request = *it;
             MORDOR_ASSERT(request);
             MORDOR_ASSERT(request->m_responseState <= ClientRequest::WAITING ||
-                request->m_responseState == ClientRequest::CANCELED);
+                request->m_responseState > ClientRequest::COMPLETE);
             if (request->m_responseState == ClientRequest::WAITING) {
                 std::set<ClientRequest *>::iterator it2 = m_waitingResponses.find(request);
                 MORDOR_ASSERT(it2 != m_waitingResponses.end());
@@ -260,7 +260,8 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
                 request->m_scheduler = NULL;
                 request->m_fiber.reset();
                 request = NULL;
-            } else if (request->m_responseState == ClientRequest::PENDING) {
+            } else if (request->m_responseState == ClientRequest::PENDING ||
+                request->m_responseState == ClientRequest::ERROR) {
                 request = NULL;
             }
         } else {
@@ -277,6 +278,7 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
         MORDOR_ASSERT(request->m_responseState == ClientRequest::CANCELED);
         MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " skipping response";
         request->finish();
+        request = NULL;
     }
     if (close) {
         MORDOR_ASSERT(!request);
@@ -403,7 +405,8 @@ ClientConnection::invariant() const
             MORDOR_ASSERT(request->m_requestState == ClientRequest::WAITING);
         }
         if (it != m_pendingRequests.begin())
-            MORDOR_ASSERT(request->m_responseState <= ClientRequest::WAITING);
+            MORDOR_ASSERT(request->m_responseState <= ClientRequest::WAITING ||
+                request->m_responseState > ClientRequest::COMPLETE);
     }
     if (!seenFirstUnrequested)
         MORDOR_ASSERT(m_currentRequest == m_pendingRequests.end());
