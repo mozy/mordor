@@ -218,8 +218,12 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
                 m_timeoutStream->readTimeout(m_readTimeout);
         }
     }
-    if (close)
-        m_stream->close();
+    if (close) {
+        try {
+            m_stream->close();
+        } catch (...) {
+        }
+    }
 }
 
 void
@@ -283,7 +287,10 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
     if (close) {
         MORDOR_ASSERT(!request);
         MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " closing";
-        m_stream->close();
+        try {
+            m_stream->close();
+        } catch (...) {
+        }
     }
 }
 
@@ -383,7 +390,8 @@ ClientConnection::invariant() const
             lastRequestNumber = request->m_requestNumber;
         } else {
             MORDOR_ASSERT(lastRequestNumber + 1 == request->m_requestNumber ||
-                request->m_requestNumber >= m_priorResponseFailed);
+                request->m_requestNumber >= m_priorResponseFailed ||
+                request->m_requestNumber >= m_priorResponseClosed);
             lastRequestNumber = request->m_requestNumber;
         }
         MORDOR_ASSERT(request->m_requestState < ClientRequest::COMPLETE ||
@@ -1121,8 +1129,12 @@ ClientRequest::ensureResponse()
             if (!hasBody && !connect) {
                 MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " no response body";
                 if (close) {
-                    if (m_conn->m_stream->supportsHalfClose())
-                        m_conn->m_stream->close(Stream::READ);
+                    if (m_conn->m_stream->supportsHalfClose()) {
+                        try {
+                            m_conn->m_stream->close(Stream::READ);
+                        } catch (...) {
+                        }
+                    }
                 } else {
                     m_conn->scheduleNextResponse(this);
                 }
@@ -1266,12 +1278,6 @@ ClientRequest::responseDone()
         MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_responseTrailer;
     }
     m_conn->scheduleNextResponse(this);
-}
-
-void
-ClientRequest::responseFailed()
-{
-    cancel(true, true);
 }
 
 }}

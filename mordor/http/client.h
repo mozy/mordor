@@ -87,7 +87,6 @@ private:
     void requestDone();
     void requestFailed();
     void responseDone();
-    void responseFailed();
     void cancel(bool abort, bool error);
 
 private:
