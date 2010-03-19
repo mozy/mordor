@@ -275,9 +275,9 @@ SSLStream::close(CloseType type)
                         << boost::errinfo_api_function("SSL_shutdown");
                 }
                 if (result == 0) {
-                    MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+                    MORDOR_LOG_WARNING(g_log) << this << " SSL_shutdown(" << m_ssl.get()
                         << "): " << result << " (" << error << ")";
-                    MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+                    break;
                 }
                 MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
