@@ -33,18 +33,12 @@ SocketStream::close(CloseType type)
                 break;
         }
         m_socket->shutdown(how);
-        if (how == SHUT_RDWR) {
-            m_socket.reset();
-        }
-    } else if (type == BOTH) {
-        m_socket.reset();
     }
 }
 
 size_t
 SocketStream::read(Buffer &b, size_t len)
 {
-    MORDOR_ASSERT(m_socket);
     if (len == 0)
         return 0;
     std::vector<iovec> bufs = b.writeBufs(len);
@@ -56,14 +50,12 @@ SocketStream::read(Buffer &b, size_t len)
 void
 SocketStream::cancelRead()
 {
-    if (m_socket)
-        m_socket->cancelReceive();
+    m_socket->cancelReceive();
 }
 
 size_t
 SocketStream::write(const Buffer &b, size_t len)
 {
-    MORDOR_ASSERT(m_socket);
     if (len == 0)
         return 0;
     const std::vector<iovec> bufs = b.readBufs(len);
@@ -75,8 +67,7 @@ SocketStream::write(const Buffer &b, size_t len)
 void
 SocketStream::cancelWrite()
 {
-    if (m_socket)
-        m_socket->cancelSend();
+    m_socket->cancelSend();
 }
 
 }
