@@ -293,6 +293,7 @@ SSLStream::close(CloseType type)
             default:
                 MORDOR_NOTREACHED();
         }
+        break;
     }
     parent()->close();
 }
