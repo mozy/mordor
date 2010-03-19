@@ -2979,3 +2979,39 @@ MORDOR_UNITTEST(HTTPClient, priorResponseFailsThenRequestFails)
     // The DummyException gets translated to a PriorRequestFailedException
     MORDOR_TEST_ASSERT_EXCEPTION(request2->requestStream()->close(), PriorRequestFailedException);
 }
+
+MORDOR_UNITTEST(HTTPClient, failWhileFlushNoRequestBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream());
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    TestStream::ptr testStream(new TestStream(duplexStream));
+    testStream->onWrite(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+}
+
+MORDOR_UNITTEST(HTTPClient, failWhileFlushRequestBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    TestStream::ptr testStream(new TestStream(duplexStream));
+    testStream->onWrite(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+    requestHeaders.entity.contentLength = 5;
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    request->requestStream()->write("hello");
+    MORDOR_TEST_ASSERT_EXCEPTION(request->requestStream()->close(), DummyException);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+}

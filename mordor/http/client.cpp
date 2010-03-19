@@ -910,12 +910,24 @@ ClientRequest::doRequest()
     } catch(...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
+        // requestFailed() already handled it; but didn't cancel the response
+        // (since a request with a request body could potentially get a
+        // response, but this one never made it to the server at all)
+        bool alreadyFailed = m_requestState == ERROR;
+        MORDOR_ASSERT(m_responseState == PENDING);
         m_requestState = ERROR;
         m_responseState = CANCELED;
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
-        MORDOR_ASSERT(m_conn->m_currentRequest != m_conn->m_pendingRequests.end());
+        MORDOR_ASSERT(m_conn->m_pendingRequests.back() == this);
+        MORDOR_ASSERT(alreadyFailed || m_conn->m_currentRequest != m_conn->m_pendingRequests.end());
+        MORDOR_ASSERT(!alreadyFailed || m_conn->m_currentRequest == m_conn->m_pendingRequests.end());
         m_conn->m_priorRequestFailed = true;
-        m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
+        if (!alreadyFailed) {
+            MORDOR_ASSERT(*m_conn->m_currentRequest == this);
+            m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
+        } else {
+            m_conn->m_pendingRequests.pop_back();
+        }
         m_conn->scheduleAllWaitingRequests();
         // Throw an HTTP exception if we can
         if (m_conn->m_priorResponseClosed <= m_requestNumber)
