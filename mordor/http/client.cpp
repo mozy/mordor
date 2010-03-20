@@ -284,11 +284,11 @@ ClientConnection::scheduleNextResponse(ClientRequest *request)
         request->finish();
         request = NULL;
     }
-    if (close) {
+    if (close && m_stream->supportsHalfClose()) {
         MORDOR_ASSERT(!request);
         MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " closing";
         try {
-            m_stream->close();
+            m_stream->close(Stream::READ);
         } catch (...) {
         }
     }
