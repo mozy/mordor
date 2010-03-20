@@ -179,6 +179,8 @@ protected:
     /// new work has been scheduled.
     virtual void tickle() = 0;
 
+    bool hasWorkToDo();
+
 private:
     void yieldTo(bool yieldToCallerOnTerminate);
     void run();

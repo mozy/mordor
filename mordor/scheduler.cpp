@@ -113,6 +113,13 @@ Scheduler::start()
     m_threads.start(m_threadCount);
 }
 
+bool
+Scheduler::hasWorkToDo()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    return !m_fibers.empty();
+}
+
 void
 Scheduler::stop()
 {
