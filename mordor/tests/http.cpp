@@ -3043,3 +3043,57 @@ MORDOR_UNITTEST(HTTPClient, priorResponseClosesWhileWaitingOnResponseAndWritingR
     Scheduler::yield();
     MORDOR_ASSERT(excepted);
 }
+
+static void scheduleRequestAndThrowDummyException(ClientConnection::ptr conn,
+    bool &excepted)
+{
+    Scheduler::getThis()->schedule(boost::bind(&waitForPriorRequestFailedOnRequest,
+        conn, boost::ref(excepted)));
+    Scheduler::yield();
+    MORDOR_THROW_EXCEPTION(DummyException());
+}
+
+
+MORDOR_UNITTEST(HTTPClient, failWhileFlushOtherWaiting)
+{
+    WorkerPool pool;
+
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream());
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    TestStream::ptr testStream(new TestStream(duplexStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+    bool excepted = false;
+    testStream->onWrite(boost::bind(&scheduleRequestAndThrowDummyException, conn, boost::ref(excepted)), 0);
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+    Scheduler::yield();
+    MORDOR_ASSERT(excepted);
+}
+
+
+MORDOR_UNITTEST(HTTPClient, failWhileRequestingOtherWaiting)
+{
+    WorkerPool pool;
+
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream());
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    BufferedStream::ptr bufferedStream(new BufferedStream(duplexStream));
+    TestStream::ptr testStream(new TestStream(bufferedStream));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+    bool excepted = false;
+    testStream->onWrite(boost::bind(&scheduleRequestAndThrowDummyException, conn, boost::ref(excepted)), 0);
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+    Scheduler::yield();
+    MORDOR_ASSERT(excepted);
+}

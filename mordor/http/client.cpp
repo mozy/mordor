@@ -929,16 +929,18 @@ ClientRequest::doRequest()
         m_requestState = ERROR;
         m_responseState = CANCELED;
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
-        MORDOR_ASSERT(m_conn->m_pendingRequests.back() == this);
         MORDOR_ASSERT(alreadyFailed || m_conn->m_currentRequest != m_conn->m_pendingRequests.end());
         MORDOR_ASSERT(!alreadyFailed || m_conn->m_currentRequest == m_conn->m_pendingRequests.end());
+        MORDOR_ASSERT(alreadyFailed || *m_conn->m_currentRequest == this);
+        // If alreadyFailed is true, it's safe to assume that this is the last
+        // request in the queue, because scheduleAllRequests would have cleared
+        // out anything after this one because they would be in a waiting state
+        MORDOR_ASSERT(!alreadyFailed || m_conn->m_pendingRequests.back() == this);
         m_conn->m_priorRequestFailed = true;
-        if (!alreadyFailed) {
-            MORDOR_ASSERT(*m_conn->m_currentRequest == this);
+        if (!alreadyFailed)
             m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
-        } else {
+        else
             m_conn->m_pendingRequests.pop_back();
-        }
         m_conn->scheduleAllWaitingRequests();
         // Throw an HTTP exception if we can
         if (m_conn->m_priorResponseClosed <= m_requestNumber)
