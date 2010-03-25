@@ -129,6 +129,41 @@ MORDOR_UNITTEST(HTTP, requestWithComplexHeader)
         != request.general.connection.end());
 }
 
+MORDOR_UNITTEST(HTTP, requestsWithBoundaryOnBufferBoundary)
+{
+    MemoryStream::ptr memoryStream(new MemoryStream());
+    // Ensure that the two requests are in two separate buffers
+    // in memory
+    Buffer buf1("GET /blah1 HTTP/1.0\r\n\r\n"),
+        buf2("PUT /blah2 HTTP/1.0\r\n\r\n");
+    memoryStream->write(buf1, buf1.readAvailable());
+    memoryStream->write(buf2, buf2.readAvailable());
+    memoryStream->seek(0);
+    DuplexStream::ptr duplexStream(new DuplexStream(memoryStream,
+        Stream::ptr(&NullStream::get(), &nop<Stream *>)));
+    BufferedStream::ptr bufferedStream(new BufferedStream(duplexStream));
+
+    Request request1;
+    RequestParser parser1(request1);
+
+    parser1.run(bufferedStream);
+    MORDOR_ASSERT(!parser1.error());
+    MORDOR_ASSERT(parser1.complete());
+    MORDOR_TEST_ASSERT_EQUAL(request1.requestLine.method, GET);
+    MORDOR_TEST_ASSERT_EQUAL(request1.requestLine.uri, URI("/blah1"));
+    MORDOR_TEST_ASSERT_EQUAL(request1.requestLine.ver, Version(1, 0));
+
+    Request request2;
+    RequestParser parser2(request2);
+
+    parser2.run(bufferedStream);
+    MORDOR_ASSERT(!parser2.error());
+    MORDOR_ASSERT(parser2.complete());
+    MORDOR_TEST_ASSERT_EQUAL(request2.requestLine.method, PUT);
+    MORDOR_TEST_ASSERT_EQUAL(request2.requestLine.uri, URI("/blah2"));
+    MORDOR_TEST_ASSERT_EQUAL(request2.requestLine.ver, Version(1, 0));
+}
+
 MORDOR_UNITTEST(HTTP, ifMatchHeader)
 {
     Request request;
