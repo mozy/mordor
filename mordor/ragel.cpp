@@ -106,16 +106,12 @@ RagelParser::run(const void *buf, size_t len, bool isEof)
 {
     MORDOR_ASSERT(!error());
 
-    size_t markSpot = ~0;
-
-    // Remember and reset mark in case fullString gets moved
-    if (mark) {
-        markSpot = mark - m_fullString.c_str();
+    // Remember and reset marks in case fullString gets moved
+    if (earliestPointer()) {
+        const char *oldString = m_fullString.c_str();
         m_fullString.append((const char *)buf, len);
-
-        if (markSpot != (size_t)~0) {
-            mark = m_fullString.c_str() + markSpot;
-        }
+        if (m_fullString.c_str() != oldString)
+            adjustPointers(m_fullString.c_str() - oldString);
         p = m_fullString.c_str();
         pe = p + m_fullString.length();
         p = pe - len;
@@ -124,29 +120,43 @@ RagelParser::run(const void *buf, size_t len, bool isEof)
         pe = p + len;
     }
 
-    if (isEof) {
-        eof = pe;
-    } else {
-        eof = NULL;
-    }
+    eof = isEof ? pe : NULL;
 
     MORDOR_LOG_DEBUG(g_log) << charslice(p, pe - p);
     exec();
 
-    if (!mark) {
+    const char *earliest = earliestPointer();
+    MORDOR_ASSERT(earliest <= pe);
+    if (!earliest) {
         m_fullString.clear();
     } else {
         if (m_fullString.empty()) {
-            m_fullString.append(mark, pe - mark);
-            mark = m_fullString.c_str();
+            MORDOR_ASSERT(earliest >= buf);
+            m_fullString.append(earliest, pe - earliest);
+            adjustPointers(m_fullString.c_str() - earliest);
+        } else if (earliest == m_fullString.c_str()) {
         } else {
-            markSpot = mark - m_fullString.c_str();
-            m_fullString = m_fullString.substr(markSpot);
-            mark = m_fullString.c_str();
+            MORDOR_ASSERT(earliest > m_fullString.c_str());
+            const char *oldString = m_fullString.c_str();
+            m_fullString = m_fullString.substr(earliest - m_fullString.c_str());
+            adjustPointers(m_fullString.c_str() - earliest);
         }
     }
 
     return p - (pe - len);
+}
+
+const char *
+RagelParser::earliestPointer() const
+{
+    return mark;
+}
+
+void
+RagelParser::adjustPointers(ptrdiff_t offset)
+{
+    if (mark)
+        mark += offset;
 }
 
 void

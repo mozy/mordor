@@ -33,6 +33,9 @@ public:
 protected:
     virtual void exec() = 0;
 
+    virtual const char *earliestPointer() const;
+    virtual void adjustPointers(ptrdiff_t offset);
+
 protected:
     // Ragel state
     int cs;

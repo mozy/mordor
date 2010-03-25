@@ -239,8 +239,8 @@ MORDOR_UNITTEST(HTTP, ifMatchHeader)
     parser.run("GET / HTTP/1.0\r\n"
                "If-Match: \"first\", \"second\", *\r\n"
                "\r\n");
-    MORDOR_TEST_ASSERT(parser.error());
-    MORDOR_TEST_ASSERT(!parser.complete());
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
     MORDOR_TEST_ASSERT_EQUAL(request.requestLine.method, GET);
     MORDOR_TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
     MORDOR_TEST_ASSERT_EQUAL(request.requestLine.ver, Version(1, 0));
@@ -253,6 +253,8 @@ MORDOR_UNITTEST(HTTP, ifMatchHeader)
     MORDOR_TEST_ASSERT(!it->unspecified);
     MORDOR_TEST_ASSERT(!it->weak);
     MORDOR_TEST_ASSERT_EQUAL(it->value, "second");
+    MORDOR_TEST_ASSERT(request.entity.extension.find("If-Match") != request.entity.extension.end());
+    MORDOR_TEST_ASSERT_EQUAL(request.entity.extension["If-Match"], "\"first\", \"second\", *");
 }
 
 MORDOR_UNITTEST(HTTP, upgradeHeader)
@@ -309,8 +311,8 @@ MORDOR_UNITTEST(HTTP, upgradeHeader)
     parser.run("GET / HTTP/1.0\r\n"
                "Upgrade: HTTP/2.0, SHTTP/1.<3, IRC/6.9, RTA/x11\r\n"
                "\r\n");
-    MORDOR_TEST_ASSERT(parser.error());
-    MORDOR_TEST_ASSERT(!parser.complete());
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
     MORDOR_TEST_ASSERT_EQUAL(request.requestLine.method, GET);
     MORDOR_TEST_ASSERT_EQUAL(request.requestLine.uri, URI("/"));
     MORDOR_TEST_ASSERT_EQUAL(request.requestLine.ver, Version(1, 0));
@@ -318,6 +320,10 @@ MORDOR_UNITTEST(HTTP, upgradeHeader)
     it = request.general.upgrade.begin();
     MORDOR_TEST_ASSERT_EQUAL(it->product, "HTTP");
     MORDOR_TEST_ASSERT_EQUAL(it->version, "2.0");
+    MORDOR_TEST_ASSERT(request.entity.extension.find("Upgrade") !=
+        request.entity.extension.end());
+    MORDOR_TEST_ASSERT_EQUAL(request.entity.extension["Upgrade"],
+        "HTTP/2.0, SHTTP/1.<3, IRC/6.9, RTA/x11");
 }
 
 MORDOR_UNITTEST(HTTP, serverHeader)
@@ -543,21 +549,27 @@ MORDOR_UNITTEST(HTTP, eTagHeader)
     parser.run("HTTP/1.1 200 OK\r\n"
                "ETag: *\r\n"
                "\r\n");
-    MORDOR_TEST_ASSERT(parser.error());
-    MORDOR_TEST_ASSERT(!parser.complete());
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
     MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
     MORDOR_TEST_ASSERT_EQUAL(response.status.status, OK);
     MORDOR_TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    MORDOR_TEST_ASSERT(response.response.eTag.unspecified);
+    MORDOR_TEST_ASSERT(response.entity.extension.find("ETag") != response.entity.extension.end());
+    MORDOR_TEST_ASSERT_EQUAL(response.entity.extension["ETag"], "*");
 
     response = Response();
     parser.run("HTTP/1.1 200 OK\r\n"
                "ETag: token\r\n"
                "\r\n");
-    MORDOR_TEST_ASSERT(parser.error());
-    MORDOR_TEST_ASSERT(!parser.complete());
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
     MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
     MORDOR_TEST_ASSERT_EQUAL(response.status.status, OK);
     MORDOR_TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    MORDOR_TEST_ASSERT(response.response.eTag.unspecified);
+    MORDOR_TEST_ASSERT(response.entity.extension.find("ETag") != response.entity.extension.end());
+    MORDOR_TEST_ASSERT_EQUAL(response.entity.extension["ETag"], "token");
 }
 
 MORDOR_UNITTEST(HTTP, locationHeader)
@@ -602,6 +614,24 @@ MORDOR_UNITTEST(HTTP, locationHeader)
         "UHLqxhXoUgoQ1pQreM2tYMR9QaJ7CsSOSJs+Qi5KIzV50DBUYLDjDuBmYiVVxms/Soc0PG"
         "4RAcxQcurGFehdeUg8nHldHqihIknc3OP/QRtBawAyEFY4p0RKlRxnA0MO4GZiJVXGaz9K"
         "hzQ8bhEBzFBy6sYV6FbRY5v48No3N72yRSA9JiYPhS/YTYcUFz");
+}
+
+MORDOR_UNITTEST(HTTP, responseWithInvalidStandardHeader)
+{
+    Response response;
+    ResponseParser parser(response);
+
+    parser.run("HTTP/1.1 200 OK\r\n"
+               "Expires: -1\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, OK);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
+    MORDOR_TEST_ASSERT(response.entity.expires.is_not_a_date_time());
+    MORDOR_TEST_ASSERT(response.entity.extension.find("Expires") !=
+        response.entity.extension.end());
+    MORDOR_TEST_ASSERT_EQUAL(response.entity.extension["Expires"], "-1");
 }
 
 MORDOR_UNITTEST(HTTP, versionComparison)
@@ -1758,7 +1788,7 @@ MORDOR_UNITTEST(HTTPClient, badTrailerResponse)
         "Connection: close\r\n"
         "\r\n"
         "0\r\n"
-        "Content-Type: garbage\r\n"
+        "Content-Type-garbage\r\n"
         "\r\n")));
     DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
     ClientConnection::ptr conn(new ClientConnection(duplexStream));

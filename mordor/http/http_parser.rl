@@ -140,6 +140,8 @@ unquote(const std::string &str)
     # See RFC 2616: http://www.w3.org/Protocols/rfc2616/rfc2616.html
 
     action mark { mark = fpc; }
+    action mark2 { mark2 = fpc; }
+    action clearmark2 { mark2 = NULL; }
     action done { fbreak; }
 
     # basic character types
@@ -167,9 +169,8 @@ unquote(const std::string &str)
     token = (CHAR -- (separators | CTL))+;
     quoted_pair = "\\" CHAR;
     ctext = TEXT -- ("(" | ")");
-    # TODO: truly nested comments
-    base_comment = "(" ( ctext | quoted_pair )* ")";
-    comment = "(" ( ctext | quoted_pair | base_comment )* ")";
+    # TODO: nested comments
+    comment = "(" ( ctext | quoted_pair )* ")";
     qdtext = TEXT -- "\"";
     quoted_string = "\"" ( qdtext | quoted_pair )* "\"";
 
@@ -272,25 +273,27 @@ unquote(const std::string &str)
     range_unit = bytes_unit | other_range_unit;
 
     action save_field_name {
-        m_temp1 = std::string(mark, fpc - mark);
-        mark = NULL;
+        m_genericHeaderName = std::string(mark2, fpc - mark2);
+        mark2 = NULL;
     }
     action save_field_value {
-        std::string fieldValue = unfold((char*)mark, (char*)fpc);
+        if (mark2) {
+            std::string fieldValue = unfold((char*)mark2, (char*)fpc);
 
-        StringMap::iterator it = m_entity->extension.find(m_temp1);
-        if (it == m_entity->extension.end()) {
-            m_entity->extension[m_temp1] = fieldValue;
-        } else {
-            it->second.append(", ");
-            it->second.append(fieldValue);
+            StringMap::iterator it = m_entity->extension.find(m_genericHeaderName);
+            if (it == m_entity->extension.end()) {
+                m_entity->extension[m_genericHeaderName] = fieldValue;
+            } else {
+                it->second.append(", ");
+                it->second.append(fieldValue);
+            }
+            mark2 = NULL;
         }
-        mark = NULL;
     }
 
     field_chars = OCTET -- (CTL | CR LF SP HT);
-    field_name = token >mark %save_field_name;
-    field_value = TEXT* >mark %save_field_value;
+    field_name = token >mark2 %save_field_name;
+    field_value = TEXT* >mark2 %save_field_value;
     message_header = field_name ":" field_value;
 
     action save_string {
@@ -398,7 +401,6 @@ unquote(const std::string &str)
     Upgrade = 'Upgrade:'i LWS* product %save_upgrade_product ( LWS* ',' LWS* product %save_upgrade_product)* LWS*;
 
     general_header = Connection | Date | Proxy_Connection | Trailer | Transfer_Encoding | Upgrade;
-    general_header_names = 'Connection'i | 'Date'i | 'Proxy-Connection'i | 'Trailer'i | 'Transfer-Encoding'i | 'Upgrade'i;
 
     action set_content_encoding {
         m_list = &m_entity->contentEncoding;
@@ -467,8 +469,7 @@ unquote(const std::string &str)
     Expires = 'Expires:'i @set_expires LWS* HTTP_date LWS*;
     Last_Modified = 'Last-Modified:'i @set_last_modified LWS* HTTP_date LWS*;
 
-    entity_header = Content_Encoding | Content_Length | Content_Range | Content_Type | Expires | Last_Modified; # | extension_header;
-    entity_header_names = 'Content-Encoding'i | 'Content-Length'i | 'Content-Range'i | 'Content-Type'i | 'Expires'i | 'Last-Modified'i;
+    entity_header = Content_Encoding | Content_Length | Content_Range | Content_Type | Expires | Last_Modified; # | message_header;
 
 }%%
 
@@ -676,17 +677,13 @@ unquote(const std::string &str)
     User_Agent = 'User-Agent:'i @set_user_agent product_and_comment_list;
 
     request_header = Accept_Charset | Accept_Encoding | Authorization | Expect | Host | If_Match | If_Modified_Since | If_None_Match | If_Range | If_Unmodified_Since | Proxy_Authorization | Range | Referer | TE | User_Agent;
-    request_header_names = 'Accept-Charset'i | 'Accept-Encoding'i | 'Authorization'i | 'Expect'i | 'Host'i | 'If-Match'i | 'If-Modified-Since'i | 'If-None-Match'i | 'If-Range'i | 'If-Unmodified-Since'i | 'Proxy-Authorization'i | 'Range'i | 'Referer'i | 'TE'i | 'User-Agent'i;
-
-    extension_header = (token - (general_header_names | request_header_names | entity_header_names)) >mark %save_field_name
-        ':' field_value;
 
     Method = token >mark %parse_Method;
     # we explicitly add query to path_absolute, because the URI spec changed from RFC 2396 to RFC 3986
     # with the query not being part of hier_part
     Request_URI = ( "*" | absolute_URI | (path_absolute ( "?" query )?) | authority);
     Request_Line = Method SP Request_URI >set_request_uri SP HTTP_Version CRLF;
-    Request = Request_Line ((general_header | request_header | entity_header | extension_header) CRLF)* CRLF @done;
+    Request = Request_Line (((general_header | request_header | entity_header) %clearmark2 | message_header) CRLF)* CRLF @done;
 
     main := Request;
     write data;
@@ -708,7 +705,27 @@ Parser::init()
     m_eTag = NULL;
     m_eTagSet = NULL;
     m_productAndCommentList = NULL;
+    mark2 = NULL;
     RagelParser::init();
+}
+
+const char *
+Parser::earliestPointer() const
+{
+    const char *parent = RagelParser::earliestPointer();
+    if (mark2 && parent)
+        return std::min(mark2, parent);
+    if (mark2)
+        return mark2;
+    return parent;
+}
+
+void
+Parser::adjustPointers(ptrdiff_t offset)
+{
+    if (mark2)
+        mark2 += offset;
+    RagelParser::adjustPointers(offset);
 }
 
 RequestParser::RequestParser(Request& request)
@@ -803,15 +820,11 @@ RequestParser::exec()
     WWW_Authenticate = 'WWW-Authenticate:'i @set_www_authenticate challengeList;
 
     response_header = Accept_Ranges | ETag | Location | Proxy_Authenticate | Retry_After | Server | WWW_Authenticate;
-    response_header_names = 'Accept-Ranges'i | 'ETag'i | 'Location'i | 'Proxy-Authenticate'i | 'Retry-After'i | 'Server'i | 'WWW-Authenticate'i;
-
-    extension_header = (token - (general_header_names | response_header_names | entity_header_names)) >mark %save_field_name
-        ':' field_value;
 
     Status_Code = DIGIT{3} > mark %parse_Status_Code;
     Reason_Phrase = (TEXT -- (CR | LF))* >mark %parse_Reason_Phrase;
     Status_Line = HTTP_Version SP Status_Code SP Reason_Phrase CRLF;
-    Response = Status_Line ((general_header | response_header | entity_header | extension_header) CRLF)* CRLF @done;
+    Response = Status_Line (((general_header | response_header | entity_header) %clearmark2 | message_header) CRLF)* CRLF @done;
 
     main := Response;
 
@@ -863,9 +876,7 @@ ResponseParser::exec()
     machine http_trailer_parser;
     include http_parser;
 
-    extension_header = (token - (entity_header_names)) >mark %save_field_name ':' field_value;
-
-    trailer = ((entity_header | extension_header) CRLF)*;
+    trailer = ((entity_header %clearmark2 | message_header) CRLF)*;
 
     main := trailer CRLF @done;
 
