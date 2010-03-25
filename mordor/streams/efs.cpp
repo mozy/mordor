@@ -210,7 +210,7 @@ EFSStream::ExportCallback(PBYTE pbData, PVOID pvCallbackContext, ULONG ulLength)
             // though we don't want it.
             return ERROR_SUCCESS;
         } else if (self->m_todo == 0) {
-            MORDOR_ASSERT(self->m_seekTarget <= self->m_pos);
+            MORDOR_ASSERT(self->m_seekTarget >= self->m_pos);
             ULONG toAdvance =
                 (ULONG)std::min<long long>(self->m_seekTarget - self->m_pos, ulLength);
             if (toAdvance == 0) {
