@@ -239,3 +239,43 @@ MORDOR_UNITTEST(PQ, queryForNullTimestampPreparedBlocking)
 { queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, "constant"); }
 MORDOR_UNITTEST(PQ, queryForNullTimestampPreparedAsync)
 { IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, "constant", &ioManager); }
+
+MORDOR_UNITTEST(PQ, transactionCommits)
+{
+    Connection conn(g_goodConnString);
+    fillUsers(conn);
+    Transaction t(conn);
+    conn.execute("UPDATE users SET name='tom' WHERE id=1");
+    t.commit();
+    Result result = conn.execute("SELECT name FROM users WHERE id=1");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "tom");
+}
+
+MORDOR_UNITTEST(PQ, transactionRollsback)
+{
+    Connection conn(g_goodConnString);
+    fillUsers(conn);
+    Transaction t(conn);
+    conn.execute("UPDATE users SET name='tom' WHERE id=1");
+    t.rollback();
+    Result result = conn.execute("SELECT name FROM users WHERE id=1");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "cody");
+}
+
+MORDOR_UNITTEST(PQ, transactionRollsbackAutomatically)
+{
+    Connection conn(g_goodConnString);
+    fillUsers(conn);
+    {
+        Transaction t(conn);
+        conn.execute("UPDATE users SET name='tom' WHERE id=1");
+    }
+    Result result = conn.execute("SELECT name FROM users WHERE id=1");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "cody");
+}

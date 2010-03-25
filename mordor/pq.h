@@ -383,6 +383,37 @@ private:
     boost::shared_ptr<PGconn> m_conn;
 };
 
+struct Transaction
+{
+public:
+    enum IsolationLevel
+    {
+        DEFAULT,
+        SERIALIZABLE,
+        REPEATABLE_READ = SERIALIZABLE,
+        READ_COMMITTED,
+        READ_UNCOMMITTED = READ_COMMITTED
+    };
+    enum Mode
+    {
+        READ_WRITE,
+        READ_ONLY
+    };
+public:
+    Transaction(Connection &connection, IsolationLevel isolationLevel
+        = DEFAULT);
+    Transaction(Connection &connection, IsolationLevel isolationLevel,
+        Mode mode);
+    ~Transaction();
+
+    void commit();
+    void rollback();
+
+private:
+    Connection &m_connection;
+    bool m_active;
+};
+
 }}
 
 #endif
