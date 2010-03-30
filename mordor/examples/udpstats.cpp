@@ -29,10 +29,9 @@ int main(int argc, char **argv)
         Socket::ptr sock = addresses[0]->createSocket(ioManager);
         sock->bind(addresses[0]);
         char buf[65536];
-        int flags = 0;
         IPv4Address addr;
         while (true) {
-            size_t read = sock->receiveFrom(buf, 65536, &flags, addr);
+            size_t read = sock->receiveFrom(buf, 65536, addr);
             stats.update(read);
             if (stats.count.count % g_perCount->val() == 0)
                 Statistics::dump(std::cout);

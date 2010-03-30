@@ -31,6 +31,8 @@ struct iovec
 #define SHUT_RDWR SD_BOTH
 typedef u_long iov_len_t;
 typedef SOCKET socket_t;
+
+class EventLoop;
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -64,9 +66,15 @@ public:
     typedef boost::shared_ptr<Socket> ptr;
 private:
     Socket(IOManager *ioManager, int family, int type, int protocol, int initialize);
+#ifdef WINDOWS
+    Socket(EventLoop *eventLoop, int family, int type, int protocol, int initialize);
+#endif
 public:
     Socket(int family, int type, int protocol = 0);
     Socket(IOManager &ioManager, int family, int type, int protocol = 0);
+#ifdef WINDOWS
+    Socket(EventLoop &eventLoop, int family, int type, int protocol = 0);
+#endif
     ~Socket();
 
     unsigned long long receiveTimeout() { return m_receiveTimeout; }
@@ -93,19 +101,19 @@ public:
     void cancelSend();
     void cancelReceive();
 
-    size_t send(const void *buf, size_t len, int flags = 0);
-    size_t send(const iovec *bufs, size_t len, int flags = 0);
-    size_t sendTo(const void *buf, size_t len, int flags, const Address &to);
-    size_t sendTo(const void *buf, size_t len, int flags, const boost::shared_ptr<Address> to)
-    { return sendTo(buf, len, flags, *to.get()); }
-    size_t sendTo(const iovec *bufs, size_t len, int flags, const Address &to);
-    size_t sendTo(const iovec *bufs, size_t len, int flags, const boost::shared_ptr<Address> to)
-    { return sendTo(bufs, len, flags, *to.get()); }
+    size_t send(const void *buffer, size_t length, int flags = 0);
+    size_t send(const iovec *buffers, size_t length, int flags = 0);
+    size_t sendTo(const void *buffer, size_t length, int flags, const Address &to);
+    size_t sendTo(const void *buffer, size_t length, int flags, const boost::shared_ptr<Address> to)
+    { return sendTo(buffer, length, flags, *to.get()); }
+    size_t sendTo(const iovec *buffers, size_t length, int flags, const Address &to);
+    size_t sendTo(const iovec *buffers, size_t length, int flags, const boost::shared_ptr<Address> to)
+    { return sendTo(buffers, length, flags, *to.get()); }
 
-    size_t receive(void *buf, size_t len, int flags = 0);
-    size_t receive(iovec *bufs, size_t len, int flags = 0);
-    size_t receiveFrom(void *buf, size_t len, int *flags, Address &from);
-    size_t receiveFrom(iovec *bufs, size_t len, int *flags, Address &from);
+    size_t receive(void *buffer, size_t length, int *flags = NULL);
+    size_t receive(iovec *buffers, size_t length, int *flags = NULL);
+    size_t receiveFrom(void *buffer, size_t length, Address &from, int *flags = NULL);
+    size_t receiveFrom(iovec *buffers, size_t length, Address &from, int *flags = NULL);
 
     boost::shared_ptr<Address> emptyAddress();
     boost::shared_ptr<Address> remoteAddress();
@@ -116,7 +124,12 @@ public:
     int protocol() { return m_protocol; }
 
 private:
-#ifndef WINDOWS
+    template <bool isSend>
+    size_t doIO(iovec *buffers, size_t length, int &flags, Address *address = NULL);
+
+#ifdef WINDOWS
+    void cancelIo(int event, error_t &cancelled, error_t error);
+#else
     void cancelIo(IOManager::Event event, error_t &cancelled, error_t error);
 #endif
 
@@ -128,6 +141,7 @@ private:
     error_t m_cancelledSend, m_cancelledReceive;
     boost::shared_ptr<Address> m_localAddress, m_remoteAddress;
 #ifdef WINDOWS
+    EventLoop *m_eventLoop;
     bool m_skipCompletionPortOnSuccess;
     // All this, just so a connect/accept can be cancelled on win2k
     bool m_unregistered;
@@ -169,6 +183,9 @@ public:
 
     Socket::ptr createSocket();
     Socket::ptr createSocket(IOManager &ioManager);
+#ifdef WINDOWS
+    Socket::ptr createSocket(EventLoop &eventLoop);
+#endif
 
     int family() const { return name()->sa_family; }
     int type() const { return m_type; }
