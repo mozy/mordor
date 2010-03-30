@@ -86,10 +86,6 @@ ProxyStreamBroker::getStream(const Mordor::URI &uri)
     Request requestHeaders;
     requestHeaders.requestLine.method = CONNECT;
     requestHeaders.requestLine.uri = os.str();
-    os.str("");
-    os << proxy.authority.host();
-    if (proxy.authority.portDefined())
-        os << ':' << proxy.authority.port();
     requestHeaders.request.host = os.str();
     requestHeaders.general.connection.insert("Proxy-Connection");
     requestHeaders.general.proxyConnection.insert("Keep-Alive");
