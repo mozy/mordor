@@ -199,6 +199,8 @@ private:
     {}
 
 public:
+    PreparedStatement() {}
+
     void bind(size_t param, const Null &);
     void bind(size_t param, const char *value);
     void bind(size_t param, const std::string &value);
