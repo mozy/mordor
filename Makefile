@@ -64,6 +64,7 @@ ifeq ($(PLATFORM), Darwin)
     DARWIN := 1
     BOOST_EXT := -mt
     BOOST_LIB_FLAGS := -L/opt/local/lib
+    PQ_LIB_FLAGS := -L/opt/local/lib/postgresql83
     IOMANAGER := kqueue
     UNDERSCORE := _underscore
     GCC_ARCH := $(shell file -L `which gcc` | grep x86_64 -o | uniq)
@@ -164,7 +165,7 @@ endif
 ifeq ($(PLATFORM), Darwin)
 endif
 
-LIBS := $(BOOST_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
+LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
 
 ifeq ($(PLATFORM), FreeBSD)
     LIBS += -lexecinfo
