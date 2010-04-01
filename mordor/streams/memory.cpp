@@ -156,7 +156,7 @@ MemoryStream::truncate(long long size)
     } else {
         size_t needed = (size_t)size - currentSize;
         m_original.reserve(needed);
-        std::vector<iovec> iovs = m_original.writeBufs(needed);
+        std::vector<iovec> iovs = m_original.writeBuffers(needed);
         for (std::vector<iovec>::iterator it(iovs.begin());
             it != iovs.end();
             ++it) {

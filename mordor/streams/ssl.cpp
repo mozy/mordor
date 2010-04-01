@@ -299,18 +299,16 @@ SSLStream::close(CloseType type)
 }
 
 size_t
-SSLStream::read(Buffer &b, size_t len)
+SSLStream::read(void *buffer, size_t length)
 {
-    std::vector<iovec> bufs = b.writeBufs(len);
-    int toRead = (int)std::min<size_t>(0x0fffffff, bufs[0].iov_len);
+    int toRead = (int)std::min<size_t>(0x0fffffff, length);
     while (true) {
-        int result = SSL_read(m_ssl.get(), bufs[0].iov_base, toRead);
+        int result = SSL_read(m_ssl.get(), buffer, toRead);
         int error = SSL_get_error(m_ssl.get(), result);
         MORDOR_LOG_DEBUG(g_log) << this << " SSL_read(" << m_ssl.get() << ", "
             << toRead << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
-                b.produce(result);
                 return result;
             case SSL_ERROR_ZERO_RETURN:
                 // Received close_notify message
@@ -334,9 +332,9 @@ SSLStream::read(Buffer &b, size_t len)
                         << boost::errinfo_api_function("SSL_read");
                 }
                 if (result == 0) {
-                    MORDOR_LOG_WARNING(g_log) << this << " SSL_read(" << m_ssl.get()
-                        << ", " << toRead << "): " << result << " ("
-                        << error << ")";
+                    MORDOR_LOG_WARNING(g_log) << this << " SSL_read("
+                        << m_ssl.get() << ", " << toRead << "): " << result
+                        << " (" << error << ")";
                     return 0;
                 }
                 MORDOR_NOTREACHED();
@@ -357,21 +355,28 @@ SSLStream::read(Buffer &b, size_t len)
 }
 
 size_t
-SSLStream::write(const Buffer &b, size_t len)
+SSLStream::write(const Buffer &buffer, size_t length)
 {
-    flush(false);
-    if (len == 0)
-        return 0;
     // SSL_write will create at least two SSL records for each call -
     // one for data, and one tiny one for the checksum or IV or something.
     // Dealing with lots of extra records can take some serious CPU time
     // server-side, so we want to provide it with as much data as possible,
-    // even if that means reallocating.  That's why we use Buffer::readBuf
-    // instead of Buffer:readBufs and only give the first buf from the iovec.
-    Buffer::SegmentData buf = b.readBuf(std::min<size_t>(0x7fffffff, len));
-    int toWrite = (int)buf.length();
+    // even if that means reallocating.  That's why we use pass the flag to
+    // coalesce small segments, instead of only doing the first available
+    // segment
+    return Stream::write(buffer, length, true);
+}
+
+size_t
+SSLStream::write(const void *buffer, size_t length)
+{
+    flush(false);
+    if (length == 0)
+        return 0;
+
+    int toWrite = (int)std::min<size_t>(0x7fffffff, length);
     while (true) {
-        int result = SSL_write(m_ssl.get(), buf.start(), toWrite);
+        int result = SSL_write(m_ssl.get(), buffer, toWrite);
         int error = SSL_get_error(m_ssl.get(), result);
         MORDOR_LOG_DEBUG(g_log) << this << " SSL_write(" << m_ssl.get() << ", "
             << toWrite << "): " << result << " (" << error << ")";
@@ -400,9 +405,9 @@ SSLStream::write(const Buffer &b, size_t len)
                             << boost::errinfo_api_function("SSL_write");
                     }
                 if (result == 0) {
-                    MORDOR_LOG_ERROR(g_log) << this << " SSL_write(" << m_ssl.get()
-                        << ", " << toWrite << "): " << result << " ("
-                        << error << ")";
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_write("
+                        << m_ssl.get() << ", " << toWrite << "): " << result
+                        << " (" << error << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
                 MORDOR_NOTREACHED();
@@ -436,7 +441,8 @@ SSLStream::flush(bool flushParent)
     while (m_writeBuffer.readAvailable()) {
         MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
             << m_writeBuffer.readAvailable() << ")";
-        size_t written = parent()->write(m_writeBuffer, m_writeBuffer.readAvailable());
+        size_t written = parent()->write(m_writeBuffer,
+            m_writeBuffer.readAvailable());
         MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
             << m_writeBuffer.readAvailable() << "): " << written;
         m_writeBuffer.consume(written);
@@ -452,8 +458,8 @@ SSLStream::accept()
     while (true) {
         int result = SSL_accept(m_ssl.get());
         int error = SSL_get_error(m_ssl.get(), result);
-        MORDOR_LOG_DEBUG(g_log) << this << " SSL_accept(" << m_ssl.get() << "): "
-            << result << " (" << error << ")";
+        MORDOR_LOG_DEBUG(g_log) << this << " SSL_accept(" << m_ssl.get()
+            << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
                 flush(false);
@@ -480,8 +486,9 @@ SSLStream::accept()
                         << boost::errinfo_api_function("SSL_accept");
                 }
                 if (result == 0) {
-                    MORDOR_LOG_ERROR(g_log) << this << " SSL_accept(" << m_ssl.get()
-                        << "): " << result << " (" << error << ")";
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_accept("
+                        << m_ssl.get() << "): " << result << " (" << error
+                        << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
                 MORDOR_NOTREACHED();
@@ -507,8 +514,8 @@ SSLStream::connect()
     while (true) {
         int result = SSL_connect(m_ssl.get());
         int error = SSL_get_error(m_ssl.get(), result);
-        MORDOR_LOG_DEBUG(g_log) << this << " SSL_connect(" << m_ssl.get() << "): "
-            << result << " (" << error << ")";
+        MORDOR_LOG_DEBUG(g_log) << this << " SSL_connect(" << m_ssl.get()
+            << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
                 flush(false);
@@ -535,8 +542,9 @@ SSLStream::connect()
                         << boost::errinfo_api_function("SSL_connect");
                 }
                 if (result == 0) {
-                    MORDOR_LOG_ERROR(g_log) << this << " SSL_connect(" << m_ssl.get()
-                        << "): " << result << " (" << error << ")";
+                    MORDOR_LOG_ERROR(g_log) << this << " SSL_connect("
+                        << m_ssl.get() << "): " << result << " (" << error
+                        << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
                 MORDOR_NOTREACHED();
@@ -582,7 +590,8 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
                 X509_V_ERR_APPLICATION_VERIFICATION,
                 "No Certificate Presented"));
         int critical = -1, altNameIndex = -1;
-        GENERAL_NAMES *gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert.get(), NID_subject_alt_name, &critical, &altNameIndex);
+        GENERAL_NAMES *gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert.get(),
+            NID_subject_alt_name, &critical, &altNameIndex);
         if (gens) {
             do {
                 try {
@@ -591,8 +600,10 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
                     {
                         GENERAL_NAME *gen = sk_GENERAL_NAME_value(gens, i);
                         if(gen->type != GEN_DNS) continue;
-                        std::string altName((const char *)gen->d.dNSName->data, gen->d.dNSName->length);
-                        if (altName == wildcardHostname || altName == hostname) {
+                        std::string altName((const char *)gen->d.dNSName->data,
+                            gen->d.dNSName->length);
+                        if (altName == wildcardHostname ||
+                            altName == hostname) {
                             success = true;
                             break;
                         }
@@ -604,7 +615,8 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
                     sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
                     throw;
                 }
-                gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert.get(), NID_subject_alt_name, &critical, &altNameIndex);
+                gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert.get(),
+                    NID_subject_alt_name, &critical, &altNameIndex);
             } while (gens);
         }
         X509_NAME *name = X509_get_subject_name(cert.get());
@@ -619,7 +631,8 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
                 "No Common Name"));
         std::string commonName;
         commonName.resize(len);
-        X509_NAME_get_text_by_NID(name, NID_commonName, &commonName[0], len + 1);
+        X509_NAME_get_text_by_NID(name, NID_commonName, &commonName[0],
+            len + 1);
         if (commonName == wildcardHostname || commonName == hostname)
             return;
         MORDOR_THROW_EXCEPTION(CertificateVerificationException(
@@ -648,10 +661,10 @@ SSLStream::wantRead()
         BIO_get_mem_ptr(m_readBio, &bm);
     }
     MORDOR_ASSERT(m_readBuffer.readAvailable());
-    std::vector<iovec> bufs = m_readBuffer.readBufs();
-    bm->data = (char *)bufs[0].iov_base;
+    const iovec iov = m_readBuffer.readBuffer(~0, false);
+    bm->data = (char *)iov.iov_base;
     bm->length = bm->max =
-        (long)std::min<size_t>(0x7fffffff, bufs[0].iov_len);
+        (long)std::min<size_t>(0x7fffffff, iov.iov_len);
     MORDOR_LOG_DEBUG(g_log) << this << " wantRead(): " << bm->length;
 }
 

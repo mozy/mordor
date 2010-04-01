@@ -26,15 +26,18 @@ public:
     bool supportsTruncate() { return false; }
     bool supportsUnread() { return false; }
 
-    size_t read(Buffer &b, size_t len);
-    size_t write(const Buffer &b, size_t len);
+    size_t read(Buffer &buffer, size_t length);
+    size_t read(void *buffer, size_t length);
+    size_t write(const Buffer &buffer, size_t length);
+    size_t write(const void *buffer, size_t length);
     long long seek(long long offset, Anchor anchor = BEGIN) { MORDOR_NOTREACHED(); }
 
     // Returns the hash in *binary*
     virtual std::string hash() const = 0;
 
 protected:
-    virtual void updateHash(const Buffer &b, size_t len) = 0;
+    virtual void updateHash(const Buffer &buffer, size_t length) = 0;
+    virtual void updateHash(const void *buffer, size_t length) = 0;
 };
 
 class SHA0Stream : public HashStream
@@ -45,7 +48,8 @@ public:
     std::string hash() const;
 
 protected:
-    void updateHash(const Buffer &b, size_t len);
+    void updateHash(const Buffer &buffer, size_t length);
+    void updateHash(const void *buffer, size_t length);
 
 private:
     SHA_CTX m_ctx;
@@ -59,7 +63,8 @@ public:
     std::string hash() const;
 
 protected:
-    void updateHash(const Buffer &b, size_t len);
+    void updateHash(const Buffer &buffer, size_t length);
+    void updateHash(const void *buffer, size_t length);
 
 private:
     SHA_CTX m_ctx;
@@ -73,7 +78,8 @@ public:
     std::string hash() const;
 
 protected:
-    void updateHash(const Buffer &b, size_t len);
+    void updateHash(const Buffer &buffer, size_t length);
+    void updateHash(const void *buffer, size_t length);
 
 private:
     MD5_CTX m_ctx;

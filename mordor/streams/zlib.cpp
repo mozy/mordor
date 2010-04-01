@@ -120,17 +120,16 @@ ZlibStream::close(CloseType type)
 }
 
 size_t
-ZlibStream::read(Buffer &b, size_t len)
+ZlibStream::read(Buffer &buffer, size_t length)
 {
     if (m_closed)
         return 0;
-    b.reserve(len);
-    struct iovec outbuf = b.writeBufs(len)[0];
+    struct iovec outbuf = buffer.writeBuffer(length, false);
     m_strm.next_out = (Bytef*)outbuf.iov_base;
     m_strm.avail_out = outbuf.iov_len;
 
     while (true) {
-        std::vector<iovec> inbufs = m_inBuffer.readBufs();
+        std::vector<iovec> inbufs = m_inBuffer.readBuffers();
         size_t avail_in;
         if (!inbufs.empty()) {
             m_strm.next_in = (Bytef*)inbufs[0].iov_base;
@@ -145,15 +144,14 @@ ZlibStream::read(Buffer &b, size_t len)
             << (inbufs.empty() ? 0 : inbufs[0].iov_len) << ", "
             << outbuf.iov_len << ")): " << rc << " (" << m_strm.avail_in
             << ", " << m_strm.avail_out << ")";
-        if (!inbufs.empty()) {
+        if (!inbufs.empty())
             m_inBuffer.consume(inbufs[0].iov_len - m_strm.avail_in);
-        }
         size_t result;
         switch (rc) {
             case Z_STREAM_END:
                 // May have still produced output
                 result = outbuf.iov_len - m_strm.avail_out;
-                b.produce(result);
+                buffer.produce(result);
                 inflateEnd(&m_strm);
                 m_closed = true;
                 return result;
@@ -162,7 +160,7 @@ ZlibStream::read(Buffer &b, size_t len)
                 // It consumed input, but produced no output... DON'T return eof
                 if (result == 0)
                     continue;
-                b.produce(result);
+                buffer.produce(result);
                 return result;
             case Z_BUF_ERROR:
                 // no progress... we need to provide more input (since we're
@@ -186,15 +184,15 @@ ZlibStream::read(Buffer &b, size_t len)
 }
 
 size_t
-ZlibStream::write(const Buffer &b, size_t len)
+ZlibStream::write(const Buffer &buffer, size_t length)
 {
     MORDOR_ASSERT(!m_closed);
     flushBuffer();
     while (true) {
         if (m_outBuffer.writeAvailable() == 0)
             m_outBuffer.reserve(m_bufferSize);
-        struct iovec inbuf = b.readBufs()[0];
-        struct iovec outbuf = m_outBuffer.writeBufs()[0];
+        struct iovec inbuf = buffer.readBuffer(length, false);
+        struct iovec outbuf = m_outBuffer.writeBuffer(~0u, false);
         m_strm.next_in = (Bytef*)inbuf.iov_base;
         m_strm.avail_in = inbuf.iov_len;
         m_strm.next_out = (Bytef*)outbuf.iov_base;
@@ -241,7 +239,7 @@ ZlibStream::flush(int flush)
     while (true) {
         if (m_outBuffer.writeAvailable() == 0)
             m_outBuffer.reserve(m_bufferSize);
-        struct iovec outbuf = m_outBuffer.writeBufs()[0];
+        struct iovec outbuf = m_outBuffer.writeBuffer(~0u, false);
         MORDOR_ASSERT(m_strm.avail_in == 0);
         m_strm.next_out = (Bytef*)outbuf.iov_base;
         m_strm.avail_out = outbuf.iov_len;
@@ -273,7 +271,8 @@ void
 ZlibStream::flushBuffer()
 {
     while (m_outBuffer.readAvailable() > 0)
-        m_outBuffer.consume(parent()->write(m_outBuffer, m_outBuffer.readAvailable()));
+        m_outBuffer.consume(parent()->write(m_outBuffer,
+            m_outBuffer.readAvailable()));
 }
 
 }

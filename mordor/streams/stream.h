@@ -99,7 +99,7 @@ public:
     /// @param length The maximum amount to read
     /// @return The amount actually read
     /// @pre supportsRead()
-    virtual size_t read(Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
+    virtual size_t read(Buffer &buffer, size_t length);
     /// @copydoc read(Buffer &, size_t)
     /// @brief Convenience function to call read() without first creating a
     /// Buffer
@@ -123,7 +123,7 @@ public:
     /// @pre @c buffer.readAvailable() >= @c length
     /// @return The amount actually written
     /// @pre supportsWrite()
-    virtual size_t write(const Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
+    virtual size_t write(const Buffer &buffer, size_t length);
 
     /// @copydoc write(const Buffer &, size_t)
     /// @brief Convenience function to call write() without first creating a
@@ -225,6 +225,10 @@ public:
     /// @pre @c buffer.readAvailable() >= @c length
     /// @pre supportsUnread()
     virtual void unread(const Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
+
+protected:
+    size_t read(Buffer &buffer, size_t length, bool coalesce);
+    size_t write(const Buffer &buffer, size_t length, bool coalesce);
 };
 
 }

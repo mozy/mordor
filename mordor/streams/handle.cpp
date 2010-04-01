@@ -93,7 +93,7 @@ HandleStream::close(CloseType type)
 }
 
 size_t
-HandleStream::read(Buffer &b, size_t len)
+HandleStream::read(void *buffer, size_t length)
 {
     if (m_cancelRead)
         MORDOR_THROW_EXCEPTION(OperationAbortedException());
@@ -109,9 +109,8 @@ HandleStream::read(Buffer &b, size_t len)
             overlapped->OffsetHigh = (DWORD)(m_pos >> 32);
         }
     }
-    len = std::min(len, m_maxOpSize);
-    Buffer::SegmentData buf = b.writeBuf(len);
-    BOOL ret = ReadFile(m_hFile, buf.start(), (DWORD)len, &read, overlapped);
+    length = std::min(length, m_maxOpSize);
+    BOOL ret = ReadFile(m_hFile, buffer, (DWORD)length, &read, overlapped);
     if (m_ioManager) {
         if (!ret && GetLastError() == ERROR_HANDLE_EOF) {
             m_ioManager->unregisterEvent(&m_readEvent);
@@ -134,12 +133,10 @@ HandleStream::read(Buffer &b, size_t len)
             m_pos = ((long long)overlapped->Offset | ((long long)overlapped->OffsetHigh << 32)) +
                 m_readEvent.overlapped.InternalHigh;
         }
-        b.produce(m_readEvent.overlapped.InternalHigh);
         return m_readEvent.overlapped.InternalHigh;
     }
     if (!ret)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
-    b.produce(read);
     return read;
 }
 
@@ -156,7 +153,7 @@ HandleStream::cancelRead()
 }
 
 size_t
-HandleStream::write(const Buffer &b, size_t len)
+HandleStream::write(const void *buffer, size_t length)
 {
     if (m_cancelWrite)
         MORDOR_THROW_EXCEPTION(OperationAbortedException());
@@ -172,9 +169,8 @@ HandleStream::write(const Buffer &b, size_t len)
             overlapped->OffsetHigh = (DWORD)(m_pos >> 32);
         }
     }
-    len = std::min(len, m_maxOpSize);
-    const Buffer::SegmentData buf = b.readBuf(len);
-    BOOL ret = WriteFile(m_hFile, buf.start(), (DWORD)len, &written, overlapped);
+    length = std::min(length, m_maxOpSize);
+    BOOL ret = WriteFile(m_hFile, buffer, (DWORD)length, &written, overlapped);
     if (m_ioManager) {
         if (!ret && GetLastError() != ERROR_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_writeEvent);

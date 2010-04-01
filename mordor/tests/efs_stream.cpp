@@ -34,7 +34,8 @@ MORDOR_UNITTEST(EFSStream, basic)
     }
     {
         FileStream file("dummy2.efs");
-        MORDOR_TEST_ASSERT_EQUAL(file.read(b2, 65536), 4u);
+        Stream &fileStream = file;
+        MORDOR_TEST_ASSERT_EQUAL(fileStream.read(b2, 65536), 4u);
         MORDOR_TEST_ASSERT(b2 == "cody");
     }
     DeleteFileW(L"dummy.efs");

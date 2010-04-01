@@ -2577,6 +2577,11 @@ public:
         : FilterStream(parent)
     {}
 
+    size_t read(Buffer &buffer, size_t length)
+    { return parent()->read(buffer, length); }
+    size_t write(const Buffer &buffer, size_t length)
+    { return parent()->write(buffer, length); }
+
     void flush(bool flushParent) {}
 };
 

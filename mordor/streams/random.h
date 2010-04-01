@@ -20,7 +20,6 @@ public:
     ~RandomStream();
 
     bool supportsRead() { return true; }
-    size_t read(Buffer &buffer, size_t length);
     size_t read(void *buffer, size_t length);
 
 private:

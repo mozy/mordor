@@ -44,7 +44,7 @@ RagelParser::run(const Buffer& b)
     init();
     size_t total = 0;
 
-    const std::vector<iovec> bufs = b.readBufs();
+    const std::vector<iovec> bufs = b.readBuffers();
     for (size_t i = 0; i < bufs.size(); ++i) {
         size_t consumed = run(bufs[i].iov_base, bufs[i].iov_len, false);
         total += consumed;
@@ -73,7 +73,7 @@ RagelParser::run(Stream &stream)
             run(NULL, 0, true);
             break;
         } else {
-            const std::vector<iovec> bufs = b.readBufs();
+            const std::vector<iovec> bufs = b.readBuffers();
             for (size_t i = 0; i < bufs.size(); ++i) {
                 size_t consumed = run(bufs[i].iov_base, bufs[i].iov_len, false);
                 total += consumed;

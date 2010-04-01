@@ -11,6 +11,7 @@ namespace Mordor {
 size_t
 Stream::read(void *buffer, size_t length)
 {
+    MORDOR_ASSERT(supportsRead());
     Buffer internalBuffer;
     internalBuffer.adopt(buffer, length);
     size_t result = read(internalBuffer, length);
@@ -18,7 +19,7 @@ Stream::read(void *buffer, size_t length)
     MORDOR_ASSERT(internalBuffer.readAvailable() == result);
     if (result == 0u)
         return 0;
-    std::vector<iovec> iovs = internalBuffer.readBufs(result);
+    std::vector<iovec> iovs = internalBuffer.readBuffers(result);
     MORDOR_ASSERT(!iovs.empty());
     // It wrote directly into our buffer
     if (iovs.front().iov_base == buffer && iovs.front().iov_len == result)
@@ -47,6 +48,22 @@ Stream::read(void *buffer, size_t length)
 }
 
 size_t
+Stream::read(Buffer &buffer, size_t length)
+{
+    return read(buffer, length, false);
+}
+
+size_t
+Stream::read(Buffer &buffer, size_t length, bool coalesce)
+{
+    MORDOR_ASSERT(supportsRead());
+    iovec iov = buffer.writeBuffer(length, coalesce);
+    size_t result = read(iov.iov_base, iov.iov_len);
+    buffer.produce(result);
+    return result;
+}
+
+size_t
 Stream::write(const char *string)
 {
     return write(string, strlen(string));
@@ -55,9 +72,24 @@ Stream::write(const char *string)
 size_t
 Stream::write(const void *buffer, size_t length)
 {
+    MORDOR_ASSERT(supportsWrite());
     Buffer internalBuffer;
     internalBuffer.copyIn(buffer, length);
     return write(internalBuffer, length);
+}
+
+size_t
+Stream::write(const Buffer &buffer, size_t length)
+{
+    return write(buffer, length, false);
+}
+
+size_t
+Stream::write(const Buffer &buffer, size_t length, bool coalesce)
+{
+    MORDOR_ASSERT(supportsWrite());
+    const iovec iov = buffer.readBuffer(length, coalesce);
+    return write(iov.iov_base, iov.iov_len);
 }
 
 std::string

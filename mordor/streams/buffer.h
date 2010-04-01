@@ -13,7 +13,7 @@ namespace Mordor {
 
 struct Buffer
 {
-public:
+private:
     struct SegmentData
     {
         friend struct Buffer;
@@ -40,7 +40,6 @@ public:
         boost::shared_array<unsigned char> m_array;
     };
 
-private:
     struct Segment
     {
         friend struct Buffer;
@@ -52,13 +51,13 @@ private:
         size_t readAvailable() const;
         size_t writeAvailable() const;
         size_t length() const;
-        void produce(size_t len);
-        void consume(size_t len);
-        void truncate(size_t len);
-        void extend(size_t len);
-        const SegmentData readBuf() const;
-        const SegmentData writeBuf() const;
-        SegmentData writeBuf();
+        void produce(size_t length);
+        void consume(size_t length);
+        void truncate(size_t length);
+        void extend(size_t length);
+        const SegmentData readBuffer() const;
+        const SegmentData writeBuffer() const;
+        SegmentData writeBuffer();
 
     private:
         size_t m_writeIndex;
@@ -70,9 +69,9 @@ private:
 public:
     Buffer();
     Buffer(const Buffer &copy);
-    Buffer(const char *str);
-    Buffer(const std::string &str);
-    Buffer(const void *data, size_t len);
+    Buffer(const char *string);
+    Buffer(const std::string &string);
+    Buffer(const void *data, size_t length);
 
     size_t readAvailable() const;
     size_t writeAvailable() const;
@@ -80,30 +79,30 @@ public:
     size_t segments() const;
 
     void adopt(void *buffer, size_t length);
-    void reserve(size_t len);
+    void reserve(size_t length);
     void compact();
     void clear();
-    void produce(size_t len);
-    void consume(size_t len);
-    void truncate(size_t len);
+    void produce(size_t length);
+    void consume(size_t length);
+    void truncate(size_t length);
 
-    const std::vector<iovec> readBufs(size_t len = ~0) const;
-    const SegmentData readBuf(size_t len) const;
-    std::vector<iovec> writeBufs(size_t len = ~0);
-    SegmentData writeBuf(size_t len);
+    const std::vector<iovec> readBuffers(size_t length = ~0) const;
+    const iovec readBuffer(size_t length, bool reallocate) const;
+    std::vector<iovec> writeBuffers(size_t length = ~0);
+    iovec writeBuffer(size_t length, bool reallocate);
 
-    void copyIn(const Buffer& buf, size_t len = ~0);
-    void copyIn(const char* sz);
-    void copyIn(const void* data, size_t len);
+    void copyIn(const Buffer& buf, size_t length = ~0);
+    void copyIn(const char* string);
+    void copyIn(const void* data, size_t length);
 
     void copyOut(Buffer &buffer, size_t length) const
     { buffer.copyIn(*this, length); }
-    void copyOut(void* buf, size_t len) const;
+    void copyOut(void* buffer, size_t length) const;
 
-    ptrdiff_t find(char delim, size_t len = ~0) const;
-    ptrdiff_t find(const std::string &str, size_t len = ~0) const;
+    ptrdiff_t find(char delimiter, size_t length = ~0) const;
+    ptrdiff_t find(const std::string &string, size_t length = ~0) const;
 
-    void visit(boost::function<void (const void *, size_t)> dg, size_t len = ~0) const;
+    void visit(boost::function<void (const void *, size_t)> dg, size_t length = ~0) const;
 
     bool operator== (const Buffer &rhs) const;
     bool operator!= (const Buffer &rhs) const;
@@ -119,7 +118,7 @@ private:
     std::list<Segment>::iterator m_writeIt;
 
     int opCmp(const Buffer &rhs) const;
-    int opCmp(const char *str, size_t len) const;
+    int opCmp(const char *string, size_t length) const;
 
     void invariant() const;
 };
