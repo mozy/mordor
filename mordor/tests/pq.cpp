@@ -8,6 +8,7 @@
 #include "mordor/pq.h"
 #include "mordor/version.h"
 #include "mordor/statistics.h"
+#include "mordor/streams/stream.h"
 #include "mordor/test/test.h"
 #include "mordor/test/stdoutlistener.h"
 
@@ -279,3 +280,35 @@ MORDOR_UNITTEST(PQ, transactionRollsbackAutomatically)
     MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "cody");
 }
+
+static void copyIn(IOManager *ioManager = NULL)
+{
+    Connection conn(g_goodConnString, ioManager);
+    conn.execute("CREATE TEMP TABLE stuff (id INTEGER, name TEXT)");
+    Stream::ptr stream = conn.copyIn("stuff").csv()();
+    stream->write("1,cody\n");
+    stream->write("2,tom\n");
+    stream->write("3,brian\n");
+    stream->write("4,jeremy\n");
+    stream->write("5,zach\n");
+    stream->write("6,paul\n");
+    stream->write("7,alen\n");
+    stream->write("8,jt\n");
+    stream->write("9,jon\n");
+    stream->write("10,jacob\n");
+    stream->close();
+    Result result = conn.execute("SELECT COUNT(*) FROM stuff");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, 0), 10);
+    result = conn.execute("SELECT SUM(id) FROM stuff");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, 0), 55);
+}
+
+MORDOR_UNITTEST(PQ, copyInBlocking)
+{ copyIn(); }
+
+MORDOR_UNITTEST(PQ, copyInAsync)
+{ IOManager ioManager; copyIn(&ioManager); }

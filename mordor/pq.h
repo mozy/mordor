@@ -12,6 +12,9 @@
 #include "mordor/iomanager.h"
 
 namespace Mordor {
+
+class Stream;
+
 namespace PQ {
 
 struct Exception : virtual ::Mordor::Exception
@@ -338,6 +341,9 @@ public:
     /// working connection is lost.
     void reset();
 
+    std::string escape(const std::string &string);
+    std::string escapeBinary(const std::string &blob);
+
     /// @param name If non-empty, specifies to prepare this command on the
     /// server.  Statements prepared on the server msut have unique names
     /// (per-connection)
@@ -376,6 +382,45 @@ public:
     template <class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3, const T4 &param4, const T5 &param5, const T6 &param6, const T7 &param7, const T8 &param8, const T9 &param9)
     { return prepare(command).execute(param1, param2, param3, param4, param5, param6, param7, param8, param9); }
+
+    /// Bulk copy data to the server
+
+    struct CopyInParams
+    {
+    private:
+        friend class Connection;
+        CopyInParams(const std::string &table, boost::shared_ptr<PGconn> conn,
+            IOManager *ioManager);
+
+    public:
+        /// Execute
+        boost::shared_ptr<Stream> operator()();
+
+        CopyInParams &columns(const std::vector<std::string> &columns);
+
+        CopyInParams &binary();
+        CopyInParams &csv();
+
+        CopyInParams &delimiter(char delimiter);
+        CopyInParams &nullString(const std::string &nullString);
+        CopyInParams &header();
+        CopyInParams &quote(char quote);
+        CopyInParams &escape(char escape);
+        CopyInParams &forceNotNull(const std::vector<std::string> &columns);
+
+    private:
+        std::string m_table;
+        IOManager *m_ioManager;
+        boost::shared_ptr<PGconn> m_conn;
+        std::vector<std::string> m_columns, m_notNullColumns;
+        bool m_binary, m_csv, m_header;
+        char m_delimiter, m_quote, m_escape;
+        std::string m_nullString;
+    };
+
+    /// See http://www.postgresql.org/docs/current/static/sql-copy.html for the
+    /// data format the server is expecting
+    CopyInParams copyIn(const std::string &table);
 
     const PGconn *conn() const { return m_conn.get(); }
 
