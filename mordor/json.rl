@@ -277,7 +277,7 @@ public:
 
     void operator()(const boost::blank &b)
     {
-        os << "blank";
+        os << "null";
     }
     void operator()(const bool &b)
     {
