@@ -8,7 +8,8 @@
 #include "mordor/pq.h"
 #include "mordor/version.h"
 #include "mordor/statistics.h"
-#include "mordor/streams/stream.h"
+#include "mordor/streams/memory.h"
+#include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
 #include "mordor/test/stdoutlistener.h"
 
@@ -312,3 +313,33 @@ MORDOR_UNITTEST(PQ, copyInBlocking)
 
 MORDOR_UNITTEST(PQ, copyInAsync)
 { IOManager ioManager; copyIn(&ioManager); }
+
+static void copyOut(IOManager *ioManager = NULL)
+{
+    Connection conn(g_goodConnString, ioManager);
+    conn.execute("CREATE TEMP TABLE country (code TEXT, name TEXT)");
+    PreparedStatement stmt = conn.prepare("INSERT INTO country VALUES($1, $2)",
+        "insertcountry");
+    Transaction transaction(conn);
+    stmt.execute("AF", "AFGHANISTAN");
+    stmt.execute("AL", "ALBANIA");
+    stmt.execute("DZ", "ALGERIA");
+    stmt.execute("ZM", "ZAMBIA");
+    stmt.execute("ZW", "ZIMBABWE");
+
+    Stream::ptr stream = conn.copyOut("country").csv().delimiter('|')();
+    MemoryStream output;
+    transferStream(stream, output);
+    MORDOR_ASSERT(output.buffer() ==
+        "AF|AFGHANISTAN\n"
+        "AL|ALBANIA\n"
+        "DZ|ALGERIA\n"
+        "ZM|ZAMBIA\n"
+        "ZW|ZIMBABWE\n");
+}
+
+MORDOR_UNITTEST(PQ, copyOutBlocking)
+{ copyOut(); }
+
+MORDOR_UNITTEST(PQ, copyOutAsync)
+{ IOManager ioManager; copyOut(&ioManager); }

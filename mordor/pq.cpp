@@ -517,7 +517,13 @@ Connection::copyIn(const std::string &table)
     return CopyInParams(table, m_conn, m_ioManager);
 }
 
-Connection::CopyInParams::CopyInParams(const std::string &table,
+Connection::CopyOutParams
+Connection::copyOut(const std::string &table)
+{
+    return CopyOutParams(table, m_conn, m_ioManager);
+}
+
+Connection::CopyParams::CopyParams(const std::string &table,
     boost::shared_ptr<PGconn> conn, IOManager *ioManager)
     : m_table(table),
       m_ioManager(ioManager),
@@ -530,74 +536,74 @@ Connection::CopyInParams::CopyInParams(const std::string &table,
       m_escape('\0')
 {}
 
-Connection::CopyInParams &
-Connection::CopyInParams::columns(const std::vector<std::string> &columns)
+Connection::CopyParams &
+Connection::CopyParams::columns(const std::vector<std::string> &columns)
 {
     m_columns = columns;
     return *this;
 }
 
-Connection::CopyInParams &
-Connection::CopyInParams::binary()
+Connection::CopyParams &
+Connection::CopyParams::binary()
 {
     MORDOR_ASSERT(!m_csv);
     m_binary = true;
     return *this;
 }
 
-Connection::CopyInParams &
-Connection::CopyInParams::csv()
+Connection::CopyParams &
+Connection::CopyParams::csv()
 {
     MORDOR_ASSERT(!m_binary);
     m_csv = true;
     return *this;
 }
 
-Connection::CopyInParams &
-Connection::CopyInParams::delimiter(char delimiter)
+Connection::CopyParams &
+Connection::CopyParams::delimiter(char delimiter)
 {
     MORDOR_ASSERT(!m_binary);
     m_delimiter = delimiter;
     return *this;
 }
 
-Connection::CopyInParams &
-Connection::CopyInParams::nullString(const std::string &nullString)
+Connection::CopyParams &
+Connection::CopyParams::nullString(const std::string &nullString)
 {
     MORDOR_ASSERT(!m_binary);
     m_nullString = nullString;
     return *this;
 }
 
-Connection::CopyInParams &
-Connection::CopyInParams::header()
+Connection::CopyParams &
+Connection::CopyParams::header()
 {
     MORDOR_ASSERT(m_csv);
     m_header = true;
     return *this;
 }
 
-Connection::CopyInParams &
-Connection::CopyInParams::quote(char quote)
+Connection::CopyParams &
+Connection::CopyParams::quote(char quote)
 {
     MORDOR_ASSERT(m_csv);
     m_quote = quote;
     return *this;
 }
 
-Connection::CopyInParams &
-Connection::CopyInParams::escape(char escape)
+Connection::CopyParams &
+Connection::CopyParams::escape(char escape)
 {
     MORDOR_ASSERT(m_csv);
     m_escape = escape;
     return *this;
 }
 
-Connection::CopyInParams &
-Connection::CopyInParams::forceNotNull(const std::vector<std::string> &columns)
+Connection::CopyParams &
+Connection::CopyParams::notNullQuoteColumns(const std::vector<std::string> &columns)
 {
     MORDOR_ASSERT(m_csv);
-    m_notNullColumns = columns;
+    m_notNullQuoteColumns = columns;
     return *this;
 }
 
@@ -708,8 +714,90 @@ private:
     IOManager *m_ioManager;
 };
 
+class CopyOutStream : public Stream
+{
+public:
+    CopyOutStream(boost::shared_ptr<PGconn> conn, IOManager *ioManager)
+        : m_conn(conn),
+          m_ioManager(ioManager)
+    {}
+
+    bool supportsRead() { return true; }
+
+    size_t read(Buffer &buffer, size_t length)
+    {
+        if (m_readBuffer.readAvailable()) {
+            length = std::min(m_readBuffer.readAvailable(), length);
+            buffer.copyIn(m_readBuffer, length);
+            m_readBuffer.consume(length);
+            return length;
+        }
+        boost::shared_ptr<PGconn> sharedConn = m_conn.lock();
+        if (!sharedConn)
+            return 0;
+        PGconn *conn = sharedConn.get();
+        int status = 0;
+        do {
+            char *data = NULL;
+            status = PQgetCopyData(conn, &data, m_ioManager ? 1 : 0);
+            switch (status) {
+                case 0:
+                    MORDOR_ASSERT(m_ioManager);
+                    m_ioManager->registerEvent(PQsocket(conn),
+                        IOManager::READ);
+                    Scheduler::yieldTo();
+                    continue;
+                case -1:
+                    break;
+                case -2:
+                    throwException(conn);
+                default:
+                    MORDOR_ASSERT(status > 0);
+                    try {
+                        m_readBuffer.copyIn(data, status);
+                    } catch (...) {
+                        PQfreemem(data);
+                        throw;
+                    }
+                    PQfreemem(data);
+                    break;
+            }
+        } while (false);
+
+        if (status == -1) {
+            m_conn.reset();
+            boost::shared_ptr<PGresult> result;
+            if (m_ioManager)
+                result.reset(nextResult(conn, m_ioManager), &PQclear);
+            else
+                result.reset(PQgetResult(conn), &PQclear);
+            while (result) {
+                ExecStatusType status = PQresultStatus(result.get());
+                MORDOR_LOG_DEBUG(g_log) << conn << " PQresultStatus("
+                    << result.get() << "): " << PQresStatus(status);
+                if (status != PGRES_COMMAND_OK)
+                    throwException(result.get());
+                if (m_ioManager)
+                    result.reset(nextResult(conn, m_ioManager), &PQclear);
+                else
+                    result.reset(PQgetResult(conn), &PQclear);
+            }
+        }
+
+        length = std::min(m_readBuffer.readAvailable(), length);
+        buffer.copyIn(m_readBuffer, length);
+        m_readBuffer.consume(length);
+        return length;
+    }
+
+private:
+    boost::weak_ptr<PGconn> m_conn;
+    IOManager *m_ioManager;
+    Buffer m_readBuffer;
+};
+
 Stream::ptr
-Connection::CopyInParams::operator()()
+Connection::CopyParams::execute(bool out)
 {
     PGconn *conn = m_conn.get();
     std::ostringstream os;
@@ -725,7 +813,7 @@ Connection::CopyInParams::operator()()
         }
         os << ") ";
     }
-    os << "FROM STDIN";
+    os << (out ? "TO STDOUT" : "FROM STDIN");
     if (m_binary) {
         os << " BINARY";
     } else {
@@ -744,12 +832,12 @@ Connection::CopyInParams::operator()()
             if (m_escape != '\0')
                 os << " ESCAPE '"
                     << PQ::escape(conn, std::string(1, m_escape)) << '\'';
-            if (!m_notNullColumns.empty()) {
-                os << " FORCE NOT NULL ";
-                for (std::vector<std::string>::const_iterator it(m_notNullColumns.begin());
-                    it != m_notNullColumns.end();
+            if (!m_notNullQuoteColumns.empty()) {
+                os << (out ? " FORCE QUOTE" : " FORCE NOT NULL ");
+                for (std::vector<std::string>::const_iterator it(m_notNullQuoteColumns.begin());
+                    it != m_notNullQuoteColumns.end();
                     ++it) {
-                    if (it != m_notNullColumns.begin())
+                    if (it != m_notNullQuoteColumns.begin())
                         os << ", ";
                     os << *it;
                 }
@@ -767,7 +855,8 @@ Connection::CopyInParams::operator()()
         next.reset(nextResult(conn, m_ioManager), &PQclear);
         while (next) {
             result = next;
-            if (PQresultStatus(result.get()) == PGRES_COPY_IN)
+            if (PQresultStatus(result.get()) ==
+                (out ? PGRES_COPY_OUT : PGRES_COPY_IN))
                 break;
             next.reset(nextResult(conn, m_ioManager), &PQclear);
             if (next) {
@@ -777,7 +866,6 @@ Connection::CopyInParams::operator()()
                 switch (status) {
                     case PGRES_COMMAND_OK:
                     case PGRES_TUPLES_OK:
-                    case PGRES_COPY_IN:
                         break;
                     default:
                         throwException(next.get());
@@ -801,11 +889,27 @@ Connection::CopyInParams::operator()()
         case PGRES_TUPLES_OK:
             MORDOR_NOTREACHED();
         case PGRES_COPY_IN:
+            MORDOR_ASSERT(!out);
             return Stream::ptr(new CopyInStream(m_conn, m_ioManager));
+        case PGRES_COPY_OUT:
+            MORDOR_ASSERT(out);
+            return Stream::ptr(new CopyOutStream(m_conn, m_ioManager));
         default:
             throwException(result.get());
             MORDOR_NOTREACHED();
     }
+}
+
+Stream::ptr
+Connection::CopyInParams::operator()()
+{
+    return execute(false);
+}
+
+Stream::ptr
+Connection::CopyOutParams::operator()()
+{
+    return execute(true);
 }
 
 void

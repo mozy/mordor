@@ -384,43 +384,73 @@ public:
     { return prepare(command).execute(param1, param2, param3, param4, param5, param6, param7, param8, param9); }
 
     /// Bulk copy data to the server
-
-    struct CopyInParams
+    struct CopyParams
     {
-    private:
-        friend class Connection;
-        CopyInParams(const std::string &table, boost::shared_ptr<PGconn> conn,
+    protected:
+        CopyParams(const std::string &table, boost::shared_ptr<PGconn> conn,
             IOManager *ioManager);
 
     public:
         /// Execute
-        boost::shared_ptr<Stream> operator()();
+        virtual boost::shared_ptr<Stream> operator()() = 0;
 
-        CopyInParams &columns(const std::vector<std::string> &columns);
+        CopyParams &columns(const std::vector<std::string> &columns);
 
-        CopyInParams &binary();
-        CopyInParams &csv();
+        CopyParams &binary();
+        CopyParams &csv();
 
-        CopyInParams &delimiter(char delimiter);
-        CopyInParams &nullString(const std::string &nullString);
-        CopyInParams &header();
-        CopyInParams &quote(char quote);
-        CopyInParams &escape(char escape);
-        CopyInParams &forceNotNull(const std::vector<std::string> &columns);
+        CopyParams &delimiter(char delimiter);
+        CopyParams &nullString(const std::string &nullString);
+        CopyParams &header();
+        CopyParams &quote(char quote);
+        CopyParams &escape(char escape);
+        CopyParams &notNullQuoteColumns(const std::vector<std::string> &columns);
+
+    protected:
+        boost::shared_ptr<Stream> execute(bool out);
 
     private:
         std::string m_table;
         IOManager *m_ioManager;
         boost::shared_ptr<PGconn> m_conn;
-        std::vector<std::string> m_columns, m_notNullColumns;
+        std::vector<std::string> m_columns, m_notNullQuoteColumns;
         bool m_binary, m_csv, m_header;
         char m_delimiter, m_quote, m_escape;
         std::string m_nullString;
     };
 
+    struct CopyInParams : public CopyParams
+    {
+    private:
+        friend class Connection;
+        CopyInParams(const std::string &table, boost::shared_ptr<PGconn> conn,
+            IOManager *ioManager)
+            : CopyParams(table, conn, ioManager)
+        {}
+
+    public:
+        /// Execute
+        boost::shared_ptr<Stream> operator()();
+    };
+
+    struct CopyOutParams : public CopyParams
+    {
+    private:
+        friend class Connection;
+        CopyOutParams(const std::string &table, boost::shared_ptr<PGconn> conn,
+            IOManager *ioManager)
+            : CopyParams(table, conn, ioManager)
+        {}
+
+    public:
+        /// Execute
+        boost::shared_ptr<Stream> operator()();
+    };
+
     /// See http://www.postgresql.org/docs/current/static/sql-copy.html for the
     /// data format the server is expecting
     CopyInParams copyIn(const std::string &table);
+    CopyOutParams copyOut(const std::string &table);
 
     const PGconn *conn() const { return m_conn.get(); }
 
