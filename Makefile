@@ -306,6 +306,7 @@ TESTOBJECTS :=								\
 	mordor/tests/timer.o						\
 	mordor/tests/transfer_stream.o					\
 	mordor/tests/uri.o						\
+	mordor/tests/xml.o						\
 	mordor/tests/zlib.o
 
 $(TESTDATA): $(CURDIR)/%: $(SRCDIR)/%
