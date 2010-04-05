@@ -286,6 +286,7 @@ TESTOBJECTS :=								\
 	mordor/tests/efs_stream.o					\
 	mordor/tests/fibers.o						\
 	mordor/tests/fibersync.o					\
+	mordor/tests/file_stream.o					\
 	mordor/tests/fls.o						\
 	mordor/tests/future.o						\
 	mordor/tests/hmac.o						\
