@@ -1029,7 +1029,6 @@ MORDOR_UNITTEST(HTTPClient, emptyResponseBody)
     MORDOR_TEST_ASSERT(request->hasResponseBody());
     Stream::ptr response = request->responseStream();
     MORDOR_TEST_ASSERT(response->supportsRead());
-    MORDOR_TEST_ASSERT(!response->supportsSeek());
     MORDOR_TEST_ASSERT(response->supportsSize());
     MORDOR_TEST_ASSERT(!response->supportsTruncate());
     MORDOR_TEST_ASSERT(!response->supportsFind());
