@@ -137,7 +137,6 @@ RagelParser::run(const void *buf, size_t len, bool isEof)
         } else if (earliest == m_fullString.c_str()) {
         } else {
             MORDOR_ASSERT(earliest > m_fullString.c_str());
-            const char *oldString = m_fullString.c_str();
             m_fullString = m_fullString.substr(earliest - m_fullString.c_str());
             adjustPointers(m_fullString.c_str() - earliest);
         }
