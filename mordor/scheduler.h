@@ -73,6 +73,13 @@ public:
     /// @return The Scheduler controlling the currently executing thread
     static Scheduler* getThis();
 
+    /// Explicitly start the Scheduler
+
+    /// Derived classes should call start() in their constructor.
+    /// It is safe to call start() even if the Scheduler is already started -
+    /// it will be a no-op
+    void start();
+
     /// Explicitly stop the scheduler
 
     /// This must be called for hybrid and spawned Schedulers.  It can be
@@ -158,8 +165,6 @@ public:
     }
 
 protected:
-    /// Derived classes should call start() in their constructor.
-    void start();
     /// Derived classes can query stopping() to see if the Scheduler is trying
     /// to stop, and should return from the idle Fiber as soon as possible.
     ///
