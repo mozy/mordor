@@ -22,6 +22,9 @@ public:
     bool supportsRead() { return true; }
     size_t read(void *buffer, size_t length);
 
+    bool supportsSeek() { return true; }
+    long long seek(long long offset, Anchor anchor = BEGIN) { return 0; }
+
 private:
 #ifdef WINDOWS
     HCRYPTPROV m_hCP;
