@@ -1031,7 +1031,9 @@ MORDOR_UNITTEST(HTTPClient, simpleRequestAbandoned)
 
     request.reset();
     // Write the body - not allowed because we abandoned the request
+#ifdef DEBUG
     MORDOR_TEST_ASSERT_ASSERTED(requestBody->write("hello"));
+#endif
 }
 
 MORDOR_UNITTEST(HTTPClient, simpleResponseAbandoned)
