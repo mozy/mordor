@@ -174,7 +174,7 @@ std::string unquote(const std::string &string)
     parse_object := parse_object_lbl: ws* string >mark %new_key ws* ':' ws* value %pop_stack ws* (',' ws* string >mark %new_key ws* ':' ws* value %pop_stack ws*)* '}' @ret;
     parse_array := parse_array_lbl: ws* value >new_element %pop_stack ws* (',' ws* value >new_element %pop_stack ws*)* ']' @ret;
 
-    main := ws* '{' @call_parse_object | '[' @call_parse_array ws*;
+    main := ws* value ws*;
     write data;
 }%%
 
