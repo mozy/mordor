@@ -5,6 +5,7 @@
 
 #include <boost/variant.hpp>
 
+#include "exception.h"
 #include "ragel.h"
 
 namespace Mordor {
@@ -44,6 +45,16 @@ private:
 
 std::string quote(const std::string &string);
 std::string unquote(const std::string &string);
+
+template <class T> Value load(T &t)
+{
+    Value result;
+    Parser parser(result);
+    parser.run(t);
+    if (!parser.final() || parser.error())
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("Invalid JSON"));
+    return result;
+}
 
 std::ostream &operator <<(std::ostream &os, const Value &json);
 

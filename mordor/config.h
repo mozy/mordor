@@ -13,6 +13,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include "assert.h"
+#include "json.h"
 
 namespace Mordor {
 
@@ -129,6 +130,7 @@ public:
     static void visit(boost::function<void (ConfigVarBase::ptr)> dg);
 
     static void loadFromEnvironment();
+    static void loadFromJSON(const JSON::Value &json);
 
 private:
     static std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator> &vars()

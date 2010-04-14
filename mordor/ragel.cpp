@@ -6,49 +6,50 @@
 
 #include "assert.h"
 #include "log.h"
-#include "mordor/string.h"
+#include "streams/stream.h"
+#include "string.h"
 
 namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:ragel");
 
 size_t
-RagelParser::run(const void *buf, size_t len)
+RagelParser::run(const void *buffer, size_t length)
 {
     init();
-    p = (const char *)buf;
-    pe = p + len;
+    p = (const char *)buffer;
+    pe = p + length;
     eof = pe;
 
     exec();
 
     MORDOR_ASSERT(!(final() && error()));
-    return len - (pe - p);
+    return length - (pe - p);
 }
 
 size_t
-RagelParser::run(const char *str)
+RagelParser::run(const char *string)
 {
-    return run(str, strlen(str));
+    return run(string, strlen(string));
 }
 
 size_t
-RagelParser::run(const std::string& str)
+RagelParser::run(const std::string& string)
 {
-    return run(str.c_str(), str.length());
+    return run(string.c_str(), string.size());
 }
 
 size_t
-RagelParser::run(const Buffer& b)
+RagelParser::run(const Buffer& buffer)
 {
     init();
     size_t total = 0;
 
-    const std::vector<iovec> bufs = b.readBuffers();
-    for (size_t i = 0; i < bufs.size(); ++i) {
-        size_t consumed = run(bufs[i].iov_base, bufs[i].iov_len, false);
+    const std::vector<iovec> buffers = buffer.readBuffers();
+    for (size_t i = 0; i < buffers.size(); ++i) {
+        size_t consumed = run(buffers[i].iov_base, buffers[i].iov_len, false);
         total += consumed;
-        if (consumed < bufs[i].iov_len) {
+        if (consumed < buffers[i].iov_len) {
             MORDOR_ASSERT(final() || error());
             return total;
         }
@@ -64,21 +65,21 @@ RagelParser::run(Stream &stream)
 {
     unsigned long long total = 0;
     init();
-    Buffer b;
+    Buffer buffer;
     bool inferredComplete = false;
     while (!error() && !complete() && !inferredComplete) {
         // TODO: limit total amount read
-        size_t read = stream.read(b, 65536);
+        size_t read = stream.read(buffer, 65536);
         if (read == 0) {
             run(NULL, 0, true);
             break;
         } else {
-            const std::vector<iovec> bufs = b.readBuffers();
-            for (size_t i = 0; i < bufs.size(); ++i) {
-                size_t consumed = run(bufs[i].iov_base, bufs[i].iov_len, false);
+            const std::vector<iovec> buffers = buffer.readBuffers();
+            for (size_t i = 0; i < buffers.size(); ++i) {
+                size_t consumed = run(buffers[i].iov_base, buffers[i].iov_len, false);
                 total += consumed;
-                b.consume(consumed);
-                if (consumed < bufs[i].iov_len) {
+                buffer.consume(consumed);
+                if (consumed < buffers[i].iov_len) {
                     MORDOR_ASSERT(final() || error());
                     inferredComplete = true;
                     break;
@@ -88,9 +89,8 @@ RagelParser::run(Stream &stream)
             }
         }
     }
-    if (stream.supportsUnread()) {
-        stream.unread(b, b.readAvailable());
-    }
+    if (stream.supportsUnread())
+        stream.unread(buffer, buffer.readAvailable());
     return total;
 }
 
@@ -102,22 +102,22 @@ RagelParser::init()
 }
 
 size_t
-RagelParser::run(const void *buf, size_t len, bool isEof)
+RagelParser::run(const void *buffer, size_t length, bool isEof)
 {
     MORDOR_ASSERT(!error());
 
     // Remember and reset marks in case fullString gets moved
     if (earliestPointer()) {
         const char *oldString = m_fullString.c_str();
-        m_fullString.append((const char *)buf, len);
+        m_fullString.append((const char *)buffer, length);
         if (m_fullString.c_str() != oldString)
             adjustPointers(m_fullString.c_str() - oldString);
         p = m_fullString.c_str();
         pe = p + m_fullString.length();
-        p = pe - len;
+        p = pe - length;
     } else {
-        p = (const char *)buf;
-        pe = p + len;
+        p = (const char *)buffer;
+        pe = p + length;
     }
 
     eof = isEof ? pe : NULL;
@@ -131,7 +131,7 @@ RagelParser::run(const void *buf, size_t len, bool isEof)
         m_fullString.clear();
     } else {
         if (m_fullString.empty()) {
-            MORDOR_ASSERT(earliest >= buf);
+            MORDOR_ASSERT(earliest >= buffer);
             m_fullString.append(earliest, pe - earliest);
             adjustPointers(m_fullString.c_str() - earliest);
         } else if (earliest == m_fullString.c_str()) {
@@ -142,7 +142,7 @@ RagelParser::run(const void *buf, size_t len, bool isEof)
         }
     }
 
-    return p - (pe - len);
+    return p - (pe - length);
 }
 
 const char *

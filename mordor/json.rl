@@ -4,6 +4,8 @@
 
 #include "mordor/json.h"
 
+#include "mordor/assert.h"
+
 namespace Mordor {
 namespace JSON {
 
