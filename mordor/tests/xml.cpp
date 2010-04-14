@@ -10,7 +10,7 @@ using namespace Mordor;
 static void callback(std::string &value, int &called,
                      const std::string &string)
 {
-    value = string;
+    value.append(string);
     ++called;
 }
 
@@ -51,4 +51,23 @@ MORDOR_UNITTEST(XMLParser, emptyTag)
     MORDOR_TEST_ASSERT_EQUAL(calledStart, 1);
     MORDOR_TEST_ASSERT_EQUAL(tag, "empty");
     MORDOR_TEST_ASSERT_EQUAL(calledEmpty, 1);
+}
+
+MORDOR_UNITTEST(XMLParser, references)
+{
+    std::string text;
+    int called = 0;
+    CallbackXMLParserEventHandler handler(NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        boost::bind(&callback, boost::ref(text), boost::ref(called), _1),
+        boost::bind(&callback, boost::ref(text), boost::ref(called), _1));
+    XMLParser parser(handler);
+    parser.run("<root>sometext&amp;somemoretext</root>");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT_EQUAL(called, 3);
+    MORDOR_TEST_ASSERT_EQUAL(text, "sometext&amp;somemoretext");
 }

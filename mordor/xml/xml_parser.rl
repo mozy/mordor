@@ -30,9 +30,15 @@ using namespace Mordor;
 
     CharData = [^<&]* - ([^<&]* ']]>' [^<&]*);
 
+    action reference
+    {
+        m_handler.onReference(std::string(mark, fpc-mark));
+        mark = NULL;
+    }
+
     CharRef = '&#' [0-9]+ ';' | '&#x' [0-9a-fA-F]+ ';';
     EntityRef = '&' Name ';';
-    Reference = EntityRef | CharRef;
+    Reference = (EntityRef | CharRef) >mark %reference;
     PEReference = '%' Name ';';
 
     action attrib_value
@@ -109,7 +115,7 @@ using namespace Mordor;
         mark = NULL;
     }
 
-    content = CharData? >mark %inner_text ((element | Reference | CDSect | PI | Comment) CharData?)*;
+    content = CharData? >mark %inner_text ((element | Reference | CDSect | PI | Comment) CharData? >mark %inner_text)*;
 
     action element_finished {
         fret;
