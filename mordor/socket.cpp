@@ -40,7 +40,7 @@ static struct Initializer {
     Initializer()
     {
         WSADATA wd;
-        WSAStartup(0x0101, &wd);
+        WSAStartup(MAKEWORD(2,2), &wd);
 
         socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
         DWORD bytes = 0;
@@ -310,6 +310,11 @@ Socket::connect(const Address &to)
             }
             ::connect(m_sock, to.name(), to.nameLen());
             DWORD lastError = GetLastError();
+            // Windows 2000 is funny this way
+            if (lastError == WSAEINVAL) {
+                ::connect(m_sock, to.name(), to.nameLen());
+                lastError = GetLastError();
+            }
             if (lastError == WSAEISCONN)
                 lastError = ERROR_SUCCESS;
             MORDOR_LOG_LEVEL(g_log, lastError ? Log::ERROR : Log::INFO)
@@ -454,6 +459,11 @@ Socket::connect(const Address &to)
                 }
                 ::connect(m_sock, to.name(), to.nameLen());
                 DWORD lastError = GetLastError();
+                // Windows 2000 is funny this way
+                if (lastError == WSAEINVAL) {
+                    ::connect(m_sock, to.name(), to.nameLen());
+                    lastError = GetLastError();
+                }
                 if (lastError == WSAEISCONN)
                     lastError = ERROR_SUCCESS;
                 MORDOR_LOG_LEVEL(g_log, lastError ? Log::ERROR : Log::INFO)
