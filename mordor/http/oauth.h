@@ -13,26 +13,21 @@ namespace HTTP {
 class OAuth
 {
 public:
-    OAuth(RequestBroker::ptr requestBroker,
-        boost::function<std::string (const URI::QueryString &params)> authDg,
-        const URI &requestTokenUri, Method requestTokenMethod,
-        const std::string &requestTokenSignatureMethod,
-        const URI &accessTokenUri, Method accessTokenMethod,
-        const std::string &accessTokenSignatureMethod,
-        const std::string &consumerKey, const std::string &consumerSecret,
-        const URI &callbackUri = "")
-        : m_requestBroker(requestBroker),
-          m_authDg(authDg),
-          m_requestTokenUri(requestTokenUri),
-          m_accessTokenUri(accessTokenUri),
-          m_requestTokenMethod(requestTokenMethod),
-          m_accessTokenMethod(accessTokenMethod),
-          m_requestTokenSignatureMethod(requestTokenSignatureMethod),
-          m_accessTokenSignatureMethod(accessTokenSignatureMethod),
-          m_consumerKey(consumerKey),
-          m_consumerSecret(consumerSecret),
-          m_callbackUri(callbackUri)
-    {}
+    struct Settings
+    {
+        boost::function<std::string (const URI::QueryString &params)> authDg;
+        URI requestTokenUri, accessTokenUri;
+        HTTP::Method requestTokenMethod, accessTokenMethod;
+        std::string requestTokenSignatureMethod, accessTokenSignatureMethod;
+        std::string consumerKey, consumerSecret;
+        URI callbackUri;
+    };
+public:
+    OAuth(RequestBroker::ptr requestBroker, const Settings &settings,
+        boost::function<void (const std::string &, const std::string &)> gotTokenDg = NULL);
+
+    void clearToken();
+    void setToken(const std::string &token, const std::string &tokenSecret);
 
     void authorize(Request &nextRequest,
         const std::string &signatureMethod, const std::string &realm);
@@ -52,13 +47,39 @@ private:
 private:
     RequestBroker::ptr m_requestBroker;
     boost::function<std::pair<unsigned long long, std::string> ()> m_nonceDg;
-    boost::function<std::string (const URI::QueryString &params)> m_authDg;
-    URI m_requestTokenUri, m_accessTokenUri;
-    HTTP::Method m_requestTokenMethod, m_accessTokenMethod;
-    std::string m_requestTokenSignatureMethod, m_accessTokenSignatureMethod;
-    std::string m_consumerKey, m_consumerSecret;
-    URI m_callbackUri;
+    boost::function<void (const std::string &, const std::string &)> m_gotTokenDg;
+    Settings m_settings;
     URI::QueryString m_params;
+};
+
+class OAuthBroker : public RequestBrokerFilter
+{
+private:
+    struct State
+    {
+        OAuth oauth;
+        std::string realm;
+        std::string signatureMethod;
+    };
+public:
+    OAuthBroker(RequestBroker::ptr parent,
+        boost::function<std::pair<OAuth::Settings, std::string>
+            (const URI &, const std::string &)> getSettingsDg,
+        boost::function<void
+            (const std::string &, const std::string &)> gotTokenDg = NULL,
+        RequestBroker::ptr brokerForOAuthRequests = RequestBroker::ptr());
+
+    ClientRequest::ptr request(Request &requestHeaders,
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+
+private:
+    RequestBroker::ptr m_brokerForOAuthRequests;
+    std::map<URI, State> m_state;
+    boost::function<std::pair<OAuth::Settings, std::string>
+        (const URI &, const std::string &)> m_getSettingsDg;
+    boost::function<void
+        (const std::string &, const std::string &)> m_gotTokenDg;
 };
 
 }}

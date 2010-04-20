@@ -134,13 +134,17 @@ MORDOR_UNITTEST(OAuth, oauthExample)
     MockConnectionBroker server(&oauthExampleServer);
     BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
 
-    OAuth oauth(RequestBroker::ptr(&requestBroker, &nop<RequestBroker *>),
+    OAuth::Settings settings = {
         &oauthExampleAuth,
-        "https://photos.example.net/request_token", POST, "PLAINTEXT",
-        "https://photos.example.net/access_token", POST, "PLAINTEXT",
+        "https://photos.example.net/request_token", "https://photos.example.net/access_token",
+        POST, POST,
+        "PLAINTEXT", "PLAINTEXT",
         "dpf43f3p2l4k3l03",
         "kd94hf93k423kf44",
-        "http://printer.example.com/request_token_ready");
+        "http://printer.example.com/request_token_ready"
+    };
+    OAuth oauth(RequestBroker::ptr(&requestBroker, &nop<RequestBroker *>),
+        settings);
     oauth.selfNonce(&getTimestampAndNonce);
 
     Request requestHeaders;
