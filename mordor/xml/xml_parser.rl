@@ -111,8 +111,10 @@ using namespace Mordor;
 
     action inner_text
     {
-        m_handler.onInnerText(std::string(mark, fpc-mark));
-        mark = NULL;
+        if (fpc != mark) {
+			m_handler.onInnerText(std::string(mark, fpc-mark));
+			mark = NULL;
+	    }
     }
 
     content = CharData? >mark %inner_text ((element | Reference | CDSect | PI | Comment) CharData? >mark %inner_text)*;

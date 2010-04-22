@@ -70,4 +70,12 @@ MORDOR_UNITTEST(XMLParser, references)
     MORDOR_ASSERT(!parser.error());
     MORDOR_TEST_ASSERT_EQUAL(called, 3);
     MORDOR_TEST_ASSERT_EQUAL(text, "sometext&amp;somemoretext");
+
+    text.clear();
+    called = 0;
+    parser.run("<path>/Users/test1/Public/C:\\abc\\n&apos;&amp;.txt1</path>");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT_EQUAL(called, 4);
+    MORDOR_TEST_ASSERT_EQUAL(text, "/Users/test1/Public/C:\\abc\\n&apos;&amp;.txt1");
 }
