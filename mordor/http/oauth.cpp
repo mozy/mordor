@@ -13,8 +13,9 @@ namespace HTTP {
 OAuth::OAuth(RequestBroker::ptr requestBroker, const Settings &settings,
     boost::function<void (const std::string &, const std::string &)> gotTokenDg)
 : m_requestBroker(requestBroker),
-  m_settings(settings),
-  m_gotTokenDg(gotTokenDg)
+  m_gotTokenDg(gotTokenDg),
+  m_settings(settings)
+
 {
     MORDOR_ASSERT(m_settings.authDg);
     MORDOR_ASSERT(m_settings.requestTokenUri.isDefined());
