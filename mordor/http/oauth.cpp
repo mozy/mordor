@@ -78,9 +78,10 @@ OAuth::getRequestToken()
         qs.insert(std::make_pair("oauth_callback", "oob"));
     else
         qs.insert(std::make_pair("oauth_callback", m_settings.callbackUri.toString()));
-    nonceAndTimestamp(qs);
+    nonceAndTimestampInternal(qs);
     sign(m_settings.requestTokenUri, m_settings.requestTokenMethod,
-        m_settings.requestTokenSignatureMethod, qs);
+        m_settings.requestTokenSignatureMethod, m_settings.consumerSecret,
+        std::string(), qs);
 
     Request requestHeaders;
     requestHeaders.requestLine.method = m_settings.requestTokenMethod;
@@ -149,9 +150,10 @@ OAuth::getAccessToken(const std::string &verifier)
     qs.insert(*m_params.find("oauth_token"));
     qs.insert(std::make_pair("oauth_verifier", verifier));
     qs.insert(std::make_pair("oauth_version", "1.0"));
-    nonceAndTimestamp(qs);
+    nonceAndTimestampInternal(qs);
     sign(m_settings.accessTokenUri, m_settings.accessTokenMethod,
-        m_settings.requestTokenSignatureMethod, qs);
+        m_settings.requestTokenSignatureMethod, m_settings.consumerSecret,
+        m_params.find("oauth_token_secret")->second, qs);
 
     Request requestHeaders;
     requestHeaders.requestLine.method = m_settings.accessTokenMethod;
@@ -221,13 +223,15 @@ OAuth::signRequest(const URI &uri, Method method,
     result.insert(std::make_pair("oauth_consumer_key", m_settings.consumerKey));
     result.insert(*m_params.find("oauth_token"));
     result.insert(std::make_pair("oauth_version", "1.0"));
-    nonceAndTimestamp(result);
-    sign(uri, method, signatureMethod, result);
+    nonceAndTimestampInternal(result);
+    std::string tokenSecret = m_params.find("oauth_token_secret")->second;
+    sign(uri, method, signatureMethod, m_settings.consumerSecret, tokenSecret,
+        result);
     return result;
 }
 
 void
-OAuth::nonceAndTimestamp(URI::QueryString &params)
+OAuth::nonceAndTimestampInternal(URI::QueryString &params)
 {
     if (m_nonceDg) {
         std::ostringstream os;
@@ -237,35 +241,53 @@ OAuth::nonceAndTimestamp(URI::QueryString &params)
         params.insert(std::make_pair("oauth_timestamp", os.str()));
         params.insert(std::make_pair("oauth_nonce", timestampAndNonce.second));
     } else {
-        static boost::posix_time::ptime start(boost::gregorian::date(1970, 1, 1));
-        static const char *allowedChars =
-            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        std::ostringstream os;
-        boost::posix_time::ptime now =
-            boost::posix_time::second_clock::universal_time();
-        boost::posix_time::time_duration duration = now - start;
-        os << duration.total_seconds();
-
-        std::string nonce;
-        nonce.resize(40);
-        for (size_t i = 0; i < 40; ++i) {
-            nonce[i] = allowedChars[rand() % 36];
-        }
-
-        params.insert(std::make_pair("oauth_timestamp", os.str()));
-        params.insert(std::make_pair("oauth_nonce", nonce));
+        nonceAndTimestamp(params);
     }
 }
 
+template <class T>
+void
+OAuth::nonceAndTimestamp(T &oauthParameters)
+{
+    static boost::posix_time::ptime start(boost::gregorian::date(1970, 1, 1));
+    static const char *allowedChars =
+        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    std::ostringstream os;
+    boost::posix_time::ptime now =
+        boost::posix_time::second_clock::universal_time();
+    boost::posix_time::time_duration duration = now - start;
+    os << duration.total_seconds();
+
+    std::string nonce;
+    nonce.resize(40);
+    for (size_t i = 0; i < 40; ++i) {
+        nonce[i] = allowedChars[rand() % 36];
+    }
+
+    typename T::iterator it = oauthParameters.find("oauth_timestamp");
+    if (it != oauthParameters.end())
+        oauthParameters.erase(it);
+    it = oauthParameters.find("oauth_nonce");
+    if (it != oauthParameters.end())
+        oauthParameters.erase(it);
+    oauthParameters.insert(std::make_pair("oauth_timestamp", os.str()));
+    oauthParameters.insert(std::make_pair("oauth_nonce", nonce));
+}
+
+template void OAuth::nonceAndTimestamp<StringMap>(StringMap &);
+template void OAuth::nonceAndTimestamp<URI::QueryString>(URI::QueryString &);
+
+template <class T>
 void
 OAuth::sign(const URI &uri, Method method, const std::string &signatureMethod,
-            URI::QueryString &params)
+            const std::string &clientSecret, const std::string &tokenSecret,
+            T &oauthParameters, const URI::QueryString &postParameters)
 {
-    MORDOR_ASSERT(params.find("oauth_signature_method") == params.end());
-    params.insert(std::make_pair("oauth_signature_method", signatureMethod));
-    MORDOR_ASSERT(params.find("oauth_signature") == params.end());
+    MORDOR_ASSERT(oauthParameters.find("oauth_signature_method") == oauthParameters.end());
+    oauthParameters.insert(std::make_pair("oauth_signature_method", signatureMethod));
+    MORDOR_ASSERT(oauthParameters.find("oauth_signature") == oauthParameters.end());
 
-    URI::QueryString::iterator it;
+    typename T::iterator it;
 
     std::ostringstream os;
     URI requestUri(uri);
@@ -276,14 +298,16 @@ OAuth::sign(const URI &uri, Method method, const std::string &signatureMethod,
     std::map<std::string, std::multiset<std::string> > combined;
     std::map<std::string, std::multiset<std::string> >::iterator
         combinedIt;
-    for (it = params.begin(); it != params.end(); ++it)
+    for (it = oauthParameters.begin(); it != oauthParameters.end(); ++it)
         if (stricmp(it->first.c_str(), "realm") != 0)
             combined[it->first].insert(it->second);
-    // TODO: POST params of application/x-www-form-urlencoded
+    URI::QueryString::const_iterator it2;
+    for (it2 = postParameters.begin(); it2 != postParameters.end(); ++it2)
+        combined[it2->first].insert(it2->second);
     if (uri.queryDefined()) {
         URI::QueryString queryParams = uri.queryString();
-        for (it = queryParams.begin(); it != queryParams.end(); ++it)
-            combined[it->first].insert(it->second);
+        for (it2 = queryParams.begin(); it2 != queryParams.end(); ++it2)
+            combined[it2->first].insert(it2->second);
     }
 
     os << '&';
@@ -306,21 +330,26 @@ OAuth::sign(const URI &uri, Method method, const std::string &signatureMethod,
     }
     signatureBaseString.append(URI::encode(os.str()));
 
-    std::string secrets = URI::encode(m_settings.consumerSecret);
+    std::string secrets = URI::encode(clientSecret);
     secrets.append(1, '&');
-    it = m_params.find("oauth_token_secret");
-    if (it != m_params.end())
-        secrets.append(URI::encode(it->second));
+    secrets.append(URI::encode(tokenSecret));
 
     if (stricmp(signatureMethod.c_str(), "HMAC-SHA1") == 0) {
-        params.insert(std::make_pair("oauth_signature",
+        oauthParameters.insert(std::make_pair("oauth_signature",
             base64encode(hmacSha1(signatureBaseString, secrets))));
     } else if (stricmp(signatureMethod.c_str(), "PLAINTEXT") == 0) {
-        params.insert(std::make_pair("oauth_signature", secrets));
+        oauthParameters.insert(std::make_pair("oauth_signature", secrets));
     } else {
         MORDOR_NOTREACHED();
     }
 }
+
+template void OAuth::sign<StringMap>(const URI &, Method, const std::string &,
+    const std::string &, const std::string &, StringMap &,
+    const URI::QueryString &);
+template void OAuth::sign<URI::QueryString>(const URI &, Method, const std::string &,
+    const std::string &, const std::string &, URI::QueryString &,
+    const URI::QueryString &);
 
 OAuthBroker::OAuthBroker(RequestBroker::ptr parent,
     boost::function<std::pair<OAuth::Settings, std::string>

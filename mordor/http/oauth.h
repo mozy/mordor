@@ -32,6 +32,15 @@ public:
     void authorize(Request &nextRequest,
         const std::string &signatureMethod, const std::string &realm);
 
+    template <class T>
+    static void nonceAndTimestamp(T &oauthParameters);
+
+    template <class T>
+    static void sign(const URI &uri, Method method,
+        const std::string &signatureMethod, const std::string &clientSecret,
+        const std::string &tokenSecret, T &oauthParameters,
+        const URI::QueryString &postParameters = URI::QueryString());
+
     // For testing use only
     void selfNonce(boost::function<std::pair<unsigned long long, std::string> ()>
         dg) { m_nonceDg = dg; }
@@ -41,9 +50,8 @@ private:
     void getAccessToken(const std::string &verifier);
     URI::QueryString signRequest(const URI &uri, Method method,
         const std::string &signatureMethod);
-    void nonceAndTimestamp(URI::QueryString &parameters);
-    void sign(const URI &uri, Method method, const std::string &signatureMethod,
-        URI::QueryString &params);
+    void nonceAndTimestampInternal(URI::QueryString &params);
+
 private:
     RequestBroker::ptr m_requestBroker;
     boost::function<std::pair<unsigned long long, std::string> ()> m_nonceDg;
