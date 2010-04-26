@@ -291,6 +291,8 @@ split(const std::string &str, char delim, size_t max)
 {
     MORDOR_ASSERT(max > 1);
     std::vector<std::string> result;
+    if (str.empty())
+        return result;
 
     size_t last = 0;
     size_t pos = str.find(delim);
@@ -310,6 +312,8 @@ split(const std::string &str, const char *delims, size_t max)
 {
     MORDOR_ASSERT(max > 1);
     std::vector<std::string> result;
+    if (str.empty())
+        return result;
 
     size_t last = 0;
     size_t pos = str.find_first_of(delims);
