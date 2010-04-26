@@ -805,12 +805,12 @@ URI::QueryString &
 URI::QueryString::operator =(const std::string &str)
 {
     clear();
-    if (str.empty())
-        return *this;
     std::vector<std::string> pairs = split(str, "&;");
     for (std::vector<std::string>::iterator it = pairs.begin();
         it != pairs.end();
         ++it) {
+        if (it->empty())
+            continue;
         std::vector<std::string> keyValue = split(*it, '=', 2);
         insert(value_type(unescape(keyValue[0], true), keyValue.size() == 2 ? unescape(keyValue[1], true) : ""));
     }
