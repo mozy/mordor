@@ -805,6 +805,8 @@ URI::QueryString &
 URI::QueryString::operator =(const std::string &str)
 {
     clear();
+    if (str.empty())
+        return *this;
     std::vector<std::string> pairs = split(str, "&;");
     for (std::vector<std::string>::iterator it = pairs.begin();
         it != pairs.end();
