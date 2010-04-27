@@ -8,6 +8,7 @@
 #include "assert.h"
 #include "mordor/streams/buffer.h"
 #include "mordor/string.h"
+#include "ragel.h"
 #include "predef.h"
 
 namespace Mordor {
@@ -131,6 +132,24 @@ struct URI
 
     class QueryString : public std::multimap<std::string, std::string, caseinsensitiveless>
     {
+    private:
+        class Parser : public RagelParser
+        {
+        public:
+            Parser(QueryString &qs);
+
+            void init();
+            bool complete() const { return false; }
+            bool final() const;
+            bool error() const;
+
+        protected:
+            void exec();
+
+        private:
+            QueryString &m_qs;
+            QueryString::iterator m_iterator;
+        };
     public:
         QueryString() {}
         QueryString(const std::string &str)
@@ -138,9 +157,18 @@ struct URI
             *this = str;
         }
 
-        QueryString &operator =(const std::string &str);
-
         std::string toString() const;
+
+        template <class T>
+        QueryString &operator =(T &t)
+        {
+            clear();
+            Parser parser(*this);
+            parser.run(t);
+            if (!parser.final() || parser.error())
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("Invalid QueryString"));
+            return *this;
+        }
     };
 
     std::string query() const;

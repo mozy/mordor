@@ -85,7 +85,6 @@ std::string unquote(const std::string &string)
     machine json_parser;
 
     action mark { mark = fpc;}
-    action done { fbreak; }
     prepush {
         prepush();
     }
