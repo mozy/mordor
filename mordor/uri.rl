@@ -801,20 +801,69 @@ URI::operator==(const URI &rhs) const
     return cmp(rhs) == 0;
 }
 
-URI::QueryString &
-URI::QueryString::operator =(const std::string &str)
-{
-    clear();
-    std::vector<std::string> pairs = split(str, "&;");
-    for (std::vector<std::string>::iterator it = pairs.begin();
-        it != pairs.end();
-        ++it) {
-        if (it->empty())
-            continue;
-        std::vector<std::string> keyValue = split(*it, '=', 2);
-        insert(value_type(unescape(keyValue[0], true), keyValue.size() == 2 ? unescape(keyValue[1], true) : ""));
+%%{
+    machine querystring_parser;
+
+    action mark { mark = fpc; }
+    action saveKey {
+        m_iterator = m_qs.insert(std::make_pair(
+            unescape(std::string(mark, fpc - mark), true), std::string()));
+        mark = NULL;
     }
-    return *this;
+    action saveValue {
+        MORDOR_ASSERT(m_iterator != m_qs.end());
+        m_iterator->second = unescape(std::string(mark, fpc - mark), true);
+        m_iterator = m_qs.end();
+        mark = NULL;
+    }
+
+    sub_delims = "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";";
+    unreserved = alpha | digit | "-" | "." | "_" | "~";
+    pct_encoded = "%" xdigit xdigit;
+    pchar = unreserved | pct_encoded | sub_delims | ":" | "@";
+    querychar = (pchar | "/" | "?") -- '&' -- ';';
+    key = querychar+;
+    value = (querychar | '=')+;
+    keyValue = key >mark %saveKey ('=' value >mark %saveValue)?;
+    main := keyValue? ( ('&' | ';') keyValue? )*;
+    write data;
+}%%
+
+URI::QueryString::Parser::Parser(QueryString &qs)
+: m_qs(qs),
+  m_iterator(m_qs.end())
+{}
+
+void
+URI::QueryString::Parser::init()
+{
+    RagelParser::init();
+    %% write init;
+}
+
+void
+URI::QueryString::Parser::exec()
+{
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+        %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
+}
+
+bool
+URI::QueryString::Parser::final() const
+{
+    return cs >= querystring_parser_first_final;
+}
+
+bool
+URI::QueryString::Parser::error() const
+{
+    return cs == querystring_parser_error;
 }
 
 std::string

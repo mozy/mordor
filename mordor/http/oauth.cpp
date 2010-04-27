@@ -4,9 +4,6 @@
 
 #include "oauth.h"
 
-#include "mordor/streams/memory.h"
-#include "mordor/streams/transfer.h"
-
 namespace Mordor {
 namespace HTTP {
 
@@ -80,12 +77,7 @@ OAuth::getRequestToken()
     if (request->response().status.status != OK)
         MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
 
-    MemoryStream responseStream;
-    transferStream(request->responseStream(), responseStream);
-    std::string response;
-    response.resize(responseStream.buffer().readAvailable());
-    responseStream.buffer().copyOut(&response[0], responseStream.buffer().readAvailable());
-    m_params = response;
+    m_params = request->responseStream();
     URI::QueryString::iterator it = m_params.find("oauth_token");
     if (it == m_params.end())
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token in response",
@@ -149,12 +141,7 @@ OAuth::getAccessToken(const std::string &verifier)
     if (request->response().status.status != OK)
         MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
 
-    MemoryStream responseStream;
-    transferStream(request->responseStream(), responseStream);
-    std::string response;
-    response.resize(responseStream.buffer().readAvailable());
-    responseStream.buffer().copyOut(&response[0], responseStream.buffer().readAvailable());
-    m_params = response;
+    m_params = request->responseStream();
     URI::QueryString::iterator it = m_params.find("oauth_token");
     if (it == m_params.end())
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token in response",
