@@ -10,7 +10,6 @@
 #include "assert.h"
 #include "mordor/streams/buffer.h"
 #include "mordor/string.h"
-#include "ragel.h"
 #include "predef.h"
 
 namespace Mordor {
