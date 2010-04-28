@@ -39,48 +39,41 @@
     </StringListProperty>
     <BoolProperty
       Name="NoDuplicates"
-      HelpContext="0"
       DisplayName="No Duplicate Removal"
       Description="Do not remove duplicates from action lists     (-d)"
       Switch="-d" />
     <BoolProperty
       Name="XML"
       Category="Visualization"
-      HelpContext="0"
       DisplayName="Emit XML"
       Description="Run the frontend only: emit XML intermediate format     (-x)"
       Switch="-x" />
     <BoolProperty
       Name="Graphviz"
       Category="Visualization"
-      HelpContext="0"
       DisplayName="Generate Graphviz"
       Description="Generate a dot file for Graphviz     (-V)"
       Switch="-V" />
     <BoolProperty
       Name="PrintableCharacters"
       Category="Visualization"
-      HelpContext="0"
       DisplayName="Display printable characters"
       Description="Display printable characters on labels     (-p)"
       Switch="-p" />
     <BoolProperty
       Name="InhibitLineDirectives"
       Category="Code Generation"
-      HelpContext="0"
       DisplayName="Inhibit line directives"
       Description="Inhibit the writing of #line directives (C/D/C#)    (-L)"
       Switch="-L" />
     <StringProperty
       Name="OutputFileName"
       Category="Output File"
-      HelpContext="0"
       DisplayName="Output File Name"
       Description="Write output to &lt;file&gt;     (-o &lt;file&gt;)"
       Switch="-o &quot;[value]&quot;" />
     <StringListProperty
       Name="IncludePaths"
-      HelpContext="0"
       DisplayName="Include Paths"
       Description="Add &lt;dir&gt; to the list of directories to search for included and imported files     (-I [path])"
       Separator=";"
@@ -88,20 +81,17 @@
     <StringProperty
       Name="Spec"
       Category="Visualization"
-      HelpContext="0"
       DisplayName="Spec"
       Description="FSM specification to output (for graphviz output)    (-S &lt;spec&gt;)"
       Switch="-S [value]" />
     <StringProperty
       Name="Machine"
       Category="Visualization"
-      HelpContext="0"
       DisplayName="Machine"
       Description="Machine definition/instantiation to output (for graphviz output)    (-M &lt;spec&gt;)"
       Switch="-M [value]" />
     <EnumProperty
       Name="Minimization"
-      HelpContext="0"
       DisplayName="FSM Minimization"
       Description="Specifies when to perform fsm minimization    (-n, -m, -l, e)">
       <EnumValue
@@ -124,7 +114,6 @@
     <EnumProperty
       Name="Host"
       Category="Code Generation"
-      HelpContext="0"
       DisplayName="Host Language">
       <EnumValue
         Name="0"
@@ -150,7 +139,6 @@
     <EnumProperty
       Name="CodeStyle"
       Category="Code Generation"
-      HelpContext="0"
       DisplayName="code style">
       <EnumValue
         Name="0"
@@ -188,7 +176,6 @@
     <IntProperty
       Name="NWaySplit"
       Category="Code Generation"
-      HelpContext="0"
       DisplayName="N"
       Description="N for N-Way Split really fast goto driven FSM" />
     <StringProperty

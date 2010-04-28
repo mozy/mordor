@@ -16,8 +16,7 @@
       <Graphviz>false</Graphviz>
       <PrintableCharacters>false</PrintableCharacters>
       <InhibitLineDirectives>false</InhibitLineDirectives>
-      <OutputFileName>%(Filename).cpp</OutputFileName>
-      <NWaySplit>0</NWaySplit>
+      <OutputFileName>$(IntDir)%(Filename).cpp</OutputFileName>
       <Minimization>0</Minimization>
       <Host>0</Host>
       <CodeStyle>0</CodeStyle>

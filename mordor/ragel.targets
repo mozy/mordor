@@ -35,6 +35,11 @@
         <Source>@(Ragel, '|')</Source>
       </Ragel_tlog>
     </ItemGroup>
+    <ItemGroup>
+      <ClCompile
+        Include="%(Ragel.Outputs)"
+        Condition="'%(Ragel.Outputs)' != '' and '%(Ragel.ExcludedFromBuild)' != 'true'" />
+    </ItemGroup>
     <Message
       Importance="High"
       Text="%(Ragel.ExecutionDescription)" />

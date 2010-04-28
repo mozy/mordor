@@ -18,6 +18,9 @@
     <ClCompile Include="buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="zlib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="buffered_stream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -103,9 +106,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="xml.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

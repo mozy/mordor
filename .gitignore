@@ -4,6 +4,7 @@ x64
 *.user
 *.ncb
 *.sdf
+*.opensdf
 *.o
 *.a
 *.d
