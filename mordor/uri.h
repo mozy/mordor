@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/shared_ptr.hpp>
+
 #include "assert.h"
 #include "mordor/streams/buffer.h"
 #include "mordor/string.h"
@@ -12,6 +14,8 @@
 #include "predef.h"
 
 namespace Mordor {
+
+class Stream;
 
 namespace HTTP
 {
@@ -132,24 +136,6 @@ struct URI
 
     class QueryString : public std::multimap<std::string, std::string, caseinsensitiveless>
     {
-    private:
-        class Parser : public RagelParser
-        {
-        public:
-            Parser(QueryString &qs);
-
-            void init();
-            bool complete() const { return false; }
-            bool final() const;
-            bool error() const;
-
-        protected:
-            void exec();
-
-        private:
-            QueryString &m_qs;
-            QueryString::iterator m_iterator;
-        };
     public:
         QueryString() {}
         QueryString(const std::string &str)
@@ -159,16 +145,9 @@ struct URI
 
         std::string toString() const;
 
-        template <class T>
-        QueryString &operator =(T &t)
-        {
-            clear();
-            Parser parser(*this);
-            parser.run(t);
-            if (!parser.final() || parser.error())
-                MORDOR_THROW_EXCEPTION(std::invalid_argument("Invalid QueryString"));
-            return *this;
-        }
+        QueryString &operator =(const std::string &string);
+        QueryString &operator =(Stream &stream);
+        QueryString &operator =(boost::shared_ptr<Stream> stream) { return *this = *stream; }
     };
 
     std::string query() const;
