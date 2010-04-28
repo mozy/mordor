@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PropertyPageSchema
+      Include="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml" />
+    <AvailableItemName
+      Include="Ragel">
+      <Targets>_Ragel</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+  <UsingTask
+    TaskName="Ragel"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  <Target
+    Name="_Ragel"
+    BeforeTargets="$(RagelBeforeTargets)"
+    AfterTargets="$(RagelAfterTargets)"
+    Condition="'@(Ragel)' != ''"
+    DependsOnTargets="$(RagelDependsOn);ComputeRagelOutput"
+    Outputs="@(Ragel-&gt;Metadata('Outputs')-&gt;Distinct())"
+    Inputs="@(Ragel);%(Ragel.AdditionalDependencies);$(MSBuildProjectFile)">
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <Ragel
+        Remove="@(Ragel)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <Ragel_tlog
+        Include="%(Ragel.Outputs)"
+        Condition="'%(Ragel.Outputs)' != '' and '%(Ragel.ExcludedFromBuild)' != 'true'">
+        <Source>@(Ragel, '|')</Source>
+      </Ragel_tlog>
+    </ItemGroup>
+    <Message
+      Importance="High"
+      Text="%(Ragel.ExecutionDescription)" />
+    <WriteLinesToFile
+      Condition="'@(Ragel_tlog)' != '' and '%(Ragel_tlog.ExcludedFromBuild)' != 'true'"
+      File="$(IntDir)$(ProjectName).write.1.tlog"
+      Lines="^%(Ragel_tlog.Source);@(Ragel_tlog-&gt;'%(Fullpath)')" />
+    <Ragel
+      Condition="'@(Ragel)' != '' and '%(Ragel.ExcludedFromBuild)' != 'true'"
+      CommandLineTemplate="%(Ragel.CommandLineTemplate)"
+      NoDuplicates="%(Ragel.NoDuplicates)"
+      XML="%(Ragel.XML)"
+      Graphviz="%(Ragel.Graphviz)"
+      PrintableCharacters="%(Ragel.PrintableCharacters)"
+      InhibitLineDirectives="%(Ragel.InhibitLineDirectives)"
+      OutputFileName="%(Ragel.OutputFileName)"
+      IncludePaths="%(Ragel.IncludePaths)"
+      Spec="%(Ragel.Spec)"
+      Machine="%(Ragel.Machine)"
+      NWaySplit="%(Ragel.NWaySplit)"
+      Minimization="%(Ragel.Minimization)"
+      Host="%(Ragel.Host)"
+      CodeStyle="%(Ragel.CodeStyle)"
+      AdditionalOptions="%(Ragel.AdditionalOptions)"
+      Inputs="@(Ragel)" />
+  </Target>
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+            $(ComputeLinkInputsTargets);
+            ComputeRagelOutput;
+          </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+            $(ComputeLibInputsTargets);
+            ComputeRagelOutput;
+          </ComputeLibInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeRagelOutput"
+    Condition="'@(Ragel)' != ''">
+    <ItemGroup>
+      <RagelDirsToMake
+        Condition="'@(Ragel)' != '' and '%(Ragel.ExcludedFromBuild)' != 'true'"
+        Include="%(Ragel.Outputs)" />
+      <Link
+        Include="%(RagelDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <Lib
+        Include="%(RagelDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <ImpLib
+        Include="%(RagelDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+    </ItemGroup>
+    <MakeDir
+      Directories="@(RagelDirsToMake-&gt;'%(RootDir)%(Directory)')" />
+  </Target>
+</Project>

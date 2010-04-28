@@ -3,6 +3,7 @@ x64
 *.suo
 *.user
 *.ncb
+*.sdf
 *.o
 *.a
 *.d

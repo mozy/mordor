@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup
+    Condition="'$(RagelBeforeTargets)' == '' and '$(RagelAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <RagelBeforeTargets>Midl</RagelBeforeTargets>
+    <RagelAfterTargets>CustomBuild</RagelAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RagelDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(RagelDependsOn)</RagelDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Ragel>
+      <NoDuplicates>false</NoDuplicates>
+      <XML>false</XML>
+      <Graphviz>false</Graphviz>
+      <PrintableCharacters>false</PrintableCharacters>
+      <InhibitLineDirectives>false</InhibitLineDirectives>
+      <OutputFileName>%(Filename).cpp</OutputFileName>
+      <NWaySplit>0</NWaySplit>
+      <Minimization>0</Minimization>
+      <Host>0</Host>
+      <CodeStyle>0</CodeStyle>
+      <CommandLineTemplate>ragel.exe [AllOptions] [AdditionalOptions] --error-format=msvc [inputs]</CommandLineTemplate>
+      <Outputs>%(OutputFileName)</Outputs>
+      <ExecutionDescription>Generating finite state machines: [inputs]</ExecutionDescription>
+    </Ragel>
+  </ItemDefinitionGroup>
+</Project>
