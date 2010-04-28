@@ -829,21 +829,23 @@ URI::operator==(const URI &rhs) const
     write data;
 }%%
 
-URI::QueryString::Parser::Parser(QueryString &qs)
-: m_qs(qs),
-  m_iterator(m_qs.end())
-{}
-
-void
-URI::QueryString::Parser::init()
+class QueryStringParser : public RagelParser
 {
-    RagelParser::init();
-    %% write init;
-}
+public:
+    QueryStringParser(URI::QueryString &qs)
+    : m_qs(qs),
+      m_iterator(m_qs.end())
+    {}
 
-void
-URI::QueryString::Parser::exec()
-{
+
+    void init()
+    {
+        RagelParser::init();
+        %% write init;
+    }
+
+    void exec()
+    {
 #ifdef MSVC
 #pragma warning(push)
 #pragma warning(disable : 4244)
@@ -852,18 +854,44 @@ URI::QueryString::Parser::exec()
 #ifdef MSVC
 #pragma warning(pop)
 #endif
+    }
+
+    bool complete() const { return false; }
+    bool final() const
+    {
+        return cs >= querystring_parser_first_final;
+    }
+
+    bool error() const
+    {
+        return cs == querystring_parser_error;
+    }
+
+private:
+    URI::QueryString &m_qs;
+    URI::QueryString::iterator m_iterator;
+};
+
+URI::QueryString &
+URI::QueryString::operator =(const std::string &string)
+{
+    clear();
+    QueryStringParser parser(*this);
+    parser.run(string);
+    if (!parser.final() || parser.error())
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("Invalid QueryString"));
+    return *this;
 }
 
-bool
-URI::QueryString::Parser::final() const
+URI::QueryString &
+URI::QueryString::operator =(Stream &stream)
 {
-    return cs >= querystring_parser_first_final;
-}
-
-bool
-URI::QueryString::Parser::error() const
-{
-    return cs == querystring_parser_error;
+    clear();
+    QueryStringParser parser(*this);
+    parser.run(stream);
+    if (!parser.final() || parser.error())
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("Invalid QueryString"));
+    return *this;
 }
 
 std::string
