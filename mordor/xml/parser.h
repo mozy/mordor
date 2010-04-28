@@ -11,6 +11,8 @@ namespace Mordor {
 class XMLParserEventHandler
 {
 public:
+    virtual ~XMLParserEventHandler() {}
+
     virtual void onStartTag(const std::string &tag) {}
     virtual void onEndTag(const std::string &tag) {}
     virtual void onEmptyTag() {}
