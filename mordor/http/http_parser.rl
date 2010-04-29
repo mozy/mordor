@@ -143,6 +143,8 @@ unquote(const std::string &str)
     action mark2 { mark2 = fpc; }
     action clearmark2 { mark2 = NULL; }
     action done { fbreak; }
+    prepush { prepush(); }
+    postpop { postpop(); }
 
     # basic character types
     OCTET = any;
@@ -169,8 +171,8 @@ unquote(const std::string &str)
     token = (CHAR -- (separators | CTL))+;
     quoted_pair = "\\" CHAR;
     ctext = TEXT -- ("(" | ")");
-    # TODO: nested comments
-    comment = "(" ( ctext | quoted_pair )* ")";
+    comment = "(" @{fcall parse_comment;};
+    parse_comment := (ctext | quoted_pair | '(' @{fcall parse_comment;} )* ")" @{fret;};
     qdtext = TEXT -- "\"";
     quoted_string = "\"" ( qdtext | quoted_pair )* "\"";
 

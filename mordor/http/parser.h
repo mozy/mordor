@@ -8,7 +8,7 @@
 namespace Mordor {
 namespace HTTP {
 
-class Parser : public RagelParser
+class Parser : public RagelParserWithStack
 {
 public:
     void init();
@@ -93,7 +93,7 @@ private:
     EntityHeaders *m_entity;
 };
 
-class ListParser : public RagelParser
+class ListParser : public RagelParserWithStack
 {
 public:
     ListParser(StringSet &stringSet);

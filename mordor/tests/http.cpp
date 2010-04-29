@@ -380,6 +380,25 @@ MORDOR_UNITTEST(HTTP, serverHeader)
         "HTTP/1.0 200 OK\r\n"
         "Server: Apache/2.2.3 (Debian) mod_fastcgi/2.4.2 mod_python/3.2.10 Python/2.4.4 PHP/4.4.4-8+etch6\r\n"
         "\r\n");
+
+    response = Response();
+    parser.run("HTTP/1.0 200 OK\r\n"
+        "Server: (Some (nested) (comments ((are)) crazy))\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+    MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 0));
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, OK);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.reason, "OK");
+    MORDOR_TEST_ASSERT_EQUAL(response.response.server.size(), 1u);
+    it = response.response.server.begin();
+    MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(*it), "Some (nested) (comments ((are)) crazy)");
+    os.str("");
+    os << response;
+    MORDOR_TEST_ASSERT_EQUAL(os.str(),
+        "HTTP/1.0 200 OK\r\n"
+        "Server: (Some (nested) (comments ((are)) crazy))\r\n"
+        "\r\n");
 }
 
 MORDOR_UNITTEST(HTTP, teHeader)
