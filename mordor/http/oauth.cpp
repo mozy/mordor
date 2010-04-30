@@ -6,56 +6,7 @@
 
 namespace Mordor {
 namespace HTTP {
-
-OAuth::OAuth(RequestBroker::ptr requestBroker, const Settings &settings,
-    boost::function<void (const std::string &, const std::string &)> gotTokenDg)
-: m_requestBroker(requestBroker),
-  m_gotTokenDg(gotTokenDg),
-  m_settings(settings)
-
-{
-    MORDOR_ASSERT(m_settings.authDg);
-    MORDOR_ASSERT(m_settings.requestTokenUri.isDefined());
-    MORDOR_ASSERT(m_settings.accessTokenUri.isDefined());
-    MORDOR_ASSERT(!m_settings.requestTokenSignatureMethod.empty());
-    MORDOR_ASSERT(!m_settings.accessTokenSignatureMethod.empty());
-    MORDOR_ASSERT(!m_settings.consumerKey.empty());
-    MORDOR_ASSERT(!m_settings.consumerSecret.empty());
-}
-
-void
-OAuth::clearToken()
-{
-    m_params.clear();
-}
-
-void
-OAuth::setToken(const std::string &token, const std::string &tokenSecret)
-{
-    m_params.clear();
-    m_params.insert(std::make_pair(std::string("oauth_token"), token));
-    m_params.insert(std::make_pair(std::string("oauth_token_secret"),
-        tokenSecret));
-}
-
-void
-OAuth::authorize(Request &nextRequest,
-                 const std::string &signatureMethod,
-                 const std::string &realm)
-{
-    if (m_params.find("oauth_token_secret") == m_params.end() ||
-        m_params.find("oauth_token") == m_params.end()) {
-        getRequestToken();
-        getAccessToken(m_settings.authDg(m_params));
-    }
-    AuthParams &authorization = nextRequest.request.authorization;
-    authorization.scheme = "OAuth";
-    URI::QueryString params = signRequest(nextRequest.requestLine.uri,
-        nextRequest.requestLine.method, signatureMethod);
-    authorization.parameters.clear();
-    authorization.parameters.insert(params.begin(), params.end());
-    authorization.parameters["realm"] = realm;
-}
+namespace OAuth {
 
 static void writeBody(ClientRequest::ptr request, const std::string &body)
 {
@@ -63,178 +14,171 @@ static void writeBody(ClientRequest::ptr request, const std::string &body)
     request->requestStream()->close();
 }
 
-void
-OAuth::getRequestToken()
+static std::pair<std::string, std::string>
+extractCredentials(ClientRequest::ptr request)
 {
-    MORDOR_ASSERT(m_settings.requestTokenMethod == GET || m_settings.requestTokenMethod == POST);
-    URI::QueryString qs;
-
-    qs.insert(std::make_pair("oauth_consumer_key", m_settings.consumerKey));
-    qs.insert(std::make_pair("oauth_version", "1.0"));
-    if (!m_settings.callbackUri.isDefined())
-        qs.insert(std::make_pair("oauth_callback", "oob"));
-    else
-        qs.insert(std::make_pair("oauth_callback", m_settings.callbackUri.toString()));
-    nonceAndTimestampInternal(qs);
-    sign(m_settings.requestTokenUri, m_settings.requestTokenMethod,
-        m_settings.requestTokenSignatureMethod, m_settings.consumerSecret,
-        std::string(), qs);
-
-    Request requestHeaders;
-    requestHeaders.requestLine.method = m_settings.requestTokenMethod;
-    requestHeaders.requestLine.uri = m_settings.requestTokenUri;
-    std::string body;
-    if (m_settings.requestTokenMethod == GET) {
-        // Add parameters that are part of the request token URI
-        URI::QueryString qsFromUri = m_settings.requestTokenUri.queryString();
-        qs.insert(qsFromUri.begin(), qsFromUri.end());
-        requestHeaders.requestLine.uri.query(qs);
-    } else {
-        body = qs.toString();
-        requestHeaders.entity.contentType.type = "application";
-        requestHeaders.entity.contentType.subtype = "x-www-form-urlencoded";
-        requestHeaders.entity.contentLength = body.size();
-    }
-
-    boost::function<void (ClientRequest::ptr)> bodyDg;
-    if (!body.empty())
-        bodyDg = boost::bind(&writeBody, _1, boost::cref(body));
-    ClientRequest::ptr request;
-    try {
-        request = m_requestBroker->request(requestHeaders, false, bodyDg);
-        m_settings.requestTokenUri = requestHeaders.requestLine.uri;
-    } catch (...) {
-        m_settings.requestTokenUri = requestHeaders.requestLine.uri;
-        throw;
-    }
-    if (request->response().status.status != OK)
-        MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
-
-    m_params = request->responseStream();
-    URI::QueryString::iterator it = m_params.find("oauth_token");
-    if (it == m_params.end())
+    URI::QueryString responseParams = request->responseStream();
+    std::pair<std::string, std::string> result;
+    std::pair<URI::QueryString::iterator, URI::QueryString::iterator> its =
+        responseParams.equal_range("oauth_token");
+    if (its.first == responseParams.end() || its.first->second.empty())
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token in response",
             request));
-    ++it;
-    if (it != m_params.end() &&
-        stricmp(it->first.c_str(), "oauth_token") == 0)
+    result.first = its.first->second;
+    ++its.first;
+    if (its.first != its.second)
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token in response",
             request));
-    it = m_params.find("oauth_token_secret");
-    if (it == m_params.end())
+    its = responseParams.equal_range("oauth_token_secret");
+    if (its.first == responseParams.end() || its.first->second.empty())
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token_secret in response",
             request));
-    ++it;
-    if (it != m_params.end() &&
-        stricmp(it->first.c_str(), "oauth_token_secret") == 0)
+    result.second = its.first->second;
+    ++its.first;
+    if (its.first != its.second)
         MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token_secret in response",
             request));
-}
-
-void
-OAuth::getAccessToken(const std::string &verifier)
-{
-    MORDOR_ASSERT(m_settings.accessTokenMethod == GET ||
-        m_settings.accessTokenMethod == POST);
-    URI::QueryString qs;
-
-    qs.insert(std::make_pair("oauth_consumer_key", m_settings.consumerKey));
-    qs.insert(*m_params.find("oauth_token"));
-    qs.insert(std::make_pair("oauth_verifier", verifier));
-    qs.insert(std::make_pair("oauth_version", "1.0"));
-    nonceAndTimestampInternal(qs);
-    sign(m_settings.accessTokenUri, m_settings.accessTokenMethod,
-        m_settings.requestTokenSignatureMethod, m_settings.consumerSecret,
-        m_params.find("oauth_token_secret")->second, qs);
-
-    Request requestHeaders;
-    requestHeaders.requestLine.method = m_settings.accessTokenMethod;
-    requestHeaders.requestLine.uri = m_settings.accessTokenUri;
-    std::string body;
-    if (m_settings.accessTokenMethod == GET) {
-        // Add parameters that are part of the request token URI
-        URI::QueryString qsFromUri = m_settings.accessTokenUri.queryString();
-        qs.insert(qsFromUri.begin(), qsFromUri.end());
-        requestHeaders.requestLine.uri.query(qs);
-    } else {
-        body = qs.toString();
-        requestHeaders.entity.contentType.type = "application";
-        requestHeaders.entity.contentType.subtype = "x-www-form-urlencoded";
-        requestHeaders.entity.contentLength = body.size();
-    }
-
-    boost::function<void (ClientRequest::ptr)> bodyDg;
-    if (!body.empty())
-        bodyDg = boost::bind(&writeBody, _1, boost::cref(body));
-    ClientRequest::ptr request;
-    try {
-        request = m_requestBroker->request(requestHeaders, false, bodyDg);
-        m_settings.accessTokenUri = requestHeaders.requestLine.uri;
-    } catch (...) {
-        m_settings.accessTokenUri = requestHeaders.requestLine.uri;
-        throw;
-    }
-    if (request->response().status.status != OK)
-        MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
-
-    m_params = request->responseStream();
-    URI::QueryString::iterator it = m_params.find("oauth_token");
-    if (it == m_params.end())
-        MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token in response",
-            request));
-    std::string token = it->second;
-    ++it;
-    if (it != m_params.end() &&
-        stricmp(it->first.c_str(), "oauth_token") == 0)
-        MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token in response",
-            request));
-    it = m_params.find("oauth_token_secret");
-    if (it == m_params.end())
-        MORDOR_THROW_EXCEPTION(InvalidResponseException("Missing oauth_token_secret in response",
-            request));
-    std::string secret = it->second;
-    ++it;
-    if (it != m_params.end() &&
-        stricmp(it->first.c_str(), "oauth_token_secret") == 0)
-        MORDOR_THROW_EXCEPTION(InvalidResponseException("Duplicate oauth_token_secret in response",
-            request));
-    if (m_gotTokenDg)
-        m_gotTokenDg(token, secret);
-}
-
-URI::QueryString
-OAuth::signRequest(const URI &uri, Method method,
-                   const std::string &signatureMethod)
-{
-    URI::QueryString result;
-    result.insert(std::make_pair("oauth_consumer_key", m_settings.consumerKey));
-    result.insert(*m_params.find("oauth_token"));
-    result.insert(std::make_pair("oauth_version", "1.0"));
-    nonceAndTimestampInternal(result);
-    std::string tokenSecret = m_params.find("oauth_token_secret")->second;
-    sign(uri, method, signatureMethod, m_settings.consumerSecret, tokenSecret,
-        result);
     return result;
 }
 
-void
-OAuth::nonceAndTimestampInternal(URI::QueryString &params)
+std::pair<std::string, std::string>
+getTemporaryCredentials(RequestBroker::ptr requestBroker, const URI &uri,
+    Method method, const std::string &signatureMethod,
+    const std::pair<std::string, std::string> &clientCredentials,
+    const URI &callbackUri)
 {
-    if (m_nonceDg) {
-        std::ostringstream os;
-        std::pair<unsigned long long, std::string> timestampAndNonce =
-            m_nonceDg();
-        os << timestampAndNonce.first;
-        params.insert(std::make_pair("oauth_timestamp", os.str()));
-        params.insert(std::make_pair("oauth_nonce", timestampAndNonce.second));
+    MORDOR_ASSERT(requestBroker);
+    MORDOR_ASSERT(uri.isDefined());
+    MORDOR_ASSERT(method == GET || method == POST);
+    MORDOR_ASSERT(signatureMethod == "PLAINTEXT" || signatureMethod == "HMAC-SHA1");
+    MORDOR_ASSERT(!clientCredentials.first.empty());
+    MORDOR_ASSERT(!clientCredentials.second.empty());
+    URI::QueryString oauthParameters;
+
+    oauthParameters.insert(std::make_pair("oauth_consumer_key", clientCredentials.first));
+    oauthParameters.insert(std::make_pair("oauth_version", "1.0"));
+    if (!callbackUri.isDefined())
+        oauthParameters.insert(std::make_pair("oauth_callback", "oob"));
+    else
+        oauthParameters.insert(std::make_pair("oauth_callback", callbackUri.toString()));
+    nonceAndTimestamp(oauthParameters);
+    sign(uri, method, signatureMethod, clientCredentials.second, std::string(),
+        oauthParameters);
+
+    Request requestHeaders;
+    requestHeaders.requestLine.method = method;
+    requestHeaders.requestLine.uri = uri;
+    std::string body;
+    if (method == GET) {
+        // Add parameters that are part of the request token URI
+        URI::QueryString qsFromUri = uri.queryString();
+        oauthParameters.insert(qsFromUri.begin(), qsFromUri.end());
+        requestHeaders.requestLine.uri.query(oauthParameters);
     } else {
-        nonceAndTimestamp(params);
+        body = oauthParameters.toString();
+        requestHeaders.entity.contentType.type = "application";
+        requestHeaders.entity.contentType.subtype = "x-www-form-urlencoded";
+        requestHeaders.entity.contentLength = body.size();
     }
+
+    boost::function<void (ClientRequest::ptr)> bodyDg;
+    if (!body.empty())
+        bodyDg = boost::bind(&writeBody, _1, boost::cref(body));
+    ClientRequest::ptr request;
+    try {
+        request = requestBroker->request(requestHeaders, false, bodyDg);
+    } catch (...) {
+        throw;
+    }
+    if (request->response().status.status != OK)
+        MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
+
+    return extractCredentials(request);
+}
+
+std::pair<std::string, std::string>
+getTokenCredentials(RequestBroker::ptr requestBroker, const URI &uri,
+    Method method, const std::string signatureMethod,
+    const std::pair<std::string, std::string> &clientCredentials,
+    const std::pair<std::string, std::string> &temporaryCredentials,
+    const std::string &verifier)
+{
+    MORDOR_ASSERT(requestBroker);
+    MORDOR_ASSERT(uri.isDefined());
+    MORDOR_ASSERT(method == GET || method == POST);
+    MORDOR_ASSERT(signatureMethod == "PLAINTEXT" || signatureMethod == "HMAC-SHA1");
+    MORDOR_ASSERT(!clientCredentials.first.empty());
+    MORDOR_ASSERT(!clientCredentials.second.empty());
+    MORDOR_ASSERT(!temporaryCredentials.first.empty());
+    MORDOR_ASSERT(!temporaryCredentials.second.empty());
+    URI::QueryString oauthParameters;
+
+    oauthParameters.insert(std::make_pair("oauth_consumer_key", clientCredentials.first));
+    oauthParameters.insert(std::make_pair("oauth_token", temporaryCredentials.first));
+    oauthParameters.insert(std::make_pair("oauth_verifier", verifier));
+    oauthParameters.insert(std::make_pair("oauth_version", "1.0"));
+    nonceAndTimestamp(oauthParameters);
+    sign(uri, method, signatureMethod, clientCredentials.second,
+        temporaryCredentials.second, oauthParameters);
+
+    Request requestHeaders;
+    requestHeaders.requestLine.method = method;
+    requestHeaders.requestLine.uri = uri;
+    std::string body;
+    if (method == GET) {
+        // Add parameters that are part of the request token URI
+        URI::QueryString qsFromUri = uri.queryString();
+        oauthParameters.insert(qsFromUri.begin(), qsFromUri.end());
+        requestHeaders.requestLine.uri.query(oauthParameters);
+    } else {
+        body = oauthParameters.toString();
+        requestHeaders.entity.contentType.type = "application";
+        requestHeaders.entity.contentType.subtype = "x-www-form-urlencoded";
+        requestHeaders.entity.contentLength = body.size();
+    }
+
+    boost::function<void (ClientRequest::ptr)> bodyDg;
+    if (!body.empty())
+        bodyDg = boost::bind(&writeBody, _1, boost::cref(body));
+    ClientRequest::ptr request;
+    try {
+        request = requestBroker->request(requestHeaders, false, bodyDg);
+    } catch (...) {
+        throw;
+    }
+    if (request->response().status.status != OK)
+        MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
+
+    return extractCredentials(request);
+}
+
+void
+authorize(Request &nextRequest, const std::string &signatureMethod,
+    const std::pair<std::string, std::string> &clientCredentials,
+    const std::pair<std::string, std::string> &tokenCredentials,
+    const std::string &realm)
+{
+    MORDOR_ASSERT(signatureMethod == "PLAINTEXT" || signatureMethod == "HMAC-SHA1");
+    MORDOR_ASSERT(!clientCredentials.first.empty());
+    MORDOR_ASSERT(!clientCredentials.second.empty());
+    MORDOR_ASSERT(!tokenCredentials.first.empty());
+    MORDOR_ASSERT(!tokenCredentials.second.empty());
+
+    AuthParams &authorization = nextRequest.request.authorization;
+    authorization.scheme = "OAuth";
+    authorization.parameters["oauth_consumer_key"] = clientCredentials.first;
+    authorization.parameters["oauth_token"] = tokenCredentials.first;
+    authorization.parameters["oauth_version"] = "1.0";
+    nonceAndTimestamp(authorization.parameters);
+    sign(nextRequest.requestLine.uri, nextRequest.requestLine.method,
+        signatureMethod, clientCredentials.second, tokenCredentials.second,
+        authorization.parameters);
+    if (!realm.empty())
+        authorization.parameters["realm"] = realm;
 }
 
 template <class T>
-void
-OAuth::nonceAndTimestamp(T &oauthParameters)
+void nonceAndTimestamp(T &oauthParameters)
 {
     static boost::posix_time::ptime start(boost::gregorian::date(1970, 1, 1));
     static const char *allowedChars =
@@ -261,14 +205,14 @@ OAuth::nonceAndTimestamp(T &oauthParameters)
     oauthParameters.insert(std::make_pair("oauth_nonce", nonce));
 }
 
-template void OAuth::nonceAndTimestamp<StringMap>(StringMap &);
-template void OAuth::nonceAndTimestamp<URI::QueryString>(URI::QueryString &);
+template void nonceAndTimestamp<StringMap>(StringMap &);
+template void nonceAndTimestamp<URI::QueryString>(URI::QueryString &);
 
 template <class T>
 void
-OAuth::sign(const URI &uri, Method method, const std::string &signatureMethod,
-            const std::string &clientSecret, const std::string &tokenSecret,
-            T &oauthParameters, const URI::QueryString &postParameters)
+sign(const URI &uri, Method method, const std::string &signatureMethod,
+    const std::string &clientSecret, const std::string &tokenSecret,
+    T &oauthParameters, const URI::QueryString &postParameters)
 {
     MORDOR_ASSERT(oauthParameters.find("oauth_signature_method") == oauthParameters.end());
     oauthParameters.insert(std::make_pair("oauth_signature_method", signatureMethod));
@@ -331,90 +275,11 @@ OAuth::sign(const URI &uri, Method method, const std::string &signatureMethod,
     }
 }
 
-template void OAuth::sign<StringMap>(const URI &, Method, const std::string &,
+template void sign<StringMap>(const URI &, Method, const std::string &,
     const std::string &, const std::string &, StringMap &,
     const URI::QueryString &);
-template void OAuth::sign<URI::QueryString>(const URI &, Method, const std::string &,
+template void sign<URI::QueryString>(const URI &, Method, const std::string &,
     const std::string &, const std::string &, URI::QueryString &,
     const URI::QueryString &);
 
-OAuthBroker::OAuthBroker(RequestBroker::ptr parent,
-    boost::function<std::pair<OAuth::Settings, std::string>
-        (const URI &, const std::string &)> getSettingsDg,
-    boost::function<void (const std::string &, const std::string &)> gotTokenDg,
-    RequestBroker::ptr brokerForOAuthRequests)
-: RequestBrokerFilter(parent),
-  m_brokerForOAuthRequests(brokerForOAuthRequests),
-  m_getSettingsDg(getSettingsDg),
-  m_gotTokenDg(gotTokenDg)
-{
-    MORDOR_ASSERT(getSettingsDg);
-    if (!brokerForOAuthRequests)
-        m_brokerForOAuthRequests = parent;
-}
-
-ClientRequest::ptr
-OAuthBroker::request(Request &requestHeaders,
-        bool forceNewConnection,
-        boost::function<void (ClientRequest::ptr)> bodyDg)
-{
-    URI schemeAndAuthority = requestHeaders.requestLine.uri;
-    schemeAndAuthority.path = URI::Path();
-    schemeAndAuthority.queryDefined(false);
-    schemeAndAuthority.fragmentDefined(false);
-
-    std::map<URI, State>::iterator it = m_state.find(schemeAndAuthority);
-    int retries = 2;
-    while (true) {
-        if (it != m_state.end()) {
-            it->second.oauth.authorize(requestHeaders,
-                it->second.signatureMethod, it->second.realm);
-        }
-        ClientRequest::ptr request = parent()->request(requestHeaders,
-            forceNewConnection, bodyDg);
-        Status status = request->response().status.status;
-        if (status == UNAUTHORIZED) {
-            if (retries-- == 0)
-                return request;
-            // We already tried to authorize, and apparently the server isn't
-            // going to accept our credentials
-            if (it != m_state.end()) {
-                it->second.oauth.clearToken();
-                if (retries-- == 0)
-                    return request;
-                continue;
-            }
-            schemeAndAuthority = requestHeaders.requestLine.uri;
-            schemeAndAuthority.path = URI::Path();
-            schemeAndAuthority.queryDefined(false);
-            schemeAndAuthority.fragmentDefined(false);
-            const ChallengeList &challenges =
-                request->response().response.wwwAuthenticate;
-            for (ChallengeList::const_iterator cit = challenges.begin();
-                cit != challenges.end();
-                ++cit) {
-                if (stricmp(cit->scheme.c_str(), "OAuth") == 0) {
-                    StringMap::const_iterator pit =
-                        cit->parameters.find("realm");
-                    std::string realm;
-                    if (pit != cit->parameters.end())
-                        realm = pit->second;
-                    std::pair<OAuth::Settings, std::string> settings =
-                        m_getSettingsDg(schemeAndAuthority, realm);
-                    if (!settings.first.consumerSecret.empty()) {
-                        State state = { OAuth(m_brokerForOAuthRequests,
-                            settings.first, m_gotTokenDg), realm, settings.second };
-                        it = m_state.insert(std::make_pair(schemeAndAuthority,
-                            state)).first;
-                        break;
-                    }
-                }
-            }
-            if (it != m_state.end())
-                continue;
-        }
-        return request;
-    }
-}
-
-}}
+}}}

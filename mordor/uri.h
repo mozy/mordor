@@ -137,10 +137,9 @@ struct URI
     {
     public:
         QueryString() {}
-        QueryString(const std::string &str)
-        {
-            *this = str;
-        }
+        QueryString(const std::string &str) { *this = str; }
+        QueryString(Stream &stream) { *this = stream; }
+        QueryString(boost::shared_ptr<Stream> stream) { *this = *stream; }
 
         std::string toString() const;
 
