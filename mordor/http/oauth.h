@@ -40,6 +40,29 @@ void sign(const URI &uri, Method method,
     const std::string &tokenSecret, T &oauthParameters,
     const URI::QueryString &postParameters = URI::QueryString());
 
+class RequestBroker : public RequestBrokerFilter
+{
+public:
+    RequestBroker(HTTP::RequestBroker::ptr parent,
+        boost::function<bool (const URI &, ClientRequest::ptr, std::string &,
+            std::pair<std::string, std::string> &,
+            std::pair<std::string, std::string> &,
+            std::string &)> getCredentialsDg)
+        : RequestBrokerFilter(parent),
+          m_getCredentialsDg(getCredentialsDg)
+    {}
+
+    ClientRequest::ptr request(Request &requestHeaders,
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+
+private:
+    boost::function<bool (const URI &, ClientRequest::ptr, std::string &,
+        std::pair<std::string, std::string> &,
+        std::pair<std::string, std::string> &,
+        std::string &)> m_getCredentialsDg;
+};
+
 }}}
 
 #endif

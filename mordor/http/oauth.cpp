@@ -282,4 +282,29 @@ template void sign<URI::QueryString>(const URI &, Method, const std::string &,
     const std::string &, const std::string &, URI::QueryString &,
     const URI::QueryString &);
 
+ClientRequest::ptr
+RequestBroker::request(Request &requestHeaders, bool forceNewConnection,
+    boost::function<void (ClientRequest::ptr)> bodyDg)
+{
+    ClientRequest::ptr priorRequest;
+    std::pair<std::string, std::string> clientCredentials, tokenCredentials;
+    std::string signatureMethod, realm;
+    while (true) {
+        if (m_getCredentialsDg(requestHeaders.requestLine.uri, priorRequest,
+            signatureMethod, clientCredentials, tokenCredentials, realm))
+            authorize(requestHeaders, signatureMethod, clientCredentials,
+                tokenCredentials, realm);
+        if (priorRequest)
+            priorRequest->finish();
+        priorRequest = parent()->request(requestHeaders, forceNewConnection,
+            bodyDg);
+        if (priorRequest->response().status.status == UNAUTHORIZED) {
+            if (isAcceptable(priorRequest->response().response.wwwAuthenticate,
+                "OAuth"))
+                continue;
+        }
+        return priorRequest;
+    }
+}
+
 }}}
