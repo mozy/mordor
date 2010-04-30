@@ -77,13 +77,7 @@
     <ClCompile Include="http\http.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="http\http_parser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="iomanager_iocp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="json.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="streams\limited.cpp">
@@ -177,12 +171,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="streams\transfer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="uri.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="xml\xml_parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="streams\zlib.cpp">
