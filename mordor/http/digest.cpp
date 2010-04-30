@@ -10,39 +10,19 @@
 
 namespace Mordor {
 namespace HTTP {
+namespace DigestAuth {
 
-void
-DigestAuth::authorize(const Response &challenge, Request &nextRequest,
-                      const std::string &username,
-                      const std::string &password)
+void authorize(const AuthParams &challenge, AuthParams &authorization,
+    const URI &uri, Method method, const std::string &username,
+    const std::string &password)
 {
-    MORDOR_ASSERT(challenge.status.status == UNAUTHORIZED ||
-        challenge.status.status == PROXY_AUTHENTICATION_REQUIRED);
-    bool proxy = challenge.status.status == PROXY_AUTHENTICATION_REQUIRED;
-    const ChallengeList &authenticate = proxy ?
-        challenge.response.proxyAuthenticate :
-        challenge.response.wwwAuthenticate;
-    AuthParams &authorization = proxy ?
-        nextRequest.request.proxyAuthorization :
-        nextRequest.request.authorization;
-    const StringMap *params = NULL;
-    for (ChallengeList::const_iterator it = authenticate.begin();
-        it != authenticate.end();
-        ++it) {
-        if (stricmp(it->scheme.c_str(), "Digest") == 0) {
-            params = &it->parameters;
-            break;
-        }
-    }
-    MORDOR_ASSERT(params);
-
     std::string realm, qop, nonce, opaque, algorithm;
     StringMap::const_iterator it;
-    if ( (it = params->find("realm")) != params->end()) realm = it->second;
-    if ( (it = params->find("qop")) != params->end()) qop = it->second;
-    if ( (it = params->find("nonce")) != params->end()) nonce = it->second;
-    if ( (it = params->find("opaque")) != params->end()) opaque = it->second;
-    if ( (it = params->find("algorithm")) != params->end()) algorithm = it->second;
+    if ( (it = challenge.parameters.find("realm")) != challenge.parameters.end()) realm = it->second;
+    if ( (it = challenge.parameters.find("qop")) != challenge.parameters.end()) qop = it->second;
+    if ( (it = challenge.parameters.find("nonce")) != challenge.parameters.end()) nonce = it->second;
+    if ( (it = challenge.parameters.find("opaque")) != challenge.parameters.end()) opaque = it->second;
+    if ( (it = challenge.parameters.find("algorithm")) != challenge.parameters.end()) algorithm = it->second;
 
     if (algorithm.empty())
         algorithm = "MD5";
@@ -55,7 +35,7 @@ DigestAuth::authorize(const Response &challenge, Request &nextRequest,
         if (parser.error() || !parser.complete())
             MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
         if (qopValues.find("auth") == qopValues.end())
-            MORDOR_THROW_EXCEPTION(InvalidDigestQopException(qop));
+            MORDOR_THROW_EXCEPTION(InvalidQopException(qop));
         authQop = true;
     }
 
@@ -72,11 +52,11 @@ DigestAuth::authorize(const Response &challenge, Request &nextRequest,
     else if (algorithm == "MD5-sess")
         A1 = md5( username + ':' + realm + ':' + password ) + ':' + nonce + ':' + cnonce;
     else
-        MORDOR_THROW_EXCEPTION(InvalidDigestAlgorithmException(algorithm));
+        MORDOR_THROW_EXCEPTION(InvalidAlgorithmException(algorithm));
 
     // compute A2 - our qop is always auth or unspecified
     os.str("");
-    os << nextRequest.requestLine.method << ':' << nextRequest.requestLine.uri;
+    os << method << ':' << uri;
     std::string A2 = os.str();
 
     authorization.scheme = "Digest";
@@ -84,7 +64,7 @@ DigestAuth::authorize(const Response &challenge, Request &nextRequest,
     authorization.parameters["username"] = username;
     authorization.parameters["realm"] = realm;
     authorization.parameters["nonce"] = nonce;
-    authorization.parameters["uri"] = nextRequest.requestLine.uri.toString();
+    authorization.parameters["uri"] = uri.toString();
     authorization.parameters["algorithm"] = algorithm;
 
     std::string response;
@@ -103,4 +83,22 @@ DigestAuth::authorize(const Response &challenge, Request &nextRequest,
         authorization.parameters["opaque"] = opaque;
 }
 
-}}
+void
+authorize(const Response &challenge, Request &nextRequest,
+    const std::string &username, const std::string &password)
+{
+    MORDOR_ASSERT(challenge.status.status == UNAUTHORIZED ||
+        challenge.status.status == PROXY_AUTHENTICATION_REQUIRED);
+    bool proxy = challenge.status.status == PROXY_AUTHENTICATION_REQUIRED;
+    const ChallengeList &authenticate = proxy ?
+        challenge.response.proxyAuthenticate :
+        challenge.response.wwwAuthenticate;
+    AuthParams &authorization = proxy ?
+        nextRequest.request.proxyAuthorization :
+        nextRequest.request.authorization;
+    authorize(challengeForSchemeAndRealm(authenticate, "Digest"),
+        authorization, nextRequest.requestLine.uri,
+        nextRequest.requestLine.method, username, password);
+}
+
+}}}

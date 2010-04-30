@@ -109,10 +109,14 @@ public:
 class ConnectionCache : public ConnectionBroker
 {
 public:
+    typedef boost::shared_ptr<ConnectionCache> ptr;
+
+public:
     ConnectionCache(StreamBroker::ptr streamBroker,
         size_t connectionsPerHost = 1)
         : m_streamBroker(streamBroker),
-          m_connectionsPerHost(connectionsPerHost)
+          m_connectionsPerHost(connectionsPerHost),
+          m_closed(false)
     {}
 
     std::pair<ClientConnection::ptr, bool>
@@ -127,6 +131,7 @@ private:
 
     typedef std::list<ClientConnection::ptr> ConnectionList;
     std::map<URI, std::pair<ConnectionList, boost::shared_ptr<FiberCondition> > > m_conns;
+    bool m_closed;
 };
 
 class MockConnectionBroker : public ConnectionBroker
@@ -304,11 +309,31 @@ private:
     ProductAndCommentList m_userAgent;
 };
 
+struct RequestBrokerOptions
+{
+    RequestBrokerOptions() : ioManager(NULL), scheduler(NULL), handleRedirects(true) {}
+
+    IOManager *ioManager;
+    Scheduler *scheduler;
+    boost::function<bool (size_t)> delayDg;
+    bool handleRedirects;
+    boost::function<URI (const URI &)> proxyForURIDg;
+    boost::function<bool (const URI &,
+            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            std::string & /* scheme */, std::string & /* realm */,
+            std::string & /* username */, std::string & /* password */,
+            size_t /* attempts */)>
+            getCredentialsDg, getProxyCredentialsDg;
+};
+
+std::pair<RequestBroker::ptr, ConnectionCache::ptr>
+    createRequestBroker(const RequestBrokerOptions &options = RequestBrokerOptions());
+
+/// @deprecated Use createRequestBroker instead
 RequestBroker::ptr defaultRequestBroker(IOManager *ioManager = NULL,
                                         Scheduler *scheduler = NULL,
                                         ConnectionBroker::ptr *connBroker = NULL,
                                         boost::function<bool (size_t)> delayDg = NULL);
-
 }}
 
 #endif

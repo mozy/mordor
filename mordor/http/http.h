@@ -415,6 +415,8 @@ struct Response
 };
 
 bool isAcceptable(const ChallengeList &list, const std::string &scheme);
+const AuthParams &challengeForSchemeAndRealm(const ChallengeList &list,
+    const std::string &scheme, const std::string &realm = std::string());
 bool isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithParameters &value, bool defaultMissing = false);
 bool isPreferred(const AcceptListWithParameters &list, const AcceptValueWithParameters &lhs, const AcceptValueWithParameters &rhs);
 const AcceptValueWithParameters *preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters &available);

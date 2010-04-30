@@ -6,11 +6,13 @@
 #include <boost/noncopyable.hpp>
 #include <boost/scoped_ptr.hpp>
 
+#include "broker.h"
 #include "client.h"
 
 namespace Mordor {
 namespace HTTP {
 
+/// @deprecated Please use AuthRequestBroker
 class ClientAuthBroker : public boost::noncopyable
 {
 public:
@@ -32,6 +34,37 @@ private:
     boost::function<ClientConnection::ptr ()> m_dg;
     std::string m_username, m_password, m_proxyUsername, m_proxyPassword;
     ClientConnection::ptr m_conn;
+};
+
+class AuthRequestBroker : public RequestBrokerFilter
+{
+public:
+    AuthRequestBroker(RequestBroker::ptr parent,
+        boost::function<bool (const URI &,
+            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            std::string & /* scheme */, std::string & /* realm */,
+            std::string & /* username */, std::string & /* password */,
+            size_t /* attempts */)>
+            getCredentialsDg,
+        boost::function<bool (const URI &,
+            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            std::string & /* scheme */, std::string & /* realm */,
+            std::string & /* username */, std::string & /* password */,
+            size_t /* attempts */)>
+            getProxyCredentialsDg)
+        : RequestBrokerFilter(parent),
+          m_getCredentialsDg(getCredentialsDg),
+          m_getProxyCredentialsDg(getProxyCredentialsDg)
+    {}
+
+    ClientRequest::ptr request(Request &requestHeaders,
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+
+private:
+    boost::function<bool (const URI &, ClientRequest::ptr, std::string &,
+        std::string &, std::string &, std::string &, size_t)>
+        m_getCredentialsDg, m_getProxyCredentialsDg;
 };
 
 }}

@@ -4,6 +4,7 @@
 
 #include "broker.h"
 
+#include "auth.h"
 #include "mordor/atomic.h"
 #include "mordor/future.h"
 #include "mordor/streams/pipe.h"
@@ -14,27 +15,54 @@
 namespace Mordor {
 namespace HTTP {
 
+std::pair<RequestBroker::ptr, ConnectionCache::ptr>
+createRequestBroker(const RequestBrokerOptions &options)
+{
+    StreamBroker::ptr socketBroker(new SocketStreamBroker(options.ioManager,
+        options.scheduler));
+    StreamBrokerFilter::ptr sslBroker(new SSLStreamBroker(socketBroker));
+    ConnectionCache::ptr connectionCache(new ConnectionCache(sslBroker));
+    RequestBroker::ptr requestBroker(new BaseRequestBroker(
+        ConnectionBroker::weak_ptr(connectionCache)));
+    if (options.delayDg)
+        requestBroker.reset(new RetryRequestBroker(requestBroker,
+        options.delayDg));
+    if (options.getCredentialsDg || options.getProxyCredentialsDg)
+        requestBroker.reset(new AuthRequestBroker(requestBroker,
+            options.getCredentialsDg, options.getProxyCredentialsDg));
+    if (options.handleRedirects)
+        requestBroker.reset(new RedirectRequestBroker(requestBroker));
+
+    socketBroker.reset(new ProxyStreamBroker(socketBroker, requestBroker,
+        options.proxyForURIDg));
+    sslBroker->parent(socketBroker);
+    ConnectionBroker::ptr connectionBroker(
+        new ProxyConnectionBroker(connectionCache, options.proxyForURIDg));
+    requestBroker.reset(new BaseRequestBroker(connectionBroker));
+    if (options.delayDg)
+        requestBroker.reset(new RetryRequestBroker(requestBroker,
+        options.delayDg));
+    if (options.getCredentialsDg || options.getProxyCredentialsDg)
+        requestBroker.reset(new AuthRequestBroker(requestBroker,
+            options.getCredentialsDg, options.getProxyCredentialsDg));
+    if (options.handleRedirects)
+        requestBroker.reset(new RedirectRequestBroker(requestBroker));
+    return std::make_pair(requestBroker, connectionCache);
+}
+
 RequestBroker::ptr defaultRequestBroker(IOManager *ioManager,
                                         Scheduler *scheduler,
                                         ConnectionBroker::ptr *connBroker,
                                         boost::function<bool (size_t)> delayDg)
 {
-    StreamBroker::ptr socketBroker(new SocketStreamBroker(ioManager, scheduler));
-    StreamBrokerFilter::ptr sslBroker(new SSLStreamBroker(socketBroker));
-    ConnectionBroker::ptr connectionBroker(new ConnectionCache(sslBroker));
-    if (connBroker != NULL)
-        *connBroker = connectionBroker;
-    RequestBroker::ptr requestBroker(new BaseRequestBroker(ConnectionBroker::weak_ptr(connectionBroker)));
-    if (delayDg)
-        requestBroker.reset(new RetryRequestBroker(requestBroker, delayDg));
-
-    socketBroker.reset(new ProxyStreamBroker(socketBroker, requestBroker));
-    sslBroker->parent(socketBroker);
-    connectionBroker.reset(new ProxyConnectionBroker(connectionBroker));
-    requestBroker.reset(new BaseRequestBroker(connectionBroker));
-    if (delayDg)
-        requestBroker.reset(new RetryRequestBroker(requestBroker, delayDg));
-    return requestBroker;
+   RequestBrokerOptions options;
+   options.ioManager = ioManager;
+   options.scheduler = scheduler;
+   options.delayDg = delayDg;
+   std::pair<RequestBroker::ptr, ConnectionCache::ptr> result = createRequestBroker(options);
+   if (connBroker)
+       *connBroker = result.second;
+   return result.first;
 }
 
 
@@ -154,6 +182,8 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
     std::pair<ClientConnection::ptr, bool> result;
     {
         FiberMutex::ScopedLock lock(m_mutex);
+        if (m_closed)
+            MORDOR_THROW_EXCEPTION(OperationAbortedException());
         // Clean out any dead conns
         for (it = m_conns.begin(); it != m_conns.end();) {
             for (it2 = it->second.first.begin();
@@ -265,6 +295,7 @@ ConnectionCache::closeConnections()
 {
     m_streamBroker->cancelPending();
     FiberMutex::ScopedLock lock(m_mutex);
+    m_closed = true;
     std::map<URI, std::pair<ConnectionList,
         boost::shared_ptr<FiberCondition> > >::iterator it;
     for (it = m_conns.begin(); it != m_conns.end(); ++it) {

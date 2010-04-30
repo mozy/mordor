@@ -294,15 +294,16 @@ RequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             signatureMethod, clientCredentials, tokenCredentials, realm))
             authorize(requestHeaders, signatureMethod, clientCredentials,
                 tokenCredentials, realm);
+        else if (priorRequest)
+            return priorRequest;
         if (priorRequest)
             priorRequest->finish();
         priorRequest = parent()->request(requestHeaders, forceNewConnection,
             bodyDg);
-        if (priorRequest->response().status.status == UNAUTHORIZED) {
-            if (isAcceptable(priorRequest->response().response.wwwAuthenticate,
+        if (priorRequest->response().status.status == UNAUTHORIZED &&
+            isAcceptable(priorRequest->response().response.wwwAuthenticate,
                 "OAuth"))
-                continue;
-        }
+            continue;
         return priorRequest;
     }
 }
