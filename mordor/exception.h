@@ -60,6 +60,7 @@ typedef int error_t;
 #endif
 
 struct FileNotFoundException : virtual NativeException {};
+struct AccessDeniedException : virtual NativeException {};
 struct BadHandleException : virtual NativeException {};
 struct OperationAbortedException : virtual NativeException {};
 struct BrokenPipeException : virtual NativeException {};

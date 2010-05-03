@@ -258,6 +258,9 @@ void throwExceptionFromLastError(error_t error)
         case ERROR_FILE_NOT_FOUND:
             throw boost::enable_current_exception(FileNotFoundException())
                 << errinfo_nativeerror(error);
+        case ERROR_ACCESS_DENIED:
+            throw boost::enable_current_exception(AccessDeniedException())
+                << errinfo_nativeerror(error);
         case ERROR_OPERATION_ABORTED:
             throw boost::enable_current_exception(OperationAbortedException())
                 << errinfo_nativeerror(error);
@@ -299,6 +302,9 @@ void throwExceptionFromLastError(error_t error)
                 << errinfo_nativeerror(error);
         case ENOENT:
             throw boost::enable_current_exception(FileNotFoundException())
+                << errinfo_nativeerror(error);
+        case EACCES:
+            throw boost::enable_current_exception(AccessDeniedException())
                 << errinfo_nativeerror(error);
         case ECANCELED:
             throw boost::enable_current_exception(OperationAbortedException())
