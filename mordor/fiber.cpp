@@ -504,10 +504,14 @@ Fiber::initStack()
 #ifdef X86
     m_env[8] = 0xffffffff; // EBP
     m_env[9] = (int)m_stack + m_stacksize; // ESP
-#else
+#elif defined(X86_64)
     long long *env = (long long *)m_env;
     env[1] = 0xffffffffffffffffll; // RBP
     env[2] = (long long)m_stack + m_stacksize; // RSP
+#elif defined(PPC)
+    m_env[0] = (int)m_stack;
+#else
+#error Platform not supported
 #endif
 #else
 #error Platform not supported
