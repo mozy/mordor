@@ -1513,11 +1513,12 @@ IPv4Address::IPv4Address(int type, int protocol)
 std::ostream &
 IPv4Address::insert(std::ostream &os) const
 {
-    return os << (int)(sin.sin_addr.s_addr & 0xff) << '.'
-        << (int)((sin.sin_addr.s_addr >> 8) & 0xff) << '.'
-        << (int)((sin.sin_addr.s_addr >> 16) & 0xff) << '.'
-        << (int)((sin.sin_addr.s_addr >> 24) & 0xff) << ':'
-        << (int)htons(sin.sin_port);
+    int addr = htonl(sin.sin_addr.s_addr);
+    return os << ((addr >> 24) & 0xff) << '.'
+        << ((addr >> 16) & 0xff) << '.'
+        << ((addr >> 8) & 0xff) << '.'
+        << (addr & 0xff) << ':'
+        << htons(sin.sin_port);
 }
 
 IPv6Address::IPv6Address(int type, int protocol)
