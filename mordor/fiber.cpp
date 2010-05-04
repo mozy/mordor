@@ -511,7 +511,7 @@ Fiber::initStack()
 #elif defined(PPC)
     m_env[0] = (int)m_stack;
 #else
-#error Platform not supported
+#error Architecture not supported
 #endif
 #else
 #error Platform not supported
