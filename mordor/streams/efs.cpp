@@ -173,10 +173,14 @@ EFSStream::seek(long long offset, Anchor anchor)
         MORDOR_THROW_EXCEPTION(std::invalid_argument("negative offset"));
     m_seekTarget = offset;
     if (m_seekTarget < m_pos) {
-        m_pos = -2;
-        m_fiber->call();
-        MORDOR_ASSERT(m_fiber->state() == Fiber::TERM);
+        if(m_fiber->state() != Fiber::TERM) {
+            m_pos = -2;
+            m_fiber->call();
+            MORDOR_ASSERT(m_fiber->state() == Fiber::TERM);
+        }
         m_fiber->reset();
+        m_pos = 0;
+        m_todo = 0;
     } else if (m_seekTarget == m_pos) {
         return m_pos;
     }
