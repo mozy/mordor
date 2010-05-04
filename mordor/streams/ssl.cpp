@@ -23,8 +23,8 @@ static Logger::ptr g_log = Log::lookup("mordor:streams:ssl");
 
 namespace {
 
-static struct Initializer {
-    Initializer()
+static struct SSLInitializer {
+    SSLInitializer()
     {
         SSL_library_init();
         SSL_load_error_strings();

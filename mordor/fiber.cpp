@@ -41,8 +41,8 @@ static size_t g_pagesize;
 
 namespace {
 
-static struct Initializer {
-    Initializer()
+static struct FiberInitializer {
+    FiberInitializer()
     {
 #ifdef WINDOWS
         SYSTEM_INFO info;
