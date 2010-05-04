@@ -69,6 +69,9 @@ ifeq ($(PLATFORM), Darwin)
     UNDERSCORE := _underscore
     GCC_ARCH := $(shell file -L `which gcc` | grep x86_64 -o | uniq)
     ifndef GCC_ARCH
+        GCC_ARCH := $(shell file -L `which gcc` | grep ppc -o | uniq)
+    endif
+    ifndef GCC_ARCH
         GCC_ARCH := i386
     endif
     ifndef ARCH
@@ -85,6 +88,11 @@ ifeq ($(PLATFORM), Darwin)
     ifeq ($(ARCH), i386)
         ifneq ($(GCC_ARCH), i386)
             MACH_TARGET := -arch i386
+        endif
+    endif
+    ifeq ($(ARCH), ppc)
+        ifneq ($(GCC_ARCH), ppc)
+            MACH_TARGET := -arch ppc
         endif
     endif
 endif
