@@ -401,7 +401,7 @@ static void throwAccessDenied()
     MORDOR_THROW_EXCEPTION(AccessDeniedException());
 }
 
-MORDOR_UNITTEST(Fibers, nativeException)
+MORDOR_UNITTEST(Fibers, nativeException2)
 {
     Fiber::ptr fiber(new Fiber(&throwAccessDenied));
     MORDOR_TEST_ASSERT_EXCEPTION(fiber->call(), AccessDeniedException);
