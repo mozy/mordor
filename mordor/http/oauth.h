@@ -40,14 +40,20 @@ void sign(const URI &uri, Method method,
     const std::string &tokenSecret, T &oauthParameters,
     const URI::QueryString &postParameters = URI::QueryString());
 
+std::pair<std::string, std::string>
+extractCredentials(ClientRequest::ptr request);
+
 class RequestBroker : public RequestBrokerFilter
 {
 public:
     RequestBroker(HTTP::RequestBroker::ptr parent,
-        boost::function<bool (const URI &, ClientRequest::ptr, std::string &,
-            std::pair<std::string, std::string> &,
-            std::pair<std::string, std::string> &,
-            std::string &)> getCredentialsDg)
+        boost::function<bool (const URI &,
+            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            std::string & /* signatureMethod */,
+            std::pair<std::string, std::string> & /* clientCredentials */,
+            std::pair<std::string, std::string> & /* tokenCredentials */,
+            std::string & /* realm */,
+            size_t /* attempts */)> getCredentialsDg)
         : RequestBrokerFilter(parent),
           m_getCredentialsDg(getCredentialsDg)
     {}
@@ -60,7 +66,7 @@ private:
     boost::function<bool (const URI &, ClientRequest::ptr, std::string &,
         std::pair<std::string, std::string> &,
         std::pair<std::string, std::string> &,
-        std::string &)> m_getCredentialsDg;
+        std::string &, size_t)> m_getCredentialsDg;
 };
 
 }}}

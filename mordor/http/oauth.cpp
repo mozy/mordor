@@ -14,7 +14,7 @@ static void writeBody(ClientRequest::ptr request, const std::string &body)
     request->requestStream()->close();
 }
 
-static std::pair<std::string, std::string>
+std::pair<std::string, std::string>
 extractCredentials(ClientRequest::ptr request)
 {
     URI::QueryString responseParams = request->responseStream();
@@ -289,9 +289,11 @@ RequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     ClientRequest::ptr priorRequest;
     std::pair<std::string, std::string> clientCredentials, tokenCredentials;
     std::string signatureMethod, realm;
+    size_t attempts = 0;
     while (true) {
         if (m_getCredentialsDg(requestHeaders.requestLine.uri, priorRequest,
-            signatureMethod, clientCredentials, tokenCredentials, realm))
+            signatureMethod, clientCredentials, tokenCredentials, realm,
+            attempts++))
             authorize(requestHeaders, signatureMethod, clientCredentials,
                 tokenCredentials, realm);
         else if (priorRequest)
