@@ -11,16 +11,28 @@ using namespace Mordor::HTTP;
 
 namespace Mordor {
 
-HTTPStream::HTTPStream(const URI &uri, RequestBroker::ptr requestBroker)
+HTTPStream::HTTPStream(const URI &uri, RequestBroker::ptr requestBroker,
+    boost::function<bool (size_t)> delayDg)
 : FilterStream(Stream::ptr(), false),
-  m_uri(uri),
   m_requestBroker(requestBroker),
   m_pos(0),
-  m_size(-1)
+  m_size(-1),
+  m_delayDg(delayDg),
+  mp_retries(NULL)
 {
-    MORDOR_ASSERT(uri.authority.hostDefined());
-    MORDOR_ASSERT(uri.path.type == URI::Path::ABSOLUTE);
+    m_requestHeaders.requestLine.uri = uri;
 }
+
+HTTPStream::HTTPStream(const HTTP::Request &requestHeaders, RequestBroker::ptr requestBroker,
+    boost::function<bool (size_t)> delayDg)
+: FilterStream(Stream::ptr(), false),
+  m_requestHeaders(requestHeaders),
+  m_requestBroker(requestBroker),
+  m_pos(0),
+  m_size(-1),
+  m_delayDg(delayDg),
+  mp_retries(NULL)
+{}
 
 size_t
 HTTPStream::read(Buffer &buffer, size_t length)
@@ -28,67 +40,64 @@ HTTPStream::read(Buffer &buffer, size_t length)
     if (m_size >= 0 && m_pos >= m_size)
         return 0;
 
+    size_t localRetries = 0;
+    size_t *retries = mp_retries ? mp_retries : &localRetries;
     while (true) {
         if (!parent()) {
-            while (true) {
-                Request requestHeaders;
-                requestHeaders.requestLine.uri = m_uri;
-                if (!eTag.unspecified) {
-                    if (m_pos != 0)
-                        requestHeaders.request.ifRange = eTag;
+            m_requestHeaders.requestLine.method = GET;
+            if (!eTag.unspecified) {
+                if (m_pos != 0) {
+                    m_requestHeaders.request.ifRange = eTag;
+                    m_requestHeaders.request.ifMatch.clear();
+                } else {
+                    m_requestHeaders.request.ifMatch.insert(eTag);
+                    m_requestHeaders.request.ifRange = HTTP::ETag();
+                }
+            } else {
+                m_requestHeaders.request.ifRange = HTTP::ETag();
+                m_requestHeaders.request.ifMatch.clear();
+            }
+            m_requestHeaders.request.range.clear();
+            if (m_pos != 0)
+                m_requestHeaders.request.range.push_back(
+                    std::make_pair((unsigned long long)m_pos, ~0ull));
+            ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
+            const HTTP::Response response = request->response();
+            Stream::ptr responseStream;
+            switch (response.status.status) {
+                case OK:
+                case PARTIAL_CONTENT:
+                    if (response.entity.contentRange.instance != ~0ull)
+                        m_size = (long long)response.entity.contentRange.instance;
+                    else if (response.entity.contentLength != ~0ull)
+                        m_size = (long long)response.entity.contentLength;
                     else
-                        requestHeaders.request.ifMatch.insert(eTag);
-                }
-                if (m_pos != 0)
-                    requestHeaders.request.range.push_back(
-                        std::make_pair((unsigned long long)m_pos, ~0ull));
-                ClientRequest::ptr request;
-                try {
-                    request = m_requestBroker->request(requestHeaders);
-                    // URI could have been changed by a permanent redirect
-                    m_uri = requestHeaders.requestLine.uri;
-                } catch (...) {
-                    m_uri = requestHeaders.requestLine.uri;
-                    throw;
-                }
-                const HTTP::Response response = request->response();
-                Stream::ptr responseStream;
-                switch (response.status.status) {
-                    case OK:
-                    case PARTIAL_CONTENT:
-                        if (response.entity.contentRange.instance != ~0ull)
-                            m_size = (long long)response.entity.contentRange.instance;
-                        else if (response.entity.contentLength != ~0ull)
-                            m_size = (long long)response.entity.contentLength;
-                        else
-                            m_size = -2;
-                        if (eTag.unspecified &&
-                            !response.response.eTag.unspecified) {
-                            eTag = response.response.eTag;
-                        } else if (!eTag.unspecified &&
-                            !response.response.eTag.unspecified &&
-                            response.response.eTag != eTag) {
-                            eTag = response.response.eTag;
-                            if (m_pos != 0 && response.status.status ==
-                                PARTIAL_CONTENT) {
-                                // Server doesn't support If-Range
-                                request->cancel(true);
-                                parent(Stream::ptr());
-                            } else {
-                                parent(request->responseStream());
-                            }
-                            MORDOR_THROW_EXCEPTION(EntityChangedException());
+                        m_size = -2;
+                    if (eTag.unspecified &&
+                        !response.response.eTag.unspecified) {
+                        eTag = response.response.eTag;
+                    } else if (!eTag.unspecified &&
+                        !response.response.eTag.unspecified &&
+                        response.response.eTag != eTag) {
+                        eTag = response.response.eTag;
+                        if (m_pos != 0 && response.status.status ==
+                            PARTIAL_CONTENT) {
+                            // Server doesn't support If-Range
+                            request->cancel(true);
+                            parent(Stream::ptr());
+                        } else {
+                            parent(request->responseStream());
                         }
-                        responseStream = request->responseStream();
-                        if (m_pos != 0 && response.status.status == OK)
-                            transferStream(responseStream,
-                                NullStream::get(), m_pos);
-                        parent(responseStream);
-                        break;
-                    default:
-                        MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
-                }
-                MORDOR_NOTREACHED();
+                        MORDOR_THROW_EXCEPTION(EntityChangedException());
+                    }
+                    responseStream = request->responseStream();
+                    if (m_pos != 0 && response.status.status == OK)
+                        transferStream(responseStream,
+                            NullStream::get(), m_pos);
+                    parent(responseStream);
+                    break;
+                default:
+                    MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
             }
         }
 
@@ -96,12 +105,17 @@ HTTPStream::read(Buffer &buffer, size_t length)
         try {
             size_t result = parent()->read(buffer, length);
             m_pos += result;
+            *retries = 0;
             return result;
         } catch (SocketException &) {
             parent(Stream::ptr());
+            if (!m_delayDg || !m_delayDg(++*retries))
+                throw;
             continue;
         } catch (UnexpectedEofException &) {
             parent(Stream::ptr());
+            if (!m_delayDg || !m_delayDg(++*retries))
+                throw;
             continue;
         }
     }
@@ -149,18 +163,8 @@ void
 HTTPStream::ensureSize()
 {
     if (m_size == -1) {
-        Request requestHeaders;
-        requestHeaders.requestLine.method = HEAD;
-        requestHeaders.requestLine.uri = m_uri;
-        ClientRequest::ptr request;
-        try {
-            request = m_requestBroker->request(requestHeaders);
-            // URI could have been changed by a permanent redirect
-            m_uri = requestHeaders.requestLine.uri;
-        } catch (...) {
-            m_uri = requestHeaders.requestLine.uri;
-            throw;
-        }
+        m_requestHeaders.requestLine.method = HEAD;
+        ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
         const HTTP::Response response = request->response();
         switch (response.status.status) {
             case OK:
@@ -182,6 +186,14 @@ HTTPStream::ensureSize()
                 MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
         }
     }
+}
+
+long long
+HTTPStream::size()
+{
+    ensureSize();
+    MORDOR_ASSERT(supportsSize());
+    return m_size;
 }
 
 }
