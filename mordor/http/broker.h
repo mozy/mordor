@@ -52,19 +52,20 @@ private:
 class SocketStreamBroker : public StreamBroker
 {
 public:
+    typedef boost::shared_ptr<SocketStreamBroker> ptr;
+
+public:
     SocketStreamBroker(IOManager *ioManager = NULL, Scheduler *scheduler = NULL)
-        : connectTimeout(~0ull),
-          sendTimeout(~0ull),
-          receiveTimeout(~0ull),
-          m_cancelled(false),
+        : m_cancelled(false),
           m_ioManager(ioManager),
-          m_scheduler(scheduler)
+          m_scheduler(scheduler),
+          m_connectTimeout(~0ull)
     {}
+
+    void connectTimeout(unsigned long long timeout) { m_connectTimeout = timeout; }
 
     Stream::ptr getStream(const URI &uri);
     void cancelPending();
-
-    unsigned long long connectTimeout, sendTimeout, receiveTimeout;
 
 private:
     boost::mutex m_mutex;
@@ -72,24 +73,37 @@ private:
     std::list<Socket::ptr> m_pending;
     IOManager *m_ioManager;
     Scheduler *m_scheduler;
+    unsigned long long m_connectTimeout;
 };
 
 class SSLStreamBroker : public StreamBrokerFilter
 {
+public:
+    typedef boost::shared_ptr<SSLStreamBroker> ptr;
+
 public:
     SSLStreamBroker(StreamBroker::ptr parent,
         SSL_CTX *sslCtx = NULL, bool verifySslCert = false,
         bool verifySslCertHost = false)
         : StreamBrokerFilter(parent),
           m_sslCtx(sslCtx),
+          m_timerManager(NULL),
+          m_readTimeout(NULL),
+          m_writeTimeout(NULL),
           m_verifySslCert(verifySslCert),
           m_verifySslCertHost(verifySslCertHost)
     {}
+
+    void timerManager(TimerManager *timerManager) { m_timerManager = timerManager; }
+    void readTimeout(unsigned long long timeout) { m_readTimeout = timeout; }
+    void writeTimeout(unsigned long long timeout) { m_writeTimeout = timeout; }
 
     Stream::ptr getStream(const URI &uri);
 
 private:
     SSL_CTX *m_sslCtx;
+    TimerManager *m_timerManager;
+    unsigned long long m_readTimeout, m_writeTimeout;
     bool m_verifySslCert, m_verifySslCertHost;
 };
 
@@ -113,11 +127,17 @@ public:
 
 public:
     ConnectionCache(StreamBroker::ptr streamBroker,
-        size_t connectionsPerHost = 1)
+        size_t connectionsPerHost = 1, TimerManager *timerManager = NULL)
         : m_streamBroker(streamBroker),
           m_connectionsPerHost(connectionsPerHost),
-          m_closed(false)
+          m_closed(false),
+          m_timerManager(NULL),
+          m_readTimeout(~0ull),
+          m_writeTimeout(~0ull)
     {}
+
+    void readTimeout(unsigned long long timeout) { m_readTimeout = timeout; }
+    void writeTimeout(unsigned long long timeout) { m_writeTimeout = timeout; }
 
     std::pair<ClientConnection::ptr, bool>
         getConnection(const URI &uri, bool forceNewConnection = false);
@@ -132,6 +152,8 @@ private:
     typedef std::list<ClientConnection::ptr> ConnectionList;
     std::map<URI, std::pair<ConnectionList, boost::shared_ptr<FiberCondition> > > m_conns;
     bool m_closed;
+    TimerManager *m_timerManager;
+    unsigned long long m_readTimeout, m_writeTimeout;
 };
 
 class MockConnectionBroker : public ConnectionBroker
@@ -311,12 +333,29 @@ private:
 
 struct RequestBrokerOptions
 {
-    RequestBrokerOptions() : ioManager(NULL), scheduler(NULL), handleRedirects(true) {}
+    RequestBrokerOptions() :
+        ioManager(NULL),
+        scheduler(NULL),
+        handleRedirects(true),
+        timerManager(NULL),
+        connectTimeout(~0ull),
+        sslConnectReadTimeout(~0ull),
+        sslConnectWriteTimeout(~0ull),
+        httpReadTimeout(~0ull),
+        httpWriteTimeout(~0ull),
+        fallbackToDirectOnProxyFailure(false)
+    {}
 
     IOManager *ioManager;
     Scheduler *scheduler;
     boost::function<bool (size_t)> delayDg;
     bool handleRedirects;
+    TimerManager *timerManager;
+    unsigned long long connectTimeout;
+    unsigned long long sslConnectReadTimeout;
+    unsigned long long sslConnectWriteTimeout;
+    unsigned long long httpReadTimeout;
+    unsigned long long httpWriteTimeout;
     boost::function<URI (const URI &)> proxyForURIDg;
     boost::function<bool (const URI &,
             ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
@@ -324,6 +363,8 @@ struct RequestBrokerOptions
             std::string & /* username */, std::string & /* password */,
             size_t /* attempts */)>
             getCredentialsDg, getProxyCredentialsDg;
+    bool fallbackToDirectOnProxyFailure;
+    StreamBrokerFilter::ptr customStreamBrokerFilter;
 };
 
 std::pair<RequestBroker::ptr, ConnectionCache::ptr>

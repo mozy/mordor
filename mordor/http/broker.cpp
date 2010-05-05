@@ -7,9 +7,11 @@
 #include "auth.h"
 #include "mordor/atomic.h"
 #include "mordor/future.h"
+#include "mordor/streams/buffered.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/socket.h"
 #include "mordor/streams/ssl.h"
+#include "mordor/streams/timeout.h"
 #include "proxy.h"
 
 namespace Mordor {
@@ -18,35 +20,61 @@ namespace HTTP {
 std::pair<RequestBroker::ptr, ConnectionCache::ptr>
 createRequestBroker(const RequestBrokerOptions &options)
 {
-    StreamBroker::ptr socketBroker(new SocketStreamBroker(options.ioManager,
+    TimerManager *timerManager = options.timerManager;
+    if (options.ioManager && !timerManager)
+        timerManager = options.ioManager;
+
+    SocketStreamBroker::ptr socketBroker(new SocketStreamBroker(options.ioManager,
         options.scheduler));
-    StreamBrokerFilter::ptr sslBroker(new SSLStreamBroker(socketBroker));
-    ConnectionCache::ptr connectionCache(new ConnectionCache(sslBroker));
+    socketBroker->connectTimeout(options.connectTimeout);
+
+    StreamBroker::ptr streamBroker = socketBroker;
+    if (options.customStreamBrokerFilter) {
+        options.customStreamBrokerFilter->parent(streamBroker);
+        streamBroker = options.customStreamBrokerFilter;
+    }
+
+    SSLStreamBroker::ptr sslBroker(new SSLStreamBroker(streamBroker));
+    sslBroker->timerManager(timerManager);
+    sslBroker->readTimeout(options.sslConnectReadTimeout);
+    sslBroker->writeTimeout(options.sslConnectWriteTimeout);
+
+    ConnectionCache::ptr connectionCache(new ConnectionCache(sslBroker, 1u,
+        timerManager));
+    connectionCache->readTimeout(options.httpReadTimeout);
+    connectionCache->writeTimeout(options.httpWriteTimeout);
+
     RequestBroker::ptr requestBroker(new BaseRequestBroker(
         ConnectionBroker::weak_ptr(connectionCache)));
     if (options.delayDg)
         requestBroker.reset(new RetryRequestBroker(requestBroker,
         options.delayDg));
-    if (options.getCredentialsDg || options.getProxyCredentialsDg)
+    if (options.proxyForURIDg && options.getProxyCredentialsDg ||
+        !options.proxyForURIDg && options.getCredentialsDg)
         requestBroker.reset(new AuthRequestBroker(requestBroker,
-            options.getCredentialsDg, options.getProxyCredentialsDg));
+        options.proxyForURIDg ? options.getCredentialsDg : NULL,
+        options.proxyForURIDg ? options.getProxyCredentialsDg : NULL));
     if (options.handleRedirects)
         requestBroker.reset(new RedirectRequestBroker(requestBroker));
 
-    socketBroker.reset(new ProxyStreamBroker(socketBroker, requestBroker,
-        options.proxyForURIDg));
-    sslBroker->parent(socketBroker);
-    ConnectionBroker::ptr connectionBroker(
-        new ProxyConnectionBroker(connectionCache, options.proxyForURIDg));
-    requestBroker.reset(new BaseRequestBroker(connectionBroker));
-    if (options.delayDg)
-        requestBroker.reset(new RetryRequestBroker(requestBroker,
-        options.delayDg));
-    if (options.getCredentialsDg || options.getProxyCredentialsDg)
-        requestBroker.reset(new AuthRequestBroker(requestBroker,
-            options.getCredentialsDg, options.getProxyCredentialsDg));
-    if (options.handleRedirects)
-        requestBroker.reset(new RedirectRequestBroker(requestBroker));
+    if (options.proxyForURIDg) {
+        ProxyStreamBroker::ptr proxyStreamBroker(new ProxyStreamBroker(socketBroker, requestBroker,
+            options.proxyForURIDg));
+        proxyStreamBroker->fallbackOnFailure(options.fallbackToDirectOnProxyFailure);
+        sslBroker->parent(boost::static_pointer_cast<StreamBroker>(proxyStreamBroker));
+        ProxyConnectionBroker::ptr connectionBroker(
+            new ProxyConnectionBroker(connectionCache, options.proxyForURIDg));
+        connectionBroker->fallbackOnFailure(options.fallbackToDirectOnProxyFailure);
+        requestBroker.reset(new BaseRequestBroker(boost::static_pointer_cast<ConnectionBroker>(connectionBroker)));
+        if (options.delayDg)
+            requestBroker.reset(new RetryRequestBroker(requestBroker,
+            options.delayDg));
+        if (options.getCredentialsDg || options.getProxyCredentialsDg)
+            requestBroker.reset(new AuthRequestBroker(requestBroker,
+                options.getCredentialsDg, options.getProxyCredentialsDg));
+        if (options.handleRedirects)
+            requestBroker.reset(new RedirectRequestBroker(requestBroker));
+    }
     return std::make_pair(requestBroker, connectionCache);
 }
 
@@ -110,11 +138,9 @@ SocketStreamBroker::getStream(const URI &uri)
             it2 = m_pending.end();
             --it2;
         }
-        socket->sendTimeout(connectTimeout);
+        socket->sendTimeout(m_connectTimeout);
         try {
             socket->connect(*it);
-            socket->sendTimeout(sendTimeout);
-            socket->receiveTimeout(receiveTimeout);
             boost::mutex::scoped_lock lock(m_mutex);
             m_pending.erase(it2);
             break;
@@ -124,6 +150,7 @@ SocketStreamBroker::getStream(const URI &uri)
             if (++it == addresses.end())
                 throw;
         }
+        socket->sendTimeout(~0ull);
     }
     Stream::ptr stream(new SocketStream(socket));
     return stream;
@@ -148,13 +175,31 @@ SSLStreamBroker::getStream(const URI &uri)
 {
     Stream::ptr result = parent()->getStream(uri);
     if (uri.schemeDefined() && uri.scheme() == "https") {
-        SSLStream::ptr sslStream(new SSLStream(result, true, true, m_sslCtx));
-        result = sslStream;
+        TimeoutStream::ptr timeoutStream;
+        if (m_timerManager) {
+            timeoutStream.reset(new TimeoutStream(result, *m_timerManager));
+            timeoutStream->readTimeout(m_readTimeout);
+            timeoutStream->writeTimeout(m_writeTimeout);
+            result = timeoutStream;
+        }
+        BufferedStream::ptr bufferedStream(new BufferedStream(result));
+        bufferedStream->allowPartialReads(true);
+        SSLStream::ptr sslStream(new SSLStream(bufferedStream, true, true, m_sslCtx));
         sslStream->connect();
         if (m_verifySslCert)
             sslStream->verifyPeerCertificate();
         if (m_verifySslCertHost)
             sslStream->verifyPeerCertificate(uri.authority.host());
+        if (timeoutStream) {
+            bufferedStream->parent(timeoutStream->parent());
+            timeoutStream.reset();
+        }
+        bufferedStream.reset(new BufferedStream(sslStream));
+        // Max data in each SSL record
+        bufferedStream->bufferSize(16384);
+        bufferedStream->flushMultiplesOfBuffer(true);
+        bufferedStream->allowPartialReads(true);
+        return bufferedStream;
     }
     return result;
 }
@@ -253,7 +298,11 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
         {
             FiberMutex::ScopedLock lock(m_mutex);
             result = std::make_pair(ClientConnection::ptr(
-                new ClientConnection(stream)), false);
+                new ClientConnection(stream, m_timerManager)), false);
+            if (m_readTimeout != ~0ull)
+                result.first->readTimeout(m_readTimeout);
+            if (m_writeTimeout != ~0ull)
+                result.first->writeTimeout(m_writeTimeout);
             // Assign this connection to the first blank connection for this
             // schemeAndAuthority
             // it should still be valid, even if the map changed
