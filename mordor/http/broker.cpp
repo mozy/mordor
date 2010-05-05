@@ -49,8 +49,8 @@ createRequestBroker(const RequestBrokerOptions &options)
     if (options.delayDg)
         requestBroker.reset(new RetryRequestBroker(requestBroker,
         options.delayDg));
-    if (options.proxyForURIDg && options.getProxyCredentialsDg ||
-        !options.proxyForURIDg && options.getCredentialsDg)
+    if ((options.proxyForURIDg && options.getProxyCredentialsDg) ||
+        (!options.proxyForURIDg && options.getCredentialsDg))
         requestBroker.reset(new AuthRequestBroker(requestBroker,
         options.proxyForURIDg ? options.getCredentialsDg : NULL,
         options.proxyForURIDg ? options.getProxyCredentialsDg : NULL));
