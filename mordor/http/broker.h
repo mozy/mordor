@@ -253,7 +253,7 @@ private:
 class RetryRequestBroker : public RequestBrokerFilter
 {
 public:
-    typedef boost::shared_ptr<BaseRequestBroker> ptr;
+    typedef boost::shared_ptr<RetryRequestBroker> ptr;
 
 public:
     RetryRequestBroker(RequestBroker::ptr parent,
