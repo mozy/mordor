@@ -526,6 +526,8 @@ URI::Path::Path(const std::string& path)
 URI::Path&
 URI::Path::operator=(const std::string& path)
 {
+    type = RELATIVE;
+	segments.clear();
     URIPathParser parser(*this);
     parser.run(path);
     if (parser.error() || !parser.final())
