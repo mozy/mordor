@@ -44,8 +44,14 @@ createRequestBroker(const RequestBrokerOptions &options)
     connectionCache->readTimeout(options.httpReadTimeout);
     connectionCache->writeTimeout(options.httpWriteTimeout);
 
-    RequestBroker::ptr requestBroker(new BaseRequestBroker(
-        ConnectionBroker::weak_ptr(connectionCache)));
+    RequestBroker::ptr requestBroker;
+    if (options.proxyForURIDg)
+        requestBroker.reset(new BaseRequestBroker(
+            ConnectionBroker::weak_ptr(connectionCache)));
+    else
+        requestBroker.reset(new BaseRequestBroker(
+            boost::static_pointer_cast<ConnectionBroker>(connectionCache)));
+
     if (options.delayDg)
         requestBroker.reset(new RetryRequestBroker(requestBroker,
         options.delayDg));
