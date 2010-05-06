@@ -226,19 +226,19 @@ sign(const URI &uri, Method method, const std::string &signatureMethod,
     requestUri.fragmentDefined(false);
     requestUri.normalize();
     os << method << '&' << URI::encode(requestUri.toString());
-    std::map<std::string, std::multiset<std::string> > combined;
-    std::map<std::string, std::multiset<std::string> >::iterator
+    std::multiset<std::pair<std::string, std::string> > combined;
+    std::multiset<std::pair<std::string, std::string> >::iterator
         combinedIt;
     for (it = oauthParameters.begin(); it != oauthParameters.end(); ++it)
         if (stricmp(it->first.c_str(), "realm") != 0)
-            combined[it->first].insert(it->second);
+            combined.insert(*it);
     URI::QueryString::const_iterator it2;
     for (it2 = postParameters.begin(); it2 != postParameters.end(); ++it2)
-        combined[it2->first].insert(it2->second);
+        combined.insert(*it2);
     if (uri.queryDefined()) {
         URI::QueryString queryParams = uri.queryString();
         for (it2 = queryParams.begin(); it2 != queryParams.end(); ++it2)
-            combined[it2->first].insert(it2->second);
+            combined.insert(*it2);
     }
 
     os << '&';
@@ -248,16 +248,11 @@ sign(const URI &uri, Method method, const std::string &signatureMethod,
     for (combinedIt = combined.begin();
         combinedIt != combined.end();
         ++combinedIt) {
-        for (std::multiset<std::string>::iterator it2 =
-            combinedIt->second.begin();
-            it2 != combinedIt->second.end();
-            ++it2) {
-            if (!first)
-                os << '&';
-            first = false;
-            os << URI::encode(combinedIt->first)
-                << '=' << URI::encode(*it2);
-        }
+        if (!first)
+            os << '&';
+        first = false;
+        os << URI::encode(combinedIt->first)
+            << '=' << URI::encode(combinedIt->second);
     }
     signatureBaseString.append(URI::encode(os.str()));
 
