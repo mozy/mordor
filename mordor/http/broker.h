@@ -83,15 +83,15 @@ public:
 
 public:
     SSLStreamBroker(StreamBroker::ptr parent,
-        SSL_CTX *sslCtx = NULL, bool verifySslCert = false,
-        bool verifySslCertHost = false)
+        SSL_CTX *sslCtx = NULL, bool verifySslCertificate = false,
+        bool verifySslCertificateHost = true)
         : StreamBrokerFilter(parent),
           m_sslCtx(sslCtx),
           m_timerManager(NULL),
           m_readTimeout(NULL),
           m_writeTimeout(NULL),
-          m_verifySslCert(verifySslCert),
-          m_verifySslCertHost(verifySslCertHost)
+          m_verifySslCertificate(verifySslCertificate),
+          m_verifySslCertificateHost(verifySslCertificate)
     {}
 
     void timerManager(TimerManager *timerManager) { m_timerManager = timerManager; }
@@ -104,7 +104,7 @@ private:
     SSL_CTX *m_sslCtx;
     TimerManager *m_timerManager;
     unsigned long long m_readTimeout, m_writeTimeout;
-    bool m_verifySslCert, m_verifySslCertHost;
+    bool m_verifySslCertificate, m_verifySslCertificateHost;
 };
 
 class ConnectionBroker
@@ -343,7 +343,10 @@ struct RequestBrokerOptions
         sslConnectWriteTimeout(~0ull),
         httpReadTimeout(~0ull),
         httpWriteTimeout(~0ull),
-        fallbackToDirectOnProxyFailure(false)
+        fallbackToDirectOnProxyFailure(false),
+        sslCtx(NULL),
+        verifySslCertificate(false),
+        verifySslCertificateHost(true)
     {}
 
     IOManager *ioManager;
@@ -365,6 +368,9 @@ struct RequestBrokerOptions
             getCredentialsDg, getProxyCredentialsDg;
     bool fallbackToDirectOnProxyFailure;
     StreamBrokerFilter::ptr customStreamBrokerFilter;
+    SSL_CTX *sslCtx;
+    bool verifySslCertificate;
+    bool verifySslCertificateHost;
 };
 
 std::pair<RequestBroker::ptr, ConnectionCache::ptr>

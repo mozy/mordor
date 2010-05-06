@@ -34,7 +34,9 @@ createRequestBroker(const RequestBrokerOptions &options)
         streamBroker = options.customStreamBrokerFilter;
     }
 
-    SSLStreamBroker::ptr sslBroker(new SSLStreamBroker(streamBroker));
+    SSLStreamBroker::ptr sslBroker(new SSLStreamBroker(streamBroker,
+        options.sslCtx, options.verifySslCertificate,
+        options.verifySslCertificateHost));
     sslBroker->timerManager(timerManager);
     sslBroker->readTimeout(options.sslConnectReadTimeout);
     sslBroker->writeTimeout(options.sslConnectWriteTimeout);
@@ -192,9 +194,9 @@ SSLStreamBroker::getStream(const URI &uri)
         bufferedStream->allowPartialReads(true);
         SSLStream::ptr sslStream(new SSLStream(bufferedStream, true, true, m_sslCtx));
         sslStream->connect();
-        if (m_verifySslCert)
+        if (m_verifySslCertificate)
             sslStream->verifyPeerCertificate();
-        if (m_verifySslCertHost)
+        if (m_verifySslCertificateHost)
             sslStream->verifyPeerCertificate(uri.authority.host());
         if (timeoutStream) {
             bufferedStream->parent(timeoutStream->parent());
