@@ -166,6 +166,8 @@ authorize(Request &nextRequest, const std::string &signatureMethod,
 
     AuthParams &authorization = nextRequest.request.authorization;
     authorization.scheme = "OAuth";
+    authorization.base64.clear();
+    authorization.parameters.clear();
     authorization.parameters["oauth_consumer_key"] = clientCredentials.first;
     authorization.parameters["oauth_token"] = tokenCredentials.first;
     authorization.parameters["oauth_version"] = "1.0";
@@ -209,16 +211,14 @@ template void nonceAndTimestamp<StringMap>(StringMap &);
 template void nonceAndTimestamp<URI::QueryString>(URI::QueryString &);
 
 template <class T>
-void
-sign(const URI &uri, Method method, const std::string &signatureMethod,
+std::string
+generateSignature(const URI &uri, Method method,
     const std::string &clientSecret, const std::string &tokenSecret,
-    T &oauthParameters, const URI::QueryString &postParameters)
+    const T &oauthParameters, const URI::QueryString &postParameters)
 {
-    MORDOR_ASSERT(oauthParameters.find("oauth_signature_method") == oauthParameters.end());
-    oauthParameters.insert(std::make_pair("oauth_signature_method", signatureMethod));
-    MORDOR_ASSERT(oauthParameters.find("oauth_signature") == oauthParameters.end());
+    MORDOR_ASSERT(oauthParameters.find("oauth_signature_method") != oauthParameters.end());
 
-    typename T::iterator it;
+    typename T::const_iterator it;
 
     std::ostringstream os;
     URI requestUri(uri);
@@ -230,7 +230,8 @@ sign(const URI &uri, Method method, const std::string &signatureMethod,
     std::multiset<std::pair<std::string, std::string> >::iterator
         combinedIt;
     for (it = oauthParameters.begin(); it != oauthParameters.end(); ++it)
-        if (stricmp(it->first.c_str(), "realm") != 0)
+        if (stricmp(it->first.c_str(), "realm") != 0 &&
+            stricmp(it->first.c_str(), "oauth_signature") != 0)
             combined.insert(*it);
     URI::QueryString::const_iterator it2;
     for (it2 = postParameters.begin(); it2 != postParameters.end(); ++it2)
@@ -260,14 +261,37 @@ sign(const URI &uri, Method method, const std::string &signatureMethod,
     secrets.append(1, '&');
     secrets.append(URI::encode(tokenSecret));
 
+    it = oauthParameters.find("oauth_signature_method");
+    const std::string &signatureMethod = it->second;
     if (stricmp(signatureMethod.c_str(), "HMAC-SHA1") == 0) {
-        oauthParameters.insert(std::make_pair("oauth_signature",
-            base64encode(hmacSha1(signatureBaseString, secrets))));
+        return base64encode(hmacSha1(signatureBaseString, secrets));
     } else if (stricmp(signatureMethod.c_str(), "PLAINTEXT") == 0) {
-        oauthParameters.insert(std::make_pair("oauth_signature", secrets));
+        return secrets;
     } else {
         MORDOR_NOTREACHED();
     }
+}
+
+template <class T>
+void sign(const URI &uri, Method method,
+    const std::string &signatureMethod, const std::string &clientSecret,
+    const std::string &tokenSecret, T &oauthParameters,
+    const URI::QueryString &postParameters)
+{
+    std::pair<typename T::iterator, typename T::iterator> its =
+        oauthParameters.equal_range("oauth_signature_method");
+    if (its.first == oauthParameters.end() ||
+        std::next(its.first) != its.second ||
+        its.first->second != signatureMethod) {
+        oauthParameters.erase(its.first, its.second);
+        oauthParameters.insert(std::make_pair("oauth_signature_method",
+            signatureMethod));
+    }
+    its = oauthParameters.equal_range("oauth_signature");
+    oauthParameters.erase(its.first, its.second);
+    oauthParameters.insert(std::make_pair("oauth_signature",
+        generateSignature(uri, method, clientSecret, tokenSecret,
+        oauthParameters, postParameters)));
 }
 
 template void sign<StringMap>(const URI &, Method, const std::string &,
@@ -275,6 +299,38 @@ template void sign<StringMap>(const URI &, Method, const std::string &,
     const URI::QueryString &);
 template void sign<URI::QueryString>(const URI &, Method, const std::string &,
     const std::string &, const std::string &, URI::QueryString &,
+    const URI::QueryString &);
+
+template <class T>
+bool validate(const URI &uri, Method method,
+    const std::string &clientSecret, const std::string &tokenSecret,
+    const T &oauthParameters,
+    const URI::QueryString &postParameters)
+{
+    std::pair<typename T::const_iterator, typename T::const_iterator> its =
+        oauthParameters.equal_range("oauth_signature_method");
+    // Not exactly one signature method
+    if (its.first == oauthParameters.end() ||
+        std::next(its.first) != its.second)
+        return false;
+    // Unsupported signature method
+    if (stricmp(its.first->second.c_str(), "PLAINTEXT") != 0 &&
+        stricmp(its.first->second.c_str(), "HMAC-SHA1") != 0)
+        return false;
+    its = oauthParameters.equal_range("oauth_signature");
+    // Not exactly one signature
+    if (its.first == oauthParameters.end() ||
+        std::next(its.first) != its.second)
+        return false;
+    return its.first->second == generateSignature(uri, method,
+        clientSecret, tokenSecret, oauthParameters, postParameters);
+}
+
+template bool validate<StringMap>(const URI &, Method,
+    const std::string &, const std::string &, const StringMap &,
+    const URI::QueryString &);
+template bool validate<URI::QueryString>(const URI &, Method,
+    const std::string &, const std::string &, const URI::QueryString &,
     const URI::QueryString &);
 
 ClientRequest::ptr

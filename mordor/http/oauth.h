@@ -34,10 +34,24 @@ void authorize(Request &nextRequest,
 template <class T>
 void nonceAndTimestamp(T &oauthParameters);
 
+// oauthParameters should *not* be empty; instead if oauth params are in the
+// POST body or in the querystring, those fields should be empty instead
+template <class T>
+std::string generateSignature(const URI &uri, Method method,
+    const std::string &clientSecret, const std::string &tokenSecret,
+    const T &oauthParameters,
+    const URI::QueryString &postParameters = URI::QueryString());
+
 template <class T>
 void sign(const URI &uri, Method method,
     const std::string &signatureMethod, const std::string &clientSecret,
     const std::string &tokenSecret, T &oauthParameters,
+    const URI::QueryString &postParameters = URI::QueryString());
+
+template <class T>
+bool validate(const URI &uri, Method method,
+    const std::string &clientSecret, const std::string &tokenSecret,
+    const T &oauthParameters,
     const URI::QueryString &postParameters = URI::QueryString());
 
 std::pair<std::string, std::string>

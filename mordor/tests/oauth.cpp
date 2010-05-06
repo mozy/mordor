@@ -28,10 +28,10 @@ MORDOR_UNITTEST(OAuth, oauthExample)
         oauthParameters.end());
     MORDOR_TEST_ASSERT_EQUAL(oauthParameters["oauth_signature"],
         "kd94hf93k423kf44&");
+    MORDOR_ASSERT(OAuth::validate("https://photos.example.net/request_token",
+        POST, clientCredentials.second, std::string(), oauthParameters));
 
     oauthParameters.erase("oauth_callback");
-    oauthParameters.erase("oauth_signature_method");
-    oauthParameters.erase("oauth_signature");
     oauthParameters["oauth_token"] = temporaryCredentials.first;
     oauthParameters["oauth_verifier"] = verifier;
     oauthParameters["oauth_timestamp"] = "1191242092";
@@ -43,10 +43,11 @@ MORDOR_UNITTEST(OAuth, oauthExample)
         oauthParameters.end());
     MORDOR_TEST_ASSERT_EQUAL(oauthParameters["oauth_signature"],
         "kd94hf93k423kf44&hdhd0244k9j7ao03");
+    MORDOR_ASSERT(OAuth::validate("https://photos.example.net/access_token",
+        POST, clientCredentials.second, temporaryCredentials.second,
+        oauthParameters));
 
     oauthParameters.erase("oauth_verifier");
-    oauthParameters.erase("oauth_signature_method");
-    oauthParameters.erase("oauth_signature");
     oauthParameters["oauth_token"] = tokenCredentials.first;
     oauthParameters["oauth_timestamp"] = "1191242096";
     oauthParameters["oauth_nonce"] = "kllo9940pd9333jh";
@@ -57,4 +58,7 @@ MORDOR_UNITTEST(OAuth, oauthExample)
         oauthParameters.end());
     MORDOR_TEST_ASSERT_EQUAL(oauthParameters["oauth_signature"],
         "tR3+Ty81lMeYAr/Fid0kMTYa/WM=");
+    MORDOR_ASSERT(OAuth::validate("http://photos.example.net/photos?file=vacation.jpg&size=original",
+        GET, clientCredentials.second, tokenCredentials.second,
+        oauthParameters));
 }
