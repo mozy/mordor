@@ -281,7 +281,7 @@ void sign(const URI &uri, Method method,
     std::pair<typename T::iterator, typename T::iterator> its =
         oauthParameters.equal_range("oauth_signature_method");
     if (its.first == oauthParameters.end() ||
-        std::next(its.first) != its.second ||
+        boost::next(its.first) != its.second ||
         its.first->second != signatureMethod) {
         oauthParameters.erase(its.first, its.second);
         oauthParameters.insert(std::make_pair("oauth_signature_method",
@@ -311,7 +311,7 @@ bool validate(const URI &uri, Method method,
         oauthParameters.equal_range("oauth_signature_method");
     // Not exactly one signature method
     if (its.first == oauthParameters.end() ||
-        std::next(its.first) != its.second)
+        boost::next(its.first) != its.second)
         return false;
     // Unsupported signature method
     if (stricmp(its.first->second.c_str(), "PLAINTEXT") != 0 &&
@@ -320,7 +320,7 @@ bool validate(const URI &uri, Method method,
     its = oauthParameters.equal_range("oauth_signature");
     // Not exactly one signature
     if (its.first == oauthParameters.end() ||
-        std::next(its.first) != its.second)
+        boost::next(its.first) != its.second)
         return false;
     return its.first->second == generateSignature(uri, method,
         clientSecret, tokenSecret, oauthParameters, postParameters);

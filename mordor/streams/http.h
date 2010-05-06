@@ -13,6 +13,9 @@ struct EntityChangedException : virtual Exception {};
 class HTTPStream : public FilterStream
 {
 public:
+    typedef boost::shared_ptr<HTTPStream> ptr;
+
+public:
     HTTPStream(const URI &uri, HTTP::RequestBroker::ptr requestBroker,
         boost::function<bool (size_t)> delayDg = NULL);
     HTTPStream(const HTTP::Request &requestHeaders,
