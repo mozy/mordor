@@ -527,7 +527,7 @@ URI::Path&
 URI::Path::operator=(const std::string& path)
 {
     type = RELATIVE;
-	segments.clear();
+    segments.clear();
     URIPathParser parser(*this);
     parser.run(path);
     if (parser.error() || !parser.final())
@@ -814,9 +814,18 @@ URI::operator==(const URI &rhs) const
     }
     action saveValue {
         MORDOR_ASSERT(m_iterator != m_qs.end());
-        m_iterator->second = unescape(std::string(mark, fpc - mark), true);
+        if (fpc - mark == 0 && m_iterator->first.empty())
+            m_qs.erase(m_iterator);
+        else
+            m_iterator->second = unescape(std::string(mark, fpc - mark), true);
         m_iterator = m_qs.end();
         mark = NULL;
+    }
+    action saveNoValue {
+        if (m_iterator != m_qs.end() && m_iterator->first.empty()) {
+            m_qs.erase(m_iterator);
+            mark = NULL;
+        }
     }
 
     sub_delims = "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";";
@@ -824,9 +833,9 @@ URI::operator==(const URI &rhs) const
     pct_encoded = "%" xdigit xdigit;
     pchar = unreserved | pct_encoded | sub_delims | ":" | "@";
     querychar = (pchar | "/" | "?") -- '&' -- ';';
-    key = querychar+;
-    value = (querychar | '=')+;
-    keyValue = key >mark %saveKey ('=' value >mark %saveValue)?;
+    key = querychar*;
+    value = (querychar | '=')*;
+    keyValue = key >mark %saveKey ('=' value >mark %saveValue)? %saveNoValue;
     main := keyValue? ( ('&' | ';') keyValue? )*;
     write data;
 }%%
