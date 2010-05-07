@@ -6,6 +6,7 @@
 
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
+#include "mordor/http/multipart.h"
 #include "mordor/http/parser.h"
 #include "mordor/http/server.h"
 #include "mordor/scheduler.h"

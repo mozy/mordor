@@ -5,7 +5,10 @@
 #include "auth.h"
 
 #include "basic.h"
+#include "client.h"
 #include "digest.h"
+#include "mordor/socket.h"
+
 #ifdef WINDOWS
 #include "negotiate.h"
 #endif
@@ -79,10 +82,10 @@ ClientAuthBroker::request(Request &requestHeaders,
             } else {
                 return request;
             }
-        } catch (SocketException) {
+        } catch (SocketException &) {
             m_conn = m_dg();
             continue;
-        } catch (PriorRequestFailedException) {
+        } catch (PriorRequestFailedException &) {
             m_conn = m_dg();
             continue;
         }

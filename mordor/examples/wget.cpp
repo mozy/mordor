@@ -10,10 +10,9 @@
 
 #include "mordor/config.h"
 #include "mordor/exception.h"
-#include "mordor/http/auth.h"
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
-#include "mordor/http/proxy.h"
+#include "mordor/http/multipart.h"
 #include "mordor/iomanager.h"
 #include "mordor/socket.h"
 #include "mordor/streams/socket.h"

@@ -10,13 +10,13 @@
 #include <boost/thread/mutex.hpp>
 
 #include "connection.h"
-#include "mordor/fiber.h"
-#include "mordor/streams/stream.h"
-#include "multipart.h"
 
 namespace Mordor {
 
+class Fiber;
+class Multipart;
 class Scheduler;
+class Stream;
 class TimeoutStream;
 class Timer;
 class TimerManager;
@@ -24,6 +24,7 @@ class TimerManager;
 namespace HTTP {
 
 class ClientConnection;
+
 class ClientRequest : public boost::enable_shared_from_this<ClientRequest>, boost::noncopyable
 {
 private:
@@ -65,17 +66,17 @@ public:
 
     const Request &request();
     bool hasRequestBody() const;
-    Stream::ptr requestStream();
-    Multipart::ptr requestMultipart();
+    boost::shared_ptr<Stream> requestStream();
+    boost::shared_ptr<Multipart> requestMultipart();
     EntityHeaders &requestTrailer();
 
     const Response &response();
     bool hasResponseBody();
-    Stream::ptr responseStream();
-    Multipart::ptr responseMultipart();
+    boost::shared_ptr<Stream> responseStream();
+    boost::shared_ptr<Multipart> responseMultipart();
     const EntityHeaders &responseTrailer() const;
 
-    Stream::ptr stream();
+    boost::shared_ptr<Stream> stream();
 
     void cancel(bool abort = false) { cancel(abort, false); }
     void finish();
@@ -93,16 +94,16 @@ private:
     boost::shared_ptr<ClientConnection> m_conn;
     unsigned long long m_requestNumber;
     Scheduler *m_scheduler;
-    Fiber::ptr m_fiber;
+    boost::shared_ptr<Fiber> m_fiber;
     Request m_request;
     Response m_response;
     EntityHeaders m_requestTrailer, m_responseTrailer;
     State m_requestState, m_responseState;
     boost::exception_ptr m_priorResponseException;
     bool m_badTrailer, m_incompleteTrailer, m_hasResponseBody;
-    Stream::ptr m_requestStream;
+    boost::shared_ptr<Stream> m_requestStream;
     boost::weak_ptr<Stream> m_responseStream;
-    Multipart::ptr m_requestMultipart;
+    boost::shared_ptr<Multipart> m_requestMultipart;
     boost::weak_ptr<Multipart> m_responseMultipart;
 };
 
@@ -136,7 +137,8 @@ public:
     typedef boost::shared_ptr<ClientConnection> ptr;
 
 public:
-    ClientConnection(Stream::ptr stream, TimerManager *timerManager = NULL);
+    ClientConnection(boost::shared_ptr<Stream> stream,
+        TimerManager *timerManager = NULL);
     ~ClientConnection();
 
     ClientRequest::ptr request(const Request &requestHeaders);

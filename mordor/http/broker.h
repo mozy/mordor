@@ -4,12 +4,22 @@
 
 #include <openssl/ssl.h>
 
-#include "client.h"
+#include "http.h"
+#include "mordor/iomanager.h"
 #include "mordor/scheduler.h"
-#include "server.h"
 
 namespace Mordor {
+
+class Socket;
+class Stream;
+class TimerManager;
+
 namespace HTTP {
+
+class ClientConnection;
+class ClientRequest;
+class ServerConnection;
+class ServerRequest;
 
 class StreamBroker
 {
@@ -20,7 +30,7 @@ public:
 public:
     virtual ~StreamBroker() {}
 
-    virtual Stream::ptr getStream(const URI &uri) = 0;
+    virtual boost::shared_ptr<Stream> getStream(const URI &uri) = 0;
     virtual void cancelPending() {}
 };
 
@@ -64,13 +74,13 @@ public:
 
     void connectTimeout(unsigned long long timeout) { m_connectTimeout = timeout; }
 
-    Stream::ptr getStream(const URI &uri);
+    boost::shared_ptr<Stream> getStream(const URI &uri);
     void cancelPending();
 
 private:
     boost::mutex m_mutex;
     bool m_cancelled;
-    std::list<Socket::ptr> m_pending;
+    std::list<boost::shared_ptr<Socket> > m_pending;
     IOManager *m_ioManager;
     Scheduler *m_scheduler;
     unsigned long long m_connectTimeout;
@@ -98,7 +108,7 @@ public:
     void readTimeout(unsigned long long timeout) { m_readTimeout = timeout; }
     void writeTimeout(unsigned long long timeout) { m_writeTimeout = timeout; }
 
-    Stream::ptr getStream(const URI &uri);
+    boost::shared_ptr<Stream> getStream(const URI &uri);
 
 private:
     SSL_CTX *m_sslCtx;
@@ -116,7 +126,7 @@ public:
 public:
     virtual ~ConnectionBroker() {}
 
-    virtual std::pair<ClientConnection::ptr, bool>
+    virtual std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false) = 0;
 };
 
@@ -139,7 +149,7 @@ public:
     void readTimeout(unsigned long long timeout) { m_readTimeout = timeout; }
     void writeTimeout(unsigned long long timeout) { m_writeTimeout = timeout; }
 
-    std::pair<ClientConnection::ptr, bool>
+    std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false);
 
     void closeConnections();
@@ -149,7 +159,7 @@ private:
     StreamBroker::ptr m_streamBroker;
     size_t m_connectionsPerHost;
 
-    typedef std::list<ClientConnection::ptr> ConnectionList;
+    typedef std::list<boost::shared_ptr<ClientConnection> > ConnectionList;
     std::map<URI, std::pair<ConnectionList, boost::shared_ptr<FiberCondition> > > m_conns;
     bool m_closed;
     TimerManager *m_timerManager;
@@ -160,10 +170,12 @@ class MockConnectionBroker : public ConnectionBroker
 {
 private:
     typedef std::map<URI,
-        std::pair<ClientConnection::ptr, ServerConnection::ptr> >
+        std::pair<boost::shared_ptr<ClientConnection>,
+            boost::shared_ptr<ServerConnection> > >
         ConnectionCache;
 public:
-    MockConnectionBroker(boost::function<void (const URI &uri, ServerRequest::ptr)> dg,
+    MockConnectionBroker(boost::function<void (const URI &uri,
+            boost::shared_ptr<ServerRequest>)> dg,
         TimerManager *timerManager = NULL, unsigned long long readTimeout = ~0ull,
         unsigned long long writeTimeout = ~0ull)
         : m_dg(dg),
@@ -172,11 +184,11 @@ public:
           m_writeTimeout(writeTimeout)
     {}
 
-    std::pair<ClientConnection::ptr, bool>
+    std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false);
 
 private:
-    boost::function<void (const URI &uri, ServerRequest::ptr)> m_dg;
+    boost::function<void (const URI &uri, boost::shared_ptr<ServerRequest>)> m_dg;
     ConnectionCache m_conns;
     TimerManager *m_timerManager;
     unsigned long long m_readTimeout, m_writeTimeout;
@@ -191,9 +203,10 @@ public:
 public:
     virtual ~RequestBroker() {}
 
-    virtual ClientRequest::ptr request(Request &requestHeaders,
+    virtual boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL) = 0;
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL)
+        = 0;
 };
 
 class RequestBrokerFilter : public RequestBroker
@@ -207,9 +220,10 @@ public:
 
     RequestBroker::ptr parent();
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL) = 0;
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL)
+        = 0;
 
 private:
     RequestBroker::ptr m_parent;
@@ -240,9 +254,9 @@ public:
         : m_weakConnectionBroker(connectionBroker)
     {}
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
     ConnectionBroker::ptr m_connectionBroker;
@@ -265,9 +279,9 @@ public:
 
     void sharedRetryCounter(size_t *retries) { mp_retries = retries; }
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
     boost::function<bool (size_t)> m_delayDg;
@@ -305,9 +319,9 @@ public:
     void handleFound(bool handle) { m_handle302 = handle; }
     void handleTemporaryRedirect(bool handle) { m_handle307 = handle; }
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
     size_t m_maxRedirects;
@@ -323,9 +337,9 @@ public:
           m_userAgent(userAgent)
     {}
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
     ProductAndCommentList m_userAgent;
@@ -361,7 +375,7 @@ struct RequestBrokerOptions
     unsigned long long httpWriteTimeout;
     boost::function<URI (const URI &)> proxyForURIDg;
     boost::function<bool (const URI &,
-            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            boost::shared_ptr<ClientRequest> /* priorRequest = ClientRequest::ptr() */,
             std::string & /* scheme */, std::string & /* realm */,
             std::string & /* username */, std::string & /* password */,
             size_t /* attempts */)>

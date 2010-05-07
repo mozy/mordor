@@ -5,6 +5,7 @@
 #include <boost/bind.hpp>
 
 #include "mordor/config.h"
+#include "mordor/http/multipart.h"
 #include "mordor/http/server.h"
 #include "mordor/iomanager.h"
 #include "mordor/socket.h"

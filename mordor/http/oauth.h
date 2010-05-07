@@ -5,7 +5,6 @@
 #include <boost/function.hpp>
 
 #include "broker.h"
-#include "http.h"
 
 namespace Mordor {
 namespace HTTP {
@@ -55,14 +54,14 @@ bool validate(const URI &uri, Method method,
     const URI::QueryString &postParameters = URI::QueryString());
 
 std::pair<std::string, std::string>
-extractCredentials(ClientRequest::ptr request);
+extractCredentials(boost::shared_ptr<ClientRequest> request);
 
 class RequestBroker : public RequestBrokerFilter
 {
 public:
     RequestBroker(HTTP::RequestBroker::ptr parent,
         boost::function<bool (const URI &,
-            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            boost::shared_ptr<ClientRequest> /* priorRequest = ClientRequest::ptr() */,
             std::string & /* signatureMethod */,
             std::pair<std::string, std::string> & /* clientCredentials */,
             std::pair<std::string, std::string> & /* tokenCredentials */,
@@ -72,12 +71,12 @@ public:
           m_getCredentialsDg(getCredentialsDg)
     {}
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
-    boost::function<bool (const URI &, ClientRequest::ptr, std::string &,
+    boost::function<bool (const URI &, boost::shared_ptr<ClientRequest>, std::string &,
         std::pair<std::string, std::string> &,
         std::pair<std::string, std::string> &,
         std::string &, size_t)> m_getCredentialsDg;

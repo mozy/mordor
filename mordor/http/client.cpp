@@ -10,6 +10,7 @@
 
 #include "chunked.h"
 #include "mordor/assert.h"
+#include "mordor/fiber.h"
 #include "mordor/log.h"
 #include "mordor/scheduler.h"
 #include "mordor/streams/limited.h"
@@ -19,6 +20,7 @@
 #include "mordor/streams/transfer.h"
 #include "mordor/util.h"
 #include "mordor/atomic.h"
+#include "multipart.h"
 #include "parser.h"
 
 namespace Mordor {

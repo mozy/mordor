@@ -10,6 +10,7 @@
 #include "mordor/log.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/transfer.h"
+#include "multipart.h"
 #include "parser.h"
 
 namespace Mordor {

@@ -48,7 +48,7 @@ public:
 
     void fallbackOnFailure(bool fallback) { m_fallbackOnFailure = fallback; }
 
-    std::pair<ClientConnection::ptr, bool>
+    std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false);
 
 private:
@@ -69,7 +69,7 @@ public:
 
     void fallbackOnFailure(bool fallback) { m_fallbackOnFailure = fallback; }
 
-    Stream::ptr getStream(const URI &uri);
+    boost::shared_ptr<Stream> getStream(const URI &uri);
 
 private:
     RequestBroker::ptr m_requestBroker;

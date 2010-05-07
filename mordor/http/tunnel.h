@@ -2,13 +2,14 @@
 #define __MORDOR_HTTP_TUNNEL_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "auth.h"
+#include "client.h"
 
 namespace Mordor {
+
 namespace HTTP {
 
 template <class T>
-Stream::ptr tunnel(T &conn, const std::string &proxy, const std::string &target)
+boost::shared_ptr<Stream> tunnel(T &conn, const std::string &proxy, const std::string &target)
 {
     Request requestHeaders;
     requestHeaders.requestLine.method = CONNECT;

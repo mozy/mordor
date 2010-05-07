@@ -3,6 +3,7 @@
 #include "mordor/pch.h"
 
 #include "mordor/uri.h"
+#include "mordor/streams/buffer.h"
 #include "mordor/test/test.h"
 
 using namespace Mordor;

@@ -5,6 +5,7 @@
 #include "broker.h"
 
 #include "auth.h"
+#include "client.h"
 #include "mordor/atomic.h"
 #include "mordor/future.h"
 #include "mordor/streams/buffered.h"
@@ -13,6 +14,7 @@
 #include "mordor/streams/ssl.h"
 #include "mordor/streams/timeout.h"
 #include "proxy.h"
+#include "server.h"
 
 namespace Mordor {
 namespace HTTP {

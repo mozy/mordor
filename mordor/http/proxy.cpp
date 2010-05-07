@@ -5,6 +5,8 @@
 #include "proxy.h"
 
 #include "mordor/config.h"
+#include "mordor/http/client.h"
+#include "mordor/socket.h"
 
 #ifdef WINDOWS
 #include "mordor/runtime_linking.h"
@@ -231,7 +233,7 @@ ProxyConnectionBroker::ProxyConnectionBroker(ConnectionBroker::ptr parent,
         m_dg = &proxyFromConfig;
 }
 
-std::pair<ClientConnection::ptr, bool>
+std::pair<boost::shared_ptr<ClientConnection>, bool>
 ProxyConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
 {
     URI proxy = m_dg(uri);
@@ -259,7 +261,7 @@ ProxyStreamBroker::ProxyStreamBroker(StreamBroker::ptr parent,
         m_dg = &proxyFromConfig;
 }
 
-Stream::ptr
+boost::shared_ptr<Stream>
 ProxyStreamBroker::getStream(const Mordor::URI &uri)
 {
     URI proxy = m_dg(uri);

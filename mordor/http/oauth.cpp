@@ -4,6 +4,9 @@
 
 #include "oauth.h"
 
+#include "client.h"
+#include "mordor/streams/stream.h"
+
 namespace Mordor {
 namespace HTTP {
 namespace OAuth {

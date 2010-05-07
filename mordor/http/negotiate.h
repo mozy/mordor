@@ -4,12 +4,19 @@
 
 #include <security.h>
 
+#include <string>
+
 #include <boost/noncopyable.hpp>
 
-#include "http.h"
-
 namespace Mordor {
+
+struct URI;
+
 namespace HTTP {
+
+struct AuthParams;
+struct Request;
+struct Response;
 
 class NegotiateAuth : public boost::noncopyable
 {
