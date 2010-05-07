@@ -371,6 +371,7 @@ struct RequestBrokerOptions
     SSL_CTX *sslCtx;
     bool verifySslCertificate;
     bool verifySslCertificateHost;
+    ProductAndCommentList userAgent;
 };
 
 std::pair<RequestBroker::ptr, ConnectionCache::ptr>

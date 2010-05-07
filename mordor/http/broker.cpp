@@ -64,6 +64,9 @@ createRequestBroker(const RequestBrokerOptions &options)
         options.proxyForURIDg ? options.getProxyCredentialsDg : NULL));
     if (options.handleRedirects)
         requestBroker.reset(new RedirectRequestBroker(requestBroker));
+    if (!options.userAgent.empty())
+        requestBroker.reset(new UserAgentRequestBroker(requestBroker,
+            options.userAgent));
 
     if (options.proxyForURIDg) {
         ProxyStreamBroker::ptr proxyStreamBroker(new ProxyStreamBroker(socketBroker, requestBroker,
@@ -82,6 +85,9 @@ createRequestBroker(const RequestBrokerOptions &options)
                 options.getCredentialsDg, options.getProxyCredentialsDg));
         if (options.handleRedirects)
             requestBroker.reset(new RedirectRequestBroker(requestBroker));
+        if (!options.userAgent.empty())
+            requestBroker.reset(new UserAgentRequestBroker(requestBroker,
+                options.userAgent));
     }
     return std::make_pair(requestBroker, connectionCache);
 }
