@@ -20,9 +20,7 @@ public:
 public:
     FilterStream(Stream::ptr parent, bool own = true)
         : m_parent(parent), m_own(own)
-    {
-        MORDOR_ASSERT(parent);
-    }
+    {}
 
     Stream::ptr parent() { return m_parent; }
     void parent(Stream::ptr parent) { m_parent = parent; }
