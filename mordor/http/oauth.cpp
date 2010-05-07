@@ -177,6 +177,18 @@ authorize(Request &nextRequest, const std::string &signatureMethod,
         authorization.parameters);
     if (!realm.empty())
         authorization.parameters["realm"] = realm;
+    // OAuth is stupid, and doesn't trust quoted-string in the Authorization
+    // header, so we have to use their encoding method (which is really just
+    // URI encoding, only encoding characters not in the unreserved character
+    // set).
+    // Note that technically Mordor breaks the OAuth spec because when it
+    // serializes, it will only add quotes when necessary, whereas OAuth
+    // (again, very naively) requires quotes on all values.
+    for (StringMap::iterator it = authorization.parameters.begin();
+        it != authorization.parameters.end();
+        ++it) {
+        it->second = URI::encode(it->second);
+    }
 }
 
 template <class T>
