@@ -24,7 +24,15 @@ public:
 
     void sharedRetryCounter(size_t *retries) { mp_retries = retries; }
 
-    HTTP::ETag eTag;
+    void eTag(const HTTP::ETag &eTag) { m_eTag = eTag; }
+    HTTP::ETag eTag();
+
+    /// Force the transfer to begin (i.e. so a call to size() won't try to
+    /// do an extra HEAD)
+    void start();
+    /// This will abandon any current transfer in progress.  If it returns
+    /// true, the transfer will have already begun at the current position
+    bool checkModified();
 
     bool supportsRead() { return true; }
     bool supportsSeek() { return true; }
@@ -36,11 +44,12 @@ public:
     long long size();
 
 private:
-    void ensureSize();
+    void stat();
 
 private:
     HTTP::Request m_requestHeaders;
     HTTP::RequestBroker::ptr m_requestBroker;
+    HTTP::ETag m_eTag;
     long long m_pos, m_size;
     boost::function<bool (size_t)> m_delayDg;
     size_t *mp_retries;
