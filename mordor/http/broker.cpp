@@ -62,7 +62,7 @@ createRequestBroker(const RequestBrokerOptions &options)
     if ((options.proxyForURIDg && options.getProxyCredentialsDg) ||
         (!options.proxyForURIDg && options.getCredentialsDg))
         requestBroker.reset(new AuthRequestBroker(requestBroker,
-        options.proxyForURIDg ? options.getCredentialsDg : NULL,
+        !options.proxyForURIDg ? options.getCredentialsDg : NULL,
         options.proxyForURIDg ? options.getProxyCredentialsDg : NULL));
     if (options.handleRedirects)
         requestBroker.reset(new RedirectRequestBroker(requestBroker));
