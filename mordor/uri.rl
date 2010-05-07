@@ -24,7 +24,7 @@ static const std::string pchar("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
 static const std::string path("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" ":@" "/");
 static const std::string segment_nc("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" "@");
 static const std::string query("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" ":@" "/?");
-static const std::string queryString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$'()*+," ":@" "/?");
+static const std::string queryString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$'()*," ":@" "/?");
 
 static std::string escape(const std::string& str, const std::string& allowedChars, bool spaceAsPlus = false)
 {

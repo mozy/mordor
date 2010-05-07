@@ -227,6 +227,11 @@ MORDOR_UNITTEST(URI, queryString)
     MORDOR_TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
     MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a+b");
 
+    qs = "a%2Bb";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.begin()->first, "a+b");
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a%2Bb");
+
     qs = "a&b;c";
     MORDOR_TEST_ASSERT_EQUAL(qs.size(), 3u);
     URI::QueryString::iterator it = qs.begin();
