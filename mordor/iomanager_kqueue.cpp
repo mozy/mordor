@@ -172,7 +172,10 @@ IOManagerKQueue::idle()
             struct kevent &event = events[i];
             if ((int)event.ident == m_tickleFds[0]) {
                 unsigned char dummy;
-                int rc2 = read(m_tickleFds[0], &dummy, 1);
+#ifdef DEBUG
+                int rc2 = 
+#endif
+                read(m_tickleFds[0], &dummy, 1);
                 MORDOR_ASSERT(rc2 == 1);
                 MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
                 continue;
