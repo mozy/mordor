@@ -390,9 +390,9 @@ endif
 mordor/examples/wget: mordor/examples/wget.o				\
 	mordor/libmordor.a
 ifeq ($(Q),@)
-	@echo ld $@
+	@echo ld $@ -lboost_program_options$(BOOST_EXT)
 endif
-	$(COMPLINK)
+	$(COMPLINK) -lboost_program_options$(BOOST_EXT)
 
 mordor/streams/socket_stream.o: mordor/streams/socket.cpp
 ifeq ($(Q),@)
