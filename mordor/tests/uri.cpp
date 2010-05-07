@@ -270,6 +270,21 @@ MORDOR_UNITTEST(URI, queryString)
     ++it;
     MORDOR_TEST_ASSERT_EQUAL(it->first, "e");
     MORDOR_TEST_ASSERT_EQUAL(it->second, "f=g=h");
+
+    qs = "a=";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
+    it = qs.begin();
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "a");
+    MORDOR_TEST_ASSERT(it->second.empty());
+
+    qs = "a=&=b&=";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 2u);
+    it = qs.begin();
+    MORDOR_TEST_ASSERT(it->first.empty());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "b");
+    ++it;
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "a");
+    MORDOR_TEST_ASSERT(it->second.empty());
 }
 
 MORDOR_UNITTEST(URI, encoding)
