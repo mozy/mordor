@@ -711,7 +711,7 @@ operator<<(std::ostream& os, const URI& uri)
     os << uri.path.serialize(!uri.schemeDefined());
 
     if (uri.queryDefined()) {
-        os << "?" << escape(uri.query(), query);
+        os << "?" << uri.m_query;
     }
 
     if (uri.fragmentDefined()) {
