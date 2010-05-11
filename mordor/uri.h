@@ -28,6 +28,7 @@ struct URI
     friend class URIParser;
     friend class HTTP::RequestParser;
     friend class HTTP::ResponseParser;
+    friend std::ostream& operator<<(std::ostream& os, const Mordor::URI& uri);
 
     enum CharacterClass {
         UNRESERVED,
