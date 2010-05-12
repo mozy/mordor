@@ -161,8 +161,10 @@ HTTPStream::checkModified()
 size_t
 HTTPStream::read(Buffer &buffer, size_t length)
 {
-    if (m_size >= 0 && m_pos >= m_size)
-        return 0;
+    //TODO Remove this lines because they prevent to reach the EOF and thus the notifyeof method doesn't get called.
+    //Cody needs to verify this and if it is needed, then we need a way to get notifyeof to get called.
+    //if (m_size >= 0 && m_pos >= m_size)
+    //    return 0;
 
     size_t localRetries = 0;
     size_t *retries = mp_retries ? mp_retries : &localRetries;
