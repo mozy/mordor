@@ -141,7 +141,7 @@ public:
         : m_streamBroker(streamBroker),
           m_connectionsPerHost(connectionsPerHost),
           m_closed(false),
-          m_timerManager(NULL),
+          m_timerManager(timerManager),
           m_readTimeout(~0ull),
           m_writeTimeout(~0ull)
     {}
