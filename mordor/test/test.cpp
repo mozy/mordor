@@ -201,7 +201,7 @@ void Test::assertEqual<const char *, const char *>(const char *file,
 
 template <>
 void Test::assertNotEqual<const char *, const char *>(const char *file,
-    int line, const char *lhs, const char *function, const char *rhs,
+    int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
     if (!(strcmp(lhs, rhs) != 0)) {
@@ -253,3 +253,71 @@ void Test::assertGreaterThanOrEqual<const char *, const char *>(const char *file
             ">=");
     }
 }
+
+#ifdef WINDOWS
+template <>
+void Test::assertEqual<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(wcscmp(lhs, rhs) == 0)) {
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "==");
+    }
+}
+
+template <>
+void Test::assertNotEqual<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(wcscmp(lhs, rhs) != 0)) {
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "!=");
+    }
+}
+
+template <>
+void Test::assertLessThan<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(wcscmp(lhs, rhs) < 0)) {
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "<");
+    }
+}
+
+template <>
+void Test::assertLessThanOrEqual<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(wcscmp(lhs, rhs) <= 0)) {
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            "<=");
+    }
+}
+
+template <>
+void Test::assertGreaterThan<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(wcscmp(lhs, rhs) > 0)) {
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            ">");
+    }
+}
+
+template <>
+void Test::assertGreaterThanOrEqual<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr)
+{
+    if (!(wcscmp(lhs, rhs) == 0)) {
+        assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
+            ">=");
+    }
+}
+#endif
