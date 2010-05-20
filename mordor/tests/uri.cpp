@@ -286,6 +286,14 @@ MORDOR_UNITTEST(URI, queryString)
     ++it;
     MORDOR_TEST_ASSERT_EQUAL(it->first, "a");
     MORDOR_TEST_ASSERT(it->second.empty());
+
+    qs.clear();
+    qs.insert(std::make_pair("ampersand", "and&and"));
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "ampersand=and%26and");
+
+    uri = URI();
+    uri.query(qs);
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "?ampersand=and%26and");
 }
 
 MORDOR_UNITTEST(URI, encoding)
