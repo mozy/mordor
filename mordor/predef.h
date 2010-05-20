@@ -19,6 +19,7 @@
 #include <ntstatus.h>
 #define WIN32_NO_STATUS
 #include <windows.h>
+#include <ws2tcpip.h>
 
 #ifdef min
 #undef min
