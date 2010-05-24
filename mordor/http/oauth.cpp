@@ -5,6 +5,7 @@
 #include "oauth.h"
 
 #include "client.h"
+#include "mordor/date_time.h"
 #include "mordor/streams/stream.h"
 
 namespace Mordor {
@@ -197,14 +198,8 @@ authorize(Request &nextRequest, const std::string &signatureMethod,
 template <class T>
 void nonceAndTimestamp(T &oauthParameters)
 {
-    static boost::posix_time::ptime start(boost::gregorian::date(1970, 1, 1));
     static const char *allowedChars =
         "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    std::ostringstream os;
-    boost::posix_time::ptime now =
-        boost::posix_time::second_clock::universal_time();
-    boost::posix_time::time_duration duration = now - start;
-    os << duration.total_seconds();
 
     std::string nonce;
     nonce.resize(40);
@@ -218,7 +213,9 @@ void nonceAndTimestamp(T &oauthParameters)
     it = oauthParameters.find("oauth_nonce");
     if (it != oauthParameters.end())
         oauthParameters.erase(it);
-    oauthParameters.insert(std::make_pair("oauth_timestamp", os.str()));
+    oauthParameters.insert(std::make_pair("oauth_timestamp",
+        boost::lexical_cast<std::string>(toTimeT(
+            boost::posix_time::second_clock::universal_time()))));
     oauthParameters.insert(std::make_pair("oauth_nonce", nonce));
 }
 
@@ -348,6 +345,21 @@ template bool validate<URI::QueryString>(const URI &, Method,
     const std::string &, const std::string &, const URI::QueryString &,
     const URI::QueryString &);
 
+static void authorizeDg(ClientRequest::ptr request,
+    const std::string &signatureMethod,
+    const std::pair<std::string, std::string> &clientCredentials,
+    const std::pair<std::string, std::string> &tokenCredentials,
+    const std::string &realm,
+    boost::function<void (ClientRequest::ptr)> bodyDg)
+{
+    authorize(request->request(), signatureMethod, clientCredentials,
+        tokenCredentials, realm);
+    if (bodyDg)
+        bodyDg(request);
+    else
+        request->doRequest();
+}
+
 ClientRequest::ptr
 RequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     boost::function<void (ClientRequest::ptr)> bodyDg)
@@ -357,17 +369,20 @@ RequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     std::string signatureMethod, realm;
     size_t attempts = 0;
     while (true) {
+        boost::function<void (ClientRequest::ptr)> wrappedBodyDg = bodyDg;
         if (m_getCredentialsDg(requestHeaders.requestLine.uri, priorRequest,
             signatureMethod, clientCredentials, tokenCredentials, realm,
             attempts++))
-            authorize(requestHeaders, signatureMethod, clientCredentials,
-                tokenCredentials, realm);
+            wrappedBodyDg = boost::bind(&authorizeDg, _1,
+                boost::cref(signatureMethod), boost::cref(clientCredentials),
+                boost::cref(tokenCredentials), boost::cref(realm),
+                bodyDg);
         else if (priorRequest)
             return priorRequest;
         if (priorRequest)
             priorRequest->finish();
         priorRequest = parent()->request(requestHeaders, forceNewConnection,
-            bodyDg);
+            wrappedBodyDg);
         if (priorRequest->response().status.status == UNAUTHORIZED &&
             isAcceptable(priorRequest->response().response.wwwAuthenticate,
                 "OAuth"))
