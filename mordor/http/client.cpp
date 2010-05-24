@@ -75,7 +75,7 @@ ClientRequest::ptr
 ClientConnection::request(const Request &requestHeaders)
 {
     ClientRequest::ptr request(new ClientRequest(shared_from_this(), requestHeaders));
-    request->doRequest();
+    request->waitForRequest();
     return request;
 }
 
@@ -465,7 +465,7 @@ ClientRequest::~ClientRequest()
 #endif
 }
 
-const Request &
+Request &
 ClientRequest::request()
 {
     return m_request;
@@ -483,6 +483,7 @@ ClientRequest::requestStream()
 {
     if (m_requestStream)
         return m_requestStream;
+    doRequest();
     MORDOR_ASSERT(!m_requestMultipart);
     MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
     if (!hasRequestBody()) {
@@ -502,6 +503,7 @@ ClientRequest::requestMultipart()
 {
     if (m_requestMultipart)
         return m_requestMultipart;
+    doRequest();
     MORDOR_ASSERT(m_request.entity.contentType.type == "multipart");
     MORDOR_ASSERT(!m_requestStream);
     MORDOR_ASSERT(m_requestState == BODY);
@@ -753,76 +755,8 @@ ClientRequest::finish()
 }
 
 void
-ClientRequest::doRequest()
+ClientRequest::waitForRequest()
 {
-    RequestLine &requestLine = m_request.requestLine;
-    // 1.0, 1.1, or defaulted
-    MORDOR_ASSERT(requestLine.ver == Version() ||
-           requestLine.ver == Version(1, 0) ||
-           requestLine.ver == Version(1, 1));
-    // Have to request *something*
-    MORDOR_ASSERT(requestLine.uri.isDefined());
-    // Host header required with HTTP/1.1
-    MORDOR_ASSERT(!m_request.request.host.empty() || requestLine.ver != Version(1, 1));
-    // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
-    const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
-    if (!transferEncoding.empty()) {
-        MORDOR_ASSERT(transferEncoding.back().value == "chunked");
-        for (ParameterizedList::const_iterator it(transferEncoding.begin());
-            it + 1 != transferEncoding.end();
-            ++it) {
-            // Only the last one can be chunked
-            MORDOR_ASSERT(it->value != "chunked");
-            // identity is only acceptable in the TE header field
-            MORDOR_ASSERT(it->value != "identity");
-            if (it->value == "gzip" ||
-                it->value == "x-gzip" ||
-                it->value == "deflate") {
-                // Known Transfer-Codings
-                continue;
-            } else if (it->value == "compress" ||
-                it->value == "x-compress") {
-                // Unsupported Transfer-Codings
-                MORDOR_ASSERT(false);
-            } else {
-                // Unknown Transfer-Coding
-                MORDOR_ASSERT(false);
-            }
-        }
-    }
-
-    bool close;
-    // Default HTTP version... 1.1 if possible
-    if (requestLine.ver == Version()) {
-        if (m_request.request.host.empty())
-            requestLine.ver = Version(1, 0);
-        else
-            requestLine.ver = Version(1, 1);
-    }
-    // If not specified, try to keep the connection open
-    StringSet &connection = m_request.general.connection;
-    if (connection.find("close") == connection.end() && requestLine.ver == Version(1, 0)) {
-        connection.insert("Keep-Alive");
-    }
-    // Determine if we're closing the connection after this request
-    if (requestLine.ver == Version(1, 0)) {
-        if (connection.find("Keep-Alive") != connection.end()) {
-            close = false;
-        } else {
-            close = true;
-            connection.insert("close");
-        }
-    } else {
-        if (connection.find("close") != connection.end()) {
-            close = true;
-        } else {
-            close = false;
-        }
-    }
-    // TE is a connection-specific header
-    if (!m_request.request.te.empty())
-        m_request.general.connection.insert("TE");
-
     bool firstRequest;
     // Put the request in the queue
     {
@@ -858,8 +792,6 @@ ClientRequest::doRequest()
             MORDOR_ASSERT(m_fiber);
             MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " waiting to request";
         }
-        if (close)
-            m_conn->m_allowNewRequests = false;
     }
     // If we weren't the first request in the queue, we have to wait for
     // another request to schedule us
@@ -889,6 +821,86 @@ ClientRequest::doRequest()
         }
     }
     MORDOR_ASSERT(m_requestState == HEADERS);
+}
+
+void
+ClientRequest::doRequest()
+{
+    if (m_requestState > HEADERS)
+        return;
+
+    RequestLine &requestLine = m_request.requestLine;
+    // 1.0, 1.1, or defaulted
+    MORDOR_ASSERT(requestLine.ver == Version() ||
+           requestLine.ver == Version(1, 0) ||
+           requestLine.ver == Version(1, 1));
+    // Have to request *something*
+    MORDOR_ASSERT(requestLine.uri.isDefined());
+    // Host header required with HTTP/1.1
+    MORDOR_ASSERT(!m_request.request.host.empty() || requestLine.ver != Version(1, 1));
+    // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
+    const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
+    if (!transferEncoding.empty()) {
+        MORDOR_ASSERT(transferEncoding.back().value == "chunked");
+        for (ParameterizedList::const_iterator it(transferEncoding.begin());
+            it + 1 != transferEncoding.end();
+            ++it) {
+            // Only the last one can be chunked
+            MORDOR_ASSERT(it->value != "chunked");
+            // identity is only acceptable in the TE header field
+            MORDOR_ASSERT(it->value != "identity");
+            if (it->value == "gzip" ||
+                it->value == "x-gzip" ||
+                it->value == "deflate") {
+                // Known Transfer-Codings
+                continue;
+            } else if (it->value == "compress" ||
+                it->value == "x-compress") {
+                // Unsupported Transfer-Codings
+                MORDOR_NOTREACHED();
+            } else {
+                // Unknown Transfer-Coding
+                MORDOR_NOTREACHED();
+            }
+        }
+    }
+
+    bool close;
+    // Default HTTP version... 1.1 if possible
+    if (requestLine.ver == Version()) {
+        if (m_request.request.host.empty())
+            requestLine.ver = Version(1, 0);
+        else
+            requestLine.ver = Version(1, 1);
+    }
+    // If not specified, try to keep the connection open
+    StringSet &connection = m_request.general.connection;
+    if (connection.find("close") == connection.end() && requestLine.ver == Version(1, 0)) {
+        connection.insert("Keep-Alive");
+    }
+    // Determine if we're closing the connection after this request
+    if (requestLine.ver == Version(1, 0)) {
+        if (connection.find("Keep-Alive") != connection.end()) {
+            close = false;
+        } else {
+            close = true;
+            connection.insert("close");
+        }
+    } else {
+        if (connection.find("close") != connection.end()) {
+            close = true;
+        } else {
+            close = false;
+        }
+    }
+    if (close) {
+        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        m_conn->invariant();
+        m_conn->m_allowNewRequests = false;
+    }
+    // TE is a connection-specific header
+    if (!m_request.request.te.empty())
+        m_request.general.connection.insert("TE");
 
     try {
         // Do the request

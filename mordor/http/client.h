@@ -64,7 +64,7 @@ public:
     State requestState() const { return m_requestState; }
     State responseState() const { return m_responseState; }
 
-    const Request &request();
+    Request &request();
     bool hasRequestBody() const;
     boost::shared_ptr<Stream> requestStream();
     boost::shared_ptr<Multipart> requestMultipart();
@@ -80,10 +80,11 @@ public:
 
     void cancel(bool abort = false) { cancel(abort, false); }
     void finish();
+    void doRequest();
     void ensureResponse();
 
 private:
-    void doRequest();
+    void waitForRequest();
     void requestMultipartDone();
     void requestDone();
     void requestFailed();

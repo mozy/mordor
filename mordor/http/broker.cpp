@@ -491,6 +491,8 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         ClientRequest::ptr request;
         try {
             request = conn.first->request(requestHeaders);
+            if (!bodyDg)
+                request->doRequest();
         } catch (boost::exception &ex) {
             ex << errinfo_source(HTTP);
             throw;

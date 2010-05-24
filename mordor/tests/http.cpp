@@ -922,6 +922,7 @@ MORDOR_UNITTEST(HTTPServer, disconnectDuringResponse)
     requestHeaders.requestLine.uri = "http://localhost/";
 
     ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     // Don't read the response body
     request->cancel(true);
@@ -943,6 +944,7 @@ MORDOR_UNITTEST(HTTPClient, emptyRequest)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -972,6 +974,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequests)
     requestHeaders.request.host = "garbage";
 
     ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
@@ -980,6 +983,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequests)
 
     requestHeaders.general.connection.insert("close");
     ClientRequest::ptr request2 = conn->request(requestHeaders);
+    request2->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
@@ -1021,6 +1025,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequestsAssertion)
     requestHeaders.request.host = "garbage";
 
     ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
@@ -1029,6 +1034,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedSynchronousRequestsAssertion)
 
     requestHeaders.general.connection.insert("close");
     ClientRequest::ptr request2 = conn->request(requestHeaders);
+    request2->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
@@ -1070,6 +1076,7 @@ MORDOR_UNITTEST(HTTPClient, emptyResponseBody)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -1110,6 +1117,7 @@ MORDOR_UNITTEST(HTTPClient, incompleteResponseHeaders)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -1136,6 +1144,7 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseBody)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -1181,6 +1190,7 @@ MORDOR_UNITTEST(HTTPClient, incompleteResponseBody)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -1221,6 +1231,7 @@ MORDOR_UNITTEST(HTTPClient, readPastEof)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -1262,6 +1273,7 @@ MORDOR_UNITTEST(HTTPClient, chunkedResponseBody)
     requestHeaders.request.host = "garbage";
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
@@ -1303,6 +1315,7 @@ MORDOR_UNITTEST(HTTPClient, trailerResponse)
     requestHeaders.request.host = "garbage";
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
@@ -1607,8 +1620,7 @@ MORDOR_UNITTEST(HTTPClient, simpleRequestPartialWrites)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
-
-    // Force a flush (of the headers)
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -1627,6 +1639,7 @@ static void pipelinedRequests(ClientConnection::ptr conn,
     requestHeaders.request.host = "garbage";
 
     ClientRequest::ptr request2 = conn->request(requestHeaders);
+    request2->doRequest();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
 
     MORDOR_TEST_ASSERT_EQUAL(request2->response().status.status, NOT_FOUND);
@@ -1724,6 +1737,7 @@ MORDOR_UNITTEST(HTTPClient, pipelinedEmptyRequests)
         conn, boost::ref(sequence)));
 
     ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->doRequest();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
 
     // Nothing has been sent to the server yet (it's buffered up)
@@ -1769,6 +1783,7 @@ MORDOR_UNITTEST(HTTPClient, missingTrailerResponse)
     requestHeaders.request.host = "garbage";
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
@@ -1818,6 +1833,7 @@ MORDOR_UNITTEST(HTTPClient, badTrailerResponse)
     requestHeaders.request.host = "garbage";
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
@@ -1866,6 +1882,7 @@ MORDOR_UNITTEST(HTTPClient, cancelRequestSingle)
     requestHeaders.entity.contentLength = 5;
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     // Nothing has been flushed yet
     MORDOR_TEST_ASSERT_EQUAL(requestStream->size(), 0);
     request->cancel();
@@ -1889,6 +1906,7 @@ MORDOR_UNITTEST(HTTPClient, cancelResponseSingle)
     requestHeaders.request.host = "garbage";
 
     ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.1\r\n"
         "Host: garbage\r\n"
@@ -1981,6 +1999,7 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseAbandoned)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -2026,6 +2045,7 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseAbandonRequest)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -2067,6 +2087,7 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseAbandonStream)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -2114,6 +2135,7 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseExceptionInStream)
     requestHeaders.general.connection.insert("close");
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT(requestStream->buffer() ==
         "GET / HTTP/1.0\r\n"
         "Connection: close\r\n"
@@ -2306,6 +2328,7 @@ MORDOR_UNITTEST(HTTPClient, newRequestWhileFlushing)
     requestHeaders.requestLine.uri = "/";
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
     pool.dispatch();
@@ -2333,9 +2356,11 @@ MORDOR_UNITTEST(HTTPClient, zlibCausesPrematureEOF)
     requestHeaders.requestLine.uri = "http://localhost/";
 
     ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    request->doRequest();
     transferStream(request->responseStream(), NullStream::get());
 
     request = requestBroker.request(requestHeaders);
+    request->doRequest();
     transferStream(request->responseStream(), NullStream::get());
 }
 
@@ -2358,7 +2383,9 @@ MORDOR_UNITTEST(HTTPClient, priorResponseFailedPipeline)
     requestHeaders.requestLine.uri = "http://localhost/";
 
     ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->doRequest();
     ClientRequest::ptr request2 = conn->request(requestHeaders);
+    request2->doRequest();
     int sequence = 1;
     pool.schedule(boost::bind(&waitForPriorResponseFailed, request2, boost::ref(sequence)));
     pool.dispatch();
@@ -2470,6 +2497,7 @@ static void firstRequest(BaseRequestBroker &requestBroker)
 
     // This should *not* timeout
     ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
 }
 
@@ -2510,6 +2538,7 @@ static void firstRequestGetsClosed(ClientConnection::ptr conn)
     requestHeaders.requestLine.uri = "http://localhost/delay";
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, HTTP::OK);
     MORDOR_ASSERT(request->response().general.connection.find("close") !=
         request->response().general.connection.end());
@@ -2556,6 +2585,7 @@ MORDOR_UNITTEST(HTTPClient, responseFailedCorrectException)
     requestHeaders.requestLine.uri = "/";
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT_EXCEPTION(request->response(), DummyException);
 }
 
@@ -2566,6 +2596,7 @@ static void cancelWhileResponseQueued(ClientConnection::ptr conn, ClientRequest:
 
     ClientRequest::ptr realRequest = conn->request(requestHeaders);
     request = realRequest;
+    request->doRequest();
     MORDOR_TEST_ASSERT_EXCEPTION(realRequest->response(), OperationAbortedException);
 }
 
@@ -2592,6 +2623,7 @@ MORDOR_UNITTEST(HTTPClient, cancelWhileResponseQueued)
     pool.schedule(boost::bind(&cancelWhileResponseQueued, conn,
         boost::ref(request2)));
     request1 = conn->request(requestHeaders);
+    request1->doRequest();
     pool.dispatch();
 
     MORDOR_ASSERT(request2);
@@ -2613,6 +2645,7 @@ MORDOR_UNITTEST(HTTPClient, abortWhileResponseQueued)
     pool.schedule(boost::bind(&cancelWhileResponseQueued, conn,
         boost::ref(request2)));
     request1 = conn->request(requestHeaders);
+    request1->doRequest();
     pool.dispatch();
 
     MORDOR_ASSERT(request2);
@@ -2646,13 +2679,16 @@ MORDOR_UNITTEST(HTTPClient, requestFailOtherWaitingResponse)
     TestStream::ptr testStream(new TestStream(bufferedStream));
     ClientConnection::ptr conn(new ClientConnection(testStream));
 
-    ClientRequest::ptr request;
+    ClientRequest::ptr request1, request2;
     Request requestHeaders;
     requestHeaders.requestLine.uri = "/";
 
-    request = conn->request(requestHeaders);
+    request1 = conn->request(requestHeaders);
+    request1->doRequest();
     testStream->onWrite(&throwDummyException, 0);
-    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+
+    request2 = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EXCEPTION(request2->doRequest(), DummyException);
 }
 
 static void waitFor200(ClientRequest::ptr request, int &sequence)
@@ -2676,22 +2712,26 @@ MORDOR_UNITTEST(HTTPClient, requestFailOthersWaitingResponse)
     TestStream::ptr testStream(new TestStream(bufferedStream));
     ClientConnection::ptr conn(new ClientConnection(testStream));
 
-    ClientRequest::ptr request1, request2, request3;
+    ClientRequest::ptr request1, request2, request3, request4;
     Request requestHeaders;
     requestHeaders.requestLine.uri = "/";
     requestHeaders.request.host = "localhost";
 
     int sequence = 0;
     request1 = conn->request(requestHeaders);
+    request1->doRequest();
     request2 = conn->request(requestHeaders);
+    request2->doRequest();
     request3 = conn->request(requestHeaders);
+    request3->doRequest();
     pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
     Scheduler::yield();
 
     testStream->onWrite(&throwDummyException, 0);
-    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+    request4 = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EXCEPTION(request4->doRequest(), DummyException);
     // Finish requests 1 through 3
     pipes.second->write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
         "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
@@ -2724,8 +2764,11 @@ MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersWaitingResponse)
 
     int sequence = 0;
     request1 = conn->request(requestHeaders);
+    request1->doRequest();
     request2 = conn->request(requestHeaders);
+    request2->doRequest();
     request3 = conn->request(requestHeaders);
+    request3->doRequest();
     pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
@@ -2733,6 +2776,7 @@ MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersWaitingResponse)
 
     requestHeaders.entity.contentLength = 1;
     ClientRequest::ptr request4 = conn->request(requestHeaders);
+    request4->doRequest();
     testStream->onWrite(&throwDummyException, 0);
     MORDOR_TEST_ASSERT_EXCEPTION(request4->requestStream()->write("a", 1), DummyException);
     request4->cancel();
@@ -2783,8 +2827,11 @@ MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersAndSelfWaitingResponse)
 
     int sequence = 0;
     request1 = conn->request(requestHeaders);
+    request1->doRequest();
     request2 = conn->request(requestHeaders);
+    request2->doRequest();
     request3 = conn->request(requestHeaders);
+    request3->doRequest();
     pool.schedule(boost::bind(&waitFor200, request1, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request2, boost::ref(sequence)));
     pool.schedule(boost::bind(&waitFor200, request3, boost::ref(sequence)));
@@ -2794,6 +2841,7 @@ MORDOR_UNITTEST(HTTPClient, requestBodyFailOthersAndSelfWaitingResponse)
     bool excepted2 = false;
     requestHeaders.entity.contentLength = 1;
     ClientRequest::ptr request4 = conn->request(requestHeaders);
+    request4->doRequest();
     pool.schedule(boost::bind(&waitForOperationAborted, request4, boost::ref(excepted1)));
     pool.schedule(boost::bind(&waitForPriorRequestFailedOnRequest, conn, boost::ref(excepted2)));
     Scheduler::yield();
@@ -2840,8 +2888,10 @@ MORDOR_UNITTEST(HTTPClient, responseFailsAnotherWaitingResponseAnotherWaitingReq
 
     bool excepted1 = false, excepted2 = false;
     request1 = conn->request(requestHeaders);
+    request1->doRequest();
     requestHeaders.entity.contentLength = 5;
     request2 = conn->request(requestHeaders);
+    request2->doRequest();
     pool.schedule(boost::bind(&waitForPriorRequestFailedOnResponse, request2, boost::ref(excepted1)));
     pool.schedule(boost::bind(&waitForPriorRequestFailedOnRequest, conn, boost::ref(excepted2)));
     Scheduler::yield();
@@ -2873,6 +2923,7 @@ MORDOR_UNITTEST(HTTPClient, responseCancelsWhileRequestScheduled)
 
     bool excepted = false;
     ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->doRequest();
 
     pool.schedule(boost::bind(&waitForPriorRequestFailedOnRequest, conn, boost::ref(excepted)));
     Scheduler::yield();
@@ -2905,6 +2956,7 @@ MORDOR_UNITTEST(HTTPClient, responseFailsReadAfterAbort)
     requestHeaders.requestLine.uri = "/";
 
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     request->cancel();
     Stream::ptr response = request->responseStream();
@@ -2930,7 +2982,9 @@ MORDOR_UNITTEST(HTTPClient, responseFailsAfterLaterResponseFails)
     requestHeaders.requestLine.uri = "/";
 
     ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->doRequest();
     ClientRequest::ptr request2 = conn->request(requestHeaders);
+    request2->doRequest();
     bool excepted = false;
     pool.schedule(boost::bind(&waitForPriorRequestFailedOnResponse, request2, boost::ref(excepted)));
     Scheduler::yield();
@@ -2967,6 +3021,7 @@ MORDOR_UNITTEST(HTTPClient, cancelWhileReadingHeadersThenFinish)
 
     int sequence = 0;
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     pool.schedule(boost::bind(&waitFor200, request, boost::ref(sequence)));
     Scheduler::yield();
     MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
@@ -2996,6 +3051,7 @@ MORDOR_UNITTEST(HTTPClient, abortWhileReadingHeadersThenFinish)
 
     bool excepted = false;
     ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
     pool.schedule(boost::bind(&waitForOperationAborted, request, boost::ref(excepted)));
     Scheduler::yield();
     MORDOR_ASSERT(!excepted);
@@ -3025,14 +3081,18 @@ MORDOR_UNITTEST(HTTPClient, forceSkipsInRequestNumberBecauseIntermediateRequestA
     requestHeaders.requestLine.uri = "/";
 
     ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->doRequest();
     ClientRequest::ptr request2 = conn->request(requestHeaders);
+    request2->doRequest();
     ClientRequest::ptr request3 = conn->request(requestHeaders);
+    request3->doRequest();
     bool excepted = false;
     pool.schedule(boost::bind(&waitForPriorRequestFailedOnResponse, request3, boost::ref(excepted)));
     Scheduler::yield();
 
     requestHeaders.entity.contentLength = 1;
     ClientRequest::ptr request4 = conn->request(requestHeaders);
+    request4->doRequest();
     testStream->onWrite(&throwDummyException, 0);
     MORDOR_TEST_ASSERT_EXCEPTION(request4->requestStream()->write("a"), DummyException);
 
@@ -3058,6 +3118,7 @@ MORDOR_UNITTEST(HTTPClient, priorResponseFailsThenRequestFails)
     requestHeaders.requestLine.uri = "/";
 
     ClientRequest::ptr request1 = conn->request(requestHeaders);
+    request1->doRequest();
 
     requestHeaders.entity.contentLength = 5;
     ClientRequest::ptr request2 = conn->request(requestHeaders);
@@ -3082,7 +3143,8 @@ MORDOR_UNITTEST(HTTPClient, failWhileFlushNoRequestBody)
     requestHeaders.requestLine.uri = "/";
     requestHeaders.request.host = "localhost";
 
-    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
 }
 
 MORDOR_UNITTEST(HTTPClient, failWhileFlushRequestBody)
@@ -3123,6 +3185,7 @@ MORDOR_UNITTEST(HTTPClient, priorResponseClosesWhileWaitingOnResponseAndWritingR
     request1->requestStream()->write("hello");
     request1->requestStream()->close();
     ClientRequest::ptr request2 = conn->request(requestHeaders);
+    request2->doRequest();
     bool excepted = false;
     pool.schedule(boost::bind(&waitForPriorRequestFailedOnResponse, request2, boost::ref(excepted)));
     Scheduler::yield();
@@ -3159,7 +3222,8 @@ MORDOR_UNITTEST(HTTPClient, failWhileFlushOtherWaiting)
     requestHeaders.requestLine.uri = "/";
     requestHeaders.request.host = "localhost";
 
-    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
     Scheduler::yield();
     MORDOR_ASSERT(excepted);
 }
@@ -3182,7 +3246,8 @@ MORDOR_UNITTEST(HTTPClient, failWhileRequestingOtherWaiting)
     requestHeaders.requestLine.uri = "/";
     requestHeaders.request.host = "localhost";
 
-    MORDOR_TEST_ASSERT_EXCEPTION(conn->request(requestHeaders), DummyException);
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
     Scheduler::yield();
     MORDOR_ASSERT(excepted);
 }
