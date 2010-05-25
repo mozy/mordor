@@ -101,7 +101,7 @@ public:
           m_readTimeout(NULL),
           m_writeTimeout(NULL),
           m_verifySslCertificate(verifySslCertificate),
-          m_verifySslCertificateHost(verifySslCertificate)
+          m_verifySslCertificateHost(verifySslCertificateHost)
     {}
 
     void timerManager(TimerManager *timerManager) { m_timerManager = timerManager; }
