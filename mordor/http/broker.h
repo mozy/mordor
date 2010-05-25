@@ -152,7 +152,8 @@ public:
     std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false);
 
-    void closeConnections();
+    void closeIdleConnections();
+    void abortConnections();
 
 private:
     FiberMutex m_mutex;

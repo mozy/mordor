@@ -356,7 +356,14 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
 }
 
 void
-ConnectionCache::closeConnections()
+ConnectionCache::closeIdleConnections()
+{
+    FiberMutex::ScopedLock lock(m_mutex);
+    m_conns.clear();
+}
+
+void
+ConnectionCache::abortConnections()
 {
     m_streamBroker->cancelPending();
     FiberMutex::ScopedLock lock(m_mutex);
