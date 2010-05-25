@@ -160,7 +160,7 @@ void
 authorize(Request &nextRequest, const std::string &signatureMethod,
     const std::pair<std::string, std::string> &clientCredentials,
     const std::pair<std::string, std::string> &tokenCredentials,
-    const std::string &realm)
+    const std::string &realm, const std::string &scheme)
 {
     MORDOR_ASSERT(signatureMethod == "PLAINTEXT" || signatureMethod == "HMAC-SHA1");
     MORDOR_ASSERT(!clientCredentials.first.empty());
@@ -176,8 +176,15 @@ authorize(Request &nextRequest, const std::string &signatureMethod,
     authorization.parameters["oauth_token"] = tokenCredentials.first;
     authorization.parameters["oauth_version"] = "1.0";
     nonceAndTimestamp(authorization.parameters);
-    sign(nextRequest.requestLine.uri, nextRequest.requestLine.method,
-        signatureMethod, clientCredentials.second, tokenCredentials.second,
+    URI uri = nextRequest.requestLine.uri;
+    if (!uri.authority.hostDefined()) {
+        MORDOR_ASSERT(!scheme.empty());
+        std::string fullUri = scheme + "://" + nextRequest.request.host +
+            uri.toString();
+        uri = fullUri;
+    }
+    sign(uri, nextRequest.requestLine.method, signatureMethod,
+        clientCredentials.second, tokenCredentials.second,
         authorization.parameters);
     if (!realm.empty())
         authorization.parameters["realm"] = realm;
@@ -349,11 +356,11 @@ static void authorizeDg(ClientRequest::ptr request,
     const std::string &signatureMethod,
     const std::pair<std::string, std::string> &clientCredentials,
     const std::pair<std::string, std::string> &tokenCredentials,
-    const std::string &realm,
+    const std::string &realm, const std::string scheme,
     boost::function<void (ClientRequest::ptr)> bodyDg)
 {
     authorize(request->request(), signatureMethod, clientCredentials,
-        tokenCredentials, realm);
+        tokenCredentials, realm, scheme);
     if (bodyDg)
         bodyDg(request);
     else
@@ -376,6 +383,7 @@ RequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             wrappedBodyDg = boost::bind(&authorizeDg, _1,
                 boost::cref(signatureMethod), boost::cref(clientCredentials),
                 boost::cref(tokenCredentials), boost::cref(realm),
+                requestHeaders.requestLine.uri.scheme(),
                 bodyDg);
         else if (priorRequest)
             return priorRequest;

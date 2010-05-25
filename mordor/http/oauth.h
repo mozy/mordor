@@ -27,7 +27,8 @@ void authorize(Request &nextRequest,
     const std::string &signatureMethod,
     const std::pair<std::string, std::string> &clientCredentials,
     const std::pair<std::string, std::string> &tokenCredentials,
-    const std::string &realm = std::string());
+    const std::string &realm = std::string(),
+    const std::string &scheme = std::string());
 
 // Helpers for setting up an OAuth request
 template <class T>
