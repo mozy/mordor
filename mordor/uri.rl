@@ -392,6 +392,7 @@ URI::URI(const Buffer &uri)
 URI&
 URI::operator=(const std::string& uri)
 {
+    clear();
     URIParser parser(*this);
     parser.run(uri);
     if (parser.error() || !parser.final())
@@ -402,6 +403,7 @@ URI::operator=(const std::string& uri)
 URI&
 URI::operator=(const Buffer &uri)
 {
+    clear();
     URIParser parser(*this);
     parser.run(uri);
     if (parser.error() || !parser.final())
