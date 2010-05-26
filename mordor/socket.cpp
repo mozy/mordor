@@ -1366,6 +1366,9 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
 #else
     error = getaddrinfo(node.c_str(), service, &hints, &results);
 #endif
+    if (error)
+        MORDOR_LOG_ERROR(g_log) << "getaddrinfo(" << host << ", " << family
+            << ", " << type << "): (" << error << ")";
     switch (error) {
         case 0:
             break;
