@@ -17,6 +17,7 @@ public:
     bool strict() { return m_strict; }
     void strict(bool strict) { m_strict = strict; }
 
+    bool supportsSeek() { return parent()->supportsSeek(); }
     bool supportsTell() { return true; }
     bool supportsSize() { return true; }
     bool supportsTruncate() { return false; }

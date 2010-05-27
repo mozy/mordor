@@ -8,6 +8,8 @@
 #include "mordor/pq.h"
 #include "mordor/version.h"
 #include "mordor/statistics.h"
+#include "mordor/streams/memory.h"
+#include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
 #include "mordor/test/stdoutlistener.h"
 
@@ -239,3 +241,105 @@ MORDOR_UNITTEST(PQ, queryForNullTimestampPreparedBlocking)
 { queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, "constant"); }
 MORDOR_UNITTEST(PQ, queryForNullTimestampPreparedAsync)
 { IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, "constant", &ioManager); }
+
+MORDOR_UNITTEST(PQ, transactionCommits)
+{
+    Connection conn(g_goodConnString);
+    fillUsers(conn);
+    Transaction t(conn);
+    conn.execute("UPDATE users SET name='tom' WHERE id=1");
+    t.commit();
+    Result result = conn.execute("SELECT name FROM users WHERE id=1");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "tom");
+}
+
+MORDOR_UNITTEST(PQ, transactionRollsback)
+{
+    Connection conn(g_goodConnString);
+    fillUsers(conn);
+    Transaction t(conn);
+    conn.execute("UPDATE users SET name='tom' WHERE id=1");
+    t.rollback();
+    Result result = conn.execute("SELECT name FROM users WHERE id=1");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "cody");
+}
+
+MORDOR_UNITTEST(PQ, transactionRollsbackAutomatically)
+{
+    Connection conn(g_goodConnString);
+    fillUsers(conn);
+    {
+        Transaction t(conn);
+        conn.execute("UPDATE users SET name='tom' WHERE id=1");
+    }
+    Result result = conn.execute("SELECT name FROM users WHERE id=1");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "cody");
+}
+
+static void copyIn(IOManager *ioManager = NULL)
+{
+    Connection conn(g_goodConnString, ioManager);
+    conn.execute("CREATE TEMP TABLE stuff (id INTEGER, name TEXT)");
+    Stream::ptr stream = conn.copyIn("stuff").csv()();
+    stream->write("1,cody\n");
+    stream->write("2,tom\n");
+    stream->write("3,brian\n");
+    stream->write("4,jeremy\n");
+    stream->write("5,zach\n");
+    stream->write("6,paul\n");
+    stream->write("7,alen\n");
+    stream->write("8,jt\n");
+    stream->write("9,jon\n");
+    stream->write("10,jacob\n");
+    stream->close();
+    Result result = conn.execute("SELECT COUNT(*) FROM stuff");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, 0), 10);
+    result = conn.execute("SELECT SUM(id) FROM stuff");
+    MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, 0), 55);
+}
+
+MORDOR_UNITTEST(PQ, copyInBlocking)
+{ copyIn(); }
+
+MORDOR_UNITTEST(PQ, copyInAsync)
+{ IOManager ioManager; copyIn(&ioManager); }
+
+static void copyOut(IOManager *ioManager = NULL)
+{
+    Connection conn(g_goodConnString, ioManager);
+    conn.execute("CREATE TEMP TABLE country (code TEXT, name TEXT)");
+    PreparedStatement stmt = conn.prepare("INSERT INTO country VALUES($1, $2)",
+        "insertcountry");
+    Transaction transaction(conn);
+    stmt.execute("AF", "AFGHANISTAN");
+    stmt.execute("AL", "ALBANIA");
+    stmt.execute("DZ", "ALGERIA");
+    stmt.execute("ZM", "ZAMBIA");
+    stmt.execute("ZW", "ZIMBABWE");
+
+    Stream::ptr stream = conn.copyOut("country").csv().delimiter('|')();
+    MemoryStream output;
+    transferStream(stream, output);
+    MORDOR_ASSERT(output.buffer() ==
+        "AF|AFGHANISTAN\n"
+        "AL|ALBANIA\n"
+        "DZ|ALGERIA\n"
+        "ZM|ZAMBIA\n"
+        "ZW|ZIMBABWE\n");
+}
+
+MORDOR_UNITTEST(PQ, copyOutBlocking)
+{ copyOut(); }
+
+MORDOR_UNITTEST(PQ, copyOutAsync)
+{ IOManager ioManager; copyOut(&ioManager); }

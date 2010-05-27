@@ -480,6 +480,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\xml.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\zlib.cpp"
 				>
 			</File>

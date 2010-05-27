@@ -396,6 +396,17 @@ MORDOR_UNITTEST(Fibers, nativeException)
     MORDOR_TEST_ASSERT_EXCEPTION(fiber->call(), FileNotFoundException);
 }
 
+static void throwAccessDenied()
+{
+    MORDOR_THROW_EXCEPTION(AccessDeniedException());
+}
+
+MORDOR_UNITTEST(Fibers, nativeException2)
+{
+    Fiber::ptr fiber(new Fiber(&throwAccessDenied));
+    MORDOR_TEST_ASSERT_EXCEPTION(fiber->call(), AccessDeniedException);
+}
+
 static void throwRuntimeError()
 {
     throw std::runtime_error("message");

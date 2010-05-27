@@ -38,37 +38,12 @@ NegotiateAuth::~NegotiateAuth()
 }
 
 bool
-NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
+NegotiateAuth::authorize(const AuthParams &challenge, AuthParams &authorization,
+    const URI &uri)
 {
-    MORDOR_ASSERT(challenge.status.status == UNAUTHORIZED ||
-        challenge.status.status == PROXY_AUTHENTICATION_REQUIRED);
-    bool proxy = challenge.status.status == PROXY_AUTHENTICATION_REQUIRED;
-    const ChallengeList &authenticate = proxy ?
-        challenge.response.proxyAuthenticate :
-        challenge.response.wwwAuthenticate;
-    AuthParams &authorization = proxy ?
-        nextRequest.request.proxyAuthorization :
-        nextRequest.request.authorization;
-    const std::string *param = NULL;
-    std::string package;
     SECURITY_STATUS status;
-    for (ChallengeList::const_iterator it = authenticate.begin();
-        it != authenticate.end();
-        ++it) {
-        if (stricmp(it->scheme.c_str(), "Negotiate") == 0) {
-            param = &it->base64;
-            package = it->scheme;
-            break;
-        }
-        if (stricmp(it->scheme.c_str(), "NTLM") == 0) {
-            param = &it->base64;
-            package = it->scheme;
-            // Don't break; keep looking for Negotiate; it's preferred
-        }
-    }
-    MORDOR_ASSERT(param);
-    MORDOR_ASSERT(!package.empty());
-    std::wstring packageW = toUtf16(package);
+    std::wstring packageW = toUtf16(challenge.scheme);
+    std::string param = challenge.base64;
 
     std::string outboundBuffer;
     SecBufferDesc outboundBufferDesc;
@@ -84,7 +59,7 @@ NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
     outboundSecBuffer.pvBuffer = &outboundBuffer[0];
     outboundSecBuffer.cbBuffer = (unsigned long)outboundBuffer.size();
 
-    if (param->empty()) {
+    if (param.empty()) {
         // No response from server; we're starting a new session
         if (SecIsValidHandle(&m_creds))
             return false;
@@ -106,14 +81,13 @@ NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
             NULL,
             &m_creds,
             &lifetime);
-        if (!SUCCEEDED(status)) {
+        if (!SUCCEEDED(status))
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(status, "AcquireCredentialsHandleW");
-        }
 
         status = InitializeSecurityContextW(
             &m_creds,
             NULL,
-            (wchar_t *)toUtf16(nextRequest.requestLine.uri.toString()).c_str(),
+            (wchar_t *)toUtf16(uri.toString()).c_str(),
             ISC_REQ_CONFIDENTIALITY,
             0,
             SECURITY_NATIVE_DREP,
@@ -125,7 +99,7 @@ NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
             &lifetime);
     } else {
         // Prepare the response from the server
-        std::string inboundBuffer = base64decode(*param);
+        std::string inboundBuffer = base64decode(param);
         SecBufferDesc inboundBufferDesc;
         SecBuffer inboundSecBuffer;
 
@@ -139,7 +113,7 @@ NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
         status = InitializeSecurityContextW(
             &m_creds,
             &m_secCtx,
-            (wchar_t *)toUtf16(nextRequest.requestLine.uri.toString()).c_str(),
+            (wchar_t *)toUtf16(uri.toString()).c_str(),
             ISC_REQ_CONFIDENTIALITY,
             0,
             SECURITY_NATIVE_DREP,
@@ -160,10 +134,39 @@ NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
         MORDOR_THROW_EXCEPTION_FROM_ERROR(status);
 
     outboundBuffer.resize(outboundSecBuffer.cbBuffer);
-    authorization.scheme = package;
+    authorization.scheme = challenge.scheme;
     authorization.base64 = base64encode(outboundBuffer);
     authorization.parameters.clear();
     return true;
+}
+
+bool
+NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
+{
+    MORDOR_ASSERT(challenge.status.status == UNAUTHORIZED ||
+        challenge.status.status == PROXY_AUTHENTICATION_REQUIRED);
+    bool proxy = challenge.status.status == PROXY_AUTHENTICATION_REQUIRED;
+    const ChallengeList &authenticate = proxy ?
+        challenge.response.proxyAuthenticate :
+        challenge.response.wwwAuthenticate;
+    AuthParams &authorization = proxy ?
+        nextRequest.request.proxyAuthorization :
+        nextRequest.request.authorization;
+    const AuthParams *auth;
+    for (ChallengeList::const_iterator it = authenticate.begin();
+        it != authenticate.end();
+        ++it) {
+        if (stricmp(it->scheme.c_str(), "Negotiate") == 0) {
+            auth = &*it;
+            break;
+        }
+        if (stricmp(it->scheme.c_str(), "NTLM") == 0) {
+            auth = &*it;
+            // Don't break; keep looking for Negotiate; it's preferred
+        }
+    }
+    MORDOR_ASSERT(auth);
+    return authorize(*auth, authorization, nextRequest.requestLine.uri);
 }
 
 }}

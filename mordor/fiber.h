@@ -37,9 +37,9 @@
 #       define UCONTEXT_FIBERS
 #   endif
 #elif defined(PPC)
-#   define SETJMP_FIBERS
+#   define UCONTEXT_FIBERS
 #elif defined(ARM)
-#   define SETJMP_FIBERS
+#   define UCONTEXT_FIBERS
 #else
 #   error Platform not supported
 #endif

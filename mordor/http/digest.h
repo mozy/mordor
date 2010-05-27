@@ -6,37 +6,38 @@
 
 namespace Mordor {
 namespace HTTP {
+namespace DigestAuth {
 
-struct InvalidDigestParamsException : virtual InvalidMessageHeaderException {};
-struct InvalidDigestQopException : virtual InvalidDigestParamsException
+struct InvalidParamsException : virtual InvalidMessageHeaderException {};
+struct InvalidQopException : virtual InvalidParamsException
 {
 public:
-    InvalidDigestQopException(const std::string &message) : m_message(message) {}
-    ~InvalidDigestQopException() throw() {}
+    InvalidQopException(const std::string &message) : m_message(message) {}
+    ~InvalidQopException() throw() {}
 
     const char *what() const throw() { return m_message.c_str(); }
 private:
     std::string m_message;
 };
-struct InvalidDigestAlgorithmException : virtual InvalidDigestParamsException
+struct InvalidAlgorithmException : virtual InvalidParamsException
 {
 public:
-    InvalidDigestAlgorithmException(const std::string &message) : m_message(message) {}
-    ~InvalidDigestAlgorithmException() throw() {}
+    InvalidAlgorithmException(const std::string &message) : m_message(message) {}
+    ~InvalidAlgorithmException() throw() {}
 
     const char *what() const throw() { return m_message.c_str(); }
 private:
     std::string m_message;
 };
 
-class DigestAuth
-{
-public:
-    static void authorize(const Response &challenge,
-        Request &nextRequest, const std::string &username,
-        const std::string &password);
-};
+void authorize(const AuthParams &challenge, AuthParams &authorization,
+    const URI &uri, Method method, const std::string &username,
+    const std::string &password);
 
-}}
+/// @deprecated
+void authorize(const Response &challenge, Request &nextRequest,
+    const std::string &username, const std::string &password);
+
+}}}
 
 #endif

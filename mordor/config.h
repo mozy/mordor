@@ -10,9 +10,11 @@
 #include <vector>
 
 #include <boost/function.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include "assert.h"
+#include "json.h"
 
 namespace Mordor {
 
@@ -70,17 +72,12 @@ public:
 
     std::string toString() const
     {
-        std::ostringstream os;
-        os << m_val;
-        return os.str();
+        return boost::lexical_cast<std::string>(m_val);
     }
 
     void fromString(const std::string &str)
     {
-        std::istringstream is(str);
-        T v;
-        is >> v;
-        val(v);
+        val(boost::lexical_cast<T>(str));
     }
 
     // TODO: atomicCompareExchange and/or mutex
@@ -129,6 +126,7 @@ public:
     static void visit(boost::function<void (ConfigVarBase::ptr)> dg);
 
     static void loadFromEnvironment();
+    static void loadFromJSON(const JSON::Value &json);
 
 private:
     static std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator> &vars()

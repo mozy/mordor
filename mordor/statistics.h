@@ -214,6 +214,9 @@ struct AverageMinMaxStatistic : AverageStatistic<T>
 template <class T, class U>
 struct ThroughputStatistic : Statistic
 {
+    AverageMinMaxStatistic<T> size;
+    AverageMinMaxStatistic<T> time;
+
     ThroughputStatistic(const char *sumunits = NULL, const char *timeunits = NULL, const char *countunits = NULL)
         : size(sumunits, countunits),
           time(timeunits, countunits)
@@ -224,15 +227,12 @@ struct ThroughputStatistic : Statistic
         units = m_units.c_str();
     }
     ThroughputStatistic(const ThroughputStatistic &copy)
-        : m_units(copy.m_units),
-        size(copy.size),
-        time(copy.time)
+      : size(copy.size),
+        time(copy.time),
+        m_units(copy.m_units)
     {
         units = m_units.c_str();
     }
-
-    AverageMinMaxStatistic<T> size;
-    AverageMinMaxStatistic<T> time;
 
     void reset()
     {

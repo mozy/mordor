@@ -173,54 +173,59 @@ struct xorStruct
     char operator()(char in) const { return in ^ m_value; }
 };
 
+template <class CTX,
+    int (*Init)(CTX *),
+    int (*Update)(CTX *, const void *, size_t),
+    int (*Final)(unsigned char *, CTX *),
+    unsigned int B, unsigned int L>
 std::string
-hmacMd5(const std::string &text, std::string key)
+hmac(const std::string &text, const std::string &key)
 {
-    const unsigned int B = 64;
-    const unsigned int L = MD5_DIGEST_LENGTH;
-    if (key.size() > B)
-        key = md5sum(key);
-    key.append(B - key.size(), '\0');
-    std::string ipad = key, opad = key;
+    std::string keyLocal = key;
+    CTX ctx;
+    if (keyLocal.size() > B) {
+        Init(&ctx);
+        Update(&ctx, keyLocal.c_str(), keyLocal.size());
+        keyLocal.resize(L);
+        Final((unsigned char *)&keyLocal[0], &ctx);
+    }
+    keyLocal.append(B - keyLocal.size(), '\0');
+    std::string ipad = keyLocal, opad = keyLocal;
     std::transform(ipad.begin(), ipad.end(), ipad.begin(), xorStruct(0x36));
     std::transform(opad.begin(), opad.end(), opad.begin(), xorStruct(0x5c));
-    MD5_CTX ctx;
-    MD5_Init(&ctx);
-    MD5_Update(&ctx, ipad.c_str(), B);
-    MD5_Update(&ctx, text.c_str(), text.size());
+    Init(&ctx);
+    Update(&ctx, ipad.c_str(), B);
+    Update(&ctx, text.c_str(), text.size());
     std::string result;
     result.resize(L);
-    MD5_Final((unsigned char *)&result[0], &ctx);
-    MD5_Init(&ctx);
-    MD5_Update(&ctx, opad.c_str(), B);
-    MD5_Update(&ctx, result.c_str(), L);
-    MD5_Final((unsigned char *)&result[0], &ctx);
+    Final((unsigned char *)&result[0], &ctx);
+    Init(&ctx);
+    Update(&ctx, opad.c_str(), B);
+    Update(&ctx, result.c_str(), L);
+    Final((unsigned char *)&result[0], &ctx);
     return result;
 }
 
 std::string
-hmacSha1(const std::string &text, std::string key)
+hmacMd5(const std::string &text, const std::string &key)
 {
-    const unsigned int B = 64;
-    const unsigned int L = SHA_DIGEST_LENGTH;
-    if (key.size() > B)
-        key = sha1sum(key);
-    key.append(B - key.size(), '\0');
-    std::string ipad = key, opad = key;
-    std::transform(ipad.begin(), ipad.end(), ipad.begin(), xorStruct(0x36));
-    std::transform(opad.begin(), opad.end(), opad.begin(), xorStruct(0x5c));
-    SHA_CTX ctx;
-    SHA1_Init(&ctx);
-    SHA1_Update(&ctx, ipad.c_str(), B);
-    SHA1_Update(&ctx, text.c_str(), text.size());
-    std::string result;
-    result.resize(L);
-    SHA1_Final((unsigned char *)&result[0], &ctx);
-    SHA1_Init(&ctx);
-    SHA1_Update(&ctx, opad.c_str(), B);
-    SHA1_Update(&ctx, result.c_str(), L);
-    SHA1_Final((unsigned char *)&result[0], &ctx);
-    return result;
+    return hmac<MD5_CTX,
+        &MD5_Init,
+        &MD5_Update,
+        &MD5_Final,
+        MD5_CBLOCK, MD5_DIGEST_LENGTH>
+        (text, key);
+}
+
+std::string
+hmacSha1(const std::string &text, const std::string &key)
+{
+    return hmac<SHA_CTX,
+        &SHA1_Init,
+        &SHA1_Update,
+        &SHA1_Final,
+        SHA_CBLOCK, SHA_DIGEST_LENGTH>
+        (text, key);
 }
 
 void
@@ -291,6 +296,8 @@ split(const std::string &str, char delim, size_t max)
 {
     MORDOR_ASSERT(max > 1);
     std::vector<std::string> result;
+    if (str.empty())
+        return result;
 
     size_t last = 0;
     size_t pos = str.find(delim);
@@ -310,6 +317,8 @@ split(const std::string &str, const char *delims, size_t max)
 {
     MORDOR_ASSERT(max > 1);
     std::vector<std::string> result;
+    if (str.empty())
+        return result;
 
     size_t last = 0;
     size_t pos = str.find_first_of(delims);

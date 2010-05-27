@@ -8,6 +8,10 @@ namespace Mordor {
 
 // When inheriting from FilterStream, use parent()->xxx to call
 // method xxx on the parent stream.
+// FilterStreams *must* implement one of the possible overloads for read()
+// and write(), even if it's just calling the parent version.  Otherwise
+// the adapter functions in the base Stream will just call each other
+// and blow the stack
 class FilterStream : public Stream
 {
 public:
@@ -36,9 +40,7 @@ public:
     bool supportsUnread() { return m_parent->supportsUnread(); }
 
     void close(CloseType type = BOTH) { if (m_own) m_parent->close(type); }
-    size_t read(Buffer &b, size_t len) { return m_parent->read(b, len); }
     void cancelRead() { m_parent->cancelRead(); }
-    size_t write(const Buffer &b, size_t len) { return m_parent->write(b, len); }
     void cancelWrite() { m_parent->cancelWrite(); }
     long long seek(long long offset, Anchor anchor = BEGIN) { return m_parent->seek(offset, anchor); }
     long long size() { return m_parent->size(); }

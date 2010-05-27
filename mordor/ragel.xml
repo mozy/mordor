@@ -1,0 +1,268 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ProjectSchemaDefinitions xmlns="clr-namespace:Microsoft.Build.Framework.XamlTypes;assembly=Microsoft.Build.Framework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:transformCallback="Microsoft.Cpp.Dev10.ConvertPropertyCallback">
+  <Rule
+    Name="Ragel"
+    PageTemplate="tool"
+    DisplayName=""
+    Order="200">
+    <Rule.DataSource>
+      <DataSource
+        Persistence="ProjectFile"
+        ItemType="Ragel" />
+    </Rule.DataSource>
+    <Rule.Categories>
+      <Category
+        Name="General">
+        <Category.DisplayName>
+          <sys:String>General</sys:String>
+        </Category.DisplayName>
+      </Category>
+      <Category
+        Name="Command Line"
+        Subtype="CommandLine">
+        <Category.DisplayName>
+          <sys:String>Command Line</sys:String>
+        </Category.DisplayName>
+      </Category>
+    </Rule.Categories>
+    <StringListProperty
+      Name="Inputs"
+      Category="Command Line"
+      IsRequired="true"
+      Switch=" ">
+      <StringListProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType="Ragel"
+          SourceType="Item" />
+      </StringListProperty.DataSource>
+    </StringListProperty>
+    <BoolProperty
+      Name="NoDuplicates"
+      DisplayName="No Duplicate Removal"
+      Description="Do not remove duplicates from action lists     (-d)"
+      Switch="-d" />
+    <BoolProperty
+      Name="XML"
+      Category="Visualization"
+      DisplayName="Emit XML"
+      Description="Run the frontend only: emit XML intermediate format     (-x)"
+      Switch="-x" />
+    <BoolProperty
+      Name="Graphviz"
+      Category="Visualization"
+      DisplayName="Generate Graphviz"
+      Description="Generate a dot file for Graphviz     (-V)"
+      Switch="-V" />
+    <BoolProperty
+      Name="PrintableCharacters"
+      Category="Visualization"
+      DisplayName="Display printable characters"
+      Description="Display printable characters on labels     (-p)"
+      Switch="-p" />
+    <BoolProperty
+      Name="InhibitLineDirectives"
+      Category="Code Generation"
+      DisplayName="Inhibit line directives"
+      Description="Inhibit the writing of #line directives (C/D/C#)    (-L)"
+      Switch="-L" />
+    <StringProperty
+      Name="OutputFileName"
+      Category="Output File"
+      DisplayName="Output File Name"
+      Description="Write output to &lt;file&gt;     (-o &lt;file&gt;)"
+      Switch="-o &quot;[value]&quot;" />
+    <StringListProperty
+      Name="IncludePaths"
+      DisplayName="Include Paths"
+      Description="Add &lt;dir&gt; to the list of directories to search for included and imported files     (-I [path])"
+      Separator=";"
+      Switch="-I &quot;[value]&quot;" />
+    <StringProperty
+      Name="Spec"
+      Category="Visualization"
+      DisplayName="Spec"
+      Description="FSM specification to output (for graphviz output)    (-S &lt;spec&gt;)"
+      Switch="-S [value]" />
+    <StringProperty
+      Name="Machine"
+      Category="Visualization"
+      DisplayName="Machine"
+      Description="Machine definition/instantiation to output (for graphviz output)    (-M &lt;spec&gt;)"
+      Switch="-M [value]" />
+    <EnumProperty
+      Name="Minimization"
+      DisplayName="FSM Minimization"
+      Description="Specifies when to perform fsm minimization    (-n, -m, -l, e)">
+      <EnumValue
+        Name="1"
+        DisplayName="Do not perform minimization (-n)"
+        Switch="-n" />
+      <EnumValue
+        Name="2"
+        DisplayName="Minimize at the end of the compilation (-m)"
+        Switch="-m" />
+      <EnumValue
+        Name="0"
+        DisplayName="Minimize after most operations (-l)"
+        Switch="-l" />
+      <EnumValue
+        Name="3"
+        DisplayName="Minimize after every operation (-e)"
+        Switch="-e" />
+    </EnumProperty>
+    <EnumProperty
+      Name="Host"
+      Category="Code Generation"
+      DisplayName="Host Language">
+      <EnumValue
+        Name="0"
+        DisplayName="C, C++, Obj-C or Obj-C++ (-C)"
+        Switch="-C" />
+      <EnumValue
+        Name="1"
+        DisplayName="D (-D)"
+        Switch="-D" />
+      <EnumValue
+        Name="2"
+        DisplayName="Java (-J)"
+        Switch="-J" />
+      <EnumValue
+        Name="3"
+        DisplayName="Ruby (-R)"
+        Switch="-R" />
+      <EnumValue
+        Name="4"
+        DisplayName="C# (-A)"
+        Switch="-A" />
+    </EnumProperty>
+    <EnumProperty
+      Name="CodeStyle"
+      Category="Code Generation"
+      DisplayName="code style">
+      <EnumValue
+        Name="0"
+        DisplayName="Table driven FSM (C/D/Java/Ruby/C#) (-T0)"
+        Switch="-T0" />
+      <EnumValue
+        Name="1"
+        DisplayName="Faster table driven FSM (C/D/Ruby/C#) (-T1)"
+        Switch="-T1" />
+      <EnumValue
+        Name="2"
+        DisplayName="Flat table driven FSM (C/D/Ruby/C#) (-F0)"
+        Switch="-F0" />
+      <EnumValue
+        Name="3"
+        DisplayName="Faster flat table driven FSM (C/D/Ruby/C#) (-F1)"
+        Switch="-F1" />
+      <EnumValue
+        Name="4"
+        DisplayName="Goto driven FSM (C/D/C#) (-G0)"
+        Switch="-G0" />
+      <EnumValue
+        Name="5"
+        DisplayName="Faster goto driven FSM (C/D/C#) (-G1)"
+        Switch="-G1" />
+      <EnumValue
+        Name="6"
+        DisplayName="Really fast goto driven FSM (C/D) (-G2)"
+        Switch="-G2" />
+      <EnumValue
+        Name="7"
+        DisplayName="N-Way Split really fast goto driven FSM (C/D) (-P&lt;N&gt;)"
+        Switch="-P[$NWaySplit]" />
+    </EnumProperty>
+    <IntProperty
+      Name="NWaySplit"
+      Category="Code Generation"
+      DisplayName="N"
+      Description="N for N-Way Split really fast goto driven FSM" />
+    <StringProperty
+      Name="CommandLineTemplate"
+      DisplayName="Command Line"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <DynamicEnumProperty
+      Name="RagelBeforeTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute Before</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run before.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^RagelBeforeTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <DynamicEnumProperty
+      Name="RagelAfterTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute After</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run after.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^RagelAfterTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <StringListProperty
+      Name="Outputs"
+      DisplayName="Outputs"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <StringProperty
+      Name="ExecutionDescription"
+      DisplayName="Execution Description"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <StringListProperty
+      Name="AdditionalDependencies"
+      DisplayName="Additional Dependencies"
+      IncludeInCommandLine="False"
+      Visible="false" />
+    <StringProperty
+      Subtype="AdditionalOptions"
+      Name="AdditionalOptions"
+      Category="Command Line">
+      <StringProperty.DisplayName>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.DisplayName>
+      <StringProperty.Description>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+  </Rule>
+  <ItemType
+    Name="Ragel"
+    DisplayName="" />
+  <FileExtension
+    Name="*.rl"
+    ContentType="Ragel" />
+  <ContentType
+    Name="Ragel"
+    DisplayName=""
+    ItemType="Ragel" />
+</ProjectSchemaDefinitions>

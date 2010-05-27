@@ -37,14 +37,18 @@ SocketStream::close(CloseType type)
 }
 
 size_t
-SocketStream::read(Buffer &b, size_t len)
+SocketStream::read(Buffer &buffer, size_t length)
 {
-    if (len == 0)
-        return 0;
-    std::vector<iovec> bufs = b.writeBufs(len);
-    size_t result = m_socket->receive(&bufs[0], bufs.size());
-    b.produce(result);
+    std::vector<iovec> iovs = buffer.writeBuffers(length);
+    size_t result = m_socket->receive(&iovs[0], iovs.size());
+    buffer.produce(result);
     return result;
+}
+
+size_t
+SocketStream::read(void *buffer, size_t length)
+{
+    return m_socket->receive(buffer, length);
 }
 
 void
@@ -54,14 +58,18 @@ SocketStream::cancelRead()
 }
 
 size_t
-SocketStream::write(const Buffer &b, size_t len)
+SocketStream::write(const Buffer &buffer, size_t length)
 {
-    if (len == 0)
-        return 0;
-    const std::vector<iovec> bufs = b.readBufs(len);
-    size_t result = m_socket->send(&bufs[0], bufs.size());
+    const std::vector<iovec> iovs = buffer.readBuffers(length);
+    size_t result = m_socket->send(&iovs[0], iovs.size());
     MORDOR_ASSERT(result > 0);
     return result;
+}
+
+size_t
+SocketStream::write(const void *buffer, size_t length)
+{
+    return m_socket->send(buffer, length);
 }
 
 void

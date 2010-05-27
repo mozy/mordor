@@ -6,15 +6,18 @@
 
 namespace Mordor {
 namespace HTTP {
+namespace BasicAuth {
 
-class BasicAuth
-{
-public:
-    static void authorize(Request &nextRequest,
-        const std::string &username, const std::string &password,
-        bool proxy = false);
-};
+void authorize(AuthParams &authorization, const std::string &username,
+    const std::string &password);
 
-}}
+/// @deprecated
+inline void authorize(Request &nextRequest,
+    const std::string &username, const std::string &password,
+    bool proxy = false)
+{ authorize(proxy ? nextRequest.request.proxyAuthorization :
+    nextRequest.request.authorization, username, password); }
+
+}}}
 
 #endif

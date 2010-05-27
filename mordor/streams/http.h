@@ -13,7 +13,16 @@ struct EntityChangedException : virtual Exception {};
 class HTTPStream : public FilterStream
 {
 public:
-    HTTPStream(const URI &uri, HTTP::RequestBroker::ptr requestBroker);
+    typedef boost::shared_ptr<HTTPStream> ptr;
+
+public:
+    HTTPStream(const URI &uri, HTTP::RequestBroker::ptr requestBroker,
+        boost::function<bool (size_t)> delayDg = NULL);
+    HTTPStream(const HTTP::Request &requestHeaders,
+        HTTP::RequestBroker::ptr requestBroker,
+        boost::function<bool (size_t)> delayDg = NULL);
+
+    void sharedRetryCounter(size_t *retries) { mp_retries = retries; }
 
     HTTP::ETag eTag;
 
@@ -30,9 +39,11 @@ private:
     void ensureSize();
 
 private:
-    URI m_uri;
+    HTTP::Request m_requestHeaders;
     HTTP::RequestBroker::ptr m_requestBroker;
     long long m_pos, m_size;
+    boost::function<bool (size_t)> m_delayDg;
+    size_t *mp_retries;
 };
 
 }

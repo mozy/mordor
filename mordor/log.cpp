@@ -53,9 +53,9 @@ static unsigned long long g_start;
 
 namespace {
 
-static struct Initializer
+static struct LogInitializer
 {
-    Initializer()
+    LogInitializer()
     {
         g_start = TimerManager::now();
 

@@ -8,19 +8,14 @@
 
 namespace Mordor {
 namespace HTTP {
+namespace BasicAuth {
 
-void
-BasicAuth::authorize(Request &nextRequest,
-                     const std::string &username,
-                     const std::string &password,
-                     bool proxy)
+void authorize(AuthParams &authorization, const std::string &username,
+    const std::string &password)
 {
-    AuthParams &authorization = proxy ?
-        nextRequest.request.proxyAuthorization :
-        nextRequest.request.authorization;
     authorization.scheme = "Basic";
     authorization.base64 = base64encode(username + ":" + password);
     authorization.parameters.clear();
 }
 
-}}
+}}}

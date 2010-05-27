@@ -5,12 +5,16 @@
 #include <string>
 #include <vector>
 
+#include <boost/shared_ptr.hpp>
+
 #include "assert.h"
 #include "mordor/streams/buffer.h"
 #include "mordor/string.h"
 #include "predef.h"
 
 namespace Mordor {
+
+class Stream;
 
 namespace HTTP
 {
@@ -133,14 +137,15 @@ struct URI
     {
     public:
         QueryString() {}
-        QueryString(const std::string &str)
-        {
-            *this = str;
-        }
-
-        QueryString &operator =(const std::string &str);
+        QueryString(const std::string &str) { *this = str; }
+        QueryString(Stream &stream) { *this = stream; }
+        QueryString(boost::shared_ptr<Stream> stream) { *this = *stream; }
 
         std::string toString() const;
+
+        QueryString &operator =(const std::string &string);
+        QueryString &operator =(Stream &stream);
+        QueryString &operator =(boost::shared_ptr<Stream> stream) { return *this = *stream; }
     };
 
     std::string query() const;

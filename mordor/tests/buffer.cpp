@@ -742,10 +742,10 @@ MORDOR_UNITTEST(Buffer, reserve0)
     MORDOR_TEST_ASSERT_EQUAL(b.segments(), 0u);
 }
 
-MORDOR_UNITTEST(Buffer, writeBuf0)
+MORDOR_UNITTEST(Buffer, writeBuffer0)
 {
     Buffer b;
-    Buffer::SegmentData segment = b.writeBuf(0);
-    MORDOR_TEST_ASSERT_EQUAL(segment.length(), 0u);
+    iovec iov = b.writeBuffer(0, true);
+    MORDOR_TEST_ASSERT_EQUAL(iov.iov_len, 0u);
     MORDOR_TEST_ASSERT_EQUAL(b.segments(), 0u);
 }

@@ -30,15 +30,20 @@ using namespace Mordor;
 
     CharData = [^<&]* - ([^<&]* ']]>' [^<&]*);
 
+    action reference
+    {
+        m_handler.onReference(std::string(mark, fpc-mark));
+        mark = NULL;
+    }
+
     CharRef = '&#' [0-9]+ ';' | '&#x' [0-9a-fA-F]+ ';';
     EntityRef = '&' Name ';';
-    Reference = EntityRef | CharRef;
+    Reference = (EntityRef | CharRef) >mark %reference;
     PEReference = '%' Name ';';
 
     action attrib_value
     {
-        if (m_attribValue)
-            m_attribValue(std::string(mark, fpc-mark));
+        m_handler.onAttributeValue(std::string(mark, fpc-mark));
         mark = NULL;
     }
 
@@ -78,27 +83,27 @@ using namespace Mordor;
     CDSect = CDStart CData CDEnd;
 
     action start_tag {
-        if (m_startTag)
-            m_startTag(std::string(mark, fpc-mark));
+        m_handler.onStartTag(std::string(mark, fpc-mark));
         mark = NULL;
     }
     action end_tag {
-        if (m_endTag)
-            m_endTag(std::string(mark, fpc-mark));
+        m_handler.onEndTag(std::string(mark, fpc-mark));
         mark = NULL;
+    }
+    action empty_tag {
+        m_handler.onEmptyTag();
     }
 
     action attrib_name
     {
-        if (m_attribName)
-            m_attribName(std::string(mark, fpc-mark));
+		m_handler.onAttributeName(std::string(mark, fpc-mark));
         mark = NULL;
     }
 
     Attribute = Name >mark %attrib_name Eq AttValue;
     STag = '<' Name >mark %start_tag (S Attribute)* S? '>';
     ETag = '</' Name >mark %end_tag S? '>';
-    EmptyElemTag = '<' Name (S Attribute)* S? '/>';
+    EmptyElemTag = '<' Name >mark %start_tag (S Attribute)* S? '/>' %empty_tag;
     action call_parse_content {
         fcall *xml_parser_en_parse_content;
     }
@@ -106,12 +111,13 @@ using namespace Mordor;
 
     action inner_text
     {
-        if (m_innerText)
-            m_innerText(std::string(mark, fpc-mark));
-        mark = NULL;
+        if (fpc != mark) {
+			m_handler.onInnerText(std::string(mark, fpc-mark));
+			mark = NULL;
+	    }
     }
 
-    content = CharData? >mark %inner_text ((element | Reference | CDSect | PI | Comment) CharData?)*;
+    content = CharData? >mark %inner_text ((element | Reference | CDSect | PI | Comment) CharData? >mark %inner_text)*;
 
     action element_finished {
         fret;

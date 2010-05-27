@@ -296,6 +296,25 @@ isAcceptable(const ChallengeList &list, const std::string &scheme)
     return false;
 }
 
+const AuthParams &
+challengeForSchemeAndRealm(const ChallengeList &list,
+    const std::string &scheme, const std::string &realm)
+{
+    for (ChallengeList::const_iterator it = list.begin();
+        it != list.end();
+        ++it) {
+        if (stricmp(it->scheme.c_str(), scheme.c_str()) == 0) {
+            if (realm.empty())
+                return *it;
+            StringMap::const_iterator realmIt = it->parameters.find("realm");
+            if (realmIt != it->parameters.end() &&
+                stricmp(realmIt->second.c_str(), realm.c_str()) == 0)
+                return *it;
+        }
+    }
+    MORDOR_NOTREACHED();
+}
+
 bool
 isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithParameters &value,
                    bool defaultMissing)

@@ -9,20 +9,36 @@
 namespace Mordor {
 
 size_t
-HashStream::read(Buffer &b, size_t len)
+HashStream::read(Buffer &buffer, size_t length)
 {
     Buffer temp;
-    size_t result = FilterStream::read(temp, len);
+    size_t result = parent()->read(temp, length);
     updateHash(temp, result);
-    b.copyIn(temp);
+    buffer.copyIn(temp);
     return result;
 }
 
 size_t
-HashStream::write(const Buffer &b, size_t len)
+HashStream::read(void *buffer, size_t length)
 {
-    size_t result = FilterStream::write(b, len);
-    updateHash(b, result);
+    size_t result = parent()->read(buffer, length);
+    updateHash(buffer, result);
+    return result;
+}
+
+size_t
+HashStream::write(const Buffer &buffer, size_t length)
+{
+    size_t result = parent()->write(buffer, length);
+    updateHash(buffer, result);
+    return result;
+}
+
+size_t
+HashStream::write(const void *buffer, size_t length)
+{
+    size_t result = parent()->write(buffer, length);
+    updateHash(buffer, result);
     return result;
 }
 
@@ -43,9 +59,15 @@ SHA0Stream::hash() const
 }
 
 void
-SHA0Stream::updateHash(const Buffer &b, size_t len)
+SHA0Stream::updateHash(const Buffer &buffer, size_t length)
 {
-    b.visit(boost::bind(&SHA_Update, &m_ctx, _1, _2), len);
+    buffer.visit(boost::bind(&SHA_Update, &m_ctx, _1, _2), length);
+}
+
+void
+SHA0Stream::updateHash(const void *buffer, size_t length)
+{
+    SHA_Update(&m_ctx, buffer, length);
 }
 
 SHA1Stream::SHA1Stream(Stream::ptr parent, bool own)
@@ -65,9 +87,15 @@ SHA1Stream::hash() const
 }
 
 void
-SHA1Stream::updateHash(const Buffer &b, size_t len)
+SHA1Stream::updateHash(const Buffer &buffer, size_t length)
 {
-    b.visit(boost::bind(&SHA1_Update, &m_ctx, _1, _2), len);
+    buffer.visit(boost::bind(&SHA1_Update, &m_ctx, _1, _2), length);
+}
+
+void
+SHA1Stream::updateHash(const void *buffer, size_t length)
+{
+    SHA1_Update(&m_ctx, buffer, length);
 }
 
 MD5Stream::MD5Stream(Stream::ptr parent, bool own)
@@ -87,9 +115,15 @@ MD5Stream::hash() const
 }
 
 void
-MD5Stream::updateHash(const Buffer &b, size_t len)
+MD5Stream::updateHash(const Buffer &buffer, size_t length)
 {
-    b.visit(boost::bind(&MD5_Update, &m_ctx, _1, _2), len);
+    buffer.visit(boost::bind(&MD5_Update, &m_ctx, _1, _2), length);
+}
+
+void
+MD5Stream::updateHash(const void *buffer, size_t length)
+{
+    MD5_Update(&m_ctx, buffer, length);
 }
 
 }

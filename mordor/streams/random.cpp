@@ -35,14 +35,6 @@ RandomStream::~RandomStream()
 #endif
 }
 
-size_t RandomStream::read(Buffer &buffer, size_t length)
-{
-    Buffer::SegmentData data = buffer.writeBuf(length);
-    size_t result = read(data.start(), data.length());
-    buffer.produce(result);
-    return result;
-}
-
 size_t RandomStream::read(void *buffer, size_t length)
 {
 #ifdef WINDOWS

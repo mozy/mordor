@@ -20,8 +20,10 @@ public:
     ~RandomStream();
 
     bool supportsRead() { return true; }
-    size_t read(Buffer &buffer, size_t length);
     size_t read(void *buffer, size_t length);
+
+    bool supportsSeek() { return true; }
+    long long seek(long long offset, Anchor anchor = BEGIN) { return 0; }
 
 private:
 #ifdef WINDOWS

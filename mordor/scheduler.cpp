@@ -26,9 +26,10 @@ ThreadPool::start(size_t threads)
 {
     MORDOR_ASSERT(m_proc);
     boost::mutex::scoped_lock lock(m_mutex);
-    for (size_t i = 0; i < threads; ++i) {
+    if (!m_threads.empty())
+        return;
+    for (size_t i = 0; i < threads; ++i)
         m_threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(m_proc)));
-    }
 }
 
 size_t
@@ -111,6 +112,13 @@ Scheduler::start()
     MORDOR_ASSERT(m_stopping);
     m_stopping = false;
     m_threads.start(m_threadCount);
+}
+
+bool
+Scheduler::hasWorkToDo()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    return !m_fibers.empty();
 }
 
 void

@@ -60,10 +60,15 @@ typedef int error_t;
 #endif
 
 struct FileNotFoundException : virtual NativeException {};
+struct AccessDeniedException : virtual NativeException {};
 struct BadHandleException : virtual NativeException {};
 struct OperationAbortedException : virtual NativeException {};
 struct BrokenPipeException : virtual NativeException {};
 struct SharingViolation : virtual NativeException {};
+struct UnresolvablePathException : virtual NativeException {};
+struct IsDirectoryException : virtual UnresolvablePathException {};
+struct IsNotDirectoryException : virtual UnresolvablePathException {};
+struct TooManySymbolicLinksException : virtual UnresolvablePathException {};
 
 error_t lastError();
 void lastError(error_t error);

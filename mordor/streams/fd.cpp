@@ -60,44 +60,81 @@ FDStream::close(CloseType type)
 }
 
 size_t
-FDStream::read(Buffer &b, size_t len)
+FDStream::read(Buffer &buffer, size_t length)
 {
     SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
-    if (len > 0xfffffffe)
-        len = 0xfffffffe;
-    std::vector<iovec> bufs = b.writeBufs(len);
-    int rc = readv(m_fd, &bufs[0], bufs.size());
+    if (length > 0xfffffffe)
+        length = 0xfffffffe;
+    std::vector<iovec> iovs = buffer.writeBuffers(length);
+    int rc = readv(m_fd, &iovs[0], iovs.size());
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
         m_ioManager->registerEvent(m_fd, IOManager::READ);
         Scheduler::yieldTo();
-        rc = readv(m_fd, &bufs[0], bufs.size());
+        rc = readv(m_fd, &iovs[0], iovs.size());
     }
     if (rc < 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("readv");
-    b.produce(rc);
+    buffer.produce(rc);
     return rc;
 }
 
 size_t
-FDStream::write(const Buffer &b, size_t len)
+FDStream::read(void *buffer, size_t length)
 {
     SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
-    if (len > 0xfffffffe)
-        len = 0xfffffffe;
-    const std::vector<iovec> bufs = b.readBufs(len);
-    int rc = writev(m_fd, &bufs[0], bufs.size());
+    if (length > 0xfffffffe)
+        length = 0xfffffffe;
+    int rc = ::read(m_fd, buffer, length);
+    while (rc < 0 && errno == EAGAIN && m_ioManager) {
+        m_ioManager->registerEvent(m_fd, IOManager::READ);
+        Scheduler::yieldTo();
+        rc = ::read(m_fd, buffer, length);
+    }
+    if (rc < 0)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("read");
+    return rc;
+}
+
+size_t
+FDStream::write(const Buffer &buffer, size_t length)
+{
+    SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
+    MORDOR_ASSERT(m_fd >= 0);
+    if (length > 0xfffffffe)
+        length = 0xfffffffe;
+    const std::vector<iovec> iovs = buffer.readBuffers(length);
+    int rc = writev(m_fd, &iovs[0], iovs.size());
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
         m_ioManager->registerEvent(m_fd, IOManager::WRITE);
         Scheduler::yieldTo();
-        rc = writev(m_fd, &bufs[0], bufs.size());
+        rc = writev(m_fd, &iovs[0], iovs.size());
     }
-    if (rc == 0) {
+    if (rc == 0)
         MORDOR_THROW_EXCEPTION(std::runtime_error("Zero length write"));
-    }
     if (rc < 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("writev");
+    return rc;
+}
+
+size_t
+FDStream::write(const void *buffer, size_t length)
+{
+    SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
+    MORDOR_ASSERT(m_fd >= 0);
+    if (length > 0xfffffffe)
+        length = 0xfffffffe;
+    int rc = ::write(m_fd, buffer, length);
+    while (rc < 0 && errno == EAGAIN && m_ioManager) {
+        m_ioManager->registerEvent(m_fd, IOManager::WRITE);
+        Scheduler::yieldTo();
+        rc = ::write(m_fd, buffer, length);
+    }
+    if (rc == 0)
+        MORDOR_THROW_EXCEPTION(std::runtime_error("Zero length write"));
+    if (rc < 0)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("write");
     return rc;
 }
 

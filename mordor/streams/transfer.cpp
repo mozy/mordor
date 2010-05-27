@@ -7,15 +7,19 @@
 #include <boost/bind.hpp>
 
 #include "mordor/exception.h"
+#include "mordor/log.h"
 #include "mordor/scheduler.h"
 #include "mordor/streams/null.h"
 #include "stream.h"
 
 namespace Mordor {
 
+static Logger::ptr g_log = Log::lookup("mordor:stream:transfer");
+
 static void readOne(Stream &src, Buffer *&buffer, size_t len, size_t &result)
 {
     result = src.read(*buffer, len);
+    MORDOR_LOG_TRACE(g_log) << "read " << result << " bytes from " << &src;
 }
 
 static void writeOne(Stream &dst, Buffer *&buffer)
@@ -23,6 +27,7 @@ static void writeOne(Stream &dst, Buffer *&buffer)
     size_t result;
     while (buffer->readAvailable() > 0) {
         result = dst.write(*buffer, buffer->readAvailable());
+        MORDOR_LOG_TRACE(g_log) << "wrote " << result << " bytes to " << &dst;
         buffer->consume(result);
     }
 }
@@ -30,6 +35,8 @@ static void writeOne(Stream &dst, Buffer *&buffer)
 unsigned long long transferStream(Stream &src, Stream &dst,
                                   unsigned long long toTransfer)
 {
+    MORDOR_LOG_DEBUG(g_log) << "transferring " << toTransfer << " bytes from "
+        << &src << " to " << &dst;
     MORDOR_ASSERT(src.supportsRead());
     MORDOR_ASSERT(dst.supportsWrite());
     Buffer buf1, buf2;
@@ -90,13 +97,18 @@ unsigned long long transferStream(Stream &src, Stream &dst,
             todo = (size_t)(toTransfer - totalRead);
         parallel_do(dgs, fibers);
         totalRead += readResult;
-        if (readResult == 0 && toTransfer != ~0ull && totalRead < toTransfer)
+        if (readResult == 0 && toTransfer != ~0ull && totalRead < toTransfer) {
+            MORDOR_LOG_ERROR(g_log) << "only read " << totalRead << "/"
+                << toTransfer << " from " << &src;
             MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+        }
         if (readResult == 0)
             return totalRead;
     }
     writeBuffer = readBuffer;
     writeOne(dst, writeBuffer);
+    MORDOR_LOG_VERBOSE(g_log) << "transferred " << totalRead << "/" << toTransfer
+        << " from " << &src << " to " << &dst;
     return totalRead;
 }
 

@@ -50,6 +50,7 @@
 #include <ntstatus.h>
 #include <security.h>
 #include <winerror.h>
+#include <winhttp.h>
 #include <winsock2.h>
 #include <mswsock.h>
 #include <ws2tcpip.h>

@@ -240,6 +240,31 @@ MORDOR_UNITTEST(URI, queryString)
     MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
     MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a+b");
+
+    qs = "";
+    MORDOR_TEST_ASSERT(qs.empty());
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "");
+
+    qs = "&&;&&;;&";
+    MORDOR_TEST_ASSERT(qs.empty());
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "");
+
+    qs = "a=b&c";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 2u);
+    it = qs.begin();
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "a");
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "b");
+    ++it;
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "c");
+
+    qs = "a=b=c=d&e=f=g=h";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 2u);
+    it = qs.begin();
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "a");
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "b=c=d");
+    ++it;
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "e");
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "f=g=h");
 }
 
 MORDOR_UNITTEST(URI, encoding)

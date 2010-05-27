@@ -258,6 +258,9 @@ void throwExceptionFromLastError(error_t error)
         case ERROR_FILE_NOT_FOUND:
             throw boost::enable_current_exception(FileNotFoundException())
                 << errinfo_nativeerror(error);
+        case ERROR_ACCESS_DENIED:
+            throw boost::enable_current_exception(AccessDeniedException())
+                << errinfo_nativeerror(error);
         case ERROR_OPERATION_ABORTED:
             throw boost::enable_current_exception(OperationAbortedException())
                 << errinfo_nativeerror(error);
@@ -269,6 +272,9 @@ void throwExceptionFromLastError(error_t error)
                 << errinfo_nativeerror(error);
         case ERROR_SHARING_VIOLATION:
             throw boost::enable_current_exception(SharingViolation())
+                << errinfo_nativeerror(error);
+        case ERROR_CANT_RESOLVE_FILENAME:
+            throw boost::enable_current_exception(UnresolvablePathException())
                 << errinfo_nativeerror(error);
         default:
             throwSocketException(error);
@@ -297,11 +303,23 @@ void throwExceptionFromLastError(error_t error)
         case ENOENT:
             throw boost::enable_current_exception(FileNotFoundException())
                 << errinfo_nativeerror(error);
+        case EACCES:
+            throw boost::enable_current_exception(AccessDeniedException())
+                << errinfo_nativeerror(error);
         case ECANCELED:
             throw boost::enable_current_exception(OperationAbortedException())
                 << errinfo_nativeerror(error);
         case EPIPE:
             throw boost::enable_current_exception(BrokenPipeException())
+                << errinfo_nativeerror(error);
+        case EISDIR:
+            throw boost::enable_current_exception(IsDirectoryException())
+                << errinfo_nativeerror(error);
+        case ENOTDIR:
+            throw boost::enable_current_exception(IsNotDirectoryException())
+                << errinfo_nativeerror(error);
+        case ELOOP:
+            throw boost::enable_current_exception(TooManySymbolicLinksException())
                 << errinfo_nativeerror(error);
         default:
             throwSocketException(error);

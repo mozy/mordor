@@ -9,58 +9,80 @@
 
 namespace Mordor {
 namespace HTTP {
+namespace OAuth {
 
-class OAuth
+std::pair<std::string, std::string>
+getTemporaryCredentials(RequestBroker::ptr requestBroker, const URI &uri,
+    Method method, const std::string &signatureMethod,
+    const std::pair<std::string, std::string> &clientCredentials,
+    const URI &callbackUri = URI());
+
+std::pair<std::string, std::string>
+getTokenCredentials(RequestBroker::ptr requestBroker, const URI &uri,
+    Method method, const std::string signatureMethod,
+    const std::pair<std::string, std::string> &clientCredentials,
+    const std::pair<std::string, std::string> &temporaryCredentials,
+    const std::string &verifier);
+
+void authorize(Request &nextRequest,
+    const std::string &signatureMethod,
+    const std::pair<std::string, std::string> &clientCredentials,
+    const std::pair<std::string, std::string> &tokenCredentials,
+    const std::string &realm = std::string());
+
+// Helpers for setting up an OAuth request
+template <class T>
+void nonceAndTimestamp(T &oauthParameters);
+
+// oauthParameters should *not* be empty; instead if oauth params are in the
+// POST body or in the querystring, those fields should be empty instead
+template <class T>
+std::string generateSignature(const URI &uri, Method method,
+    const std::string &clientSecret, const std::string &tokenSecret,
+    const T &oauthParameters,
+    const URI::QueryString &postParameters = URI::QueryString());
+
+template <class T>
+void sign(const URI &uri, Method method,
+    const std::string &signatureMethod, const std::string &clientSecret,
+    const std::string &tokenSecret, T &oauthParameters,
+    const URI::QueryString &postParameters = URI::QueryString());
+
+template <class T>
+bool validate(const URI &uri, Method method,
+    const std::string &clientSecret, const std::string &tokenSecret,
+    const T &oauthParameters,
+    const URI::QueryString &postParameters = URI::QueryString());
+
+std::pair<std::string, std::string>
+extractCredentials(ClientRequest::ptr request);
+
+class RequestBroker : public RequestBrokerFilter
 {
 public:
-    OAuth(RequestBroker::ptr requestBroker,
-        boost::function<std::string (const URI::QueryString &params)> authDg,
-        const URI &requestTokenUri, Method requestTokenMethod,
-        const std::string &requestTokenSignatureMethod,
-        const URI &accessTokenUri, Method accessTokenMethod,
-        const std::string &accessTokenSignatureMethod,
-        const std::string &consumerKey, const std::string &consumerSecret,
-        const URI &callbackUri = "")
-        : m_requestBroker(requestBroker),
-          m_authDg(authDg),
-          m_requestTokenUri(requestTokenUri),
-          m_accessTokenUri(accessTokenUri),
-          m_requestTokenMethod(requestTokenMethod),
-          m_accessTokenMethod(accessTokenMethod),
-          m_requestTokenSignatureMethod(requestTokenSignatureMethod),
-          m_accessTokenSignatureMethod(accessTokenSignatureMethod),
-          m_consumerKey(consumerKey),
-          m_consumerSecret(consumerSecret),
-          m_callbackUri(callbackUri)
+    RequestBroker(HTTP::RequestBroker::ptr parent,
+        boost::function<bool (const URI &,
+            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            std::string & /* signatureMethod */,
+            std::pair<std::string, std::string> & /* clientCredentials */,
+            std::pair<std::string, std::string> & /* tokenCredentials */,
+            std::string & /* realm */,
+            size_t /* attempts */)> getCredentialsDg)
+        : RequestBrokerFilter(parent),
+          m_getCredentialsDg(getCredentialsDg)
     {}
 
-    void authorize(Request &nextRequest,
-        const std::string &signatureMethod, const std::string &realm);
-
-    // For testing use only
-    void selfNonce(boost::function<std::pair<unsigned long long, std::string> ()>
-        dg) { m_nonceDg = dg; }
+    ClientRequest::ptr request(Request &requestHeaders,
+        bool forceNewConnection = false,
+        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
 
 private:
-    void getRequestToken();
-    void getAccessToken(const std::string &verifier);
-    URI::QueryString signRequest(const URI &uri, Method method,
-        const std::string &signatureMethod);
-    void nonceAndTimestamp(URI::QueryString &parameters);
-    void sign(const URI &uri, Method method, const std::string &signatureMethod,
-        URI::QueryString &params);
-private:
-    RequestBroker::ptr m_requestBroker;
-    boost::function<std::pair<unsigned long long, std::string> ()> m_nonceDg;
-    boost::function<std::string (const URI::QueryString &params)> m_authDg;
-    URI m_requestTokenUri, m_accessTokenUri;
-    HTTP::Method m_requestTokenMethod, m_accessTokenMethod;
-    std::string m_requestTokenSignatureMethod, m_accessTokenSignatureMethod;
-    std::string m_consumerKey, m_consumerSecret;
-    URI m_callbackUri;
-    URI::QueryString m_params;
+    boost::function<bool (const URI &, ClientRequest::ptr, std::string &,
+        std::pair<std::string, std::string> &,
+        std::pair<std::string, std::string> &,
+        std::string &, size_t)> m_getCredentialsDg;
 };
 
-}}
+}}}
 
 #endif

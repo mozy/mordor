@@ -12,6 +12,9 @@
 #include "mordor/iomanager.h"
 
 namespace Mordor {
+
+class Stream;
+
 namespace PQ {
 
 struct Exception : virtual ::Mordor::Exception
@@ -199,6 +202,8 @@ private:
     {}
 
 public:
+    PreparedStatement() {}
+
     void bind(size_t param, const Null &);
     void bind(size_t param, const char *value);
     void bind(size_t param, const std::string &value);
@@ -336,6 +341,9 @@ public:
     /// working connection is lost.
     void reset();
 
+    std::string escape(const std::string &string);
+    std::string escapeBinary(const std::string &blob);
+
     /// @param name If non-empty, specifies to prepare this command on the
     /// server.  Statements prepared on the server msut have unique names
     /// (per-connection)
@@ -375,12 +383,112 @@ public:
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3, const T4 &param4, const T5 &param5, const T6 &param6, const T7 &param7, const T8 &param8, const T9 &param9)
     { return prepare(command).execute(param1, param2, param3, param4, param5, param6, param7, param8, param9); }
 
+    /// Bulk copy data to the server
+    struct CopyParams
+    {
+    protected:
+        CopyParams(const std::string &table, boost::shared_ptr<PGconn> conn,
+            IOManager *ioManager);
+
+    public:
+        /// Execute
+        virtual boost::shared_ptr<Stream> operator()() = 0;
+
+        CopyParams &columns(const std::vector<std::string> &columns);
+
+        CopyParams &binary();
+        CopyParams &csv();
+
+        CopyParams &delimiter(char delimiter);
+        CopyParams &nullString(const std::string &nullString);
+        CopyParams &header();
+        CopyParams &quote(char quote);
+        CopyParams &escape(char escape);
+        CopyParams &notNullQuoteColumns(const std::vector<std::string> &columns);
+
+    protected:
+        boost::shared_ptr<Stream> execute(bool out);
+
+    private:
+        std::string m_table;
+        IOManager *m_ioManager;
+        boost::shared_ptr<PGconn> m_conn;
+        std::vector<std::string> m_columns, m_notNullQuoteColumns;
+        bool m_binary, m_csv, m_header;
+        char m_delimiter, m_quote, m_escape;
+        std::string m_nullString;
+    };
+
+    struct CopyInParams : public CopyParams
+    {
+    private:
+        friend class Connection;
+        CopyInParams(const std::string &table, boost::shared_ptr<PGconn> conn,
+            IOManager *ioManager)
+            : CopyParams(table, conn, ioManager)
+        {}
+
+    public:
+        /// Execute
+        boost::shared_ptr<Stream> operator()();
+    };
+
+    struct CopyOutParams : public CopyParams
+    {
+    private:
+        friend class Connection;
+        CopyOutParams(const std::string &table, boost::shared_ptr<PGconn> conn,
+            IOManager *ioManager)
+            : CopyParams(table, conn, ioManager)
+        {}
+
+    public:
+        /// Execute
+        boost::shared_ptr<Stream> operator()();
+    };
+
+    /// See http://www.postgresql.org/docs/current/static/sql-copy.html for the
+    /// data format the server is expecting
+    CopyInParams copyIn(const std::string &table);
+    CopyOutParams copyOut(const std::string &table);
+
     const PGconn *conn() const { return m_conn.get(); }
 
 private:
     const std::string &m_conninfo;
     IOManager *m_ioManager;
     boost::shared_ptr<PGconn> m_conn;
+};
+
+struct Transaction
+{
+public:
+    enum IsolationLevel
+    {
+        DEFAULT,
+        SERIALIZABLE,
+        REPEATABLE_READ = SERIALIZABLE,
+        READ_COMMITTED,
+        READ_UNCOMMITTED = READ_COMMITTED
+    };
+    enum Mode
+    {
+        READ_WRITE,
+        READ_ONLY
+    };
+public:
+    Transaction(Connection &connection, IsolationLevel isolationLevel
+        = DEFAULT);
+    Transaction(Connection &connection, IsolationLevel isolationLevel,
+        Mode mode);
+    ~Transaction();
+
+    void commit();
+    void rollback();
+
+private:
+    Connection &m_connection;
+    bool m_active;
 };
 
 }}

@@ -135,13 +135,14 @@ private:
           m_line(line)
     {}
 
+public:
     LogEvent(const LogEvent &copy)
         : m_logger(copy.m_logger),
           m_level(copy.m_level),
           m_file(copy.m_file),
           m_line(copy.m_line)
     {}
-public:
+
     ~LogEvent();
     std::ostream &os() { return m_os; }
 

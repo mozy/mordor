@@ -29,8 +29,10 @@ public:
     bool supportsTruncate() { return true; }
 
     void close(CloseType type = BOTH);
-    size_t read(Buffer &b, size_t len);
-    size_t write(const Buffer &b, size_t len);
+    size_t read(Buffer &buffer, size_t length);
+    size_t read(void *buffer, size_t length);
+    size_t write(const Buffer &buffer, size_t length);
+    size_t write(const void *buffer, size_t length);
     long long seek(long long offset, Anchor anchor);
     long long size();
     void truncate(long long size);

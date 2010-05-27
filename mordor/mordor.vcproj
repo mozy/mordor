@@ -359,6 +359,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\eventloop.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\exception.cpp"
 				>
 			</File>
@@ -376,10 +380,6 @@
 			</File>
 			<File
 				RelativePath=".\streams\hash.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\http\http.cpp"
 				>
 			</File>
 			<File
@@ -417,6 +417,10 @@
 						ObjectFile="$(IntDir)\http_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\http\http.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\http\http_parser.cpp"
@@ -535,10 +539,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -573,6 +573,10 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\streams\ssl.cpp"
@@ -717,6 +721,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\eventloop.h"
+				>
+			</File>
+			<File
 				RelativePath=".\exception.h"
 				>
 			</File>
@@ -749,11 +757,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\http.h"
+				RelativePath=".\http\http.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\http.h"
+				RelativePath=".\streams\http.h"
 				>
 			</File>
 			<File
@@ -797,10 +805,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\progress.h"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\null.h"
 				>
 			</File>
@@ -809,11 +813,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.h"
+				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
+				RelativePath=".\xml\parser.h"
 				>
 			</File>
 			<File
@@ -826,6 +830,10 @@
 			</File>
 			<File
 				RelativePath=".\predef.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\progress.h"
 				>
 			</File>
 			<File
@@ -946,10 +954,6 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\json.rl"
-			>
-		</File>
-		<File
 			RelativePath=".\http\http_parser.rl"
 			>
 			<FileConfiguration
@@ -984,6 +988,10 @@
 					OutputFileName="http\$(InputName).cpp"
 				/>
 			</FileConfiguration>
+		</File>
+		<File
+			RelativePath=".\json.rl"
+			>
 		</File>
 		<File
 			RelativePath=".\uri.rl"

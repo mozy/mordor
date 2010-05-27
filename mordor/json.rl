@@ -4,6 +4,8 @@
 
 #include "mordor/json.h"
 
+#include "mordor/assert.h"
+
 namespace Mordor {
 namespace JSON {
 
@@ -83,7 +85,6 @@ std::string unquote(const std::string &string)
     machine json_parser;
 
     action mark { mark = fpc;}
-    action done { fbreak; }
     prepush {
         prepush();
     }
@@ -172,7 +173,7 @@ std::string unquote(const std::string &string)
     parse_object := parse_object_lbl: ws* string >mark %new_key ws* ':' ws* value %pop_stack ws* (',' ws* string >mark %new_key ws* ':' ws* value %pop_stack ws*)* '}' @ret;
     parse_array := parse_array_lbl: ws* value >new_element %pop_stack ws* (',' ws* value >new_element %pop_stack ws*)* ']' @ret;
 
-    main := ws* '{' @call_parse_object | '[' @call_parse_array ws*;
+    main := ws* value ws*;
     write data;
 }%%
 
@@ -277,7 +278,7 @@ public:
 
     void operator()(const boost::blank &b)
     {
-        os << "blank";
+        os << "null";
     }
     void operator()(const bool &b)
     {

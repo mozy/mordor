@@ -8,12 +8,16 @@
 namespace Mordor {
 namespace HTTP {
 
-class Parser : public RagelParser
+class Parser : public RagelParserWithStack
 {
 public:
     void init();
 protected:
     Parser() { init(); }
+
+    const char *earliestPointer() const;
+    void adjustPointers(ptrdiff_t offset);
+
     // Pointers to current headers
     std::string *m_string;
     StringSet *m_set;
@@ -32,7 +36,8 @@ protected:
     boost::posix_time::ptime *m_date;
 
     // Temp storage
-    std::string m_temp1, m_temp2;
+    std::string m_temp1, m_temp2, m_genericHeaderName;
+    const char *mark2;
     ETag m_tempETag;
 };
 
@@ -88,7 +93,7 @@ private:
     EntityHeaders *m_entity;
 };
 
-class ListParser : public RagelParser
+class ListParser : public RagelParserWithStack
 {
 public:
     ListParser(StringSet &stringSet);

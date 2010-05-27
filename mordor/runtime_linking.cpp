@@ -337,4 +337,49 @@ MORDOR_RUNTIME_LINK_DEFINITION(SymGetLineFromAddr64, BOOL, __stdcall,
     return FALSE;
 }
 
+MORDOR_RUNTIME_LINK_DEFINITION(WinHttpCloseHandle, BOOL, WINAPI,
+    (HINTERNET hInternet),
+    (hInternet),
+    L"winhttp.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FALSE;
+}
+
+MORDOR_RUNTIME_LINK_DEFINITION(WinHttpGetDefaultProxyConfiguration, BOOL, WINAPI,
+    (WINHTTP_PROXY_INFO *pProxyInfo),
+    (pProxyInfo),
+    L"winhttp.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FALSE;
+}
+
+MORDOR_RUNTIME_LINK_DEFINITION(WinHttpGetIEProxyConfigForCurrentUser, BOOL, WINAPI,
+    (WINHTTP_CURRENT_USER_IE_PROXY_CONFIG *pProxyConfig),
+    (pProxyConfig),
+    L"winhttp.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FALSE;
+}
+
+MORDOR_RUNTIME_LINK_DEFINITION(WinHttpGetProxyForUrl, BOOL, WINAPI,
+    (HINTERNET hSession, LPCWSTR lpcwszUrl, WINHTTP_AUTOPROXY_OPTIONS *pAutoProxyOptions, WINHTTP_PROXY_INFO *pProxyInfo),
+    (hSession, lpcwszUrl, pAutoProxyOptions, pProxyInfo),
+    L"winhttp.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FALSE;
+}
+
+MORDOR_RUNTIME_LINK_DEFINITION(WinHttpOpen, HINTERNET, WINAPI,
+    (LPCWSTR pszAgentW, DWORD dwAccessType, LPCWSTR pszProxyW, LPCWSTR pszProxyBypassW, DWORD dwFlags),
+    (pszAgentW, dwAccessType, pszProxyW, pszProxyBypassW, dwFlags),
+    L"winhttp.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return NULL;
+}
+
 }

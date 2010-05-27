@@ -17,6 +17,9 @@ public:
     NegotiateAuth(const std::string &username, const std::string &password);
     ~NegotiateAuth();
 
+    bool authorize(const AuthParams &challenge, AuthParams &authorization,
+        const URI &uri);
+    /// @deprecated
     bool authorize(const Response &challenge, Request &nextRequest);
 
 private:

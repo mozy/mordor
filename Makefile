@@ -64,9 +64,13 @@ ifeq ($(PLATFORM), Darwin)
     DARWIN := 1
     BOOST_EXT := -mt
     BOOST_LIB_FLAGS := -L/opt/local/lib
+    PQ_LIB_FLAGS := -L/opt/local/lib/postgresql83
     IOMANAGER := kqueue
     UNDERSCORE := _underscore
     GCC_ARCH := $(shell file -L `which gcc` | grep x86_64 -o | uniq)
+    ifndef GCC_ARCH
+        GCC_ARCH := $(shell file -L `which gcc` | grep ppc -o | uniq)
+    endif
     ifndef GCC_ARCH
         GCC_ARCH := i386
     endif
@@ -84,6 +88,11 @@ ifeq ($(PLATFORM), Darwin)
     ifeq ($(ARCH), i386)
         ifneq ($(GCC_ARCH), i386)
             MACH_TARGET := -arch i386
+        endif
+    endif
+    ifeq ($(ARCH), ppc)
+        ifneq ($(GCC_ARCH), ppc)
+            MACH_TARGET := -arch ppc
         endif
     endif
 endif
@@ -164,7 +173,7 @@ endif
 ifeq ($(PLATFORM), Darwin)
 endif
 
-LIBS := $(BOOST_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
+LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
 
 ifeq ($(PLATFORM), FreeBSD)
     LIBS += -lexecinfo
@@ -285,6 +294,7 @@ TESTOBJECTS :=								\
 	mordor/tests/efs_stream.o					\
 	mordor/tests/fibers.o						\
 	mordor/tests/fibersync.o					\
+	mordor/tests/file_stream.o					\
 	mordor/tests/fls.o						\
 	mordor/tests/future.o						\
 	mordor/tests/hmac.o						\
@@ -304,6 +314,7 @@ TESTOBJECTS :=								\
 	mordor/tests/timer.o						\
 	mordor/tests/transfer_stream.o					\
 	mordor/tests/uri.o						\
+	mordor/tests/xml.o						\
 	mordor/tests/zlib.o
 
 $(TESTDATA): $(CURDIR)/%: $(SRCDIR)/%
