@@ -36,6 +36,65 @@ static LPFN_CONNECTEX ConnectEx;
 
 namespace {
 
+enum Family
+{
+    UNSPECIFIED = AF_UNSPEC,
+    IP4 = AF_INET,
+    IP6 = AF_INET6
+};
+enum Type
+{
+    STREAM = SOCK_STREAM,
+    DATAGRAM = SOCK_DGRAM
+};
+enum Protocol
+{
+    ANY = 0,
+    TCP = IPPROTO_TCP,
+    UDP = IPPROTO_UDP
+};
+
+std::ostream &operator <<(std::ostream &os, Family family)
+{
+    switch (family)
+    {
+        case UNSPECIFIED:
+            return os << "AF_UNSPEC";
+        case IP4:
+            return os << "AF_INET";
+        case IP6:
+            return os << "AF_INET6";
+        default:
+            return os << (int)family;
+    }
+}
+
+std::ostream &operator <<(std::ostream &os, Type type)
+{
+    switch (type)
+    {
+        case STREAM:
+            return os << "SOCK_STREAM";
+        case DATAGRAM:
+            return os << "SOCK_DGRAM";
+        default:
+            return os << (int)type;
+    }
+}
+
+std::ostream &operator <<(std::ostream &os, Protocol protocol)
+{
+    switch (protocol)
+    {
+        case TCP:
+            return os << "IPPROTO_TCP";
+        case UDP:
+            return os << "IPPROTO_UDP";
+        default:
+            return os << (int)protocol;
+    }
+}
+
 static struct Initializer {
     Initializer()
     {
@@ -109,11 +168,11 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
     if (m_ioManager) {
         m_sock = socket(family, type, protocol);
         MORDOR_LOG_LEVEL(g_log, m_sock == -1 ? Log::ERROR : Log::DEBUG) << this
-            << " socket(" << family << ", " << type << ", " << protocol
-            << "): " << m_sock << " (" << lastError() << ")";
-        if (m_sock == -1) {
+            << " socket(" << (Family)family << ", " << (Type)type << ", "
+            << (Protocol)protocol << "): " << m_sock << " (" << lastError()
+            << ")";
+        if (m_sock == -1)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("socket");
-        }
     }
 #endif
 }
@@ -144,11 +203,11 @@ Socket::Socket(int family, int type, int protocol)
 #endif
 {
     m_sock = socket(family, type, protocol);
-    MORDOR_LOG_DEBUG(g_log) << this << " socket(" << family << ", " << type << ", "
-        << protocol << "): " << m_sock << " (" << lastError() << ")";
-    if (m_sock == -1) {
+    MORDOR_LOG_DEBUG(g_log) << this << " socket(" << (Family)family << ", "
+        << (Type)type << ", " << (Protocol)protocol << "): " << m_sock << " ("
+        << lastError() << ")";
+    if (m_sock == -1)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("socket");
-    }
 #ifdef OSX
     unsigned int opt = 1;
     if (setsockopt(m_sock, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt)) == -1) {
@@ -174,8 +233,9 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
 #endif
 {
     m_sock = socket(family, type, protocol);
-    MORDOR_LOG_DEBUG(g_log) << this << " socket(" << family << ", " << type << ", "
-        << protocol << "): " << m_sock << " (" << lastError() << ")";
+    MORDOR_LOG_DEBUG(g_log) << this << " socket(" << (Family)family << ", "
+        << (Type)type << ", " << (Protocol)protocol << "): " << m_sock << " ("
+        << lastError() << ")";
     if (m_sock == -1)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("socket");
 #ifdef WINDOWS
@@ -219,8 +279,9 @@ Socket::Socket(EventLoop &eventLoop, int family, int type, int protocol)
   m_scheduler(NULL)
 {
     m_sock = socket(family, type, protocol);
-    MORDOR_LOG_DEBUG(g_log) << this << " socket(" << family << ", " << type << ", "
-        << protocol << "): " << m_sock << " (" << lastError() << ")";
+    MORDOR_LOG_DEBUG(g_log) << this << " socket(" << (Family)family << ", "
+        << (Type)type << ", " << (Protocol)protocol << "): " << m_sock << " ("
+        << lastError() << ")";
     if (m_sock == -1)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("socket");
     u_long arg = 1;
@@ -353,6 +414,8 @@ Socket::connect(const Address &to)
                                 << ", 0.0.0.0:0): (" << lastError() << ")";
                             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("bind");
                         }
+                        MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock
+                            << ", 0.0.0.0:0)";
                         break;
                     }
                 case AF_INET6:
@@ -368,6 +431,8 @@ Socket::connect(const Address &to)
                                 << ", [::]:0): (" << lastError() << ")";
                             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("bind");
                         }
+                        MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock
+                            << ", [::]:0)";
                         break;
                     }
                 default:
@@ -377,7 +442,7 @@ Socket::connect(const Address &to)
             m_ioManager->registerEvent(&m_sendEvent);
             BOOL bRet = ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped);
             if (!bRet && GetLastError() != WSA_IO_PENDING) {
-                MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock
+                MORDOR_LOG_ERROR(g_log) << this << " ConnectEx(" << m_sock
                     << ", " << to << "): (" << lastError() << ")";
                 m_ioManager->unregisterEvent(&m_sendEvent);
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ConnectEx");
@@ -387,7 +452,7 @@ Socket::connect(const Address &to)
                 m_sendEvent.overlapped.Internal = STATUS_SUCCESS;
             } else {
                 if (m_cancelledSend) {
-                    MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
+                    MORDOR_LOG_ERROR(g_log) << this << " ConnectEx(" << m_sock << ", " << to
                             << "): (" << m_cancelledSend << ")";
                     m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
                     Scheduler::yieldTo();
@@ -409,7 +474,7 @@ Socket::connect(const Address &to)
             if (error == ERROR_SEM_TIMEOUT)
                 error = WSAETIMEDOUT;
             MORDOR_LOG_LEVEL(g_log, error ? Log::ERROR : Log::INFO) << this
-                << " connect(" << m_sock << ", " << to << "): (" << error << ")";
+                << " ConnectEx(" << m_sock << ", " << to << "): (" << error << ")";
             if (error)
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ConnectEx");
             setOption(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
@@ -631,7 +696,7 @@ Socket::accept(Socket &target)
             BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, sizeof(SOCKADDR_STORAGE) + 16, sizeof(SOCKADDR_STORAGE) + 16, &bytes,
                 &m_receiveEvent.overlapped);
             if (!ret && GetLastError() != WSA_IO_PENDING) {
-                MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "):  ("
+                MORDOR_LOG_ERROR(g_log) << this << " AcceptEx(" << m_sock << "):  ("
                     << lastError() << ")";
                 m_ioManager->unregisterEvent(&m_receiveEvent);
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("AcceptEx");
@@ -641,7 +706,7 @@ Socket::accept(Socket &target)
                 m_receiveEvent.overlapped.Internal = STATUS_SUCCESS;
             } else {
                 if (m_cancelledReceive) {
-                    MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
+                    MORDOR_LOG_ERROR(g_log) << this << " AcceptEx(" << m_sock << "): ("
                         << m_cancelledReceive << ")";
                     m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
                     Scheduler::yieldTo();
@@ -660,7 +725,7 @@ Socket::accept(Socket &target)
                 if (error == ERROR_OPERATION_ABORTED &&
                     m_cancelledReceive != ERROR_OPERATION_ABORTED)
                     error = WSAETIMEDOUT;
-                MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
+                MORDOR_LOG_ERROR(g_log) << this << " AcceptEx(" << m_sock << "): ("
                     << error << ")";
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "AcceptEx");
             }
@@ -676,7 +741,7 @@ Socket::accept(Socket &target)
             std::ostringstream os;
             if (remoteAddr)
                 os << " (" << *m_remoteAddress << ")";
-            MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
+            MORDOR_LOG_INFO(g_log) << this << " AcceptEx(" << m_sock << "): "
                 << target.m_sock << os.str();
             target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
             target.m_ioManager->registerFile((HANDLE)target.m_sock);
@@ -1367,8 +1432,8 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     error = getaddrinfo(node.c_str(), service, &hints, &results);
 #endif
     if (error)
-        MORDOR_LOG_ERROR(g_log) << "getaddrinfo(" << host << ", " << family
-            << ", " << type << "): (" << error << ")";
+        MORDOR_LOG_ERROR(g_log) << "getaddrinfo(" << host << ", "
+            << (Family)family << ", " << (Type)type << "): (" << error << ")";
     switch (error) {
         case 0:
             break;
