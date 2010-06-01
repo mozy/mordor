@@ -304,6 +304,10 @@ ProxyStreamBroker::getStream(const Mordor::URI &uri)
         if (m_fallbackOnFailure)
             return parent()->getStream(uri);
         throw;
+    } catch (UnexpectedEofException &) {
+        if (m_fallbackOnFailure)
+            return parent()->getStream(uri);
+        throw;
     }
 }
 
