@@ -13,6 +13,7 @@
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
 #include "mordor/http/multipart.h"
+#include "mordor/http/proxy.h"
 #include "mordor/iomanager.h"
 #include "mordor/socket.h"
 #include "mordor/streams/socket.h"
@@ -56,11 +57,6 @@ static bool getCredentials(HTTP::ClientRequest::ptr priorRequest,
         return true;
     }
     return false;
-}
-
-URI proxy(const URI &uri)
-{
-    return "https://siren";
 }
 
 int main(int argc, char *argv[])
@@ -108,7 +104,7 @@ int main(int argc, char *argv[])
         if (vm.count("proxyusername"))
             options.getProxyCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
                 proxyusername, proxypassword, _7, true);
-        options.proxyForURIDg = &proxy;
+        options.proxyForURIDg = &HTTP::defaultProxy;
         HTTP::RequestBroker::ptr requestBroker =
             HTTP::createRequestBroker(options).first;
 

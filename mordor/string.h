@@ -8,6 +8,10 @@
 
 #include "version.h"
 
+#ifdef OSX
+#include <CoreFoundation/CFString.h>
+#endif
+
 namespace Mordor {
 
 std::string base64decode(const std::string &src);
@@ -42,6 +46,8 @@ std::string toUtf8(const wchar_t *str, size_t len = ~0);
 std::string toUtf8(const std::wstring &str);
 std::wstring toUtf16(const char *str, size_t len = ~0);
 std::wstring toUtf16(const std::string &str);
+#elif defined (OSX)
+std::string toUtf8(CFStringRef string);
 #endif
 std::string toUtf8(wchar_t character);
 std::string toUtf8(int character);

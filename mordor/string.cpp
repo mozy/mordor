@@ -409,6 +409,24 @@ toUtf16(const std::string &str)
     MORDOR_ASSERT(str.size() < 0x80000000u);
     return toUtf16(str.c_str(), str.size());
 }
+#elif defined (OSX)
+
+std::string
+toUtf8(CFStringRef string)
+{
+    const char *bytes = CFStringGetCStringPtr(string, kCFStringEncodingUTF8);
+    if (bytes)
+        return bytes;
+    std::string result;
+    CFIndex length = CFStringGetLength(string);
+    length = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8);
+    result.resize(length);
+    if (!CFStringGetCString(string, &result[0], length, kCFStringEncodingUTF8)) {
+        MORDOR_NOTREACHED();
+    }
+    result.resize(strlen(result.c_str()));
+    return result;
+}
 #endif
 
 std::string

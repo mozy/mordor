@@ -10,6 +10,9 @@
 
 #ifdef WINDOWS
 #include "mordor/runtime_linking.h"
+#elif defined (OSX)
+#include <SystemConfiguration/SystemConfiguration.h>
+#include "mordor/util.h"
 #endif
 
 namespace Mordor {
@@ -223,6 +226,58 @@ URI proxyFromUserSettings(const URI &uri)
     if (settings.autoDetect)
         return autoDetectProxy(uri, settings.pacScript);
     return proxyFromList(uri, settings.proxy, settings.bypassList);
+}
+#elif defined(OSX)
+URI proxyFromSystemConfiguration(const URI &uri)
+{
+    MORDOR_ASSERT(uri.schemeDefined());
+    MORDOR_ASSERT(uri.scheme() == "http" || uri.scheme() == "https");
+
+    const void *enableKey;
+    const void *proxyKey;
+    const void *portKey;
+    if (uri.scheme() == "http") {
+        enableKey = kSCPropNetProxiesHTTPEnable;
+        proxyKey = kSCPropNetProxiesHTTPProxy;
+        portKey = kSCPropNetProxiesHTTPPort;
+    } else {
+        enableKey = kSCPropNetProxiesHTTPSEnable;
+        proxyKey = kSCPropNetProxiesHTTPSProxy;
+        portKey = kSCPropNetProxiesHTTPSPort;
+    }
+
+    ScopedCFRef<CFDictionaryRef> proxyDict = SCDynamicStoreCopyProxies(NULL);
+    if (!proxyDict)
+        return URI();
+    CFNumberRef excludeSimpleHostnamesRef =
+        (CFNumberRef)CFDictionaryGetValue(proxyDict, kSCPropNetProxiesExcludeSimpleHostnames);
+    int excludeSimpleHostnames;
+    if (excludeSimpleHostnamesRef &&
+        CFGetTypeID(excludeSimpleHostnamesRef) == CFNumberGetTypeID() &&
+        CFNumberGetValue(excludeSimpleHostnamesRef, kCFNumberIntType, &excludeSimpleHostnames) &&
+        excludeSimpleHostnames &&
+        uri.authority.host().find('.') == std::string::npos)
+        return URI();
+    CFNumberRef enabledRef = (CFNumberRef)CFDictionaryGetValue(proxyDict, enableKey);
+    if (!enabledRef || CFGetTypeID(enabledRef) != CFNumberGetTypeID())
+        return URI();
+    int enabled = 0;
+    if (!CFNumberGetValue(enabledRef, kCFNumberIntType, &enabled) || enabled == 0)
+        return URI();
+    CFStringRef proxyHostRef = (CFStringRef)CFDictionaryGetValue(proxyDict, proxyKey);
+    if (!proxyHostRef || CFGetTypeID(proxyHostRef) != CFStringGetTypeID())
+        return URI();
+    CFNumberRef proxyPortRef = (CFNumberRef)CFDictionaryGetValue(proxyDict, portKey);
+    int port = 0;
+    if (proxyPortRef && CFGetTypeID(proxyPortRef) != CFNumberGetTypeID())
+        CFNumberGetValue(proxyPortRef, kCFNumberIntType, &port);
+
+    URI result;
+    result.authority.host(toUtf8(proxyHostRef));
+    result.scheme(uri.scheme());
+    if (port != 0)
+        result.authority.port(port);
+    return result;
 }
 #endif
 

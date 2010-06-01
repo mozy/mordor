@@ -31,6 +31,7 @@
 #include <netinet/ip.h>
 #include <netinet/in_systm.h>
 #include <ucontext.h>
+#include <CoreFoundation/CFString.h>
 #endif
 
 #undef major

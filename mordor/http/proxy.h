@@ -35,7 +35,20 @@ struct ProxySettings
 
 ProxySettings getUserProxySettings();
 URI proxyFromUserSettings(const URI &uri);
+#elif defined (OSX)
+URI proxyFromSystemConfiguration(const URI &uri);
 #endif
+
+inline URI defaultProxy(const URI &uri)
+{
+#ifdef WINDOWS
+    return proxyFromUserSettings(uri);
+#elif defined (OSX)
+    return proxyFromSystemConfiguration(uri);
+#else
+    return proxyFromConfig(uri);
+#endif
+}
 
 class ProxyConnectionBroker : public ConnectionBroker
 {
@@ -44,7 +57,7 @@ public:
 
 public:
     ProxyConnectionBroker(ConnectionBroker::ptr parent,
-        boost::function<URI (const URI &)> proxyForURIDg = &proxyFromConfig);
+        boost::function<URI (const URI &)> proxyForURIDg = &defaultProxy);
 
     void fallbackOnFailure(bool fallback) { m_fallbackOnFailure = fallback; }
 
@@ -65,7 +78,7 @@ public:
 public:
     ProxyStreamBroker(StreamBroker::ptr parent,
         RequestBroker::ptr requestBroker,
-        boost::function<URI (const URI &)> proxyForURIDg = &proxyFromConfig);
+        boost::function<URI (const URI &)> proxyForURIDg = &defaultProxy);
 
     void fallbackOnFailure(bool fallback) { m_fallbackOnFailure = fallback; }
 
