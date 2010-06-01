@@ -71,6 +71,9 @@ URI proxyFromList(const URI &uri, const std::string &proxy,
         }
         if (!forScheme.empty() && stricmp(forScheme.c_str(), uri.scheme().c_str()) != 0)
             continue;
+        equals = curProxy.find("//");
+        if (equals == std::string::npos)
+            curProxy = "//" + curProxy;
         URI proxyUri;
         try {
             proxyUri = curProxy;
