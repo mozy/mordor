@@ -28,14 +28,7 @@
 
 namespace Mordor {
 
-#ifdef WINDOWS
-
-static LPFN_ACCEPTEX pAcceptEx;
-static LPFN_GETACCEPTEXSOCKADDRS pGetAcceptExSockaddrs;
-static LPFN_CONNECTEX ConnectEx;
-
 namespace {
-
 enum Family
 {
     UNSPECIFIED = AF_UNSPEC,
@@ -94,6 +87,15 @@ std::ostream &operator <<(std::ostream &os, Protocol protocol)
             return os << (int)protocol;
     }
 }
+}
+
+#ifdef WINDOWS
+
+static LPFN_ACCEPTEX pAcceptEx;
+static LPFN_GETACCEPTEXSOCKADDRS pGetAcceptExSockaddrs;
+static LPFN_CONNECTEX ConnectEx;
+
+namespace {
 
 static struct Initializer {
     Initializer()
