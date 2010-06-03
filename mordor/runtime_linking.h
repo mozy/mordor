@@ -16,7 +16,7 @@
     static ReturnType CallingConvention Name##NotImpl ArgTypes;                 \
     static ReturnType CallingConvention Name##Thunk ArgTypes                    \
     {                                                                           \
-        HINSTANCE hInstance = GetModuleHandleW(Library);                        \
+        HINSTANCE hInstance = LoadLibraryW(Library);                            \
         p##Name = (LPFN_##Name)GetProcAddress(hInstance, #Name);                \
         if (!p##Name)                                                           \
             p##Name = &Name##NotImpl;                                           \
