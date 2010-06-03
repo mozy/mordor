@@ -11,6 +11,7 @@
 #ifdef WINDOWS
 #include "mordor/runtime_linking.h"
 #elif defined (OSX)
+#include <CoreServices/CoreServices.h>
 #include <SystemConfiguration/SystemConfiguration.h>
 #include "mordor/util.h"
 #endif
@@ -233,71 +234,48 @@ std::vector<URI> proxyFromUserSettings(const URI &uri)
 std::vector<URI> proxyFromSystemConfiguration(const URI &uri)
 {
     std::vector<URI> result;
-    MORDOR_ASSERT(uri.schemeDefined());
-    MORDOR_ASSERT(uri.scheme() == "http" || uri.scheme() == "https");
 
-    const void *enableKey;
-    const void *proxyKey;
-    const void *portKey;
-    if (uri.scheme() == "http") {
-        enableKey = kSCPropNetProxiesHTTPEnable;
-        proxyKey = kSCPropNetProxiesHTTPProxy;
-        portKey = kSCPropNetProxiesHTTPPort;
-    } else {
-        enableKey = kSCPropNetProxiesHTTPSEnable;
-        proxyKey = kSCPropNetProxiesHTTPSProxy;
-        portKey = kSCPropNetProxiesHTTPSPort;
-    }
+    std::string uristring = uri.toString();
+    ScopedCFRef<CFURLRef> cfurl = CFURLCreateWithBytes(NULL,
+        (const UInt8 *)uristring.c_str(),
+        uristring.size(), kCFStringEncodingUTF8, NULL);
+    if (!cfurl)
+        return result;
 
-    ScopedCFRef<CFDictionaryRef> proxyDict = SCDynamicStoreCopyProxies(NULL);
-    if (!proxyDict)
+    ScopedCFRef<CFDictionaryRef> proxySettings = SCDynamicStoreCopyProxies(NULL);
+    if (!proxySettings)
         return result;
-    CFNumberRef excludeSimpleHostnamesRef =
-        (CFNumberRef)CFDictionaryGetValue(proxyDict, kSCPropNetProxiesExcludeSimpleHostnames);
-    std::string host = uri.authority.host();
-    int excludeSimpleHostnames;
-    if (excludeSimpleHostnamesRef &&
-        CFGetTypeID(excludeSimpleHostnamesRef) == CFNumberGetTypeID() &&
-        CFNumberGetValue(excludeSimpleHostnamesRef, kCFNumberIntType, &excludeSimpleHostnames) &&
-        excludeSimpleHostnames &&
-        host.find('.') == std::string::npos)
+    ScopedCFRef<CFArrayRef> proxies = CFNetworkCopyProxiesForURL(cfurl,
+        proxySettings);
+    if (!proxies)
         return result;
-    CFArrayRef bypassList = (CFArrayRef)CFDictionaryGetValue(proxyDict, kSCPropNetProxiesExceptionsList);
-    if (bypassList && CFGetTypeID(bypassList) == CFArrayGetTypeID()) {
-        for (CFIndex i = 0; i < CFArrayGetCount(bypassList); ++i) {
-            CFStringRef bypassRef = (CFStringRef)CFArrayGetValueAtIndex(bypassList, i);
-            if (!bypassRef || CFGetTypeID(bypassRef) != CFStringGetTypeID())
+    for (CFIndex i = 0; i < CFArrayGetCount(proxies); ++i) {
+        CFDictionaryRef thisProxy = (CFDictionaryRef)CFArrayGetValueAtIndex(proxies, i);
+        CFStringRef proxyType = (CFStringRef)CFDictionaryGetValue(thisProxy, kCFProxyTypeKey);
+        if (!proxyType || CFGetTypeID(proxyType) != CFStringGetTypeID())
+            continue;
+        URI thisProxyUri;
+        if (CFEqual(proxyType, kCFProxyTypeNone)) {
+            result.push_back(URI());
+        } else if (CFEqual(proxyType, kCFProxyTypeHTTP)) {
+            thisProxyUri.scheme("http");
+        } else if (CFEqual(proxyType, kCFProxyTypeHTTPS)) {
+            thisProxyUri.scheme("https");
+        }
+        if (thisProxyUri.schemeDefined()) {
+            CFStringRef proxyHost = (CFStringRef)CFDictionaryGetValue(thisProxy, kCFProxyHostNameKey);
+            if (!proxyHost || CFGetTypeID(proxyHost) != CFStringGetTypeID())
                 continue;
-            std::string bypass = toUtf8(bypassRef);
-            if (bypass.empty())
-                continue;
-            if (bypass[0] == '*' && host.size() >= bypass.size() - 1 &&
-                stricmp(bypass.c_str() + 1, host.c_str() + host.size() - bypass.size() - 1) == 0)
-                return URI();
-            else if (stricmp(host.c_str(), bypass.c_str()) == 0)
-                return URI();
+            CFNumberRef proxyPort = (CFNumberRef)CFDictionaryGetValue(thisProxy, kCFProxyPortNumberKey);
+            int port = -1;
+            if (proxyPort && CFGetTypeID(proxyPort) == CFNumberGetTypeID())
+                CFNumberGetValue(proxyPort, kCFNumberIntType, &port);
+            thisProxyUri.authority.host(toUtf8(proxyHost));
+            if (port != -1)
+                thisProxyUri.authority.port(port);
+            result.push_back(thisProxyUri);
         }
     }
-    CFNumberRef enabledRef = (CFNumberRef)CFDictionaryGetValue(proxyDict, enableKey);
-    if (!enabledRef || CFGetTypeID(enabledRef) != CFNumberGetTypeID())
-        return result;
-    int enabled = 0;
-    if (!CFNumberGetValue(enabledRef, kCFNumberIntType, &enabled) || enabled == 0)
-        return result;
-    CFStringRef proxyHostRef = (CFStringRef)CFDictionaryGetValue(proxyDict, proxyKey);
-    if (!proxyHostRef || CFGetTypeID(proxyHostRef) != CFStringGetTypeID())
-        return result;
-    CFNumberRef proxyPortRef = (CFNumberRef)CFDictionaryGetValue(proxyDict, portKey);
-    int port = 0;
-    if (proxyPortRef && CFGetTypeID(proxyPortRef) != CFNumberGetTypeID())
-        CFNumberGetValue(proxyPortRef, kCFNumberIntType, &port);
-
-    URI proxy;
-    proxy.authority.host(toUtf8(proxyHostRef));
-    proxy.scheme(uri.scheme());
-    if (port != 0)
-        proxy.authority.port(port);
-    result.push_back(proxy);
     return result;
 }
 #endif

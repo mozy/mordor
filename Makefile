@@ -173,7 +173,7 @@ endif
 LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_program_options $(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
 
 ifeq ($(PLATFORM), Darwin)
-   LIBS += -framework SystemConfiguration -framework CoreFoundation
+   LIBS += -framework SystemConfiguration -framework CoreFoundation -framework CoreServices
 endif
 
 ifeq ($(PLATFORM), FreeBSD)
@@ -402,6 +402,13 @@ endif
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
 
+mordor/streams/http_stream.o: mordor/streams/http.cpp
+ifeq ($(Q),@)
+	@echo c++ $<
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 
 LIBMORDOROBJECTS := 							\
 	mordor/assert.o							\
@@ -437,7 +444,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/fd.o						\
 	mordor/streams/file.o						\
 	mordor/streams/hash.o						\
-	mordor/streams/http.o						\
+	mordor/streams/http_stream.o					\
 	mordor/streams/limited.o					\
 	mordor/streams/memory.o						\
 	mordor/streams/null.o						\
