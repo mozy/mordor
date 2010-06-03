@@ -268,7 +268,13 @@ boost::shared_ptr<Stream>
 ProxyStreamBroker::getStream(const Mordor::URI &uri)
 {
     URI proxy = m_dg(uri);
-    if (!proxy.isDefined() || !(proxy.schemeDefined() && proxy.scheme() == "https"))
+    // Don't use a proxy if they didn't provide one, the provided one has no
+    // scheme, the proxy's scheme is not https, or we're trying to get a
+    // connection to the proxy anyway
+    if (!proxy.isDefined() || !proxy.schemeDefined() ||
+        proxy.scheme() != "https" ||
+        (uri.scheme() == "http" && uri.path.isEmpty() &&
+        uri.authority == proxy.authority))
         return parent()->getStream(uri);
     std::ostringstream os;
     if (!uri.authority.hostDefined())
@@ -285,7 +291,11 @@ ProxyStreamBroker::getStream(const Mordor::URI &uri)
         MORDOR_THROW_EXCEPTION(std::invalid_argument("Unknown protocol for proxying connection"));
     Request requestHeaders;
     requestHeaders.requestLine.method = CONNECT;
-    requestHeaders.requestLine.uri = os.str();
+    URI &requestUri = requestHeaders.requestLine.uri;
+    requestUri.scheme("http");
+    requestUri.authority = proxy.authority;
+    requestUri.path.type = URI::Path::ABSOLUTE;
+    requestUri.path.segments.push_back(os.str());
     requestHeaders.request.host = os.str();
     requestHeaders.general.connection.insert("Proxy-Connection");
     requestHeaders.general.proxyConnection.insert("Keep-Alive");

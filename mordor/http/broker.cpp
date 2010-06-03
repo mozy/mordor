@@ -461,10 +461,13 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     bool connect = requestHeaders.requestLine.method == CONNECT;
     MORDOR_ASSERT(connect || originalUri.authority.hostDefined());
     MORDOR_ASSERT(!connect || !requestHeaders.request.host.empty());
-    if (!connect)
+    if (!connect) {
         requestHeaders.request.host = originalUri.authority.host();
-    else
-        originalUri = "http://" + requestHeaders.request.host;
+    } else {
+        MORDOR_ASSERT(originalUri.scheme() == "http");
+        MORDOR_ASSERT(originalUri.path.segments.size() == 1);
+        currentUri = originalUri.path.segments[0];
+    }
     ConnectionBroker::ptr connectionBroker = m_connectionBroker;
     if (!connectionBroker)
         connectionBroker = m_weakConnectionBroker.lock();
@@ -473,13 +476,11 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         conn = connectionBroker->getConnection(
             connect ? originalUri : currentUri, forceNewConnection);
     } catch (boost::exception &ex) {
-        if (!connect)
-            currentUri = originalUri;
+        currentUri = originalUri;
         ex << errinfo_source(CONNECTION);
         throw;
     } catch (...) {
-        if (!connect)
-            currentUri = originalUri;
+        currentUri = originalUri;
         throw;
     }
     try {
@@ -511,8 +512,7 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             Scheduler::getThis()->schedule(boost::bind(&doBody,
                 request, bodyDg, boost::ref(future), boost::ref(exception),
                 boost::ref(exceptionWasHttp)));
-        if (!connect)
-            currentUri = originalUri;
+        currentUri = originalUri;
         try {
             // Force reading the response here to check for connectivity problems
             request->response();
@@ -543,8 +543,7 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             Mordor::rethrow_exception(exception);
         return request;
     } catch (...) {
-        if (!connect)
-            currentUri = originalUri;
+        currentUri = originalUri;
         throw;
     }
 }

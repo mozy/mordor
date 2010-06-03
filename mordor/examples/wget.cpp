@@ -58,6 +58,11 @@ static bool getCredentials(HTTP::ClientRequest::ptr priorRequest,
     return false;
 }
 
+URI proxy(const URI &uri)
+{
+    return "https://siren";
+}
+
 int main(int argc, char *argv[])
 {
     Config::loadFromEnvironment();
@@ -103,6 +108,7 @@ int main(int argc, char *argv[])
         if (vm.count("proxyusername"))
             options.getProxyCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
                 proxyusername, proxypassword, _7, true);
+        options.proxyForURIDg = &proxy;
         HTTP::RequestBroker::ptr requestBroker =
             HTTP::createRequestBroker(options).first;
 

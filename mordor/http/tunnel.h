@@ -13,8 +13,12 @@ boost::shared_ptr<Stream> tunnel(T &conn, const std::string &proxy, const std::s
 {
     Request requestHeaders;
     requestHeaders.requestLine.method = CONNECT;
-    requestHeaders.requestLine.uri = target;
-    requestHeaders.request.host = proxy;
+    URI &requestUri = requestHeaders.requestLine.uri;
+    requestUri.scheme("http");
+    requestUri.authority.host(proxy);
+    requestUri.path.type = URI::Path::ABSOLUTE;
+    requestUri.path.segments.push_back(target);
+    requestHeaders.request.host = target;
     requestHeaders.general.connection.insert("Proxy-Connection");
     requestHeaders.general.proxyConnection.insert("Keep-Alive");
     ClientRequest::ptr request = conn.request(requestHeaders);
