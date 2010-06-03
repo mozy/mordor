@@ -11,19 +11,19 @@ namespace HTTP {
 
 // The default; if you've done Config::loadFromEnvironment, this will use the
 // HTTP_PROXY environment variable (passing it to proxyFromList)
-URI proxyFromConfig(const URI &uri);
+std::vector<URI> proxyFromConfig(const URI &uri);
 // This parses proxy and bypassList according to the WINHTTP_PROXY_INFO
 // structure; additionally if bypassList is blank, it will look for a !
 // in the proxy, and use that to separate the proxy from the
 // bypassList
-URI proxyFromList(const URI &uri, const std::string &proxy,
+std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
     const std::string &bypassList = std::string());
 
 #ifdef WINDOWS
-URI autoDetectProxy(const URI &uri,
+std::vector<URI> autoDetectProxy(const URI &uri,
     const std::string &pacScript = std::string(),
     const std::string &userAgent = std::string());
-URI proxyFromMachineDefault(const URI &uri);
+std::vector<URI> proxyFromMachineDefault(const URI &uri);
 
 struct ProxySettings
 {
@@ -34,12 +34,12 @@ struct ProxySettings
 };
 
 ProxySettings getUserProxySettings();
-URI proxyFromUserSettings(const URI &uri);
+std::vector<URI> proxyFromUserSettings(const URI &uri);
 #elif defined (OSX)
-URI proxyFromSystemConfiguration(const URI &uri);
+std::vector<URI> proxyFromSystemConfiguration(const URI &uri);
 #endif
 
-inline URI defaultProxy(const URI &uri)
+inline std::vector<URI> defaultProxy(const URI &uri)
 {
 #ifdef WINDOWS
     return proxyFromUserSettings(uri);
@@ -57,17 +57,14 @@ public:
 
 public:
     ProxyConnectionBroker(ConnectionBroker::ptr parent,
-        boost::function<URI (const URI &)> proxyForURIDg = &defaultProxy);
-
-    void fallbackOnFailure(bool fallback) { m_fallbackOnFailure = fallback; }
+        boost::function<std::vector<URI> (const URI &)> proxyForURIDg = &defaultProxy);
 
     std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false);
 
 private:
     ConnectionBroker::ptr m_parent;
-    boost::function<URI (const URI &)> m_dg;
-    bool m_fallbackOnFailure;
+    boost::function<std::vector<URI> (const URI &)> m_dg;
 };
 
 class ProxyStreamBroker : public StreamBrokerFilter
@@ -78,16 +75,13 @@ public:
 public:
     ProxyStreamBroker(StreamBroker::ptr parent,
         RequestBroker::ptr requestBroker,
-        boost::function<URI (const URI &)> proxyForURIDg = &defaultProxy);
-
-    void fallbackOnFailure(bool fallback) { m_fallbackOnFailure = fallback; }
+        boost::function<std::vector<URI> (const URI &)> proxyForURIDg = &defaultProxy);
 
     boost::shared_ptr<Stream> getStream(const URI &uri);
 
 private:
     RequestBroker::ptr m_requestBroker;
-    boost::function<URI (const URI &)> m_dg;
-    bool m_fallbackOnFailure;
+    boost::function<std::vector<URI> (const URI &)> m_dg;
 };
 
 }}

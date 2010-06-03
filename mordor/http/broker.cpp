@@ -73,11 +73,9 @@ createRequestBroker(const RequestBrokerOptions &options)
     if (options.proxyForURIDg) {
         ProxyStreamBroker::ptr proxyStreamBroker(new ProxyStreamBroker(socketBroker, requestBroker,
             options.proxyForURIDg));
-        proxyStreamBroker->fallbackOnFailure(options.fallbackToDirectOnProxyFailure);
         sslBroker->parent(boost::static_pointer_cast<StreamBroker>(proxyStreamBroker));
         ProxyConnectionBroker::ptr connectionBroker(
             new ProxyConnectionBroker(connectionCache, options.proxyForURIDg));
-        connectionBroker->fallbackOnFailure(options.fallbackToDirectOnProxyFailure);
         requestBroker.reset(new BaseRequestBroker(boost::static_pointer_cast<ConnectionBroker>(connectionBroker)));
         if (options.delayDg)
             requestBroker.reset(new RetryRequestBroker(requestBroker,

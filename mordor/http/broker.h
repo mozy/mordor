@@ -358,7 +358,6 @@ struct RequestBrokerOptions
         sslConnectWriteTimeout(~0ull),
         httpReadTimeout(~0ull),
         httpWriteTimeout(~0ull),
-        fallbackToDirectOnProxyFailure(false),
         sslCtx(NULL),
         verifySslCertificate(false),
         verifySslCertificateHost(true)
@@ -374,14 +373,13 @@ struct RequestBrokerOptions
     unsigned long long sslConnectWriteTimeout;
     unsigned long long httpReadTimeout;
     unsigned long long httpWriteTimeout;
-    boost::function<URI (const URI &)> proxyForURIDg;
+    boost::function<std::vector<URI> (const URI &)> proxyForURIDg;
     boost::function<bool (const URI &,
             boost::shared_ptr<ClientRequest> /* priorRequest = ClientRequest::ptr() */,
             std::string & /* scheme */, std::string & /* realm */,
             std::string & /* username */, std::string & /* password */,
             size_t /* attempts */)>
             getCredentialsDg, getProxyCredentialsDg;
-    bool fallbackToDirectOnProxyFailure;
     StreamBrokerFilter::ptr customStreamBrokerFilter;
     SSL_CTX *sslCtx;
     bool verifySslCertificate;
