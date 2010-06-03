@@ -251,13 +251,30 @@ URI proxyFromSystemConfiguration(const URI &uri)
         return URI();
     CFNumberRef excludeSimpleHostnamesRef =
         (CFNumberRef)CFDictionaryGetValue(proxyDict, kSCPropNetProxiesExcludeSimpleHostnames);
+    std::string host = uri.authority.host();
     int excludeSimpleHostnames;
     if (excludeSimpleHostnamesRef &&
         CFGetTypeID(excludeSimpleHostnamesRef) == CFNumberGetTypeID() &&
         CFNumberGetValue(excludeSimpleHostnamesRef, kCFNumberIntType, &excludeSimpleHostnames) &&
         excludeSimpleHostnames &&
-        uri.authority.host().find('.') == std::string::npos)
+        host.find('.') == std::string::npos)
         return URI();
+    CFArrayRef bypassList = (CFArrayRef)CFDictionaryGetValue(proxyDict, kSCPropNetProxiesExceptionsList);
+    if (bypassList && CFGetTypeID(bypassList) == CFArrayGetTypeID()) {
+        for (CFIndex i = 0; i < CFArrayGetCount(bypassList); ++i) {
+            CFStringRef bypassRef = (CFStringRef)CFArrayGetValueAtIndex(bypassList, i);
+            if (!bypassRef || CFGetTypeID(bypassRef) != CFStringGetTypeID())
+                continue;
+            std::string bypass = toUtf8(bypassRef);
+            if (bypass.empty())
+                continue;
+            if (bypass[0] == '*' && host.size() >= bypass.size() - 1 &&
+                stricmp(bypass.c_str() + 1, host.c_str() + host.size() - bypass.size() - 1) == 0)
+                return URI();
+            else if (stricmp(host.c_str(), bypass.c_str()) == 0)
+                return URI();
+        }
+    }
     CFNumberRef enabledRef = (CFNumberRef)CFDictionaryGetValue(proxyDict, enableKey);
     if (!enabledRef || CFGetTypeID(enabledRef) != CFNumberGetTypeID())
         return URI();
