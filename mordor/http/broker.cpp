@@ -56,7 +56,7 @@ createRequestBroker(const RequestBrokerOptions &options)
         requestBroker.reset(new BaseRequestBroker(
             boost::static_pointer_cast<ConnectionBroker>(connectionCache)));
 
-    if (options.delayDg)
+    if (options.delayDg && !options.proxyForURIDg)
         requestBroker.reset(new RetryRequestBroker(requestBroker,
         options.delayDg));
     if ((options.proxyForURIDg && options.getProxyCredentialsDg) ||
@@ -561,7 +561,7 @@ RetryRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             return request;
         } catch (SocketException &ex) {
             const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
-            if (!source || *source != HTTP)
+            if (!source || (*source != HTTP && *source != CONNECTION))
                 throw;
             if (m_delayDg && !m_delayDg(atomicIncrement(*retries)))
                 throw;
