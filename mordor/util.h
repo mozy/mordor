@@ -26,8 +26,10 @@ public:
             CFRelease(m_ref);
     }
 
-    operator T() { return m_ref; }
-    operator T() const { return m_ref; }
+    operator T & () { return m_ref; }
+    operator const T & () const { return m_ref; }
+    T * operator &() { return &m_ref; }
+    T * const operator &() const { return &m_ref; }
 
     ScopedCFRef &operator =(T ref)
     {
