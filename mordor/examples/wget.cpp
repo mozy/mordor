@@ -60,14 +60,6 @@ static bool getCredentials(HTTP::ClientRequest::ptr priorRequest,
     return false;
 }
 
-bool retry(size_t count)
-{
-    if (count > 3)
-        return false;
-    Mordor::sleep(1000000);
-    return true;
-}
-
 int main(int argc, char *argv[])
 {
     Config::loadFromEnvironment();
@@ -107,26 +99,26 @@ int main(int argc, char *argv[])
         if (vm.count("password")) password = vm["password"].as<std::string>();
         if (vm.count("proxyusername")) proxyusername = vm["proxyusername"].as<std::string>();
         if (vm.count("proxypassword")) proxypassword = vm["proxypassword"].as<std::string>();
-        if (vm.count("username"))
-            options.getCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
-                username, password, _7, false);
         if (vm.count("proxyusername"))
             options.getProxyCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
                 proxyusername, proxypassword, _7, true);
+        HTTP::RequestBroker::ptr proxyBroker =
+            HTTP::createRequestBroker(options).first;
+        if (vm.count("username"))
+            options.getCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
+                username, password, _7, false);
+        options.proxyRequestBroker = proxyBroker;
 #ifdef WINDOWS
         HTTP::ProxyCache proxyCache;
         options.proxyForURIDg = boost::bind(
             &HTTP::ProxyCache::proxyFromUserSettings, &proxyCache, _1);
 #elif defined (OSX)
-        HTTP::RequestBroker::ptr proxyBroker =
-            HTTP::createRequestBroker(options).first;
         HTTP::ProxyCache proxyCache(proxyBroker);
         options.proxyForURIDg = boost::bind(
             &HTTP::ProxyCache::proxyFromSystemConfiguration, &proxyCache, _1);
 #else
-        options.proxyForURIDg = &proxyFromConfig;
+        options.proxyForURIDg = &HTTP::proxyFromConfig;
 #endif
-        options.delayDg = &retry;
         HTTP::RequestBroker::ptr requestBroker =
             HTTP::createRequestBroker(options).first;
 

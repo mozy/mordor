@@ -2,7 +2,7 @@
 #define __MORDOR_HTTP_PROXY_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "broker.h"
+#include "mordor/uri.h"
 
 #ifdef WINDOWS
 #include <winhttp.h>
@@ -12,7 +12,12 @@
 #endif
 
 namespace Mordor {
+
+class Stream;
+
 namespace HTTP {
+
+class RequestBroker;
 
 // Functions to use for the proxyForURIDg
 
@@ -56,50 +61,21 @@ private:
 class ProxyCache
 {
 public:
-    ProxyCache(RequestBroker::ptr requestBroker);
+    ProxyCache(boost::shared_ptr<RequestBroker> requestBroker);
 
     std::vector<URI> proxyFromSystemConfiguration(const URI &uri);
 
 private:
     ScopedCFRef<SCDynamicStoreRef> m_dynamicStore;
-    RequestBroker::ptr m_requestBroker;
+	boost::shared_ptr<RequestBroker> m_requestBroker;
     std::map<URI, ScopedCFRef<CFStringRef> > m_cachedScripts;
 };
 #endif
 
-class ProxyConnectionBroker : public ConnectionBroker
-{
-public:
-    typedef boost::shared_ptr<ProxyConnectionBroker> ptr;
-
-public:
-    ProxyConnectionBroker(ConnectionBroker::ptr parent,
-        boost::function<std::vector<URI> (const URI &)> proxyForURIDg);
-
-    std::pair<boost::shared_ptr<ClientConnection>, bool>
-        getConnection(const URI &uri, bool forceNewConnection = false);
-
-private:
-    ConnectionBroker::ptr m_parent;
-    boost::function<std::vector<URI> (const URI &)> m_dg;
-};
-
-class ProxyStreamBroker : public StreamBrokerFilter
-{
-public:
-    typedef boost::shared_ptr<ProxyStreamBroker> ptr;
-
-public:
-    ProxyStreamBroker(StreamBroker::ptr parent,
-        RequestBroker::ptr requestBroker,
-        boost::function<std::vector<URI> (const URI &)> proxyForURIDg);
-
-    boost::shared_ptr<Stream> getStream(const URI &uri);
-
-private:
-    RequestBroker::ptr m_requestBroker;
-    boost::function<std::vector<URI> (const URI &)> m_dg;
-};
+/// Establish a tunnel via an HTTPS proxy
+boost::shared_ptr<Stream>
+tunnel(boost::shared_ptr<RequestBroker> requestBroker, const URI &proxy,
+    const URI &target);
 
 }}
 

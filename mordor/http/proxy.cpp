@@ -5,6 +5,7 @@
 #include "proxy.h"
 
 #include "mordor/config.h"
+#include "mordor/http/broker.h"
 #include "mordor/http/client.h"
 #include "mordor/socket.h"
 
@@ -389,105 +390,40 @@ ProxyCache::proxyFromSystemConfiguration(const URI &uri)
 }
 #endif
 
-ProxyConnectionBroker::ProxyConnectionBroker(ConnectionBroker::ptr parent,
-    boost::function<std::vector<URI> (const URI &)> proxyForURIDg)
-    : m_parent(parent),
-      m_dg(proxyForURIDg)
-{
-    MORDOR_ASSERT(m_dg);
-}
-
-std::pair<boost::shared_ptr<ClientConnection>, bool>
-ProxyConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
-{
-    std::vector<URI> proxies = m_dg(uri);
-    if (proxies.empty())
-        return m_parent->getConnection(uri, forceNewConnection);
-    std::vector<URI>::iterator it = proxies.begin();
-    while (true) {
-        try {
-            URI &proxy = *it;
-            if (!proxy.isDefined() || !(proxy.schemeDefined() && proxy.scheme() == "http"))
-                return m_parent->getConnection(uri, forceNewConnection);
-            return std::make_pair(m_parent->getConnection(proxy,
-                forceNewConnection).first, true);
-        } catch (SocketException &) {
-            if (++it == proxies.end())
-                throw;
-        }
-    }
-}
-
-ProxyStreamBroker::ProxyStreamBroker(StreamBroker::ptr parent,
-    RequestBroker::ptr requestBroker,
-    boost::function<std::vector<URI> (const URI &)> proxyForURIDg)
-    : StreamBrokerFilter(parent),
-      m_requestBroker(requestBroker),
-      m_dg(proxyForURIDg)
-{
-    MORDOR_ASSERT(m_dg);
-}
-
 boost::shared_ptr<Stream>
-ProxyStreamBroker::getStream(const Mordor::URI &uri)
+tunnel(RequestBroker::ptr requestBroker, const URI &proxy, const URI &target)
 {
-    std::vector<URI> proxies = m_dg(uri);
-    if (proxies.empty())
-        return parent()->getStream(uri);
-    std::vector<URI>::iterator it = proxies.begin();
-    while (true) {
-        try {
-            URI &proxy = *it;
-            // Don't use a proxy if they didn't provide one, the provided one has no
-            // scheme, the proxy's scheme is not https, or we're trying to get a
-            // connection to the proxy itself anyway
-            if (!proxy.isDefined() || !proxy.schemeDefined() ||
-                proxy.scheme() != "https" ||
-                (uri.scheme() == "http" && uri.path.isEmpty() &&
-                uri.authority == proxy.authority))
-                return parent()->getStream(uri);
-            std::ostringstream os;
-            if (!uri.authority.hostDefined())
-                MORDOR_THROW_EXCEPTION(std::invalid_argument("No host defined"));
-            os << uri.authority.host() << ':';
-            if (uri.authority.portDefined())
-                os << uri.authority.port();
-            else if (uri.scheme() == "http")
-                os << "80";
-            else if (uri.scheme() == "https")
-                os << "443";
-            else
-                // TODO: can this be looked up using the system? (getaddrinfo)
-                MORDOR_THROW_EXCEPTION(std::invalid_argument("Unknown protocol for proxying connection"));
-            Request requestHeaders;
-            requestHeaders.requestLine.method = CONNECT;
-            URI &requestUri = requestHeaders.requestLine.uri;
-            requestUri.scheme("http");
-            requestUri.authority = proxy.authority;
-            requestUri.path.type = URI::Path::ABSOLUTE;
-            requestUri.path.segments.push_back(os.str());
-            requestHeaders.request.host = os.str();
-            requestHeaders.general.connection.insert("Proxy-Connection");
-            requestHeaders.general.proxyConnection.insert("Keep-Alive");
-            ClientRequest::ptr request = m_requestBroker->request(requestHeaders, true);
-            if (request->response().status.status == HTTP::OK) {
-                return request->stream();
-            } else {
-                if (++it == proxies.end())
-                    MORDOR_THROW_EXCEPTION(InvalidResponseException("Proxy connection failed",
-                        request));
-            }
-        } catch (SocketException &) {
-            if (++it == proxies.end())
-                throw;
-        } catch (HTTP::Exception &) {
-            if (++it == proxies.end())
-                throw;
-        } catch (UnexpectedEofException &) {
-            if (++it == proxies.end())
-                throw;
-        }
-    }
+    MORDOR_ASSERT(proxy.schemeDefined());
+
+    std::ostringstream os;
+    if (!target.authority.hostDefined())
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("No host defined"));
+    os << target.authority.host() << ':';
+    if (target.authority.portDefined())
+        os << target.authority.port();
+    else if (target.scheme() == "http")
+        os << "80";
+    else if (target.scheme() == "https")
+        os << "443";
+    else
+        // TODO: can this be looked up using the system? (getaddrinfo)
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("Unknown protocol for proxying connection"));
+    Request requestHeaders;
+    requestHeaders.requestLine.method = CONNECT;
+    URI &requestUri = requestHeaders.requestLine.uri;
+    requestUri.scheme("http");
+    requestUri.authority = proxy.authority;
+    requestUri.path.type = URI::Path::ABSOLUTE;
+    requestUri.path.segments.push_back(os.str());
+    requestHeaders.request.host = os.str();
+    requestHeaders.general.connection.insert("Proxy-Connection");
+    requestHeaders.general.proxyConnection.insert("Keep-Alive");
+    ClientRequest::ptr request = requestBroker->request(requestHeaders, true);
+    if (request->response().status.status == HTTP::OK)
+        return request->stream();
+    else
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Proxy connection failed",
+            request));
 }
 
 }}

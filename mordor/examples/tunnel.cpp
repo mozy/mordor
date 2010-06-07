@@ -6,7 +6,8 @@
 
 #include "mordor/config.h"
 #include "mordor/http/auth.h"
-#include "mordor/http/tunnel.h"
+#include "mordor/http/client.h"
+#include "mordor/http/proxy.h"
 #include "mordor/iomanager.h"
 #include "mordor/socket.h"
 #include "mordor/streams/duplex.h"
@@ -70,28 +71,38 @@ static void outgoingConnection(Stream::ptr client, IOManager &ioManager,
     }
 }
 
-static
-HTTP::ClientConnection::ptr establishConn(IOManager &ioManager, const std::string &to)
+static bool getCredentials(HTTP::ClientRequest::ptr priorRequest,
+    std::string &scheme, std::string &username, std::string &password,
+    const std::string &user, const std::string &pass,
+    size_t attempts)
 {
-    std::vector<Address::ptr> addresses =
-        Address::lookup(to, AF_UNSPEC, SOCK_STREAM);
-    Socket::ptr sock;
-    for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
-        it != addresses.end();
-        ) {
-        sock = (*it)->createSocket(ioManager);
-        try {
-            sock->connect(*it);
-            break;
-        } catch (std::exception &) {
-            if (++it == addresses.end())
-                throw;
-            sock.reset();
-        }
+    if (!priorRequest)
+        return false;
+    if (attempts > 1)
+        return false;
+    username = user;
+    password = pass;
+    const HTTP::ChallengeList &challengeList =
+        priorRequest->response().response.proxyAuthenticate;
+#ifdef WINDOWS
+    if (HTTP::isAcceptable(challengeList, "Negotiate")) {
+        scheme = "Negotiate";
+        return true;
     }
-    Stream::ptr stream(new SocketStream(sock));
-    HTTP::ClientConnection::ptr conn(new HTTP::ClientConnection(stream));
-    return conn;
+    if (HTTP::isAcceptable(challengeList, "NTLM")) {
+        scheme = "NTLM";
+        return true;
+    }
+#endif
+    if (HTTP::isAcceptable(challengeList, "Digest")) {
+        scheme = "Digest";
+        return true;
+    }
+    if (HTTP::isAcceptable(challengeList, "Basic")) {
+        scheme = "Basic";
+        return true;
+    }
+    return false;
 }
 
 static void outgoingProxyConnection(Stream::ptr client, IOManager &ioManager,
@@ -104,11 +115,13 @@ static void outgoingProxyConnection(Stream::ptr client, IOManager &ioManager,
         std::vector<Address::ptr> addresses =
         Address::lookup(proxy, AF_UNSPEC, SOCK_STREAM);
 
-        HTTP::ClientAuthBroker authBroker(boost::bind(&establishConn,
-            boost::ref(ioManager), proxy), "", "", username,
-            password);
+        HTTP::RequestBrokerOptions options;
+        options.ioManager = &ioManager;
+        options.getProxyCredentialsDg = boost::bind(&getCredentials, _2, _3,
+            _5, _6, username, password, _7);
+        HTTP::RequestBroker::ptr requestBroker = HTTP::createRequestBroker(options).first;
 
-        Stream::ptr server = HTTP::tunnel(authBroker, proxy, toConnectTo);
+        Stream::ptr server = HTTP::tunnel(requestBroker, proxy, toConnectTo);
         if (ssl) {
             SSLStream::ptr serverSSL(new SSLStream(server));
             serverSSL->connect();

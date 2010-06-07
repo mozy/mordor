@@ -397,9 +397,6 @@
     <ClInclude Include="streams\transfer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="http\tunnel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="uri.h">
       <Filter>Header Files</Filter>
     </ClInclude>

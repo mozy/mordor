@@ -224,7 +224,6 @@
     <ClInclude Include="streams\timeout.h" />
     <ClInclude Include="timer.h" />
     <ClInclude Include="streams\transfer.h" />
-    <ClInclude Include="http\tunnel.h" />
     <ClInclude Include="uri.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="version.h" />
