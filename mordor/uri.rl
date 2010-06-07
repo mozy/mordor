@@ -533,7 +533,7 @@ URI::Path::operator=(const std::string& path)
     URIPathParser parser(*this);
     parser.run(path);
     if (parser.error() || !parser.final())
-        throw std::invalid_argument("uri");
+        throw std::invalid_argument("path");
     return *this;
 }
 
