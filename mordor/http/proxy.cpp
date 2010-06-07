@@ -115,62 +115,6 @@ std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
 }
 
 #ifdef WINDOWS
-std::vector<URI> autoDetectProxy(const URI &uri, const std::string &pacScript,
-    const std::string &userAgent)
-{
-    WINHTTP_PROXY_INFO proxyInfo;
-    HINTERNET hHttpSession = NULL;
-    WINHTTP_AUTOPROXY_OPTIONS options;
-
-    memset(&options, 0, sizeof(WINHTTP_AUTOPROXY_OPTIONS));
-    memset(&proxyInfo, 0, sizeof(WINHTTP_PROXY_INFO));
-
-    hHttpSession = pWinHttpOpen(toUtf16(userAgent).c_str(),
-        WINHTTP_ACCESS_TYPE_NO_PROXY,
-        WINHTTP_NO_PROXY_NAME,
-        WINHTTP_NO_PROXY_BYPASS,
-        0);
-    if (!hHttpSession) {
-        if (GetLastError() == ERROR_CALL_NOT_IMPLEMENTED)
-            return std::vector<URI>();
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WinHttpOpen");
-    }
-
-    std::wstring pacScriptW = toUtf16(pacScript);
-    if (!pacScriptW.empty()) {
-        options.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL;
-        options.lpszAutoConfigUrl = pacScriptW.c_str();
-    } else {
-        options.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
-        options.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP |
-            WINHTTP_AUTO_DETECT_TYPE_DNS_A;
-    }
-
-    options.fAutoLogonIfChallenged = TRUE;
-    std::vector<URI> result;
-    if (pWinHttpGetProxyForUrl(hHttpSession, toUtf16(uri.toString()).c_str(),
-        &options, &proxyInfo)) {
-        try {
-            std::string proxy, bypassList;
-            result = proxyFromList(uri, toUtf8(proxyInfo.lpszProxy),
-                toUtf8(proxyInfo.lpszProxyBypass));
-        } catch (...) {
-            if (proxyInfo.lpszProxy)
-                GlobalFree(proxyInfo.lpszProxy);
-            if (proxyInfo.lpszProxyBypass)
-                GlobalFree(proxyInfo.lpszProxyBypass);
-            pWinHttpCloseHandle(hHttpSession);
-            throw;
-        }
-        if (proxyInfo.lpszProxy)
-            GlobalFree(proxyInfo.lpszProxy);
-        if (proxyInfo.lpszProxyBypass)
-            GlobalFree(proxyInfo.lpszProxyBypass);
-    }
-    pWinHttpCloseHandle(hHttpSession);
-    return result;
-}
-
 std::vector<URI> proxyFromMachineDefault(const URI &uri)
 {
     WINHTTP_PROXY_INFO proxyInfo;
@@ -228,10 +172,73 @@ getUserProxySettings()
     return result;
 }
 
-std::vector<URI> proxyFromUserSettings(const URI &uri)
+ProxyCache::ProxyCache(const std::string &userAgent)
+{
+    m_hHttpSession = pWinHttpOpen(toUtf16(userAgent).c_str(),
+        WINHTTP_ACCESS_TYPE_NO_PROXY,
+        WINHTTP_NO_PROXY_NAME,
+        WINHTTP_NO_PROXY_BYPASS,
+        0);
+    if (!m_hHttpSession && GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WinHttpOpen");
+}
+
+ProxyCache::~ProxyCache()
+{
+    if (m_hHttpSession)
+        pWinHttpCloseHandle(m_hHttpSession);
+}
+
+std::vector<URI>
+ProxyCache::autoDetectProxy(const URI &uri, const std::string &pacScript)
+{
+    std::vector<URI> result;
+    if (!m_hHttpSession)
+        return result;
+
+    WINHTTP_PROXY_INFO proxyInfo;
+    WINHTTP_AUTOPROXY_OPTIONS options;
+
+    memset(&options, 0, sizeof(WINHTTP_AUTOPROXY_OPTIONS));
+    memset(&proxyInfo, 0, sizeof(WINHTTP_PROXY_INFO));
+
+    std::wstring pacScriptW = toUtf16(pacScript);
+    if (!pacScriptW.empty()) {
+        options.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL;
+        options.lpszAutoConfigUrl = pacScriptW.c_str();
+    } else {
+        options.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
+        options.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP |
+            WINHTTP_AUTO_DETECT_TYPE_DNS_A;
+    }
+
+    options.fAutoLogonIfChallenged = TRUE;
+    if (pWinHttpGetProxyForUrl(m_hHttpSession, toUtf16(uri.toString()).c_str(),
+        &options, &proxyInfo)) {
+        try {
+            std::string proxy, bypassList;
+            result = proxyFromList(uri, toUtf8(proxyInfo.lpszProxy),
+                toUtf8(proxyInfo.lpszProxyBypass));
+        } catch (...) {
+            if (proxyInfo.lpszProxy)
+                GlobalFree(proxyInfo.lpszProxy);
+            if (proxyInfo.lpszProxyBypass)
+                GlobalFree(proxyInfo.lpszProxyBypass);
+            throw;
+        }
+        if (proxyInfo.lpszProxy)
+            GlobalFree(proxyInfo.lpszProxy);
+        if (proxyInfo.lpszProxyBypass)
+            GlobalFree(proxyInfo.lpszProxyBypass);
+    }
+    return result;
+}
+
+std::vector<URI>
+ProxyCache::proxyFromUserSettings(const URI &uri)
 {
     ProxySettings settings = getUserProxySettings();
-    if (settings.autoDetect)
+    if (settings.autoDetect || !settings.pacScript.empty())
         return autoDetectProxy(uri, settings.pacScript);
     return proxyFromList(uri, settings.proxy, settings.bypassList);
 }

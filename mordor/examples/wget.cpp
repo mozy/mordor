@@ -15,6 +15,7 @@
 #include "mordor/http/multipart.h"
 #include "mordor/http/proxy.h"
 #include "mordor/iomanager.h"
+#include "mordor/sleep.h"
 #include "mordor/socket.h"
 #include "mordor/streams/socket.h"
 #include "mordor/streams/ssl.h"
@@ -57,6 +58,14 @@ static bool getCredentials(HTTP::ClientRequest::ptr priorRequest,
         return true;
     }
     return false;
+}
+
+bool retry(size_t count)
+{
+    if (count > 3)
+        return false;
+    Mordor::sleep(1000000);
+    return true;
 }
 
 int main(int argc, char *argv[])
@@ -104,7 +113,16 @@ int main(int argc, char *argv[])
         if (vm.count("proxyusername"))
             options.getProxyCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
                 proxyusername, proxypassword, _7, true);
-        options.proxyForURIDg = &HTTP::defaultProxy;
+#ifdef WINDOWS
+        HTTP::ProxyCache proxyCache;
+        options.proxyForURIDg = boost::bind(
+            &HTTP::ProxyCache::proxyFromUserSettings, &proxyCache, _1);
+#elif defined (OSX)
+        options.proxyForURIDg = &HTTP::proxyFromSystemConfiguration;
+#else
+        options.proxyForURIDg = &proxyFromConfig;
+#endif
+        options.delayDg = &retry;
         HTTP::RequestBroker::ptr requestBroker =
             HTTP::createRequestBroker(options).first;
 

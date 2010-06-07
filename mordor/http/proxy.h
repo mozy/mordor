@@ -4,6 +4,10 @@
 
 #include "broker.h"
 
+#ifdef WINDOWS
+#include <winhttp.h>
+#endif
+
 namespace Mordor {
 namespace HTTP {
 
@@ -20,9 +24,6 @@ std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
     const std::string &bypassList = std::string());
 
 #ifdef WINDOWS
-std::vector<URI> autoDetectProxy(const URI &uri,
-    const std::string &pacScript = std::string(),
-    const std::string &userAgent = std::string());
 std::vector<URI> proxyFromMachineDefault(const URI &uri);
 
 struct ProxySettings
@@ -34,21 +35,23 @@ struct ProxySettings
 };
 
 ProxySettings getUserProxySettings();
-std::vector<URI> proxyFromUserSettings(const URI &uri);
+
+class ProxyCache
+{
+public:
+    ProxyCache(const std::string &userAgent = std::string());
+    ~ProxyCache();
+
+    std::vector<URI> proxyFromUserSettings(const URI &uri);
+    std::vector<URI> autoDetectProxy(const URI &uri,
+        const std::string &pacScript = std::string());
+
+private:
+    HINTERNET m_hHttpSession;
+};
 #elif defined (OSX)
 std::vector<URI> proxyFromSystemConfiguration(const URI &uri);
 #endif
-
-inline std::vector<URI> defaultProxy(const URI &uri)
-{
-#ifdef WINDOWS
-    return proxyFromUserSettings(uri);
-#elif defined (OSX)
-    return proxyFromSystemConfiguration(uri);
-#else
-    return proxyFromConfig(uri);
-#endif
-}
 
 class ProxyConnectionBroker : public ConnectionBroker
 {
@@ -57,7 +60,7 @@ public:
 
 public:
     ProxyConnectionBroker(ConnectionBroker::ptr parent,
-        boost::function<std::vector<URI> (const URI &)> proxyForURIDg = &defaultProxy);
+        boost::function<std::vector<URI> (const URI &)> proxyForURIDg);
 
     std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false);
@@ -75,7 +78,7 @@ public:
 public:
     ProxyStreamBroker(StreamBroker::ptr parent,
         RequestBroker::ptr requestBroker,
-        boost::function<std::vector<URI> (const URI &)> proxyForURIDg = &defaultProxy);
+        boost::function<std::vector<URI> (const URI &)> proxyForURIDg);
 
     boost::shared_ptr<Stream> getStream(const URI &uri);
 
