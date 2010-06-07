@@ -18,8 +18,14 @@ template <class T>
 struct ScopedCFRef
 {
 public:
-    ScopedCFRef() {}
+    ScopedCFRef() : m_ref(NULL) {}
     ScopedCFRef(T ref) : m_ref(ref) {}
+    ScopedCFRef(const ScopedCFRef &copy)
+        : m_ref(copy.m_ref)
+    {
+        if (m_ref)
+            CFRetain(m_ref);
+    }
     ~ScopedCFRef()
     {
         if (m_ref)
@@ -36,6 +42,15 @@ public:
         if (m_ref)
             CFRelease(m_ref);
         m_ref = ref;
+        return *this;
+    }
+    ScopedCFRef &operator =(const ScopedCFRef &copy)
+    {
+        if (m_ref)
+            CFRelease(m_ref);
+        m_ref = copy.m_ref;
+        if (m_ref)
+            CFRetain(m_ref);
         return *this;
     }
 

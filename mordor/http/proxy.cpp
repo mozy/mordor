@@ -243,25 +243,38 @@ ProxyCache::proxyFromUserSettings(const URI &uri)
     return proxyFromList(uri, settings.proxy, settings.bypassList);
 }
 #elif defined(OSX)
+ProxyCache::ProxyCache(RequestBroker::ptr requestBroker)
+    : m_requestBroker(requestBroker)
+{
+    m_dynamicStore = SCDynamicStoreCreate(NULL, NULL, NULL, NULL);
+}
 
-static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl);
+static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
+    RequestBroker::ptr requestBroker,
+    std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts);
 
-static std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl)
+static std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl,
+    RequestBroker::ptr requestBroker,
+    std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts)
 {
     std::vector<URI> result;
     for (CFIndex i = 0; i < CFArrayGetCount(proxies); ++i) {
-        CFDictionaryRef thisProxy = (CFDictionaryRef)CFArrayGetValueAtIndex(proxies, i);
-        CFStringRef proxyType = (CFStringRef)CFDictionaryGetValue(thisProxy, kCFProxyTypeKey);
+        CFDictionaryRef thisProxy =
+            (CFDictionaryRef)CFArrayGetValueAtIndex(proxies, i);
+        CFStringRef proxyType = (CFStringRef)CFDictionaryGetValue(thisProxy,
+            kCFProxyTypeKey);
         if (!proxyType || CFGetTypeID(proxyType) != CFStringGetTypeID())
             continue;
         URI thisProxyUri;
         if (CFEqual(proxyType, kCFProxyTypeNone)) {
             result.push_back(URI());
         } else if (CFEqual(proxyType, kCFProxyTypeAutoConfigurationURL)) {
-            CFURLRef cfurl = (CFURLRef)CFDictionaryGetValue(thisProxy, kCFProxyAutoConfigurationURLKey);
+            CFURLRef cfurl = (CFURLRef)CFDictionaryGetValue(thisProxy,
+                kCFProxyAutoConfigurationURLKey);
             if (!cfurl || CFGetTypeID(cfurl) != CFURLGetTypeID())
                 continue;
-            std::vector<URI> pacProxies = proxyFromPacScript(cfurl, targeturl);
+            std::vector<URI> pacProxies = proxyFromPacScript(cfurl, targeturl,
+                requestBroker, cachedScripts);
             result.insert(result.end(), pacProxies.begin(), pacProxies.end());
         } else if (CFEqual(proxyType, kCFProxyTypeHTTP)) {
             thisProxyUri.scheme("http");
@@ -269,10 +282,12 @@ static std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl)
             thisProxyUri.scheme("https");
         }
         if (thisProxyUri.schemeDefined()) {
-            CFStringRef proxyHost = (CFStringRef)CFDictionaryGetValue(thisProxy, kCFProxyHostNameKey);
+            CFStringRef proxyHost = (CFStringRef)CFDictionaryGetValue(
+                thisProxy, kCFProxyHostNameKey);
             if (!proxyHost || CFGetTypeID(proxyHost) != CFStringGetTypeID())
                 continue;
-            CFNumberRef proxyPort = (CFNumberRef)CFDictionaryGetValue(thisProxy, kCFProxyPortNumberKey);
+            CFNumberRef proxyPort = (CFNumberRef)CFDictionaryGetValue(
+                thisProxy, kCFProxyPortNumberKey);
             int port = -1;
             if (proxyPort && CFGetTypeID(proxyPort) == CFNumberGetTypeID())
                 CFNumberGetValue(proxyPort, kCFNumberIntType, &port);
@@ -285,8 +300,9 @@ static std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl)
     return result;
 }
 
-// THIS IS CURRENTLY BLOCKING
-static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl)
+static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
+    RequestBroker::ptr requestBroker,
+    std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts)
 {
     std::vector<URI> result;
     CFStringRef string = CFURLGetString(cfurl);
@@ -303,45 +319,54 @@ static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl)
         return result;
 
     try {
-        Stream::ptr pacStream;
-        MemoryStream localStream;
-        if (uri.scheme() == "file") {
-            if (uri.authority.hostDefined() &&
-                uri.authority.host() != "localhost" &&
-                !uri.authority.host().empty())
-                return result;
-            std::ostringstream os;
-            for (std::vector<std::string>::const_iterator it = uri.path.segments.begin();
-                it != uri.path.segments.end();
-                ++it)
-                os << '/' << *it;
-            pacStream.reset(new FileStream(os.str(), FileStream::READ));
+        ScopedCFRef<CFStringRef> pacScript;
+        std::map<URI, ScopedCFRef<CFStringRef> >::iterator it =
+            cachedScripts.find(uri);
+        if (it != cachedScripts.end()) {
+            pacScript = it->second;
         } else {
-            RequestBroker::ptr requestBroker = defaultRequestBroker();
-            pacStream.reset(new HTTPStream(uri, requestBroker));
+            Stream::ptr pacStream;
+            MemoryStream localStream;
+            if (uri.scheme() == "file") {
+                if (uri.authority.hostDefined() &&
+                    uri.authority.host() != "localhost" &&
+                    !uri.authority.host().empty())
+                    return result;
+                std::ostringstream os;
+                for (std::vector<std::string>::const_iterator it = uri.path.segments.begin();
+                    it != uri.path.segments.end();
+                    ++it)
+                    os << '/' << *it;
+                pacStream.reset(new FileStream(os.str(), FileStream::READ));
+            } else {
+                pacStream.reset(new HTTPStream(uri, requestBroker));
+            }
+            pacStream.reset(new LimitedStream(pacStream, 1024 * 1024 + 1));
+            if (transferStream(pacStream, localStream) >= 1024u * 1024u)
+                return result;
+            std::string localBuffer;
+            localBuffer.resize((size_t)localStream.size());
+            localStream.buffer().copyOut(&localBuffer[0], localBuffer.size());
+            pacScript = CFStringCreateWithBytes(NULL,
+                (const UInt8*)localBuffer.c_str(), localBuffer.size(),
+                kCFStringEncodingUTF8, true);
+            cachedScripts[uri] = pacScript;
         }
-        pacStream.reset(new LimitedStream(pacStream, 1024 * 1024 + 1));
-        if (transferStream(pacStream, localStream) >= 1024u * 1024u)
-            return result;
-        std::string localBuffer;
-        localBuffer.resize((size_t)localStream.size());
-        localStream.buffer().copyOut(&localBuffer[0], localBuffer.size());
-        ScopedCFRef<CFStringRef> pacScript = CFStringCreateWithBytes(NULL,
-            (const UInt8*)localBuffer.c_str(), localBuffer.size(),
-            kCFStringEncodingUTF8, true);
         ScopedCFRef<CFErrorRef> error;
         ScopedCFRef<CFArrayRef> pacProxies =
             CFNetworkCopyProxiesForAutoConfigurationScript(pacScript, targeturl,
             &error);
         if (!pacProxies)
             return result;
-        return proxyFromCFArray(pacProxies, targeturl);
+        return proxyFromCFArray(pacProxies, targeturl, requestBroker,
+            cachedScripts);
     } catch (...) {
         return result;
     }
 }
 
-std::vector<URI> proxyFromSystemConfiguration(const URI &uri)
+std::vector<URI>
+ProxyCache::proxyFromSystemConfiguration(const URI &uri)
 {
     std::vector<URI> result;
 
@@ -352,14 +377,15 @@ std::vector<URI> proxyFromSystemConfiguration(const URI &uri)
     if (!cfurl)
         return result;
 
-    ScopedCFRef<CFDictionaryRef> proxySettings = SCDynamicStoreCopyProxies(NULL);
+    ScopedCFRef<CFDictionaryRef> proxySettings =
+        SCDynamicStoreCopyProxies(m_dynamicStore);
     if (!proxySettings)
         return result;
     ScopedCFRef<CFArrayRef> proxies = CFNetworkCopyProxiesForURL(cfurl,
         proxySettings);
     if (!proxies)
         return result;
-    return proxyFromCFArray(proxies, cfurl);
+    return proxyFromCFArray(proxies, cfurl, m_requestBroker, m_cachedScripts);
 }
 #endif
 

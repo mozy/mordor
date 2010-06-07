@@ -6,6 +6,9 @@
 
 #ifdef WINDOWS
 #include <winhttp.h>
+#elif defined (OSX)
+#include <SystemConfiguration/SystemConfiguration.h>
+#include "mordor/util.h"
 #endif
 
 namespace Mordor {
@@ -50,7 +53,18 @@ private:
     HINTERNET m_hHttpSession;
 };
 #elif defined (OSX)
-std::vector<URI> proxyFromSystemConfiguration(const URI &uri);
+class ProxyCache
+{
+public:
+    ProxyCache(RequestBroker::ptr requestBroker);
+
+    std::vector<URI> proxyFromSystemConfiguration(const URI &uri);
+
+private:
+    ScopedCFRef<SCDynamicStoreRef> m_dynamicStore;
+    RequestBroker::ptr m_requestBroker;
+    std::map<URI, ScopedCFRef<CFStringRef> > m_cachedScripts;
+};
 #endif
 
 class ProxyConnectionBroker : public ConnectionBroker

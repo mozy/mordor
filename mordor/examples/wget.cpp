@@ -118,7 +118,11 @@ int main(int argc, char *argv[])
         options.proxyForURIDg = boost::bind(
             &HTTP::ProxyCache::proxyFromUserSettings, &proxyCache, _1);
 #elif defined (OSX)
-        options.proxyForURIDg = &HTTP::proxyFromSystemConfiguration;
+        HTTP::RequestBroker::ptr proxyBroker =
+            HTTP::createRequestBroker(options).first;
+        HTTP::ProxyCache proxyCache(proxyBroker);
+        options.proxyForURIDg = boost::bind(
+            &HTTP::ProxyCache::proxyFromSystemConfiguration, &proxyCache, _1);
 #else
         options.proxyForURIDg = &proxyFromConfig;
 #endif
