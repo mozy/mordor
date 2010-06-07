@@ -8,6 +8,7 @@
 #include "client.h"
 #include "mordor/atomic.h"
 #include "mordor/future.h"
+#include "mordor/socks.h"
 #include "mordor/streams/buffered.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/socket.h"
@@ -175,15 +176,16 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
     if (m_proxyForURIDg)
         proxies = m_proxyForURIDg(uri);
     // Remove proxy types that aren't supported
-    for (std::vector<URI>::const_iterator it(proxies.begin());
+    for (std::vector<URI>::iterator it(proxies.begin());
         it != proxies.end();
         ++it) {
         MORDOR_ASSERT(it->schemeDefined() || !it->isDefined());
         if (!it->schemeDefined())
             continue;
         std::string scheme = it->scheme();
-        if (scheme != "http" && (scheme != "https" || !m_proxyBroker))
-            it = proxies.erase(it);
+        if (scheme != "http" && (scheme != "https" || !m_proxyBroker) &&
+            scheme != "socks")
+            it = proxies.erase(it, it);
     }
     URI schemeAndAuthority;
     schemeAndAuthority = uri;
@@ -273,7 +275,10 @@ std::pair<ClientConnection::ptr, bool>
 ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
     FiberMutex::ScopedLock &lock)
 {
-    bool proxied = proxy.schemeDefined() && proxy.scheme() == "http";
+    std::string proxyScheme;
+    if (proxy.schemeDefined())
+        proxyScheme = proxy.scheme();
+    bool proxied = proxyScheme == "http";
     const URI &endpoint = proxied ? proxy : uri;
 
     // Make sure we have a ConnectionList and mutex for this endpoint
@@ -294,10 +299,24 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
     // Establish a new connection
     try {
         Stream::ptr stream;
-        if (proxy.schemeDefined() && proxy.scheme() == "https" && m_proxyBroker)
+        if (proxyScheme == "https") {
             stream = tunnel(m_proxyBroker, proxy, uri);
-        else
+        } else if (proxyScheme == "socks") {
+            unsigned short port;
+            if (uri.authority.portDefined())
+                port = uri.authority.port();
+            else if (uri.scheme() == "http")
+                port = 80;
+            else if (uri.scheme() == "https")
+                port = 443;
+            else
+                // TODO: can this be looked up using the system? (getaddrinfo)
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("Unknown protocol for proxying connection"));
+            stream = SOCKS::tunnel(m_streamBroker, proxy, IPAddress::ptr(),
+                uri.authority.host(), port);
+        } else {
             stream = m_streamBroker->getStream(endpoint);
+        }
         addSSL(endpoint, stream);
         lock.lock();
         result = std::make_pair(ClientConnection::ptr(

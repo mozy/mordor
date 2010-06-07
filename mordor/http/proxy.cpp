@@ -81,7 +81,10 @@ std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
             forScheme = curProxy.substr(0, equals);
             curProxy = curProxy.substr(equals + 1);
         }
-        if (!forScheme.empty() && stricmp(forScheme.c_str(), uri.scheme().c_str()) != 0)
+        std::transform(forScheme.begin(), forScheme.end(), forScheme.begin(),
+            &tolower);
+        if (!forScheme.empty() && forScheme != uri.scheme() &&
+            forScheme != "socks")
             continue;
         equals = curProxy.find("//");
         if (equals == std::string::npos)
@@ -96,14 +99,16 @@ std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
             continue;
         if (proxyUri.schemeDefined()) {
             std::string scheme = proxyUri.scheme();
-            std::transform(scheme.begin(), scheme.end(), scheme.begin(), &tolower);
-            if (scheme != "http" && scheme != "https")
-                continue;
+            std::transform(scheme.begin(), scheme.end(), scheme.begin(),
+                &tolower);
             if (forScheme.empty() && scheme != uri.scheme())
                 continue;
             proxyUri.scheme(scheme);
         } else {
-            proxyUri.scheme(uri.scheme());
+            if (forScheme == "socks")
+                proxyUri.scheme("socks");
+            else
+                proxyUri.scheme(uri.scheme());
         }
         proxyUri.path.segments.clear();
         proxyUri.path.type = URI::Path::RELATIVE;
@@ -239,9 +244,16 @@ std::vector<URI>
 ProxyCache::proxyFromUserSettings(const URI &uri)
 {
     ProxySettings settings = getUserProxySettings();
-    if (settings.autoDetect || !settings.pacScript.empty())
-        return autoDetectProxy(uri, settings.pacScript);
-    return proxyFromList(uri, settings.proxy, settings.bypassList);
+    std::vector<URI> result, temp;
+    if (settings.autoDetect)
+        result = autoDetectProxy(uri);
+    if (!settings.pacScript.empty()) {
+        temp = autoDetectProxy(uri, settings.pacScript);
+        result.insert(result.end(), temp.begin(), temp.end());
+    }
+    temp = proxyFromList(uri, settings.proxy, settings.bypassList);
+    result.insert(result.end(), temp.begin(), temp.end());
+    return result;
 }
 #elif defined(OSX)
 ProxyCache::ProxyCache(RequestBroker::ptr requestBroker)
@@ -281,6 +293,8 @@ static std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl,
             thisProxyUri.scheme("http");
         } else if (CFEqual(proxyType, kCFProxyTypeHTTPS)) {
             thisProxyUri.scheme("https");
+        } else if (CFEqual(proxyType, kCFProxyTypeSOCKS)) {
+            thisProxyUri.scheme("socks");
         }
         if (thisProxyUri.schemeDefined()) {
             CFStringRef proxyHost = (CFStringRef)CFDictionaryGetValue(

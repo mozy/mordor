@@ -664,6 +664,9 @@ URI::normalize()
     } else if (m_scheme == "file") {
         authority.normalize("localhost", true);
         path.normalize();
+    } else if (m_scheme == "socks") {
+        authority.normalize("", false, 1080, false);
+        path.normalize();
     } else {
         authority.normalize();
         path.normalize();

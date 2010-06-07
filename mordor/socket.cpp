@@ -1426,7 +1426,10 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     std::wstring serviceWStorage;
     const wchar_t *serviceW = NULL;
     if (service) {
-        serviceWStorage = toUtf16(service);
+        if (stricmp(service, "socks") == 0)
+            serviceWStorage = L"1080";
+        else
+            serviceWStorage = toUtf16(service);
         serviceW = serviceWStorage.c_str();
     }
     error = pGetAddrInfoW(toUtf16(node).c_str(), serviceW, &hints, &results);
