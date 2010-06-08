@@ -142,6 +142,17 @@ AuthRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
                 m_getCredentialsDg(requestHeaders.requestLine.uri, priorRequest,
                 scheme, realm, username, password, attempts++)) {
 #ifdef WINDOWS
+                MORDOR_ASSERT(
+                    stricmp(scheme.c_str(), "Negotiate") == 0 ||
+                    stricmp(scheme.c_str(), "NTLM") == 0 ||
+                    stricmp(scheme.c_str(), "Digest") == 0 ||
+                    stricmp(scheme.c_str(), "Basic") == 0);
+#else
+                    MORDOR_ASSERT(
+                    stricmp(scheme.c_str(), "Digest") == 0 ||
+                    stricmp(scheme.c_str(), "Basic") == 0);
+#endif
+#ifdef WINDOWS
                 if (scheme == "Negotiate" || scheme == "NTLM") {
                     negotiateAuth.reset(new NegotiateAuth(username, password));
                     negotiateAuth->authorize(
@@ -169,6 +180,17 @@ AuthRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
                 m_getProxyCredentialsDg &&
                 m_getProxyCredentialsDg(requestHeaders.requestLine.uri,
                 priorRequest, scheme, realm, username, password, proxyAttempts++)) {
+#ifdef WINDOWS
+                MORDOR_ASSERT(
+                    stricmp(scheme.c_str(), "Negotiate") == 0 ||
+                    stricmp(scheme.c_str(), "NTLM") == 0 ||
+                    stricmp(scheme.c_str(), "Digest") == 0 ||
+                    stricmp(scheme.c_str(), "Basic") == 0);
+#else
+                    MORDOR_ASSERT(
+                    stricmp(scheme.c_str(), "Digest") == 0 ||
+                    stricmp(scheme.c_str(), "Basic") == 0);
+#endif
 #ifdef WINDOWS
                 if (scheme == "Negotiate" || scheme == "NTLM") {
                     negotiateProxyAuth.reset(new NegotiateAuth(username, password));
