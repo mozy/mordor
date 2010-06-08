@@ -126,6 +126,8 @@ public:
     void sslReadTimeout(unsigned long long timeout) { m_sslReadTimeout = timeout; }
     void sslWriteTimeout(unsigned long long timeout) { m_sslWriteTimeout = timeout; }
     void sslCtx(SSL_CTX *ctx) { m_sslCtx = ctx; }
+    void verifySslCertificate(bool verify) { m_verifySslCertificate = verify; }
+    void verifySslCertificateHost(bool verify) { m_verifySslCertificateHost = verify; }
     // Required to support any proxies
     void proxyForURI(boost::function<std::vector<URI> (const URI &)> proxyForURIDg)
     { m_proxyForURIDg = proxyForURIDg; }
