@@ -7,6 +7,7 @@
 #include <boost/scoped_ptr.hpp>
 
 #include "broker.h"
+#include "mordor/version.h"
 
 namespace Mordor {
 namespace HTTP {
@@ -65,6 +66,13 @@ private:
         std::string &, std::string &, std::string &, std::string &, size_t)>
         m_getCredentialsDg, m_getProxyCredentialsDg;
 };
+	
+#ifdef OSX
+bool getCredentialsFromKeychain(const URI &uri,
+    boost::shared_ptr<ClientRequest> priorRequest,
+    std::string &scheme, std::string &realm, std::string &username,
+    std::string &password, size_t attempts);
+#endif
 
 }}
 

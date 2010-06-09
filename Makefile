@@ -62,7 +62,7 @@ PLATFORMDIR := $(PLATFORM)/$(ARCH)
 
 ifeq ($(PLATFORM), Darwin)
     DARWIN := 1
-    BOOST_EXT := -mt
+    BOOST_EXT := 
     BOOST_LIB_FLAGS := -L/opt/local/lib
     PQ_LIB_FLAGS := -L/opt/local/lib/postgresql83
     IOMANAGER := kqueue
@@ -173,7 +173,7 @@ endif
 LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_program_options $(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
 
 ifeq ($(PLATFORM), Darwin)
-   LIBS += -framework SystemConfiguration -framework CoreFoundation -framework CoreServices
+   LIBS += -framework SystemConfiguration -framework CoreFoundation -framework CoreServices -framework Security
 endif
 
 ifeq ($(PLATFORM), FreeBSD)

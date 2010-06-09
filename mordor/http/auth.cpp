@@ -11,6 +11,12 @@
 
 #ifdef WINDOWS
 #include "negotiate.h"
+#elif defined (OSX)
+#include "mordor/util.h"
+
+#include <Security/SecKeychain.h>
+#include <Security/SecKeychainItem.h>
+#include <Security/SecKeychainSearch.h>
 #endif
 
 namespace Mordor {
@@ -243,4 +249,89 @@ AuthRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     }
 }
 
+#ifdef OSX
+bool getCredentialsFromKeychain(const URI &uri, ClientRequest::ptr priorRequest,
+    std::string &scheme, std::string &realm, std::string &username,
+    std::string &password, size_t attempts)
+{
+    if (attempts != 1)
+        return false;
+    bool proxy =
+       priorRequest->response().status.status == PROXY_AUTHENTICATION_REQUIRED;
+    const ChallengeList &challengeList = proxy ?
+        priorRequest->response().response.proxyAuthenticate :
+        priorRequest->response().response.wwwAuthenticate;
+    if (isAcceptable(challengeList, "Basic"))
+        scheme = "Basic";
+    else if (isAcceptable(challengeList, "Digest"))
+        scheme = "Digest";
+    else
+        return false;
+
+    std::vector<SecKeychainAttribute> attrVector;
+    std::string host = uri.authority.host();
+    attrVector.push_back((SecKeychainAttribute){kSecServerItemAttr, host.size(),
+       (void *)host.c_str()});
+
+    UInt32 port = 0;
+    if (uri.authority.portDefined()) {
+        port = uri.authority.port();
+        attrVector.push_back((SecKeychainAttribute){kSecPortItemAttr,
+           sizeof(UInt32), &port});
+    }
+    SecProtocolType protocol;
+    if (proxy && priorRequest->request().requestLine.method == CONNECT)
+        protocol = kSecProtocolTypeHTTPSProxy;
+    else if (proxy)
+        protocol = kSecProtocolTypeHTTPProxy;
+    else if (uri.scheme() == "https")
+        protocol = kSecProtocolTypeHTTPS;
+    else if (uri.scheme() == "http")
+        protocol = kSecProtocolTypeHTTP;
+    else
+        MORDOR_NOTREACHED();
+    attrVector.push_back((SecKeychainAttribute){kSecProtocolItemAttr,
+        sizeof(SecProtocolType), &protocol});
+
+    ScopedCFRef<SecKeychainSearchRef> search;
+    SecKeychainAttributeList attrList;
+    attrList.count = (UInt32)attrVector.size();
+    attrList.attr = attrVector.data();
+
+    OSStatus status = SecKeychainSearchCreateFromAttributes(NULL,
+        kSecInternetPasswordItemClass, &attrList, &search);
+    if (status != errSecSuccess)
+        return false;
+    ScopedCFRef<SecKeychainItemRef> item;
+    status = SecKeychainSearchCopyNext(search, &item);
+    if (status != errSecSuccess)
+        return false;
+    SecKeychainAttributeInfo info;
+    SecKeychainAttrType tag = kSecAccountItemAttr;
+    CSSM_DB_ATTRIBUTE_FORMAT format = CSSM_DB_ATTRIBUTE_FORMAT_STRING;
+    info.count = 1;
+    info.tag = (UInt32 *)&tag;
+    info.format = (UInt32 *)&format;
+    
+    SecKeychainAttributeList *attrs;
+    UInt32 passwordLength = 0;
+    void *passwordBytes = NULL;
+
+    status = SecKeychainItemCopyAttributesAndData(item, &info, NULL, &attrs,
+        &passwordLength, &passwordBytes);
+    if (status != errSecSuccess)
+        return false;
+
+    try {
+        username.assign((const char *)attrs->attr[0].data, attrs->attr[0].length);
+        password.assign((const char *)passwordBytes, passwordLength);
+    } catch (...) {
+        SecKeychainItemFreeContent(attrs, passwordBytes);
+        throw;
+    }
+    SecKeychainItemFreeContent(attrs, passwordBytes);
+    return true;
+}
+#endif
+	
 }}

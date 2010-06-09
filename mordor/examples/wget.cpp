@@ -10,6 +10,7 @@
 
 #include "mordor/config.h"
 #include "mordor/exception.h"
+#include "mordor/http/auth.h"
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
 #include "mordor/http/multipart.h"
@@ -102,11 +103,19 @@ int main(int argc, char *argv[])
         if (vm.count("proxyusername"))
             options.getProxyCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
                 proxyusername, proxypassword, _7, true);
+#ifdef OSX
+        else
+            options.getProxyCredentialsDg = &HTTP::getCredentialsFromKeychain;
+#endif
         HTTP::RequestBroker::ptr proxyBroker =
             HTTP::createRequestBroker(options).first;
         if (vm.count("username"))
             options.getCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
                 username, password, _7, false);
+#ifdef OSX
+        else
+            options.getCredentialsDg = &HTTP::getCredentialsFromKeychain;
+#endif
         options.proxyRequestBroker = proxyBroker;
 #ifdef WINDOWS
         HTTP::ProxyCache proxyCache;
