@@ -123,6 +123,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="antxmllistener.cpp" />
     <ClCompile Include="stdoutlistener.cpp" />
     <ClCompile Include="test.cpp">
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Async</ExceptionHandling>
@@ -140,6 +141,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="antxmllistener.h" />
     <ClInclude Include="stdoutlistener.h" />
     <ClInclude Include="test.h" />
   </ItemGroup>

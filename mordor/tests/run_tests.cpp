@@ -7,7 +7,7 @@
 #include "mordor/config.h"
 #include "mordor/version.h"
 #include "mordor/statistics.h"
-#include "mordor/test/test.h"
+#include "mordor/test/antxmllistener.h"
 #include "mordor/test/stdoutlistener.h"
 
 using namespace Mordor;
@@ -17,6 +17,9 @@ using namespace Mordor::Test;
 #include <direct.h>
 #define chdir _chdir
 #endif
+
+static ConfigVar<std::string>::ptr g_xmlDirectory = Config::lookup<std::string>(
+    "test.antxml.directory", std::string(), "Location to put XML files");
 
 int main(int argc, const char **argv)
 {
@@ -29,12 +32,20 @@ int main(int argc, const char **argv)
 #endif
     chdir(newDirectory.c_str());
 
-    StdoutListener listener;
+    boost::shared_ptr<TestListener> listener;
+    std::string xmlDirectory = g_xmlDirectory->val();
+    if (!xmlDirectory.empty()) {
+        if (xmlDirectory == ".")
+            xmlDirectory.clear();
+        listener.reset(new AntXMLListener(xmlDirectory));
+    } else {
+        listener.reset(new StdoutListener());
+    }
     bool result;
     if (argc > 1) {
-        result = runTests(testsForArguments(argc - 1, argv + 1), listener);
+        result = runTests(testsForArguments(argc - 1, argv + 1), *listener);
     } else {
-        result = runTests(listener);
+        result = runTests(*listener);
     }
     std::cout << Statistics::dump();
     return result ? 0 : 1;

@@ -480,6 +480,7 @@ endif
 	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
 
 LIBMORDORTESTOBJECTS :=							\
+	mordor/test/antxmllistener.o					\
  	mordor/test/test.o						\
 	mordor/test/stdoutlistener.o
 
