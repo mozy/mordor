@@ -296,15 +296,15 @@ bool getCredentialsFromKeychain(const URI &uri, ClientRequest::ptr priorRequest,
     ScopedCFRef<SecKeychainSearchRef> search;
     SecKeychainAttributeList attrList;
     attrList.count = (UInt32)attrVector.size();
-    attrList.attr = attrVector.data();
+    attrList.attr = &attrVector[0];
 
     OSStatus status = SecKeychainSearchCreateFromAttributes(NULL,
         kSecInternetPasswordItemClass, &attrList, &search);
-    if (status != errSecSuccess)
+    if (status != 0)
         return false;
     ScopedCFRef<SecKeychainItemRef> item;
     status = SecKeychainSearchCopyNext(search, &item);
-    if (status != errSecSuccess)
+    if (status != 0)
         return false;
     SecKeychainAttributeInfo info;
     SecKeychainAttrType tag = kSecAccountItemAttr;
@@ -319,7 +319,7 @@ bool getCredentialsFromKeychain(const URI &uri, ClientRequest::ptr priorRequest,
 
     status = SecKeychainItemCopyAttributesAndData(item, &info, NULL, &attrs,
         &passwordLength, &passwordBytes);
-    if (status != errSecSuccess)
+    if (status != 0)
         return false;
 
     try {
