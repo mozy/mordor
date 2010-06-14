@@ -167,7 +167,7 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
 #endif
 {
 #ifdef WINDOWS
-    if (m_ioManager) {
+    if (pAcceptEx && m_ioManager) {
         m_sock = socket(family, type, protocol);
         MORDOR_LOG_LEVEL(g_log, m_sock == -1 ? Log::ERROR : Log::DEBUG) << this
             << " socket(" << (Family)family << ", " << (Type)type << ", "
@@ -509,7 +509,8 @@ Socket::connect(const Address &to)
                 Timer::ptr timeout;
                 if (m_sendTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_sendTimeout,
-                        boost::bind(&Socket::cancelConnect, this));
+                        boost::bind(&Socket::cancelIo, this,
+                            boost::ref(m_cancelledSend), WSAETIMEDOUT));
                 Scheduler::yieldTo();
                 m_fiber.reset();
                 m_scheduler = NULL;
@@ -764,9 +765,7 @@ Socket::accept(Socket &target)
                 MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
                     << newsock;
                 // Worked first time
-                return;
-            }
-            if (GetLastError() == WSAEWOULDBLOCK) {
+            } else if (GetLastError() == WSAEWOULDBLOCK) {
                 m_ioManager->registerEvent(m_hEvent);
                 m_fiber = Fiber::getThis();
                 m_scheduler = Scheduler::getThis();
@@ -781,7 +780,8 @@ Socket::accept(Socket &target)
                 Timer::ptr timeout;
                 if (m_receiveTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_sendTimeout,
-                        boost::bind(&Socket::cancelAccept, this));
+                        boost::bind(&Socket::cancelIo, this,
+                        boost::ref(m_cancelledReceive), WSAETIMEDOUT));
                 Scheduler::yieldTo();
                 m_fiber.reset();
                 m_scheduler = NULL;
@@ -807,6 +807,19 @@ Socket::accept(Socket &target)
                     << lastError() << ")";
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("accept");
             }
+            try {
+                m_ioManager->registerFile((HANDLE)newsock);
+            } catch(...) {
+                closesocket(newsock);
+                throw;
+            }
+            if (target.m_sock != -1)
+                ::closesocket(target.m_sock);
+            target.m_sock = newsock;
+            target.m_skipCompletionPortOnSuccess =
+                !!pSetFileCompletionNotificationModes((HANDLE)newsock,
+                    FILE_SKIP_COMPLETION_PORT_ON_SUCCESS |
+                    FILE_SKIP_SET_EVENT_ON_HANDLE);
         }
 #else
         int newsock = ::accept(m_sock, NULL, NULL);
@@ -1194,7 +1207,8 @@ Socket::cancelAccept()
     m_cancelledReceive = ERROR_OPERATION_ABORTED;
     if (pAcceptEx) {
         m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
-    } else {
+    }
+    if (m_hEvent && m_scheduler && m_fiber) {
         m_unregistered = !!m_ioManager->unregisterEvent(m_hEvent);
         m_scheduler->schedule(m_fiber);
     }
@@ -1223,7 +1237,8 @@ Socket::cancelConnect()
     m_cancelledSend = ERROR_OPERATION_ABORTED;
     if (ConnectEx) {
         m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
-    } else {
+    }
+    if (m_hEvent && m_scheduler && m_fiber) {
         m_unregistered = !!m_ioManager->unregisterEvent(m_hEvent);
         m_scheduler->schedule(m_fiber);
     }
@@ -1289,6 +1304,19 @@ Socket::cancelIo(int event, error_t &cancelled, error_t error)
         return;
     cancelled = error;
     m_eventLoop->cancelEvent(m_sock, (EventLoop::Event)event);
+}
+
+void
+Socket::cancelIo(error_t &cancelled, error_t error)
+{
+    MORDOR_ASSERT(error);
+    if (cancelled)
+        return;
+    cancelled = error;
+    if (m_hEvent && m_scheduler && m_fiber) {
+        m_unregistered = !!m_ioManager->unregisterEvent(m_hEvent);
+        m_scheduler->schedule(m_fiber);
+    }
 }
 #else
 void

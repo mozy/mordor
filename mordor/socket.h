@@ -132,7 +132,10 @@ private:
     size_t doIO(iovec *buffers, size_t length, int &flags, Address *address = NULL);
 
 #ifdef WINDOWS
+    // For EventLoop
     void cancelIo(int event, error_t &cancelled, error_t error);
+    // For WSAEventSelect
+    void cancelIo(error_t &cancelled, error_t error);
 #else
     void cancelIo(IOManager::Event event, error_t &cancelled, error_t error);
 #endif
