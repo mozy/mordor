@@ -444,6 +444,14 @@ Socket::connect(const Address &to)
             m_ioManager->registerEvent(&m_sendEvent);
             BOOL bRet = ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped);
             if (!bRet && GetLastError() != WSA_IO_PENDING) {
+                if (GetLastError() == WSAEINVAL) {
+                    m_ioManager->unregisterEvent(&m_sendEvent);
+                    // Some LSPs are *borken* (I'm looking at you, bmnet.dll),
+                    // and don't properly support ConnectEx (and AcceptEx).  In
+                    // that case, go to how we work on Windows 2000 without
+                    // ConnectEx at all
+                    goto suckylsp;
+                }
                 MORDOR_LOG_ERROR(g_log) << this << " ConnectEx(" << m_sock
                     << ", " << to << "): (" << lastError() << ")";
                 m_ioManager->unregisterEvent(&m_sendEvent);
@@ -481,6 +489,7 @@ Socket::connect(const Address &to)
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ConnectEx");
             setOption(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
         } else {
+suckylsp:
             if (!m_hEvent) {
                 m_hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
                 if (!m_hEvent)
@@ -699,6 +708,11 @@ Socket::accept(Socket &target)
             BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, sizeof(SOCKADDR_STORAGE) + 16, sizeof(SOCKADDR_STORAGE) + 16, &bytes,
                 &m_receiveEvent.overlapped);
             if (!ret && GetLastError() != WSA_IO_PENDING) {
+                if (GetLastError() == WSAENOTSOCK) {
+                    m_ioManager->unregisterEvent(&m_receiveEvent);
+                    // See comment in similar line in connect()
+                    goto suckylsp;
+                }
                 MORDOR_LOG_ERROR(g_log) << this << " AcceptEx(" << m_sock << "):  ("
                     << lastError() << ")";
                 m_ioManager->unregisterEvent(&m_receiveEvent);
@@ -753,6 +767,7 @@ Socket::accept(Socket &target)
                     FILE_SKIP_COMPLETION_PORT_ON_SUCCESS |
                     FILE_SKIP_SET_EVENT_ON_HANDLE);
         } else {
+suckylsp:
             if (!m_hEvent) {
                 m_hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
                 if (!m_hEvent)
