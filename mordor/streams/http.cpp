@@ -65,11 +65,12 @@ HTTPStream::start()
             m_requestHeaders.request.range.push_back(
                 std::make_pair((unsigned long long)m_pos, ~0ull));
         ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
-        const Response response = request->response();
+        const Response &response = request->response();
         Stream::ptr responseStream;
         switch (response.status.status) {
             case OK:
             case PARTIAL_CONTENT:
+                m_response = response;
                 if (response.entity.contentRange.instance != ~0ull)
                     m_size = (long long)response.entity.contentRange.instance;
                 else if (response.entity.contentLength != ~0ull)
@@ -123,11 +124,12 @@ HTTPStream::checkModified()
         m_requestHeaders.request.range.push_back(
             std::make_pair((unsigned long long)m_pos, ~0ull));
     ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
-    const Response response = request->response();
+    const Response &response = request->response();
     switch (response.status.status) {
         case OK:
         case PARTIAL_CONTENT:
         case NOT_MODIFIED:
+            m_response = response;
             if (response.entity.contentRange.instance != ~0ull)
                 m_size = (long long)response.entity.contentRange.instance;
             else if (response.entity.contentLength != ~0ull)
@@ -156,6 +158,13 @@ HTTPStream::checkModified()
     }
     parent(responseStream);
     return true;
+}
+
+const HTTP::Response &
+HTTPStream::response()
+{
+    stat();
+    return m_response;
 }
 
 size_t
@@ -230,9 +239,10 @@ HTTPStream::stat()
     if (m_size == -1) {
         m_requestHeaders.requestLine.method = HEAD;
         ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
-        const Response response = request->response();
+        const Response &response = request->response();
         switch (response.status.status) {
             case OK:
+                m_response = response;
                 if (response.entity.contentLength != ~0ull)
                     m_size = (long long)response.entity.contentLength;
                 else

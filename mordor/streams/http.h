@@ -33,6 +33,7 @@ public:
     /// This will abandon any current transfer in progress.  If it returns
     /// true, the transfer will have already begun at the current position
     bool checkModified();
+    const HTTP::Response &response();
 
     bool supportsRead() { return true; }
     bool supportsSeek() { return true; }
@@ -48,6 +49,7 @@ private:
 
 private:
     HTTP::Request m_requestHeaders;
+    HTTP::Response m_response;
     HTTP::RequestBroker::ptr m_requestBroker;
     HTTP::ETag m_eTag;
     long long m_pos, m_size;
