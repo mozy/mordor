@@ -121,16 +121,17 @@ std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
 }
 
 #ifdef WINDOWS
-std::vector<URI> proxyFromMachineDefault(const URI &uri)
+
+static std::vector<URI> proxyFromProxyInfo(const URI &uri,
+    WINHTTP_PROXY_INFO &proxyInfo)
 {
-    WINHTTP_PROXY_INFO proxyInfo;
-    if (!pWinHttpGetDefaultProxyConfiguration(&proxyInfo))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WinHttpGetDefaultProxyConfiguration");
     std::vector<URI> result;
+    std::string proxy, bypassList;
     try {
-        std::string proxy, bypassList;
-        result = proxyFromList(uri, toUtf8(proxyInfo.lpszProxy),
-            toUtf8(proxyInfo.lpszProxyBypass));
+        if (proxyInfo.lpszProxy)
+            proxy = toUtf8(proxyInfo.lpszProxy);
+        if (proxyInfo.lpszProxyBypass)
+            bypassList = toUtf8(proxyInfo.lpszProxyBypass);
     } catch (...) {
         if (proxyInfo.lpszProxy)
             GlobalFree(proxyInfo.lpszProxy);
@@ -142,7 +143,22 @@ std::vector<URI> proxyFromMachineDefault(const URI &uri)
         GlobalFree(proxyInfo.lpszProxy);
     if (proxyInfo.lpszProxyBypass)
         GlobalFree(proxyInfo.lpszProxyBypass);
-    return result;
+    switch (proxyInfo.dwAccessType) {
+        case WINHTTP_ACCESS_TYPE_NAMED_PROXY:
+            return proxyFromList(uri, proxy, bypassList);
+        case WINHTTP_ACCESS_TYPE_NO_PROXY:
+            return result;
+        default:
+            MORDOR_NOTREACHED();
+    }
+}
+
+std::vector<URI> proxyFromMachineDefault(const URI &uri)
+{
+    WINHTTP_PROXY_INFO proxyInfo;
+    if (!pWinHttpGetDefaultProxyConfiguration(&proxyInfo))
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WinHttpGetDefaultProxyConfiguration");
+    return proxyFromProxyInfo(uri, proxyInfo);
 }
 
 ProxySettings
@@ -221,21 +237,7 @@ ProxyCache::autoDetectProxy(const URI &uri, const std::string &pacScript)
     options.fAutoLogonIfChallenged = TRUE;
     if (pWinHttpGetProxyForUrl(m_hHttpSession, toUtf16(uri.toString()).c_str(),
         &options, &proxyInfo)) {
-        try {
-            std::string proxy, bypassList;
-            result = proxyFromList(uri, toUtf8(proxyInfo.lpszProxy),
-                toUtf8(proxyInfo.lpszProxyBypass));
-        } catch (...) {
-            if (proxyInfo.lpszProxy)
-                GlobalFree(proxyInfo.lpszProxy);
-            if (proxyInfo.lpszProxyBypass)
-                GlobalFree(proxyInfo.lpszProxyBypass);
-            throw;
-        }
-        if (proxyInfo.lpszProxy)
-            GlobalFree(proxyInfo.lpszProxy);
-        if (proxyInfo.lpszProxyBypass)
-            GlobalFree(proxyInfo.lpszProxyBypass);
+        return proxyFromProxyInfo(uri, proxyInfo);
     }
     return result;
 }
