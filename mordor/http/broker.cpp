@@ -240,14 +240,9 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
 std::pair<ClientConnection::ptr, bool>
 ConnectionCache::getConnectionViaProxyFromCache(const URI &uri, const URI &proxy)
 {
-    CachedConnectionMap::iterator it;
-    bool proxied = false;
-    if (proxy.schemeDefined() && proxy.scheme() == "http") {
-        proxied = true;
-        it = m_conns.find(proxy);
-    } else {
-        it = m_conns.find(uri);
-    }
+    bool proxied = proxy.schemeDefined() && proxy.scheme() == "http";
+    const URI &endpoint = proxied ? proxy : uri;
+    CachedConnectionMap::iterator it = m_conns.find(endpoint);
     ConnectionList::iterator it2;
     while (true) {
         if (it != m_conns.end() &&
@@ -262,6 +257,9 @@ ConnectionCache::getConnectionViaProxyFromCache(const URI &uri, const URI &proxy
             if (!*it2) {
                 // Wait for somebody to let us try again
                 it->second.second->wait();
+                // We let go of the mutex, and the last connection may have
+                // disappeared
+                it = m_conns.find(endpoint);
             } else {
                 // Return the existing, completed connection
                 return std::make_pair(*it2, proxied);
@@ -321,6 +319,10 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
         }
         addSSL(endpoint, stream);
         lock.lock();
+        // Somebody called abortConnections while we were unlocked; just throw
+        // this connection away
+        if (m_closed)
+            MORDOR_THROW_EXCEPTION(OperationAbortedException());
         result = std::make_pair(ClientConnection::ptr(
             new ClientConnection(stream, m_timerManager)), proxied);
         if (m_httpReadTimeout != ~0ull)
@@ -342,6 +344,11 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
         it->second.second->broadcast();
     } catch (...) {
         lock.lock();
+        // Somebody called abortConnections while we were unlocked; no need to
+        // clean up the temporary spot for this connection, since it's gone;
+        // pass the original exception on, though
+        if (m_closed)
+            throw;
         // This connection attempt failed; remove the first blank connection
         // for this schemeAndAuthority to let someone else try to establish a
         // connection
@@ -366,13 +373,31 @@ void
 ConnectionCache::closeIdleConnections()
 {
     FiberMutex::ScopedLock lock(m_mutex);
-    m_conns.clear();
+    // We don't just clear the list, because there may be a connection in
+    // in progress that has an iterator into it
+    std::map<URI, std::pair<ConnectionList,
+        boost::shared_ptr<FiberCondition> > >::iterator it;
+    for (it = m_conns.begin(); it != m_conns.end(); ++it) {
+        it->second.second->broadcast();
+        for (ConnectionList::iterator it2 = it->second.first.begin();
+            it2 != it->second.first.end();) {
+            if (*it2) {
+                Stream::ptr connStream = (*it2)->stream();
+                connStream->cancelRead();
+                connStream->cancelWrite();
+                it2 = it->second.first.erase(it2);
+            } else {
+                ++it2;
+            }
+        }
+        if (it->second.first.empty())
+            m_conns.erase(it);
+    }
 }
 
 void
 ConnectionCache::abortConnections()
 {
-    m_streamBroker->cancelPending();
     FiberMutex::ScopedLock lock(m_mutex);
     m_closed = true;
     std::map<URI, std::pair<ConnectionList,
@@ -390,6 +415,8 @@ ConnectionCache::abortConnections()
         }
     }
     m_conns.clear();
+    lock.unlock();
+    m_streamBroker->cancelPending();
 }
 
 void
