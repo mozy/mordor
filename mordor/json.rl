@@ -82,7 +82,7 @@ std::string unquote(const std::string &string)
                         result.append(toUtf8(utf16));
                         priorUtf16 = utf16;
                     }
-                    break;
+                    continue;
                 default:
                     MORDOR_NOTREACHED();
             }

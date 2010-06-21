@@ -257,3 +257,14 @@ MORDOR_UNITTEST(JSON, escaping)
     MORDOR_TEST_ASSERT_EQUAL(quote("\"\\\b\f\n\r\t\x1b"), "\"\\\"\\\\\\b\\f\\n\\r\\t\\u001b\"");
     MORDOR_TEST_ASSERT_EQUAL(unquote("\"\\\"\\\\\\b\\f\\n\\r\\t\\u001b\\/\""), "\"\\\b\f\n\r\t\x1b/");
 }
+
+MORDOR_UNITTEST(JSON, unicodeEscape)
+{
+    Value root;
+    Parser parser(root);
+    parser.run(
+        "\"\\u2028(2).docx\"");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(root), "\xe2\x80\xa8(2).docx");
+}
