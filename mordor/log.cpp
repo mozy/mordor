@@ -99,14 +99,26 @@ static void enableLogger(Logger::ptr logger,
         logger->level(level, false);
 }
 
+static boost::regex buildLogRegex(const std::string &exp, const std::string &default_exp)
+{
+    try
+    {
+        return boost::regex(exp);
+    }
+    catch(boost::bad_expression &)
+    {
+        return boost::regex(default_exp);
+    }
+}
+
 static void enableLoggers()
 {
-    boost::regex errorRegex("^" + g_logError->val() + "$");
-    boost::regex warnRegex("^" + g_logWarn->val() + "$");
-    boost::regex infoRegex("^" + g_logInfo->val() + "$");
-    boost::regex verboseRegex("^" + g_logVerbose->val() + "$");
-    boost::regex debugRegex("^" + g_logDebug->val() + "$");
-    boost::regex traceRegex("^" + g_logTrace->val() + "$");
+    boost::regex errorRegex = buildLogRegex(g_logError->val(), ".*");
+    boost::regex warnRegex = buildLogRegex(g_logWarn->val(), ".*");
+    boost::regex infoRegex = buildLogRegex(g_logInfo->val(), ".*");
+    boost::regex verboseRegex = buildLogRegex(g_logVerbose->val(), "");
+    boost::regex debugRegex = buildLogRegex(g_logDebug->val(), "");
+    boost::regex traceRegex = buildLogRegex(g_logTrace->val(), "");
     Log::visit(boost::bind(&enableLogger, _1,
         boost::cref(errorRegex), boost::cref(warnRegex),
         boost::cref(infoRegex), boost::cref(verboseRegex),
