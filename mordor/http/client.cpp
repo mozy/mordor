@@ -138,8 +138,10 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
     invariant();
     MORDOR_ASSERT(m_currentRequest != m_pendingRequests.end());
     MORDOR_ASSERT(request == *m_currentRequest);
-    MORDOR_ASSERT(request->m_requestState == ClientRequest::BODY);
-    MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " request complete";
+    MORDOR_ASSERT(request->m_requestState == ClientRequest::BODY ||
+        request->m_requestState == ClientRequest::HEADERS);
+    MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-"
+        << request->m_requestNumber << " request complete";
     std::list<ClientRequest *>::iterator it(m_currentRequest);
     ++it;
     if (it == m_pendingRequests.end()) {
@@ -157,7 +159,8 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         request->m_requestState = ClientRequest::HEADERS;
         MORDOR_ASSERT(request->m_scheduler);
         MORDOR_ASSERT(request->m_fiber);
-        MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " scheduling request";
+        MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-"
+            << request->m_requestNumber << " scheduling request";
         request->m_scheduler->schedule(request->m_fiber);
         request->m_scheduler = NULL;
         request->m_fiber.reset();
@@ -926,41 +929,15 @@ ClientRequest::doRequest()
             MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_request.requestLine;
         }
         m_conn->m_stream->write(str.c_str(), str.size());
-        m_requestState = BODY;
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID, false)) {
             MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " no request body";
             m_conn->scheduleNextRequest(this);
+        } else {
+            m_requestState = BODY;
         }
     } catch(...) {
-        boost::mutex::scoped_lock lock(m_conn->m_mutex);
-        m_conn->invariant();
-        // requestFailed() already handled it; but didn't cancel the response
-        // (since a request with a request body could potentially get a
-        // response, but this one never made it to the server at all)
-        bool alreadyFailed = m_requestState == ERROR;
-        MORDOR_ASSERT(m_responseState == PENDING);
-        m_requestState = ERROR;
-        m_responseState = CANCELED;
-        MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
-        MORDOR_ASSERT(alreadyFailed || m_conn->m_currentRequest != m_conn->m_pendingRequests.end());
-        MORDOR_ASSERT(!alreadyFailed || m_conn->m_currentRequest == m_conn->m_pendingRequests.end());
-        MORDOR_ASSERT(alreadyFailed || *m_conn->m_currentRequest == this);
-        // If alreadyFailed is true, it's safe to assume that this is the last
-        // request in the queue, because scheduleAllRequests would have cleared
-        // out anything after this one because they would be in a waiting state
-        MORDOR_ASSERT(!alreadyFailed || m_conn->m_pendingRequests.back() == this);
-        m_conn->m_priorRequestFailed = true;
-        if (!alreadyFailed)
-            m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
-        else
-            m_conn->m_pendingRequests.pop_back();
-        m_conn->scheduleAllWaitingRequests();
-        // Throw an HTTP exception if we can
-        if (m_conn->m_priorResponseClosed <= m_requestNumber)
-            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-        if (m_conn->m_priorResponseFailed <= m_requestNumber)
-            MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+        requestFailed();
         throw;
     }
 }
@@ -1214,7 +1191,9 @@ ClientRequest::requestDone()
 void
 ClientRequest::requestFailed()
 {
-    MORDOR_ASSERT(m_requestState == BODY);
+    if (m_requestState == ERROR)
+        return;
+    MORDOR_ASSERT(m_requestState == BODY || m_requestState == HEADERS);
     MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " request failed";
     if (m_requestStream) {
         // Break the circular reference
@@ -1230,14 +1209,45 @@ ClientRequest::requestFailed()
     MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
     MORDOR_ASSERT(this == *m_conn->m_currentRequest);
     m_conn->m_priorRequestFailed = true;
-    m_requestState = ERROR;
-    if (m_responseState >= COMPLETE) {
+    if (m_requestState == HEADERS) {
+        switch (m_responseState) {
+            case PENDING:
+                m_responseState = CANCELED;
+                m_conn->m_currentRequest =
+                    m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
+                break;
+            case WAITING:
+                MORDOR_ASSERT(m_conn->m_waitingResponses.find(this) !=
+                    m_conn->m_waitingResponses.end());
+                m_conn->m_waitingResponses.erase(this);
+                m_conn->m_currentRequest =
+                    m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
+                MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-"
+                    << m_requestNumber << " scheduling response";
+                m_scheduler->schedule(m_fiber);
+                m_scheduler = NULL;
+                m_fiber.reset();
+                m_responseState = CANCELED;
+                break;
+            case HEADERS:
+                m_conn->m_stream->cancelRead();
+            case BODY:
+                ++m_conn->m_currentRequest;
+                break;
+            default:
+                MORDOR_ASSERT(this == m_conn->m_pendingRequests.front());
+                ++m_conn->m_currentRequest;
+                m_conn->m_pendingRequests.pop_front();
+                break;
+        }
+    } else if (m_responseState >= COMPLETE) {
         MORDOR_ASSERT(this == m_conn->m_pendingRequests.front());
+        ++m_conn->m_currentRequest;
         m_conn->m_pendingRequests.pop_front();
-        m_conn->m_currentRequest = m_conn->m_pendingRequests.end();
     } else {
         ++m_conn->m_currentRequest;
     }
+    m_requestState = ERROR;
     m_conn->scheduleAllWaitingRequests();
     // Throw an HTTP exception if we can
     if (m_conn->m_priorResponseClosed <= m_requestNumber)

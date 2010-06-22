@@ -3130,7 +3130,7 @@ MORDOR_UNITTEST(HTTPClient, priorResponseFailsThenRequestFails)
     MORDOR_TEST_ASSERT_EXCEPTION(request2->requestStream()->close(), PriorRequestFailedException);
 }
 
-MORDOR_UNITTEST(HTTPClient, failWhileFlushNoRequestBody)
+MORDOR_UNITTEST(HTTPClient, failWhileFlushNoRequestBodyResponsePending)
 {
     MemoryStream::ptr requestStream(new MemoryStream());
     MemoryStream::ptr responseStream(new MemoryStream());
@@ -3250,4 +3250,210 @@ MORDOR_UNITTEST(HTTPClient, failWhileRequestingOtherWaiting)
     MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
     Scheduler::yield();
     MORDOR_ASSERT(excepted);
+}
+
+MORDOR_UNITTEST(HTTPClient, failWhileFlushNoRequestBodyResponseHeaders)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    TestStream::ptr testStream(new TestStream(pipes.first));
+    testStream->onWrite(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    bool excepted = false;
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitForOperationAborted, request, boost::ref(excepted)));
+    Scheduler::yield();
+    MORDOR_ASSERT(!excepted);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
+    Scheduler::yield();
+    MORDOR_ASSERT(excepted);
+}
+
+// No need to test failWhileFlushRequestBodyResponseHeaders/Body/Complete
+// because the request actually made it to the server, so the response won't
+// get cancelled
+
+MORDOR_UNITTEST(HTTPClient, failWhileFlushNoRequestBodyResponseBody)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    TestStream::ptr testStream(new TestStream(pipes.first));
+    testStream->onWrite(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    pipes.second->write("HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    Stream::ptr responseStream = request->responseStream();
+    MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
+    char dummy[6];
+    dummy[5] = '\0';
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->read(dummy, 5), 5u);
+    MORDOR_TEST_ASSERT_EQUAL((const char *)dummy, "hello");
+}
+
+MORDOR_UNITTEST(HTTPClient, failWhileFlushNoRequestBodyResponseWaiting)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    TestStream::ptr testStream(new TestStream(pipes.first));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    bool excepted = false;
+    ClientRequest::ptr request1 = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&readStuff, pipes.second));
+    request1->doRequest();
+    testStream->onWrite(&throwDummyException, 0);
+    ClientRequest::ptr request2 = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitForOperationAborted, request2, boost::ref(excepted)));
+    Scheduler::yield();
+    MORDOR_ASSERT(!excepted);
+    MORDOR_TEST_ASSERT_EXCEPTION(request2->doRequest(), DummyException);
+    Scheduler::yield();
+    MORDOR_ASSERT(excepted);
+}
+
+MORDOR_UNITTEST(HTTPClient, failWhileFlushNoRequestBodyResponseComplete)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    TestStream::ptr testStream(new TestStream(duplexStream));
+    testStream->onWrite(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
+}
+
+MORDOR_UNITTEST(HTTPClient, failWhileFlushRequestBodyResponseComplete)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    TestStream::ptr testStream(new TestStream(duplexStream));
+    testStream->onWrite(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+    requestHeaders.entity.contentLength = 5;
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    request->requestStream()->write("hello");
+    MORDOR_TEST_ASSERT_EXCEPTION(request->requestStream()->close(), DummyException);
+}
+
+MORDOR_UNITTEST(HTTPClient, failWhileRequestingResponseHeaders)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    pipes.first.reset(new BufferedStream(pipes.first));
+    TestStream::ptr testStream(new TestStream(pipes.first));
+    testStream->onWrite(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    bool excepted = false;
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitForOperationAborted, request, boost::ref(excepted)));
+    Scheduler::yield();
+    MORDOR_ASSERT(!excepted);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
+    Scheduler::yield();
+    MORDOR_ASSERT(excepted);
+}
+
+MORDOR_UNITTEST(HTTPClient, failWhileRequestingResponseWaiting)
+{
+    WorkerPool pool;
+
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    pipes.first.reset(new BufferedStream(pipes.first));
+    TestStream::ptr testStream(new TestStream(pipes.first));
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    bool excepted = false;
+    ClientRequest::ptr request1 = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&readStuff, pipes.second));
+    request1->doRequest();
+    testStream->onWrite(&throwDummyException, 0);
+    ClientRequest::ptr request2 = conn->request(requestHeaders);
+    pool.schedule(boost::bind(&waitForOperationAborted, request2, boost::ref(excepted)));
+    Scheduler::yield();
+    MORDOR_ASSERT(!excepted);
+    MORDOR_TEST_ASSERT_EXCEPTION(request2->doRequest(), DummyException);
+    Scheduler::yield();
+    MORDOR_ASSERT(excepted);
+}
+
+MORDOR_UNITTEST(HTTPClient, failWhileRequestingResponseBody)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream("HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello"));
+    Stream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    duplexStream.reset(new BufferedStream(duplexStream));
+    TestStream::ptr testStream(new TestStream(duplexStream));
+    testStream->onWrite(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
+    char dummy[6];
+    dummy[5] = '\0';
+    MORDOR_TEST_ASSERT_EQUAL(request->responseStream()->read(dummy, 5), 5u);
+    MORDOR_TEST_ASSERT_EQUAL((const char *)dummy, "hello");
+}
+
+MORDOR_UNITTEST(HTTPClient, failWhileRequestingResponseComplete)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"));
+    Stream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    duplexStream.reset(new BufferedStream(duplexStream));
+    TestStream::ptr testStream(new TestStream(duplexStream));
+    testStream->onWrite(&throwDummyException, 0);
+    ClientConnection::ptr conn(new ClientConnection(testStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.request.host = "localhost";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
 }
