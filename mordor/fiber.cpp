@@ -506,7 +506,7 @@ Fiber::initStack()
     m_env[9] = (int)m_stack + m_stacksize; // ESP
 #elif defined(X86_64)
     long long *env = (long long *)m_env;
-    env[1] = 0xffffffffffffffffll; // RBP
+    env[1] = 0x0ll; // RBP
     env[2] = (long long)m_stack + m_stacksize; // RSP
 #elif defined(PPC)
     m_env[0] = (int)m_stack;
