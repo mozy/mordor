@@ -21,6 +21,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tunnel", "examples\tunnel.v
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iombench", "examples\iombench.vcxproj", "{C96B814F-E7C2-4465-8FFB-C49105929E68}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "decodebacktrace", "examples\decodebacktrace.vcxproj", "{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -101,6 +103,14 @@ Global
 		{C96B814F-E7C2-4465-8FFB-C49105929E68}.Release|Win32.Build.0 = Release|Win32
 		{C96B814F-E7C2-4465-8FFB-C49105929E68}.Release|x64.ActiveCfg = Release|x64
 		{C96B814F-E7C2-4465-8FFB-C49105929E68}.Release|x64.Build.0 = Release|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|Win32.Build.0 = Debug|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|x64.ActiveCfg = Debug|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|x64.Build.0 = Debug|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|Win32.ActiveCfg = Release|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|Win32.Build.0 = Release|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|x64.ActiveCfg = Release|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -112,5 +122,6 @@ Global
 		{35655735-9C38-4255-81E8-F8CDABEB358E} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
 		{41B0154E-EBCA-4518-8957-47623868F2FA} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
 		{C96B814F-E7C2-4465-8FFB-C49105929E68} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
 	EndGlobalSection
 EndGlobal
