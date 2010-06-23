@@ -152,6 +152,13 @@ public:
     /// The current execution state of the Fiber
     State state();
 
+    /// Get the backtrace of a fiber
+
+    /// The fiber must not be currently executing.  If it's in a state other
+    /// than HOLD, the backtrace will be empty.
+    /// @pre state() != EXEC
+    std::vector<void *> backtrace();
+
 private:
     void call(bool destructor);
     Fiber::ptr yieldTo(bool yieldToCallerOnTerminate, State targetState);
@@ -193,6 +200,8 @@ private:
 
     std::vector<intptr_t> m_fls;
 };
+
+void fiberBacktrace(Fiber *fiber);
 
 template <class T>
 class FiberLocalStorageBase : boost::noncopyable

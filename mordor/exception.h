@@ -30,6 +30,7 @@ typedef errinfo_lasterror errinfo_nativeerror;
 typedef boost::errinfo_errno errinfo_nativeerror;
 #endif
 
+std::string to_string( const std::vector<void *> bt );
 std::string to_string( errinfo_backtrace const &bt );
 
 std::vector<void *> backtrace(int framesToSkip = 0);
