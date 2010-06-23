@@ -376,7 +376,7 @@ ConnectionCache::closeIdleConnections()
     // We don't just clear the list, because there may be a connection in
     // in progress that has an iterator into it
     std::map<URI, std::pair<ConnectionList,
-        boost::shared_ptr<FiberCondition> > >::iterator it;
+        boost::shared_ptr<FiberCondition> > >::iterator it, extraIt;
     for (it = m_conns.begin(); it != m_conns.end();) {
         it->second.second->broadcast();
         for (ConnectionList::iterator it2 = it->second.first.begin();
@@ -390,10 +390,13 @@ ConnectionCache::closeIdleConnections()
                 ++it2;
             }
         }
-        if (it->second.first.empty())
-            it = m_conns.erase(it);
-        else
+        if (it->second.first.empty()) {
+            extraIt = it;
             ++it;
+            m_conns.erase(extraIt);
+        } else {
+            ++it;
+        }
     }
 }
 
