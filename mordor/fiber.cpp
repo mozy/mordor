@@ -509,6 +509,13 @@ Fiber::initStack()
     env[1] = 0xffffffffffffffffll; // RBP
     env[2] = (long long)m_stack + m_stacksize; // RSP
 #endif
+#elif defined (LINUX)
+#ifdef ARM
+    int *env = (int *)m_env;
+    env[8] = (int)m_stack + m_stacksize;
+#else
+#error Platform not supported
+#endif
 #else
 #error Platform not supported
 #endif
