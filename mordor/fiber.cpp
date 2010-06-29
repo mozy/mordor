@@ -513,6 +513,13 @@ Fiber::initStack()
 #else
 #error Architecture not supported
 #endif
+#elif defined (LINUX)
+#ifdef ARM
+    int *env = (int *)m_env;
+    env[8] = (int)m_stack + m_stacksize;
+#else
+#error Platform not supported
+#endif
 #else
 #error Platform not supported
 #endif
