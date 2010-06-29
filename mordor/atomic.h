@@ -5,6 +5,10 @@
 
 #include "predef.h"
 
+#if (__GNUC__ == 4 && __GNUC_MINOR__ >= 1 && defined(__arm__))
+#include <boost/smart_ptr/detail/sp_counted_base_spin.hpp>
+#endif
+
 namespace Mordor {
 
 #ifdef WINDOWS
@@ -166,7 +170,7 @@ atomicSwap(volatile T &t, T newvalue)
     return comparand;
 }
 #endif
-#elif (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)
+#elif (__GNUC__ == 4 && __GNUC_MINOR__ >= 1 && !defined(__arm__))
 template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(void *), T>::type
 atomicDecrement(volatile T& t) { return __sync_sub_and_fetch(&t, 1); }
@@ -220,6 +224,22 @@ atomicIncrement(volatile T& t) { return __gnu_cxx::__exchange_and_add((_Atomic_w
 template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(_Atomic_word), T>::type
 atomicAdd(volatile T& t, T v) { return __gnu_cxx::__exchange_and_add((_Atomic_word*)_&t, v) + v; }
+#elif (__GNUC__ == 4 && __GNUC_MINOR__ >= 1 && defined(__arm__))
+template <class T>
+typename boost::enable_if_c<sizeof(T) <= sizeof(int), T>::type
+atomicAdd(volatile T& t, T v) { return boost::detail::atomic_exchange_and_add((int *)&t, (int)v) + v; }
+template <class T>
+typename boost::enable_if_c<sizeof(T) <= sizeof(int), T>::type
+atomicIncrement(volatile T& t) { return atomicAdd(t, (T)1); }
+template <class T>
+typename boost::enable_if_c<sizeof(T) <= sizeof(int), T>::type
+atomicCompareAndSwap(volatile T &t, T newvalue, T comparand) {
+    ::boost::detail::spinlock_pool<1>::scoped_lock lock((void *)&t);
+    T oldvalue = t;
+    if (oldvalue == comparand)
+        t = newvalue;
+    return oldvalue;
+}
 #endif
 
 template <typename T>
