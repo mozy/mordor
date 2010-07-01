@@ -668,16 +668,4 @@ Fiber::backtrace()
     return result;
 }
 
-void fiberBacktrace(Fiber *fiber)
-{
-    std::string bt = to_string(fiber->backtrace());
-#ifdef WINDOWS
-    OutputDebugStringA(bt.c_str());
-    OutputDebugStringA("\n");
-#else
-    std::cout << bt << std::endl;
-#endif
-}
-
-
 }

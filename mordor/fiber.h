@@ -201,8 +201,6 @@ private:
     std::vector<intptr_t> m_fls;
 };
 
-void fiberBacktrace(Fiber *fiber);
-
 template <class T>
 class FiberLocalStorageBase : boost::noncopyable
 {
