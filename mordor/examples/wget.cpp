@@ -13,8 +13,10 @@
 #include "mordor/http/auth.h"
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
+#include "mordor/http/multipart.h"
 #include "mordor/http/proxy.h"
 #include "mordor/iomanager.h"
+#include "mordor/sleep.h"
 #include "mordor/socket.h"
 #include "mordor/streams/socket.h"
 #include "mordor/streams/ssl.h"
@@ -98,12 +100,34 @@ int main(int argc, char *argv[])
         if (vm.count("password")) password = vm["password"].as<std::string>();
         if (vm.count("proxyusername")) proxyusername = vm["proxyusername"].as<std::string>();
         if (vm.count("proxypassword")) proxypassword = vm["proxypassword"].as<std::string>();
-        if (vm.count("username"))
-            options.getCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
-                username, password, _7, false);
         if (vm.count("proxyusername"))
             options.getProxyCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
                 proxyusername, proxypassword, _7, true);
+#ifdef OSX
+        else
+            options.getProxyCredentialsDg = &HTTP::getCredentialsFromKeychain;
+#endif
+        HTTP::RequestBroker::ptr proxyBroker =
+            HTTP::createRequestBroker(options).first;
+        if (vm.count("username"))
+            options.getCredentialsDg = boost::bind(&getCredentials, _2, _3, _5, _6,
+                username, password, _7, false);
+#ifdef OSX
+        else
+            options.getCredentialsDg = &HTTP::getCredentialsFromKeychain;
+#endif
+        options.proxyRequestBroker = proxyBroker;
+#ifdef WINDOWS
+        HTTP::ProxyCache proxyCache;
+        options.proxyForURIDg = boost::bind(
+            &HTTP::ProxyCache::proxyFromUserSettings, &proxyCache, _1);
+#elif defined (OSX)
+        HTTP::ProxyCache proxyCache(proxyBroker);
+        options.proxyForURIDg = boost::bind(
+            &HTTP::ProxyCache::proxyFromSystemConfiguration, &proxyCache, _1);
+#else
+        options.proxyForURIDg = &HTTP::proxyFromConfig;
+#endif
         HTTP::RequestBroker::ptr requestBroker =
             HTTP::createRequestBroker(options).first;
 

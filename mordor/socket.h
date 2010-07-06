@@ -11,10 +11,21 @@
 #include "iomanager.h"
 #include "version.h"
 
+#ifdef WINDOWS
+#include <ws2tcpip.h>
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#ifndef OSX
+# include <netinet/in_systm.h>
+# include <netinet/ip.h>
+#endif
+#include <sys/un.h>
+#endif
+
 namespace Mordor {
 
 #ifdef WINDOWS
-#include <ws2tcpip.h>
 struct iovec
 {
     union
@@ -34,13 +45,6 @@ typedef SOCKET socket_t;
 
 class EventLoop;
 #else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#ifndef OSX
-# include <netinet/in_systm.h>
-# include <netinet/ip.h>
-#endif
-#include <sys/un.h>
 typedef size_t iov_len_t;
 typedef int socket_t;
 #endif
@@ -128,7 +132,10 @@ private:
     size_t doIO(iovec *buffers, size_t length, int &flags, Address *address = NULL);
 
 #ifdef WINDOWS
+    // For EventLoop
     void cancelIo(int event, error_t &cancelled, error_t error);
+    // For WSAEventSelect
+    void cancelIo(error_t &cancelled, error_t error);
 #else
     void cancelIo(IOManager::Event event, error_t &cancelled, error_t error);
 #endif

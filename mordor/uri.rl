@@ -24,7 +24,7 @@ static const std::string pchar("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
 static const std::string path("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" ":@" "/");
 static const std::string segment_nc("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" "@");
 static const std::string query("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" ":@" "/?");
-static const std::string queryString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$'()*+," ":@" "/?");
+static const std::string queryString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$'()*," ":@" "/?");
 
 static std::string escape(const std::string& str, const std::string& allowedChars, bool spaceAsPlus = false)
 {
@@ -392,6 +392,7 @@ URI::URI(const Buffer &uri)
 URI&
 URI::operator=(const std::string& uri)
 {
+    reset();
     URIParser parser(*this);
     parser.run(uri);
     if (parser.error() || !parser.final())
@@ -402,6 +403,7 @@ URI::operator=(const std::string& uri)
 URI&
 URI::operator=(const Buffer &uri)
 {
+    reset();
     URIParser parser(*this);
     parser.run(uri);
     if (parser.error() || !parser.final())
@@ -527,11 +529,11 @@ URI::Path&
 URI::Path::operator=(const std::string& path)
 {
     type = RELATIVE;
-	segments.clear();
+    segments.clear();
     URIPathParser parser(*this);
     parser.run(path);
     if (parser.error() || !parser.final())
-        throw std::invalid_argument("uri");
+        throw std::invalid_argument("path");
     return *this;
 }
 
@@ -662,6 +664,9 @@ URI::normalize()
     } else if (m_scheme == "file") {
         authority.normalize("localhost", true);
         path.normalize();
+    } else if (m_scheme == "socks") {
+        authority.normalize("", false, 1080, false);
+        path.normalize();
     } else {
         authority.normalize();
         path.normalize();
@@ -711,7 +716,7 @@ operator<<(std::ostream& os, const URI& uri)
     os << uri.path.serialize(!uri.schemeDefined());
 
     if (uri.queryDefined()) {
-        os << "?" << escape(uri.query(), query);
+        os << "?" << uri.m_query;
     }
 
     if (uri.fragmentDefined()) {
@@ -814,9 +819,18 @@ URI::operator==(const URI &rhs) const
     }
     action saveValue {
         MORDOR_ASSERT(m_iterator != m_qs.end());
-        m_iterator->second = unescape(std::string(mark, fpc - mark), true);
+        if (fpc - mark == 0 && m_iterator->first.empty())
+            m_qs.erase(m_iterator);
+        else
+            m_iterator->second = unescape(std::string(mark, fpc - mark), true);
         m_iterator = m_qs.end();
         mark = NULL;
+    }
+    action saveNoValue {
+        if (m_iterator != m_qs.end() && m_iterator->first.empty()) {
+            m_qs.erase(m_iterator);
+            mark = NULL;
+        }
     }
 
     sub_delims = "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";";
@@ -824,9 +838,9 @@ URI::operator==(const URI &rhs) const
     pct_encoded = "%" xdigit xdigit;
     pchar = unreserved | pct_encoded | sub_delims | ":" | "@";
     querychar = (pchar | "/" | "?") -- '&' -- ';';
-    key = querychar+;
-    value = (querychar | '=')+;
-    keyValue = key >mark %saveKey ('=' value >mark %saveValue)?;
+    key = querychar*;
+    value = (querychar | '=')*;
+    keyValue = key >mark %saveKey ('=' value >mark %saveValue)? %saveNoValue;
     main := keyValue? ( ('&' | ';') keyValue? )*;
     write data;
 }%%

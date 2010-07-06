@@ -61,6 +61,8 @@
 		3CAB29E9112B347400607AEE /* timer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2798112B096700607AEE /* timer.cpp */; };
 		3CAC4A341151622F00F85725 /* iomanager_kqueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB271B112B096700607AEE /* iomanager_kqueue.cpp */; };
 		3CC4CE561138646D001C21F2 /* progress.h in Headers */ = {isa = PBXBuildFile; fileRef = 3CC4CE551138646D001C21F2 /* progress.h */; };
+		C34893CA11BEB1300044E9C8 /* socks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C34893C811BEB1300044E9C8 /* socks.cpp */; };
+		C34893CB11BEB1300044E9C8 /* socks.h in Headers */ = {isa = PBXBuildFile; fileRef = C34893C911BEB1300044E9C8 /* socks.h */; };
 		E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E29FD2A81136FD1D004BC293 /* timeout.cpp */; };
 		E29FD2AB1136FD1D004BC293 /* timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = E29FD2A91136FD1D004BC293 /* timeout.h */; };
 /* End PBXBuildFile section */
@@ -279,6 +281,8 @@
 		3CAB27A1112B096700607AEE /* xml_parser.rl */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp.preprocessed; fileEncoding = 4; path = xml_parser.rl; sourceTree = "<group>"; };
 		3CAB29B1112B340600607AEE /* libmordor.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmordor.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		3CC4CE551138646D001C21F2 /* progress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = progress.h; sourceTree = "<group>"; };
+		C34893C811BEB1300044E9C8 /* socks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = socks.cpp; sourceTree = "<group>"; };
+		C34893C911BEB1300044E9C8 /* socks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socks.h; sourceTree = "<group>"; };
 		E29FD2A81136FD1D004BC293 /* timeout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timeout.cpp; sourceTree = "<group>"; };
 		E29FD2A91136FD1D004BC293 /* timeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timeout.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -330,6 +334,8 @@
 		3CAB26D4112B096700607AEE /* mordor */ = {
 			isa = PBXGroup;
 			children = (
+				C34893C811BEB1300044E9C8 /* socks.cpp */,
+				C34893C911BEB1300044E9C8 /* socks.h */,
 				3CAB26D5112B096700607AEE /* .gitignore */,
 				3CAB26D6112B096700607AEE /* anymap.h */,
 				3CAB26D7112B096700607AEE /* assert.cpp */,
@@ -591,6 +597,7 @@
 			files = (
 				E29FD2AB1136FD1D004BC293 /* timeout.h in Headers */,
 				3CC4CE561138646D001C21F2 /* progress.h in Headers */,
+				C34893CB11BEB1300044E9C8 /* socks.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -692,6 +699,7 @@
 				3CAB29E9112B347400607AEE /* timer.cpp in Sources */,
 				E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */,
 				3CAC4A341151622F00F85725 /* iomanager_kqueue.cpp in Sources */,
+				C34893CA11BEB1300044E9C8 /* socks.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

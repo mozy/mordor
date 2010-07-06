@@ -8,12 +8,11 @@
 #include <boost/shared_ptr.hpp>
 
 #include "assert.h"
-#include "mordor/streams/buffer.h"
 #include "mordor/string.h"
-#include "predef.h"
 
 namespace Mordor {
 
+struct Buffer;
 class Stream;
 
 namespace HTTP
@@ -27,6 +26,7 @@ struct URI
     friend class URIParser;
     friend class HTTP::RequestParser;
     friend class HTTP::ResponseParser;
+    friend std::ostream& operator<<(std::ostream& os, const Mordor::URI& uri);
 
     enum CharacterClass {
         UNRESERVED,

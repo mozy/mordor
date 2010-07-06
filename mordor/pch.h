@@ -66,6 +66,7 @@
 #include <mach/task.h>
 #include <sys/_endian.h>
 #include <sys/sysctl.h>
+#include <CoreFoundation/CFString.h>
 #elif defined(FREEBSD)
 #include <sys/endian.h>
 #include <sys/sem.h>

@@ -47,14 +47,13 @@ static struct Initializer {
 }
 #endif
 
-std::string to_string( errinfo_backtrace const &bt )
+std::string to_string(const std::vector<void *> backtrace)
 {
 #ifdef WINDOWS
     static boost::mutex s_mutex;
     boost::mutex::scoped_lock lock(s_mutex);
 #endif
     std::ostringstream os;
-    const std::vector<void *> &backtrace = bt.value();
 #ifdef POSIX
     boost::shared_ptr<char *> symbols(backtrace_symbols(&backtrace[0],
         backtrace.size()), &free);
@@ -91,6 +90,11 @@ std::string to_string( errinfo_backtrace const &bt )
 #endif
     }
     return os.str();
+}
+
+std::string to_string( errinfo_backtrace const &bt )
+{
+    return to_string(bt.value());
 }
 
 #ifdef WINDOWS

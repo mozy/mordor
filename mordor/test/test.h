@@ -18,7 +18,7 @@ typedef void (*TestDg)();
 typedef std::pair<TestDg, std::map<std::string, TestDg> > TestSuite;
 typedef std::map<std::string, TestSuite> TestSuites;
 
-// Test definitions
+/// Create an invariant that is run before and after every test in TestSuite
 #define MORDOR_SUITE_INVARIANT(TestSuite)                                       \
     static void _ ## TestSuite ## _invariant();                                 \
     namespace {                                                                 \
@@ -31,7 +31,7 @@ typedef std::map<std::string, TestSuite> TestSuites;
     }                                                                           \
     static void _ ## TestSuite ## _invariant()
 
-
+/// Create a unit test that is part of TestSuite
 #define MORDOR_UNITTEST(TestSuite, TestName)                                    \
     static void TestSuite ## _ ## TestName();                                   \
     namespace {                                                                 \
@@ -44,6 +44,20 @@ typedef std::map<std::string, TestSuite> TestSuites;
     }                                                                           \
     static void TestSuite ## _ ## TestName()
 
+/// Create a unit test that is part of TestSuite, and runs as a member function
+/// of Fixture
+#define MORDOR_UNITTEST_FIXTURE(Fixture, TestSuite, TestName)                   \
+    class TestSuite ## _ ## TestName ## Helper : public Fixture                 \
+    {                                                                           \
+    public:                                                                     \
+        void run();                                                             \
+    };                                                                          \
+    MORDOR_UNITTEST(TestSuite, TestName)                                        \
+    {                                                                           \
+        TestSuite ## _ ## TestName ## Helper helper;                            \
+        helper.run();                                                           \
+    }                                                                           \
+    void TestSuite ## _ ## TestName ## Helper::run()
 
 // Public interface
 class TestListener
@@ -205,6 +219,12 @@ template <>
 void assertEqual<const char *, const char *>(const char *file,
     int line,  const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr);
+#ifdef WINDOWS
+template <>
+void assertEqual<const wchar_t *, const wchar_t *>(const char *file,
+    int line,  const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr);
+#endif
 
 template <class T, class U>
 void assertNotEqual(const char *file, int line, const char *function,
@@ -220,6 +240,12 @@ template <>
 void assertNotEqual<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr);
+#ifdef WINDOWS
+template <>
+void assertNotEqual<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr);
+#endif
 
 template <class T, class U>
 void assertLessThan(const char *file, int line, const char *function,
@@ -235,6 +261,12 @@ template <>
 void assertLessThan<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr);
+#ifdef WINDOWS
+template <>
+void assertLessThan<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr);
+#endif
 
 template <class T, class U>
 void assertLessThanOrEqual(const char *file, int line, const char *function,
@@ -250,6 +282,12 @@ template <>
 void assertLessThanOrEqual<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr);
+#ifdef WINDOWS
+template <>
+void assertLessThanOrEqual<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr);
+#endif
 
 template <class T, class U>
 void assertGreaterThan(const char *file, int line, const char *function,
@@ -265,6 +303,12 @@ template <>
 void assertGreaterThan<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr);
+#ifdef WINDOWS
+template <>
+void assertGreaterThan<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr);
+#endif
 
 template <class T, class U>
 void assertGreaterThanOrEqual(const char *file, int line, const char *function,
@@ -280,6 +324,12 @@ template <>
 void assertGreaterThanOrEqual<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr);
+#ifdef WINDOWS
+template <>
+void assertGreaterThanOrEqual<const wchar_t *, const wchar_t *>(const char *file,
+    int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
+    const char *lhsExpr, const char *rhsExpr);
+#endif
 
 template <class T, class U, class V>
 void assertAboutEqual(const char *file, int line, const char *function,

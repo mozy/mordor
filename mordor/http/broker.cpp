@@ -5,14 +5,17 @@
 #include "broker.h"
 
 #include "auth.h"
+#include "client.h"
 #include "mordor/atomic.h"
 #include "mordor/future.h"
+#include "mordor/socks.h"
 #include "mordor/streams/buffered.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/socket.h"
 #include "mordor/streams/ssl.h"
 #include "mordor/streams/timeout.h"
 #include "proxy.h"
+#include "server.h"
 
 namespace Mordor {
 namespace HTTP {
@@ -34,55 +37,32 @@ createRequestBroker(const RequestBrokerOptions &options)
         streamBroker = options.customStreamBrokerFilter;
     }
 
-    SSLStreamBroker::ptr sslBroker(new SSLStreamBroker(streamBroker,
-        options.sslCtx, options.verifySslCertificate,
-        options.verifySslCertificateHost));
-    sslBroker->timerManager(timerManager);
-    sslBroker->readTimeout(options.sslConnectReadTimeout);
-    sslBroker->writeTimeout(options.sslConnectWriteTimeout);
-
-    ConnectionCache::ptr connectionCache(new ConnectionCache(sslBroker, 1u,
+    ConnectionCache::ptr connectionCache(new ConnectionCache(streamBroker,
         timerManager));
-    connectionCache->readTimeout(options.httpReadTimeout);
-    connectionCache->writeTimeout(options.httpWriteTimeout);
+    connectionCache->httpReadTimeout(options.httpReadTimeout);
+    connectionCache->httpWriteTimeout(options.httpWriteTimeout);
+    connectionCache->sslReadTimeout(options.sslConnectReadTimeout);
+    connectionCache->sslWriteTimeout(options.sslConnectWriteTimeout);
+    connectionCache->sslCtx(options.sslCtx);
+    connectionCache->proxyForURI(options.proxyForURIDg);
+    connectionCache->proxyRequestBroker(options.proxyRequestBroker);
+    connectionCache->verifySslCertificate(options.verifySslCertificate);
+    connectionCache->verifySslCertificateHost(options.verifySslCertificateHost);
 
-    RequestBroker::ptr requestBroker;
-    if (options.proxyForURIDg)
-        requestBroker.reset(new BaseRequestBroker(
-            ConnectionBroker::weak_ptr(connectionCache)));
-    else
-        requestBroker.reset(new BaseRequestBroker(
-            boost::static_pointer_cast<ConnectionBroker>(connectionCache)));
+    RequestBroker::ptr requestBroker(new BaseRequestBroker(
+        boost::static_pointer_cast<ConnectionBroker>(connectionCache)));
 
+    if (options.getCredentialsDg || options.getProxyCredentialsDg)
+        requestBroker.reset(new AuthRequestBroker(requestBroker,
+            options.getCredentialsDg, options.getProxyCredentialsDg));
+    if (options.handleRedirects)
+        requestBroker.reset(new RedirectRequestBroker(requestBroker));
     if (options.delayDg)
         requestBroker.reset(new RetryRequestBroker(requestBroker,
         options.delayDg));
-    if ((options.proxyForURIDg && options.getProxyCredentialsDg) ||
-        (!options.proxyForURIDg && options.getCredentialsDg))
-        requestBroker.reset(new AuthRequestBroker(requestBroker,
-        options.proxyForURIDg ? options.getCredentialsDg : NULL,
-        options.proxyForURIDg ? options.getProxyCredentialsDg : NULL));
-    if (options.handleRedirects)
-        requestBroker.reset(new RedirectRequestBroker(requestBroker));
-
-    if (options.proxyForURIDg) {
-        ProxyStreamBroker::ptr proxyStreamBroker(new ProxyStreamBroker(socketBroker, requestBroker,
-            options.proxyForURIDg));
-        proxyStreamBroker->fallbackOnFailure(options.fallbackToDirectOnProxyFailure);
-        sslBroker->parent(boost::static_pointer_cast<StreamBroker>(proxyStreamBroker));
-        ProxyConnectionBroker::ptr connectionBroker(
-            new ProxyConnectionBroker(connectionCache, options.proxyForURIDg));
-        connectionBroker->fallbackOnFailure(options.fallbackToDirectOnProxyFailure);
-        requestBroker.reset(new BaseRequestBroker(boost::static_pointer_cast<ConnectionBroker>(connectionBroker)));
-        if (options.delayDg)
-            requestBroker.reset(new RetryRequestBroker(requestBroker,
-            options.delayDg));
-        if (options.getCredentialsDg || options.getProxyCredentialsDg)
-            requestBroker.reset(new AuthRequestBroker(requestBroker,
-                options.getCredentialsDg, options.getProxyCredentialsDg));
-        if (options.handleRedirects)
-            requestBroker.reset(new RedirectRequestBroker(requestBroker));
-    }
+    if (!options.userAgent.empty())
+        requestBroker.reset(new UserAgentRequestBroker(requestBroker,
+            options.userAgent));
     return std::make_pair(requestBroker, connectionCache);
 }
 
@@ -178,40 +158,6 @@ SocketStreamBroker::cancelPending()
     }
 }
 
-Stream::ptr
-SSLStreamBroker::getStream(const URI &uri)
-{
-    Stream::ptr result = parent()->getStream(uri);
-    if (uri.schemeDefined() && uri.scheme() == "https") {
-        TimeoutStream::ptr timeoutStream;
-        if (m_timerManager) {
-            timeoutStream.reset(new TimeoutStream(result, *m_timerManager));
-            timeoutStream->readTimeout(m_readTimeout);
-            timeoutStream->writeTimeout(m_writeTimeout);
-            result = timeoutStream;
-        }
-        BufferedStream::ptr bufferedStream(new BufferedStream(result));
-        bufferedStream->allowPartialReads(true);
-        SSLStream::ptr sslStream(new SSLStream(bufferedStream, true, true, m_sslCtx));
-        sslStream->connect();
-        if (m_verifySslCertificate)
-            sslStream->verifyPeerCertificate();
-        if (m_verifySslCertificateHost)
-            sslStream->verifyPeerCertificate(uri.authority.host());
-        if (timeoutStream) {
-            bufferedStream->parent(timeoutStream->parent());
-            timeoutStream.reset();
-        }
-        bufferedStream.reset(new BufferedStream(sslStream));
-        // Max data in each SSL record
-        bufferedStream->bufferSize(16384);
-        bufferedStream->flushMultiplesOfBuffer(true);
-        bufferedStream->allowPartialReads(true);
-        return bufferedStream;
-    }
-    return result;
-}
-
 static bool least(const ClientConnection::ptr &lhs,
                   const ClientConnection::ptr &rhs)
 {
@@ -228,105 +174,181 @@ static bool least(const ClientConnection::ptr &lhs,
 std::pair<ClientConnection::ptr, bool>
 ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
 {
+    std::vector<URI> proxies;
+    if (m_proxyForURIDg)
+        proxies = m_proxyForURIDg(uri);
+    // Remove proxy types that aren't supported
+    for (std::vector<URI>::iterator it(proxies.begin());
+        it != proxies.end();
+        ++it) {
+        MORDOR_ASSERT(it->schemeDefined() || !it->isDefined());
+        if (!it->schemeDefined())
+            continue;
+        std::string scheme = it->scheme();
+        if (scheme != "http" && (scheme != "https" || !m_proxyBroker) &&
+            scheme != "socks")
+            it = proxies.erase(it, it);
+    }
     URI schemeAndAuthority;
-    std::map<URI, std::pair<ConnectionList,
-        boost::shared_ptr<FiberCondition> > >::iterator it, it3;
-    ConnectionList::iterator it2;
+    schemeAndAuthority = uri;
+    schemeAndAuthority.path = URI::Path();
+    schemeAndAuthority.queryDefined(false);
+    schemeAndAuthority.fragmentDefined(false);
     std::pair<ClientConnection::ptr, bool> result;
-    {
-        FiberMutex::ScopedLock lock(m_mutex);
-        if (m_closed)
-            MORDOR_THROW_EXCEPTION(OperationAbortedException());
-        // Clean out any dead conns
-        for (it = m_conns.begin(); it != m_conns.end();) {
-            for (it2 = it->second.first.begin();
-                it2 != it->second.first.end();) {
-                if (*it2 && !(*it2)->newRequestsAllowed()) {
-                    it2 = it->second.first.erase(it2);
-                } else {
-                    ++it2;
-                }
-            }
-            if (it->second.first.empty()) {
-                it3 = it;
-                ++it3;
-                m_conns.erase(it);
-                it = it3;
-            } else {
-                ++it;
-            }
-        }
 
-        schemeAndAuthority = uri;
-        schemeAndAuthority.path = URI::Path();
-        schemeAndAuthority.queryDefined(false);
-        schemeAndAuthority.fragmentDefined(false);
+    FiberMutex::ScopedLock lock(m_mutex);
+    if (m_closed)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
+    // Clean out any dead conns
+    cleanOutDeadConns(m_conns);
 
-        if (!forceNewConnection) {
-            while (true) {
-                // Look for an existing connection
-                it = m_conns.find(schemeAndAuthority);
-                if (it != m_conns.end() &&
-                    !it->second.first.empty() &&
-                    it->second.first.size() >= m_connectionsPerHost) {
-                    ConnectionList &connsForThisUri = it->second.first;
-                    // Assign it2 to point to the connection with the
-                    // least number of outstanding requests
-                    it2 = std::min_element(connsForThisUri.begin(),
-                        connsForThisUri.end(), &least);
-                    // No connection has completed yet (but it's in progress)
-                    if (!*it2) {
-                        // Wait for somebody to let us try again
-                        it->second.second->wait();
-                    } else {
-                        // Return the existing, completed connection
-                        return std::make_pair(*it2, false);
-                    }
-                } else {
-                    // No existing connections
-                    break;
-                }
-            }
+    if (!forceNewConnection) {
+        if (proxies.empty()) {
+            result = getConnectionViaProxyFromCache(schemeAndAuthority, URI());
+            if (result.first)
+                return result;
         }
-        // Create a new (blank) connection
-        m_conns[schemeAndAuthority].first.push_back(ClientConnection::ptr());
-        if (it == m_conns.end()) {
-            // This is the first connection for this schemeAndAuthority
-            it = m_conns.find(schemeAndAuthority);
-            // (double-check)
-            if (!it->second.second)
-                // Create the condition variable for it
-                it->second.second.reset(new FiberCondition(m_mutex));
+        for (std::vector<URI>::const_iterator it(proxies.begin());
+            it != proxies.end();
+            ++it) {
+            result = getConnectionViaProxyFromCache(schemeAndAuthority, *it);
+            if (result.first)
+                return result;
         }
     }
 
+    // Create a new connection
+    if (proxies.empty())
+        return getConnectionViaProxy(schemeAndAuthority, URI(), lock);
+    std::vector<URI>::const_iterator it = proxies.begin();
+    while(true) {
+        try {
+            return getConnectionViaProxy(schemeAndAuthority, *it, lock);
+        } catch (SocketException &) {
+            if (++it == proxies.end())
+                throw;
+        } catch (HTTP::Exception &) {
+            if (++it == proxies.end())
+                throw;
+        } catch (UnexpectedEofException &) {
+            if (++it == proxies.end())
+                throw;
+        }
+    }
+}
+
+std::pair<ClientConnection::ptr, bool>
+ConnectionCache::getConnectionViaProxyFromCache(const URI &uri, const URI &proxy)
+{
+    bool proxied = proxy.schemeDefined() && proxy.scheme() == "http";
+    const URI &endpoint = proxied ? proxy : uri;
+    CachedConnectionMap::iterator it = m_conns.find(endpoint);
+    ConnectionList::iterator it2;
+    while (true) {
+        if (it != m_conns.end() &&
+            !it->second.first.empty() &&
+            it->second.first.size() >= m_connectionsPerHost) {
+            ConnectionList &connsForThisUri = it->second.first;
+            // Assign it2 to point to the connection with the
+            // least number of outstanding requests
+            it2 = std::min_element(connsForThisUri.begin(),
+                connsForThisUri.end(), &least);
+            // No connection has completed yet (but it's in progress)
+            if (!*it2) {
+                // Wait for somebody to let us try again
+                it->second.second->wait();
+                // We let go of the mutex, and the last connection may have
+                // disappeared
+                it = m_conns.find(endpoint);
+            } else {
+                // Return the existing, completed connection
+                return std::make_pair(*it2, proxied);
+            }
+        } else {
+            // No existing connections
+            return std::make_pair(ClientConnection::ptr(), false);
+        }
+    }
+}
+
+std::pair<ClientConnection::ptr, bool>
+ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
+    FiberMutex::ScopedLock &lock)
+{
+    std::string proxyScheme;
+    if (proxy.schemeDefined())
+        proxyScheme = proxy.scheme();
+    bool proxied = proxyScheme == "http";
+    const URI &endpoint = proxied ? proxy : uri;
+
+    // Make sure we have a ConnectionList and mutex for this endpoint
+    CachedConnectionMap::iterator it = m_conns.find(endpoint);
+    if (it == m_conns.end()) {
+        it = m_conns.insert(std::make_pair(endpoint,
+            std::make_pair(ConnectionList(),
+            boost::shared_ptr<FiberCondition>()))).first;
+        it->second.second.reset(new FiberCondition(m_mutex));
+    }
+    // Add a placeholder for the new connection
+    it->second.first.push_back(ClientConnection::ptr());
+
+    lock.unlock();
+
+    ConnectionList::iterator it2;
+    std::pair<ClientConnection::ptr, bool> result;
     // Establish a new connection
     try {
-        Stream::ptr stream = m_streamBroker->getStream(schemeAndAuthority);
-        {
-            FiberMutex::ScopedLock lock(m_mutex);
-            result = std::make_pair(ClientConnection::ptr(
-                new ClientConnection(stream, m_timerManager)), false);
-            if (m_readTimeout != ~0ull)
-                result.first->readTimeout(m_readTimeout);
-            if (m_writeTimeout != ~0ull)
-                result.first->writeTimeout(m_writeTimeout);
-            // Assign this connection to the first blank connection for this
-            // schemeAndAuthority
-            // it should still be valid, even if the map changed
-            for (it2 = it->second.first.begin();
-                it2 != it->second.first.end();
-                ++it2) {
-                if (!*it2) {
-                    *it2 = result.first;
-                    break;
-                }
-            }
-            // Unblock all waiters for them to choose an existing connection
-            it->second.second->broadcast();
+        Stream::ptr stream;
+        if (proxyScheme == "https") {
+            stream = tunnel(m_proxyBroker, proxy, uri);
+        } else if (proxyScheme == "socks") {
+            unsigned short port;
+            if (uri.authority.portDefined())
+                port = uri.authority.port();
+            else if (uri.scheme() == "http")
+                port = 80;
+            else if (uri.scheme() == "https")
+                port = 443;
+            else
+                // TODO: can this be looked up using the system? (getaddrinfo)
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("Unknown protocol for proxying connection"));
+            stream = SOCKS::tunnel(m_streamBroker, proxy, IPAddress::ptr(),
+                uri.authority.host(), port);
+        } else {
+            stream = m_streamBroker->getStream(endpoint);
         }
+        addSSL(endpoint, stream);
+        lock.lock();
+        // Somebody called abortConnections while we were unlocked; just throw
+        // this connection away
+        if (m_closed)
+            MORDOR_THROW_EXCEPTION(OperationAbortedException());
+        result = std::make_pair(ClientConnection::ptr(
+            new ClientConnection(stream, m_timerManager)), proxied);
+        if (m_httpReadTimeout != ~0ull)
+            result.first->readTimeout(m_httpReadTimeout);
+        if (m_httpWriteTimeout != ~0ull)
+            result.first->writeTimeout(m_httpWriteTimeout);
+        // Assign this connection to the first blank connection for this
+        // schemeAndAuthority
+        // it should still be valid, even if the map changed
+        for (it2 = it->second.first.begin();
+            it2 != it->second.first.end();
+            ++it2) {
+            if (!*it2) {
+                *it2 = result.first;
+                break;
+            }
+        }
+        // Unblock all waiters for them to choose an existing connection
+        it->second.second->broadcast();
     } catch (...) {
-        FiberMutex::ScopedLock lock(m_mutex);
+        lock.lock();
+        // Somebody called abortConnections while we were unlocked; no need to
+        // clean up the temporary spot for this connection, since it's gone;
+        // pass the original exception on, though
+        if (m_closed)
+            throw;
         // This connection attempt failed; remove the first blank connection
         // for this schemeAndAuthority to let someone else try to establish a
         // connection
@@ -348,9 +370,39 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
 }
 
 void
-ConnectionCache::closeConnections()
+ConnectionCache::closeIdleConnections()
 {
-    m_streamBroker->cancelPending();
+    FiberMutex::ScopedLock lock(m_mutex);
+    // We don't just clear the list, because there may be a connection in
+    // in progress that has an iterator into it
+    std::map<URI, std::pair<ConnectionList,
+        boost::shared_ptr<FiberCondition> > >::iterator it, extraIt;
+    for (it = m_conns.begin(); it != m_conns.end();) {
+        it->second.second->broadcast();
+        for (ConnectionList::iterator it2 = it->second.first.begin();
+            it2 != it->second.first.end();) {
+            if (*it2) {
+                Stream::ptr connStream = (*it2)->stream();
+                connStream->cancelRead();
+                connStream->cancelWrite();
+                it2 = it->second.first.erase(it2);
+            } else {
+                ++it2;
+            }
+        }
+        if (it->second.first.empty()) {
+            extraIt = it;
+            ++it;
+            m_conns.erase(extraIt);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void
+ConnectionCache::abortConnections()
+{
     FiberMutex::ScopedLock lock(m_mutex);
     m_closed = true;
     std::map<URI, std::pair<ConnectionList,
@@ -368,6 +420,65 @@ ConnectionCache::closeConnections()
         }
     }
     m_conns.clear();
+    lock.unlock();
+    m_streamBroker->cancelPending();
+}
+
+void
+ConnectionCache::cleanOutDeadConns(CachedConnectionMap &conns)
+{
+    CachedConnectionMap::iterator it, it3;
+    ConnectionList::iterator it2;
+    for (it = conns.begin(); it != conns.end();) {
+        for (it2 = it->second.first.begin();
+            it2 != it->second.first.end();) {
+            if (*it2 && !(*it2)->newRequestsAllowed()) {
+                it2 = it->second.first.erase(it2);
+            } else {
+                ++it2;
+            }
+        }
+        if (it->second.first.empty()) {
+            it3 = it;
+            ++it3;
+            conns.erase(it);
+            it = it3;
+        } else {
+            ++it;
+        }
+    }
+}
+
+void
+ConnectionCache::addSSL(const URI &uri, Stream::ptr &stream)
+{
+    if (uri.schemeDefined() && uri.scheme() == "https") {
+        TimeoutStream::ptr timeoutStream;
+        if (m_timerManager) {
+            timeoutStream.reset(new TimeoutStream(stream, *m_timerManager));
+            timeoutStream->readTimeout(m_sslReadTimeout);
+            timeoutStream->writeTimeout(m_sslWriteTimeout);
+            stream = timeoutStream;
+        }
+        BufferedStream::ptr bufferedStream(new BufferedStream(stream));
+        bufferedStream->allowPartialReads(true);
+        SSLStream::ptr sslStream(new SSLStream(bufferedStream, true, true, m_sslCtx));
+        sslStream->connect();
+        if (m_verifySslCertificate)
+            sslStream->verifyPeerCertificate();
+        if (m_verifySslCertificateHost)
+            sslStream->verifyPeerCertificate(uri.authority.host());
+        if (timeoutStream) {
+            bufferedStream->parent(timeoutStream->parent());
+            timeoutStream.reset();
+        }
+        bufferedStream.reset(new BufferedStream(sslStream));
+        // Max data in each SSL record
+        bufferedStream->bufferSize(16384);
+        bufferedStream->flushMultiplesOfBuffer(true);
+        bufferedStream->allowPartialReads(true);
+        stream = bufferedStream;
+    }
 }
 
 std::pair<ClientConnection::ptr, bool>
@@ -446,10 +557,13 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     bool connect = requestHeaders.requestLine.method == CONNECT;
     MORDOR_ASSERT(connect || originalUri.authority.hostDefined());
     MORDOR_ASSERT(!connect || !requestHeaders.request.host.empty());
-    if (!connect)
+    if (!connect) {
         requestHeaders.request.host = originalUri.authority.host();
-    else
-        originalUri = "http://" + requestHeaders.request.host;
+    } else {
+        MORDOR_ASSERT(originalUri.scheme() == "http");
+        MORDOR_ASSERT(originalUri.path.segments.size() == 1);
+        currentUri = originalUri.path.segments[0];
+    }
     ConnectionBroker::ptr connectionBroker = m_connectionBroker;
     if (!connectionBroker)
         connectionBroker = m_weakConnectionBroker.lock();
@@ -458,13 +572,11 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         conn = connectionBroker->getConnection(
             connect ? originalUri : currentUri, forceNewConnection);
     } catch (boost::exception &ex) {
-        if (!connect)
-            currentUri = originalUri;
+        currentUri = originalUri;
         ex << errinfo_source(CONNECTION);
         throw;
     } catch (...) {
-        if (!connect)
-            currentUri = originalUri;
+        currentUri = originalUri;
         throw;
     }
     try {
@@ -483,6 +595,8 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         ClientRequest::ptr request;
         try {
             request = conn.first->request(requestHeaders);
+            if (!bodyDg)
+                request->doRequest();
         } catch (boost::exception &ex) {
             ex << errinfo_source(HTTP);
             throw;
@@ -494,8 +608,7 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             Scheduler::getThis()->schedule(boost::bind(&doBody,
                 request, bodyDg, boost::ref(future), boost::ref(exception),
                 boost::ref(exceptionWasHttp)));
-        if (!connect)
-            currentUri = originalUri;
+        currentUri = originalUri;
         try {
             // Force reading the response here to check for connectivity problems
             request->response();
@@ -526,8 +639,7 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             Mordor::rethrow_exception(exception);
         return request;
     } catch (...) {
-        if (!connect)
-            currentUri = originalUri;
+        currentUri = originalUri;
         throw;
     }
 }
@@ -547,7 +659,7 @@ RetryRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             return request;
         } catch (SocketException &ex) {
             const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
-            if (!source || *source != HTTP)
+            if (!source || (*source != HTTP && *source != CONNECTION))
                 throw;
             if (m_delayDg && !m_delayDg(atomicIncrement(*retries)))
                 throw;

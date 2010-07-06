@@ -409,7 +409,81 @@ toUtf16(const std::string &str)
     MORDOR_ASSERT(str.size() < 0x80000000u);
     return toUtf16(str.c_str(), str.size());
 }
+#elif defined (OSX)
+
+std::string
+toUtf8(CFStringRef string)
+{
+    const char *bytes = CFStringGetCStringPtr(string, kCFStringEncodingUTF8);
+    if (bytes)
+        return bytes;
+    std::string result;
+    CFIndex length = CFStringGetLength(string);
+    length = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8);
+    result.resize(length);
+    if (!CFStringGetCString(string, &result[0], length, kCFStringEncodingUTF8)) {
+        MORDOR_NOTREACHED();
+    }
+    result.resize(strlen(result.c_str()));
+    return result;
+}
 #endif
+
+std::string
+toUtf8(wchar_t character)
+{
+    return toUtf8((int)character);
+}
+
+std::string
+toUtf8(int character)
+{
+    MORDOR_ASSERT(character <= 0x10ffff);
+    std::string result;
+    if (character <= 0x7f) {
+        result.append(1, (char)character);
+    } else if (character <= 0x7ff) {
+        result.resize(2);
+        result[0] = 0xc0 | ((character >> 6) & 0x1f);
+        result[1] = 0x80 | (character & 0x3f);
+    } else if (character <= 0xffff) {
+        result.resize(3);
+        result[0] = 0xe0 | ((character >> 12) & 0xf);
+        result[1] = 0x80 | ((character >> 6) & 0x3f);
+        result[2] = 0x80 | (character & 0x3f);
+    } else {
+        result.resize(4);
+        result[0] = 0xf0 | ((character >> 18) & 0x7);
+        result[1] = 0x80 | ((character >> 12) & 0x3f);
+        result[2] = 0x80 | ((character >> 6) & 0x3f);
+        result[3] = 0x80 | (character & 0x3f);
+    }
+    return result;
+}
+
+int
+toUtf32(wchar_t highSurrogate, wchar_t lowSurrogate)
+{
+    MORDOR_ASSERT(isHighSurrogate(highSurrogate));
+    MORDOR_ASSERT(isLowSurrogate(lowSurrogate));
+    return ((((int)highSurrogate - 0xd800) << 10) | ((int)lowSurrogate - 0xdc00)) + 0x10000;
+}
+
+std::string
+toUtf8(wchar_t highSurrogate, wchar_t lowSurrogate)
+{
+    return toUtf8(toUtf32(highSurrogate, lowSurrogate));
+}
+
+bool isHighSurrogate(wchar_t character)
+{
+    return character >= 0xd800 && character <= 0xdbff;
+}
+
+bool isLowSurrogate(wchar_t character)
+{
+    return character >= 0xdc00 && character <= 0xdfff;
+}
 
 bool
 caseinsensitiveless::operator ()(const std::string &lhs, const std::string &rhs) const

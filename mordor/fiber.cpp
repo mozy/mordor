@@ -506,12 +506,19 @@ Fiber::initStack()
     m_env[9] = (int)m_stack + m_stacksize; // ESP
 #elif defined(X86_64)
     long long *env = (long long *)m_env;
-    env[1] = 0xffffffffffffffffll; // RBP
+    env[1] = 0x0ll; // RBP
     env[2] = (long long)m_stack + m_stacksize; // RSP
 #elif defined(PPC)
     m_env[0] = (int)m_stack;
 #else
 #error Architecture not supported
+#endif
+#elif defined (LINUX)
+#ifdef ARM
+    int *env = (int *)m_env;
+    env[8] = (int)m_stack + m_stacksize;
+#else
+#error Platform not supported
 #endif
 #else
 #error Platform not supported
@@ -608,5 +615,69 @@ Fiber::flsGet(size_t key)
         return NULL;
     return self->m_fls[key];
 }
+
+std::vector<void *>
+Fiber::backtrace()
+{
+    MORDOR_ASSERT(m_state != EXEC);
+    std::vector<void *> result;
+    if (m_state != HOLD)
+        return result;
+#ifdef WINDOWS
+    STACKFRAME64 frame;
+    DWORD type;
+    CONTEXT *context;
+#ifdef _M_IX86
+    context = (CONTEXT *)((char *)m_sp + 0x14);
+    type                   = IMAGE_FILE_MACHINE_I386;
+    frame.AddrPC.Offset    = context->Eip;
+    frame.AddrPC.Mode      = AddrModeFlat;
+    frame.AddrFrame.Offset = context->Ebp;
+    frame.AddrFrame.Mode   = AddrModeFlat;
+    frame.AddrStack.Offset = context->Esp;
+    frame.AddrStack.Mode   = AddrModeFlat;
+    context = NULL;
+#elif _M_X64
+    context = (CONTEXT *)((char *)m_sp + 0x30);
+    CONTEXT dupContext;
+    memcpy(&dupContext, context, sizeof(CONTEXT));
+    context = &dupContext;
+    type                   = IMAGE_FILE_MACHINE_AMD64;
+    frame.AddrPC.Offset    = dupContext.Rip;
+    frame.AddrPC.Mode      = AddrModeFlat;
+    frame.AddrFrame.Offset = dupContext.Rsp;
+    frame.AddrFrame.Mode   = AddrModeFlat;
+    frame.AddrStack.Offset = dupContext.Rsp;
+    frame.AddrStack.Mode   = AddrModeFlat;
+#else
+#error "Unsupported platform"
+#endif
+
+    while (result.size() < 64) {
+        if (!StackWalk64(type, GetCurrentProcess(), GetCurrentThread(),
+            &frame, context, NULL, &SymFunctionTableAccess64,
+            &SymGetModuleBase64, NULL)) {
+            DWORD lastError = GetLastError();
+            break;
+        }
+        if (frame.AddrPC.Offset != 0) {
+            result.push_back((void *)frame.AddrPC.Offset);
+        }
+    }
+#endif
+    return result;
+}
+
+void fiberBacktrace(Fiber *fiber)
+{
+    std::string bt = to_string(fiber->backtrace());
+#ifdef WINDOWS
+    OutputDebugStringA(bt.c_str());
+    OutputDebugStringA("\n");
+#else
+    std::cout << bt << std::endl;
+#endif
+}
+
 
 }

@@ -3,6 +3,7 @@
 #include "mordor/pch.h"
 
 #include "mordor/uri.h"
+#include "mordor/streams/buffer.h"
 #include "mordor/test/test.h"
 
 using namespace Mordor;
@@ -227,6 +228,11 @@ MORDOR_UNITTEST(URI, queryString)
     MORDOR_TEST_ASSERT_EQUAL(qs.begin()->first, "a b");
     MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a+b");
 
+    qs = "a%2Bb";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.begin()->first, "a+b");
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a%2Bb");
+
     qs = "a&b;c";
     MORDOR_TEST_ASSERT_EQUAL(qs.size(), 3u);
     URI::QueryString::iterator it = qs.begin();
@@ -265,6 +271,29 @@ MORDOR_UNITTEST(URI, queryString)
     ++it;
     MORDOR_TEST_ASSERT_EQUAL(it->first, "e");
     MORDOR_TEST_ASSERT_EQUAL(it->second, "f=g=h");
+
+    qs = "a=";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
+    it = qs.begin();
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "a");
+    MORDOR_TEST_ASSERT(it->second.empty());
+
+    qs = "a=&=b&=";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 2u);
+    it = qs.begin();
+    MORDOR_TEST_ASSERT(it->first.empty());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "b");
+    ++it;
+    MORDOR_TEST_ASSERT_EQUAL(it->first, "a");
+    MORDOR_TEST_ASSERT(it->second.empty());
+
+    qs.clear();
+    qs.insert(std::make_pair("ampersand", "and&and"));
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "ampersand=and%26and");
+
+    uri = URI();
+    uri.query(qs);
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "?ampersand=and%26and");
 }
 
 MORDOR_UNITTEST(URI, encoding)

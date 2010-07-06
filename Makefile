@@ -62,7 +62,7 @@ PLATFORMDIR := $(PLATFORM)/$(ARCH)
 
 ifeq ($(PLATFORM), Darwin)
     DARWIN := 1
-    BOOST_EXT := -mt
+    BOOST_EXT := 
     BOOST_LIB_FLAGS := -L/opt/local/lib
     PQ_LIB_FLAGS := -L/opt/local/lib/postgresql83
     IOMANAGER := kqueue
@@ -170,10 +170,11 @@ ifeq ($(RAGEL_MAJOR), 6)
     RLCODEGEN :=
 endif
 
-ifeq ($(PLATFORM), Darwin)
-endif
+LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_program_options $(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
 
-LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
+ifeq ($(PLATFORM), Darwin)
+   LIBS += -framework SystemConfiguration -framework CoreFoundation -framework CoreServices -framework Security
+endif
 
 ifeq ($(PLATFORM), FreeBSD)
     LIBS += -lexecinfo
@@ -390,11 +391,18 @@ endif
 mordor/examples/wget: mordor/examples/wget.o				\
 	mordor/libmordor.a
 ifeq ($(Q),@)
-	@echo ld $@
+	@echo ld $@ -lboost_program_options$(BOOST_EXT)
 endif
-	$(COMPLINK)
+	$(COMPLINK) -lboost_program_options$(BOOST_EXT)
 
 mordor/streams/socket_stream.o: mordor/streams/socket.cpp
+ifeq ($(Q),@)
+	@echo c++ $<
+endif
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+mordor/streams/http_stream.o: mordor/streams/http.cpp
 ifeq ($(Q),@)
 	@echo c++ $<
 endif
@@ -429,6 +437,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/semaphore.o						\
 	mordor/sleep.o							\
 	mordor/socket.o							\
+	mordor/socks.o							\
 	mordor/statistics.o						\
 	mordor/streams/buffer.o						\
 	mordor/streams/buffered.o					\
@@ -436,7 +445,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/fd.o						\
 	mordor/streams/file.o						\
 	mordor/streams/hash.o						\
-	mordor/streams/http.o						\
+	mordor/streams/http_stream.o					\
 	mordor/streams/limited.o					\
 	mordor/streams/memory.o						\
 	mordor/streams/null.o						\
@@ -471,6 +480,7 @@ endif
 	$(Q)$(AR) $(ARFLAGS) $@ $(filter %.o,$?)
 
 LIBMORDORTESTOBJECTS :=							\
+	mordor/test/antxmllistener.o					\
  	mordor/test/test.o						\
 	mordor/test/stdoutlistener.o
 

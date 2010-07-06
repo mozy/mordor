@@ -10,11 +10,11 @@
 #include <boost/shared_ptr.hpp>
 
 #include "http.h"
-#include "mordor/streams/stream.h"
 
 namespace Mordor {
 
 class BodyPart;
+class Stream;
 
 struct MissingMultipartBoundaryException : virtual HTTP::Exception, virtual StreamException
 {};
@@ -29,7 +29,7 @@ public:
 
     static std::string randomBoundary();
 
-    Multipart(Stream::ptr stream, std::string boundary);
+    Multipart(boost::shared_ptr<Stream> stream, std::string boundary);
 
     boost::shared_ptr<BodyPart> nextPart();
     void finish();
@@ -40,7 +40,7 @@ private:
     void partDone();
 
 private:
-    Stream::ptr m_stream;
+    boost::shared_ptr<Stream> m_stream;
     std::string m_boundary;
     boost::shared_ptr<BodyPart> m_currentPart;
     bool m_finished;
@@ -57,13 +57,13 @@ private:
 
 public:
     HTTP::EntityHeaders &headers();
-    Stream::ptr stream();
+    boost::shared_ptr<Stream> stream();
     Multipart::ptr multipart();
 
 private:
     HTTP::EntityHeaders m_headers;
     Multipart::ptr m_multipart;
-    Stream::ptr m_stream;
+    boost::shared_ptr<Stream> m_stream;
     Multipart::ptr m_childMultipart;
 };
 

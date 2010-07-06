@@ -3,12 +3,17 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
 #include "connection.h"
-#include "multipart.h"
 
 namespace Mordor {
+
+class Fiber;
+class Multipart;
+class Scheduler;
+
 namespace HTTP {
 
 class ServerConnection;
+
 class ServerRequest : public boost::enable_shared_from_this<ServerRequest>, boost::noncopyable
 {
 private:
@@ -25,15 +30,15 @@ public:
 
     const Request &request() const { return m_request; }
     bool hasRequestBody() const;
-    Stream::ptr requestStream();
+    boost::shared_ptr<Stream> requestStream();
     const EntityHeaders &requestTrailer() const;
-    Multipart::ptr requestMultipart();
+    boost::shared_ptr<Multipart> requestMultipart();
 
     Response &response() { return m_response; }
     const Response &response() const { return m_response; }
     bool hasResponseBody() const;
-    Stream::ptr responseStream();
-    Multipart::ptr responseMultipart();
+    boost::shared_ptr<Stream> responseStream();
+    boost::shared_ptr<Multipart> responseMultipart();
     EntityHeaders &responseTrailer();
 
     bool committed() const { return m_committed; }
@@ -52,13 +57,13 @@ private:
 private:
     boost::shared_ptr<ServerConnection> m_conn;
     Scheduler *m_scheduler;
-    Fiber::ptr m_fiber;
+    boost::shared_ptr<Fiber> m_fiber;
     Request m_request;
     Response m_response;
     EntityHeaders m_requestTrailer, m_responseTrailer;
     bool m_requestDone, m_committed, m_responseDone, m_responseInFlight, m_aborted, m_willClose;
-    Stream::ptr m_requestStream, m_responseStream;
-    Multipart::ptr m_requestMultipart, m_responseMultipart;
+    boost::shared_ptr<Stream> m_requestStream, m_responseStream;
+    boost::shared_ptr<Multipart> m_requestMultipart, m_responseMultipart;
 };
 
 class ServerConnection : public Connection, public boost::enable_shared_from_this<ServerConnection>, boost::noncopyable
@@ -70,7 +75,8 @@ public:
 private:
     friend class ServerRequest;
 public:
-    ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg, size_t maxPipelineDepth = 5);
+    ServerConnection(boost::shared_ptr<Stream> stream,
+        boost::function<void (ServerRequest::ptr)> dg, size_t maxPipelineDepth = 5);
 
     void processRequests();
 
@@ -94,8 +100,9 @@ private:
 };
 
 // Helper functions
-void respondError(ServerRequest::ptr request, Status status, const std::string &message = "", bool closeConnection = false);
-void respondStream(ServerRequest::ptr request, Stream::ptr response);
+void respondError(ServerRequest::ptr request, Status status,
+    const std::string &message = "", bool closeConnection = false);
+void respondStream(ServerRequest::ptr request, boost::shared_ptr<Stream> response);
 
 }}
 

@@ -5,9 +5,18 @@
 #include "auth.h"
 
 #include "basic.h"
+#include "client.h"
 #include "digest.h"
+#include "mordor/socket.h"
+
 #ifdef WINDOWS
 #include "negotiate.h"
+#elif defined (OSX)
+#include "mordor/util.h"
+
+#include <Security/SecKeychain.h>
+#include <Security/SecKeychainItem.h>
+#include <Security/SecKeychainSearch.h>
 #endif
 
 namespace Mordor {
@@ -79,10 +88,10 @@ ClientAuthBroker::request(Request &requestHeaders,
             } else {
                 return request;
             }
-        } catch (SocketException) {
+        } catch (SocketException &) {
             m_conn = m_dg();
             continue;
-        } catch (PriorRequestFailedException) {
+        } catch (PriorRequestFailedException &) {
             m_conn = m_dg();
             continue;
         }
@@ -139,6 +148,17 @@ AuthRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
                 m_getCredentialsDg(requestHeaders.requestLine.uri, priorRequest,
                 scheme, realm, username, password, attempts++)) {
 #ifdef WINDOWS
+                MORDOR_ASSERT(
+                    stricmp(scheme.c_str(), "Negotiate") == 0 ||
+                    stricmp(scheme.c_str(), "NTLM") == 0 ||
+                    stricmp(scheme.c_str(), "Digest") == 0 ||
+                    stricmp(scheme.c_str(), "Basic") == 0);
+#else
+                    MORDOR_ASSERT(
+                    stricmp(scheme.c_str(), "Digest") == 0 ||
+                    stricmp(scheme.c_str(), "Basic") == 0);
+#endif
+#ifdef WINDOWS
                 if (scheme == "Negotiate" || scheme == "NTLM") {
                     negotiateAuth.reset(new NegotiateAuth(username, password));
                     negotiateAuth->authorize(
@@ -166,6 +186,17 @@ AuthRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
                 m_getProxyCredentialsDg &&
                 m_getProxyCredentialsDg(requestHeaders.requestLine.uri,
                 priorRequest, scheme, realm, username, password, proxyAttempts++)) {
+#ifdef WINDOWS
+                MORDOR_ASSERT(
+                    stricmp(scheme.c_str(), "Negotiate") == 0 ||
+                    stricmp(scheme.c_str(), "NTLM") == 0 ||
+                    stricmp(scheme.c_str(), "Digest") == 0 ||
+                    stricmp(scheme.c_str(), "Basic") == 0);
+#else
+                    MORDOR_ASSERT(
+                    stricmp(scheme.c_str(), "Digest") == 0 ||
+                    stricmp(scheme.c_str(), "Basic") == 0);
+#endif
 #ifdef WINDOWS
                 if (scheme == "Negotiate" || scheme == "NTLM") {
                     negotiateProxyAuth.reset(new NegotiateAuth(username, password));
@@ -218,4 +249,89 @@ AuthRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     }
 }
 
+#ifdef OSX
+bool getCredentialsFromKeychain(const URI &uri, ClientRequest::ptr priorRequest,
+    std::string &scheme, std::string &realm, std::string &username,
+    std::string &password, size_t attempts)
+{
+    if (attempts != 1)
+        return false;
+    bool proxy =
+       priorRequest->response().status.status == PROXY_AUTHENTICATION_REQUIRED;
+    const ChallengeList &challengeList = proxy ?
+        priorRequest->response().response.proxyAuthenticate :
+        priorRequest->response().response.wwwAuthenticate;
+    if (isAcceptable(challengeList, "Basic"))
+        scheme = "Basic";
+    else if (isAcceptable(challengeList, "Digest"))
+        scheme = "Digest";
+    else
+        return false;
+
+    std::vector<SecKeychainAttribute> attrVector;
+    std::string host = uri.authority.host();
+    attrVector.push_back((SecKeychainAttribute){kSecServerItemAttr, host.size(),
+       (void *)host.c_str()});
+
+    UInt32 port = 0;
+    if (uri.authority.portDefined()) {
+        port = uri.authority.port();
+        attrVector.push_back((SecKeychainAttribute){kSecPortItemAttr,
+           sizeof(UInt32), &port});
+    }
+    SecProtocolType protocol;
+    if (proxy && priorRequest->request().requestLine.method == CONNECT)
+        protocol = kSecProtocolTypeHTTPSProxy;
+    else if (proxy)
+        protocol = kSecProtocolTypeHTTPProxy;
+    else if (uri.scheme() == "https")
+        protocol = kSecProtocolTypeHTTPS;
+    else if (uri.scheme() == "http")
+        protocol = kSecProtocolTypeHTTP;
+    else
+        MORDOR_NOTREACHED();
+    attrVector.push_back((SecKeychainAttribute){kSecProtocolItemAttr,
+        sizeof(SecProtocolType), &protocol});
+
+    ScopedCFRef<SecKeychainSearchRef> search;
+    SecKeychainAttributeList attrList;
+    attrList.count = (UInt32)attrVector.size();
+    attrList.attr = &attrVector[0];
+
+    OSStatus status = SecKeychainSearchCreateFromAttributes(NULL,
+        kSecInternetPasswordItemClass, &attrList, &search);
+    if (status != 0)
+        return false;
+    ScopedCFRef<SecKeychainItemRef> item;
+    status = SecKeychainSearchCopyNext(search, &item);
+    if (status != 0)
+        return false;
+    SecKeychainAttributeInfo info;
+    SecKeychainAttrType tag = kSecAccountItemAttr;
+    CSSM_DB_ATTRIBUTE_FORMAT format = CSSM_DB_ATTRIBUTE_FORMAT_STRING;
+    info.count = 1;
+    info.tag = (UInt32 *)&tag;
+    info.format = (UInt32 *)&format;
+    
+    SecKeychainAttributeList *attrs;
+    UInt32 passwordLength = 0;
+    void *passwordBytes = NULL;
+
+    status = SecKeychainItemCopyAttributesAndData(item, &info, NULL, &attrs,
+        &passwordLength, &passwordBytes);
+    if (status != 0)
+        return false;
+
+    try {
+        username.assign((const char *)attrs->attr[0].data, attrs->attr[0].length);
+        password.assign((const char *)passwordBytes, passwordLength);
+    } catch (...) {
+        SecKeychainItemFreeContent(attrs, passwordBytes);
+        throw;
+    }
+    SecKeychainItemFreeContent(attrs, passwordBytes);
+    return true;
+}
+#endif
+	
 }}

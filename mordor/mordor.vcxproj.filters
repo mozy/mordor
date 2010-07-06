@@ -176,6 +176,9 @@
     <ClCompile Include="streams\zlib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="socks.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h">
@@ -397,9 +400,6 @@
     <ClInclude Include="streams\transfer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="http\tunnel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="uri.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -410,6 +410,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="streams\zlib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="socks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

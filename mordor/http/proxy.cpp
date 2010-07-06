@@ -5,9 +5,21 @@
 #include "proxy.h"
 
 #include "mordor/config.h"
+#include "mordor/http/broker.h"
+#include "mordor/http/client.h"
+#include "mordor/socket.h"
 
 #ifdef WINDOWS
 #include "mordor/runtime_linking.h"
+#elif defined (OSX)
+#include <CoreServices/CoreServices.h>
+#include <SystemConfiguration/SystemConfiguration.h>
+#include "mordor/util.h"
+#include "mordor/streams/file.h"
+#include "mordor/streams/http.h"
+#include "mordor/streams/limited.h"
+#include "mordor/streams/memory.h"
+#include "mordor/streams/transfer.h"
 #endif
 
 namespace Mordor {
@@ -17,18 +29,19 @@ static ConfigVar<std::string>::ptr g_httpProxy =
     Config::lookup("http.proxy", std::string(),
     "HTTP Proxy Server");
 
-URI proxyFromConfig(const URI &uri)
+std::vector<URI> proxyFromConfig(const URI &uri)
 {
     return proxyFromList(uri, g_httpProxy->val());
 }
 
-URI proxyFromList(const URI &uri, const std::string &proxy,
+std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
     const std::string &bypassList)
 {
     MORDOR_ASSERT(uri.schemeDefined());
     MORDOR_ASSERT(uri.scheme() == "http" || uri.scheme() == "https");
     MORDOR_ASSERT(uri.authority.hostDefined());
 
+    std::vector<URI> result;
     std::string proxyLocal = proxy;
     std::string bypassListLocal = bypassList;
     if (bypassListLocal.empty()) {
@@ -48,15 +61,16 @@ URI proxyFromList(const URI &uri, const std::string &proxy,
         if (proxy.empty())
             continue;
         if (proxy == "<local>" && host.find('.') == std::string::npos)
-            return URI();
+            return result;
         if (proxy[0] == '*' && host.size() >= proxy.size() - 1 &&
             stricmp(proxy.c_str() + 1, host.c_str() + host.size() - proxy.size() - 1) == 0)
-            return URI();
+            return result;
         else if (stricmp(host.c_str(), proxy.c_str()) == 0)
-            return URI();
+            return result;
     }
 
     list = split(proxyLocal, "; \t\r\n");
+
     for (std::vector<std::string>::iterator it = list.begin();
         it != list.end();
         ++it) {
@@ -67,8 +81,14 @@ URI proxyFromList(const URI &uri, const std::string &proxy,
             forScheme = curProxy.substr(0, equals);
             curProxy = curProxy.substr(equals + 1);
         }
-        if (!forScheme.empty() && stricmp(forScheme.c_str(), uri.scheme().c_str()) != 0)
+        std::transform(forScheme.begin(), forScheme.end(), forScheme.begin(),
+            &tolower);
+        if (!forScheme.empty() && forScheme != uri.scheme() &&
+            forScheme != "socks")
             continue;
+        equals = curProxy.find("//");
+        if (equals == std::string::npos)
+            curProxy = "//" + curProxy;
         URI proxyUri;
         try {
             proxyUri = curProxy;
@@ -79,92 +99,39 @@ URI proxyFromList(const URI &uri, const std::string &proxy,
             continue;
         if (proxyUri.schemeDefined()) {
             std::string scheme = proxyUri.scheme();
-            std::transform(scheme.begin(), scheme.end(), scheme.begin(), &tolower);
-            if (scheme != "http" && scheme != "https")
-                continue;
+            std::transform(scheme.begin(), scheme.end(), scheme.begin(),
+                &tolower);
             if (forScheme.empty() && scheme != uri.scheme())
                 continue;
             proxyUri.scheme(scheme);
         } else {
-            proxyUri.scheme(uri.scheme());
+            if (forScheme == "socks")
+                proxyUri.scheme("socks");
+            else
+                proxyUri.scheme(uri.scheme());
         }
         proxyUri.path.segments.clear();
         proxyUri.path.type = URI::Path::RELATIVE;
         proxyUri.authority.userinfoDefined(false);
         proxyUri.queryDefined(false);
         proxyUri.fragmentDefined(false);
-        return proxyUri;
+        result.push_back(proxyUri);
     }
-    return URI();
-}
-
-#ifdef WINDOWS
-URI autoDetectProxy(const URI &uri, const std::string &pacScript,
-    const std::string &userAgent)
-{
-    WINHTTP_PROXY_INFO proxyInfo;
-    HINTERNET hHttpSession = NULL;
-    WINHTTP_AUTOPROXY_OPTIONS options;
-
-    memset(&options, 0, sizeof(WINHTTP_AUTOPROXY_OPTIONS));
-    memset(&proxyInfo, 0, sizeof(WINHTTP_PROXY_INFO));
-
-    hHttpSession = pWinHttpOpen(toUtf16(userAgent).c_str(),
-        WINHTTP_ACCESS_TYPE_NO_PROXY,
-        WINHTTP_NO_PROXY_NAME,
-        WINHTTP_NO_PROXY_BYPASS,
-        0);
-    if (!hHttpSession) {
-        if (GetLastError() == ERROR_CALL_NOT_IMPLEMENTED)
-            return URI();
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WinHttpOpen");
-    }
-
-    std::wstring pacScriptW = toUtf16(pacScript);
-    if (!pacScriptW.empty()) {
-        options.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL;
-        options.lpszAutoConfigUrl = pacScriptW.c_str();
-    } else {
-        options.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
-        options.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP |
-            WINHTTP_AUTO_DETECT_TYPE_DNS_A;
-    }
-
-    options.fAutoLogonIfChallenged = TRUE;
-    URI result;
-    if (pWinHttpGetProxyForUrl(hHttpSession, toUtf16(uri.toString()).c_str(),
-        &options, &proxyInfo)) {
-        try {
-            std::string proxy, bypassList;
-            result = proxyFromList(uri, toUtf8(proxyInfo.lpszProxy),
-                toUtf8(proxyInfo.lpszProxyBypass));
-        } catch (...) {
-            if (proxyInfo.lpszProxy)
-                GlobalFree(proxyInfo.lpszProxy);
-            if (proxyInfo.lpszProxyBypass)
-                GlobalFree(proxyInfo.lpszProxyBypass);
-            pWinHttpCloseHandle(hHttpSession);
-            throw;
-        }
-        if (proxyInfo.lpszProxy)
-            GlobalFree(proxyInfo.lpszProxy);
-        if (proxyInfo.lpszProxyBypass)
-            GlobalFree(proxyInfo.lpszProxyBypass);
-    }
-    pWinHttpCloseHandle(hHttpSession);
     return result;
 }
 
-URI proxyFromMachineDefault(const URI &uri)
+#ifdef WINDOWS
+
+static std::vector<URI> proxyFromProxyInfo(const URI &uri,
+    WINHTTP_PROXY_INFO &proxyInfo)
 {
-    WINHTTP_PROXY_INFO proxyInfo;
-    if (!pWinHttpGetDefaultProxyConfiguration(&proxyInfo))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WinHttpGetDefaultProxyConfiguration");
-    URI result;
+    std::vector<URI> result;
+    std::string proxy, bypassList;
     try {
-        std::string proxy, bypassList;
-        result = proxyFromList(uri, toUtf8(proxyInfo.lpszProxy),
-            toUtf8(proxyInfo.lpszProxyBypass));
+        if (proxyInfo.lpszProxy)
+            proxy = toUtf8(proxyInfo.lpszProxy);
+        if (proxyInfo.lpszProxyBypass)
+            bypassList = toUtf8(proxyInfo.lpszProxyBypass);
     } catch (...) {
         if (proxyInfo.lpszProxy)
             GlobalFree(proxyInfo.lpszProxy);
@@ -176,7 +143,22 @@ URI proxyFromMachineDefault(const URI &uri)
         GlobalFree(proxyInfo.lpszProxy);
     if (proxyInfo.lpszProxyBypass)
         GlobalFree(proxyInfo.lpszProxyBypass);
-    return result;
+    switch (proxyInfo.dwAccessType) {
+        case WINHTTP_ACCESS_TYPE_NAMED_PROXY:
+            return proxyFromList(uri, proxy, bypassList);
+        case WINHTTP_ACCESS_TYPE_NO_PROXY:
+            return result;
+        default:
+            MORDOR_NOTREACHED();
+    }
+}
+
+std::vector<URI> proxyFromMachineDefault(const URI &uri)
+{
+    WINHTTP_PROXY_INFO proxyInfo;
+    if (!pWinHttpGetDefaultProxyConfiguration(&proxyInfo))
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WinHttpGetDefaultProxyConfiguration");
+    return proxyFromProxyInfo(uri, proxyInfo);
 }
 
 ProxySettings
@@ -212,97 +194,252 @@ getUserProxySettings()
     return result;
 }
 
-URI proxyFromUserSettings(const URI &uri)
+ProxyCache::ProxyCache(const std::string &userAgent)
+{
+    m_hHttpSession = pWinHttpOpen(toUtf16(userAgent).c_str(),
+        WINHTTP_ACCESS_TYPE_NO_PROXY,
+        WINHTTP_NO_PROXY_NAME,
+        WINHTTP_NO_PROXY_BYPASS,
+        0);
+    if (!m_hHttpSession && GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WinHttpOpen");
+}
+
+ProxyCache::~ProxyCache()
+{
+    if (m_hHttpSession)
+        pWinHttpCloseHandle(m_hHttpSession);
+}
+
+std::vector<URI>
+ProxyCache::autoDetectProxy(const URI &uri, const std::string &pacScript)
+{
+    std::vector<URI> result;
+    if (!m_hHttpSession)
+        return result;
+
+    WINHTTP_PROXY_INFO proxyInfo;
+    WINHTTP_AUTOPROXY_OPTIONS options;
+
+    memset(&options, 0, sizeof(WINHTTP_AUTOPROXY_OPTIONS));
+    memset(&proxyInfo, 0, sizeof(WINHTTP_PROXY_INFO));
+
+    std::wstring pacScriptW = toUtf16(pacScript);
+    if (!pacScriptW.empty()) {
+        options.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL;
+        options.lpszAutoConfigUrl = pacScriptW.c_str();
+    } else {
+        options.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
+        options.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP |
+            WINHTTP_AUTO_DETECT_TYPE_DNS_A;
+    }
+
+    options.fAutoLogonIfChallenged = TRUE;
+    if (pWinHttpGetProxyForUrl(m_hHttpSession, toUtf16(uri.toString()).c_str(),
+        &options, &proxyInfo)) {
+        return proxyFromProxyInfo(uri, proxyInfo);
+    }
+    return result;
+}
+
+std::vector<URI>
+ProxyCache::proxyFromUserSettings(const URI &uri)
 {
     ProxySettings settings = getUserProxySettings();
+    std::vector<URI> result, temp;
     if (settings.autoDetect)
-        return autoDetectProxy(uri, settings.pacScript);
-    return proxyFromList(uri, settings.proxy, settings.bypassList);
+        result = autoDetectProxy(uri);
+    if (!settings.pacScript.empty()) {
+        temp = autoDetectProxy(uri, settings.pacScript);
+        result.insert(result.end(), temp.begin(), temp.end());
+    }
+    temp = proxyFromList(uri, settings.proxy, settings.bypassList);
+    result.insert(result.end(), temp.begin(), temp.end());
+    return result;
 }
-#endif
-
-ProxyConnectionBroker::ProxyConnectionBroker(ConnectionBroker::ptr parent,
-    boost::function<URI (const URI &)> proxyForURIDg)
-    : m_parent(parent),
-      m_dg(proxyForURIDg),
-      m_fallbackOnFailure(false)
+#elif defined(OSX)
+ProxyCache::ProxyCache(RequestBroker::ptr requestBroker)
+    : m_requestBroker(requestBroker)
 {
-    if (!m_dg)
-        m_dg = &proxyFromConfig;
+    m_dynamicStore = SCDynamicStoreCreate(NULL, NULL, NULL, NULL);
 }
 
-std::pair<ClientConnection::ptr, bool>
-ProxyConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
+static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
+    RequestBroker::ptr requestBroker,
+    std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts);
+
+static std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl,
+    RequestBroker::ptr requestBroker,
+    std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts)
 {
-    URI proxy = m_dg(uri);
-    if (!proxy.isDefined() || !(proxy.schemeDefined() && proxy.scheme() == "http"))
-        return m_parent->getConnection(uri, forceNewConnection);
+    std::vector<URI> result;
+    for (CFIndex i = 0; i < CFArrayGetCount(proxies); ++i) {
+        CFDictionaryRef thisProxy =
+            (CFDictionaryRef)CFArrayGetValueAtIndex(proxies, i);
+        CFStringRef proxyType = (CFStringRef)CFDictionaryGetValue(thisProxy,
+            kCFProxyTypeKey);
+        if (!proxyType || CFGetTypeID(proxyType) != CFStringGetTypeID())
+            continue;
+        URI thisProxyUri;
+        if (CFEqual(proxyType, kCFProxyTypeNone)) {
+            result.push_back(URI());
+        } else if (CFEqual(proxyType, kCFProxyTypeAutoConfigurationURL)) {
+            CFURLRef cfurl = (CFURLRef)CFDictionaryGetValue(thisProxy,
+                kCFProxyAutoConfigurationURLKey);
+            if (!cfurl || CFGetTypeID(cfurl) != CFURLGetTypeID())
+                continue;
+            std::vector<URI> pacProxies = proxyFromPacScript(cfurl, targeturl,
+                requestBroker, cachedScripts);
+            result.insert(result.end(), pacProxies.begin(), pacProxies.end());
+        } else if (CFEqual(proxyType, kCFProxyTypeHTTP)) {
+            thisProxyUri.scheme("http");
+        } else if (CFEqual(proxyType, kCFProxyTypeHTTPS)) {
+            thisProxyUri.scheme("https");
+        } else if (CFEqual(proxyType, kCFProxyTypeSOCKS)) {
+            thisProxyUri.scheme("socks");
+        }
+        if (thisProxyUri.schemeDefined()) {
+            CFStringRef proxyHost = (CFStringRef)CFDictionaryGetValue(
+                thisProxy, kCFProxyHostNameKey);
+            if (!proxyHost || CFGetTypeID(proxyHost) != CFStringGetTypeID())
+                continue;
+            CFNumberRef proxyPort = (CFNumberRef)CFDictionaryGetValue(
+                thisProxy, kCFProxyPortNumberKey);
+            int port = -1;
+            if (proxyPort && CFGetTypeID(proxyPort) == CFNumberGetTypeID())
+                CFNumberGetValue(proxyPort, kCFNumberIntType, &port);
+            thisProxyUri.authority.host(toUtf8(proxyHost));
+            if (port != -1)
+                thisProxyUri.authority.port(port);
+            result.push_back(thisProxyUri);
+        }
+    }
+    return result;
+}
+
+static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
+    RequestBroker::ptr requestBroker,
+    std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts)
+{
+    std::vector<URI> result;
+    CFStringRef string = CFURLGetString(cfurl);
+    URI uri;
     try {
-        return std::make_pair(m_parent->getConnection(proxy,
-            forceNewConnection).first, true);
-    } catch (SocketException &) {
-        if (m_fallbackOnFailure)
-            return m_parent->getConnection(uri, forceNewConnection);
-        throw;
+        uri = toUtf8(string);
+    } catch (std::invalid_argument &) {
+        return result;
+    }
+    if (!uri.schemeDefined())
+        return result;
+    if (uri.scheme() != "http" && uri.scheme() != "https" &&
+        uri.scheme() != "file")
+        return result;
+
+    try {
+        ScopedCFRef<CFStringRef> pacScript;
+        std::map<URI, ScopedCFRef<CFStringRef> >::iterator it =
+            cachedScripts.find(uri);
+        if (it != cachedScripts.end()) {
+            pacScript = it->second;
+        } else {
+            Stream::ptr pacStream;
+            MemoryStream localStream;
+            if (uri.scheme() == "file") {
+                if (uri.authority.hostDefined() &&
+                    uri.authority.host() != "localhost" &&
+                    !uri.authority.host().empty())
+                    return result;
+                std::ostringstream os;
+                for (std::vector<std::string>::const_iterator it = uri.path.segments.begin();
+                    it != uri.path.segments.end();
+                    ++it)
+                    os << '/' << *it;
+                pacStream.reset(new FileStream(os.str(), FileStream::READ));
+            } else {
+                pacStream.reset(new HTTPStream(uri, requestBroker));
+            }
+            pacStream.reset(new LimitedStream(pacStream, 1024 * 1024 + 1));
+            if (transferStream(pacStream, localStream) >= 1024u * 1024u)
+                return result;
+            std::string localBuffer;
+            localBuffer.resize((size_t)localStream.size());
+            localStream.buffer().copyOut(&localBuffer[0], localBuffer.size());
+            pacScript = CFStringCreateWithBytes(NULL,
+                (const UInt8*)localBuffer.c_str(), localBuffer.size(),
+                kCFStringEncodingUTF8, true);
+            cachedScripts[uri] = pacScript;
+        }
+        ScopedCFRef<CFErrorRef> error;
+        ScopedCFRef<CFArrayRef> pacProxies =
+            CFNetworkCopyProxiesForAutoConfigurationScript(pacScript, targeturl,
+            &error);
+        if (!pacProxies)
+            return result;
+        return proxyFromCFArray(pacProxies, targeturl, requestBroker,
+            cachedScripts);
+    } catch (...) {
+        return result;
     }
 }
 
-ProxyStreamBroker::ProxyStreamBroker(StreamBroker::ptr parent,
-    RequestBroker::ptr requestBroker,
-    boost::function<URI (const URI &)> proxyForURIDg)
-    : StreamBrokerFilter(parent),
-      m_requestBroker(requestBroker),
-      m_dg(proxyForURIDg),
-      m_fallbackOnFailure(false)
+std::vector<URI>
+ProxyCache::proxyFromSystemConfiguration(const URI &uri)
 {
-    if (!m_dg)
-        m_dg = &proxyFromConfig;
-}
+    std::vector<URI> result;
 
-Stream::ptr
-ProxyStreamBroker::getStream(const Mordor::URI &uri)
+    std::string uristring = uri.toString();
+    ScopedCFRef<CFURLRef> cfurl = CFURLCreateWithBytes(NULL,
+        (const UInt8 *)uristring.c_str(),
+        uristring.size(), kCFStringEncodingUTF8, NULL);
+    if (!cfurl)
+        return result;
+
+    ScopedCFRef<CFDictionaryRef> proxySettings =
+        SCDynamicStoreCopyProxies(m_dynamicStore);
+    if (!proxySettings)
+        return result;
+    ScopedCFRef<CFArrayRef> proxies = CFNetworkCopyProxiesForURL(cfurl,
+        proxySettings);
+    if (!proxies)
+        return result;
+    return proxyFromCFArray(proxies, cfurl, m_requestBroker, m_cachedScripts);
+}
+#endif
+
+boost::shared_ptr<Stream>
+tunnel(RequestBroker::ptr requestBroker, const URI &proxy, const URI &target)
 {
-    URI proxy = m_dg(uri);
-    if (!proxy.isDefined() || !(proxy.schemeDefined() && proxy.scheme() == "https"))
-        return parent()->getStream(uri);
+    MORDOR_ASSERT(proxy.schemeDefined());
+
     std::ostringstream os;
-    if (!uri.authority.hostDefined())
+    if (!target.authority.hostDefined())
         MORDOR_THROW_EXCEPTION(std::invalid_argument("No host defined"));
-    os << uri.authority.host() << ':';
-    if (uri.authority.portDefined())
-        os << uri.authority.port();
-    else if (uri.scheme() == "http")
+    os << target.authority.host() << ':';
+    if (target.authority.portDefined())
+        os << target.authority.port();
+    else if (target.scheme() == "http")
         os << "80";
-    else if (uri.scheme() == "https")
+    else if (target.scheme() == "https")
         os << "443";
     else
         // TODO: can this be looked up using the system? (getaddrinfo)
         MORDOR_THROW_EXCEPTION(std::invalid_argument("Unknown protocol for proxying connection"));
     Request requestHeaders;
     requestHeaders.requestLine.method = CONNECT;
-    requestHeaders.requestLine.uri = os.str();
+    URI &requestUri = requestHeaders.requestLine.uri;
+    requestUri.scheme("http");
+    requestUri.authority = proxy.authority;
+    requestUri.path.type = URI::Path::ABSOLUTE;
+    requestUri.path.segments.push_back(os.str());
     requestHeaders.request.host = os.str();
     requestHeaders.general.connection.insert("Proxy-Connection");
     requestHeaders.general.proxyConnection.insert("Keep-Alive");
-    try {
-        ClientRequest::ptr request = m_requestBroker->request(requestHeaders, true);
-        if (request->response().status.status == HTTP::OK) {
-            return request->stream();
-        } else {
-            if (m_fallbackOnFailure)
-                return parent()->getStream(uri);
-            MORDOR_THROW_EXCEPTION(InvalidResponseException("Proxy connection failed",
-                request));
-        }
-    } catch (SocketException &) {
-        if (m_fallbackOnFailure)
-            return parent()->getStream(uri);
-        throw;
-    } catch (HTTP::Exception &) {
-        if (m_fallbackOnFailure)
-            return parent()->getStream(uri);
-        throw;
-    }
+    ClientRequest::ptr request = requestBroker->request(requestHeaders, true);
+    if (request->response().status.status == HTTP::OK)
+        return request->stream();
+    else
+        MORDOR_THROW_EXCEPTION(InvalidResponseException("Proxy connection failed",
+            request));
 }
 
 }}

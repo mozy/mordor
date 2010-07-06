@@ -7,7 +7,7 @@
 #include <boost/scoped_ptr.hpp>
 
 #include "broker.h"
-#include "client.h"
+#include "mordor/version.h"
 
 namespace Mordor {
 namespace HTTP {
@@ -16,7 +16,7 @@ namespace HTTP {
 class ClientAuthBroker : public boost::noncopyable
 {
 public:
-    ClientAuthBroker(boost::function<ClientConnection::ptr ()> dg,
+    ClientAuthBroker(boost::function<boost::shared_ptr<ClientConnection> ()> dg,
         const std::string &username, const std::string &password,
         const std::string &proxyUsername, const std::string &proxyPassword)
         : m_dg(dg),
@@ -27,13 +27,13 @@ public:
     {}
 
     // optional dg is to provide the request body if necessary
-    ClientRequest::ptr request(Request &requestHeaders,
-        boost::function< void (ClientRequest::ptr)> dg = NULL);
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
+        boost::function< void (boost::shared_ptr<ClientRequest>)> dg = NULL);
 
 private:
-    boost::function<ClientConnection::ptr ()> m_dg;
+    boost::function<boost::shared_ptr<ClientConnection> ()> m_dg;
     std::string m_username, m_password, m_proxyUsername, m_proxyPassword;
-    ClientConnection::ptr m_conn;
+    boost::shared_ptr<ClientConnection> m_conn;
 };
 
 class AuthRequestBroker : public RequestBrokerFilter
@@ -41,13 +41,13 @@ class AuthRequestBroker : public RequestBrokerFilter
 public:
     AuthRequestBroker(RequestBroker::ptr parent,
         boost::function<bool (const URI &,
-            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            boost::shared_ptr<ClientRequest> /* priorRequest = ClientRequest::ptr() */,
             std::string & /* scheme */, std::string & /* realm */,
             std::string & /* username */, std::string & /* password */,
             size_t /* attempts */)>
             getCredentialsDg,
         boost::function<bool (const URI &,
-            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            boost::shared_ptr<ClientRequest> /* priorRequest = ClientRequest::ptr() */,
             std::string & /* scheme */, std::string & /* realm */,
             std::string & /* username */, std::string & /* password */,
             size_t /* attempts */)>
@@ -57,15 +57,22 @@ public:
           m_getProxyCredentialsDg(getProxyCredentialsDg)
     {}
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
-    boost::function<bool (const URI &, ClientRequest::ptr, std::string &,
-        std::string &, std::string &, std::string &, size_t)>
+    boost::function<bool (const URI &, boost::shared_ptr<ClientRequest>,
+        std::string &, std::string &, std::string &, std::string &, size_t)>
         m_getCredentialsDg, m_getProxyCredentialsDg;
 };
+	
+#ifdef OSX
+bool getCredentialsFromKeychain(const URI &uri,
+    boost::shared_ptr<ClientRequest> priorRequest,
+    std::string &scheme, std::string &realm, std::string &username,
+    std::string &password, size_t attempts);
+#endif
 
 }}
 

@@ -4,6 +4,7 @@
 
 #include "negotiate.h"
 
+#include "http.h"
 #include "mordor/string.h"
 
 #pragma comment(lib, "secur32.lib")

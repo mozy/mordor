@@ -4,12 +4,23 @@
 
 #include <openssl/ssl.h>
 
-#include "client.h"
+#include "http.h"
+#include "mordor/iomanager.h"
 #include "mordor/scheduler.h"
-#include "server.h"
 
 namespace Mordor {
+
+class Socket;
+class Stream;
+class TimerManager;
+
 namespace HTTP {
+
+class ClientConnection;
+class ClientRequest;
+class RequestBroker;
+class ServerConnection;
+class ServerRequest;
 
 class StreamBroker
 {
@@ -20,7 +31,7 @@ public:
 public:
     virtual ~StreamBroker() {}
 
-    virtual Stream::ptr getStream(const URI &uri) = 0;
+    virtual boost::shared_ptr<Stream> getStream(const URI &uri) = 0;
     virtual void cancelPending() {}
 };
 
@@ -64,47 +75,16 @@ public:
 
     void connectTimeout(unsigned long long timeout) { m_connectTimeout = timeout; }
 
-    Stream::ptr getStream(const URI &uri);
+    boost::shared_ptr<Stream> getStream(const URI &uri);
     void cancelPending();
 
 private:
     boost::mutex m_mutex;
     bool m_cancelled;
-    std::list<Socket::ptr> m_pending;
+    std::list<boost::shared_ptr<Socket> > m_pending;
     IOManager *m_ioManager;
     Scheduler *m_scheduler;
     unsigned long long m_connectTimeout;
-};
-
-class SSLStreamBroker : public StreamBrokerFilter
-{
-public:
-    typedef boost::shared_ptr<SSLStreamBroker> ptr;
-
-public:
-    SSLStreamBroker(StreamBroker::ptr parent,
-        SSL_CTX *sslCtx = NULL, bool verifySslCertificate = false,
-        bool verifySslCertificateHost = true)
-        : StreamBrokerFilter(parent),
-          m_sslCtx(sslCtx),
-          m_timerManager(NULL),
-          m_readTimeout(NULL),
-          m_writeTimeout(NULL),
-          m_verifySslCertificate(verifySslCertificate),
-          m_verifySslCertificateHost(verifySslCertificate)
-    {}
-
-    void timerManager(TimerManager *timerManager) { m_timerManager = timerManager; }
-    void readTimeout(unsigned long long timeout) { m_readTimeout = timeout; }
-    void writeTimeout(unsigned long long timeout) { m_writeTimeout = timeout; }
-
-    Stream::ptr getStream(const URI &uri);
-
-private:
-    SSL_CTX *m_sslCtx;
-    TimerManager *m_timerManager;
-    unsigned long long m_readTimeout, m_writeTimeout;
-    bool m_verifySslCertificate, m_verifySslCertificateHost;
 };
 
 class ConnectionBroker
@@ -116,7 +96,7 @@ public:
 public:
     virtual ~ConnectionBroker() {}
 
-    virtual std::pair<ClientConnection::ptr, bool>
+    virtual std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false) = 0;
 };
 
@@ -126,44 +106,80 @@ public:
     typedef boost::shared_ptr<ConnectionCache> ptr;
 
 public:
-    ConnectionCache(StreamBroker::ptr streamBroker,
-        size_t connectionsPerHost = 1, TimerManager *timerManager = NULL)
+    ConnectionCache(StreamBroker::ptr streamBroker, TimerManager *timerManager = NULL)
         : m_streamBroker(streamBroker),
-          m_connectionsPerHost(connectionsPerHost),
+          m_connectionsPerHost(1u),
           m_closed(false),
-          m_timerManager(NULL),
-          m_readTimeout(~0ull),
-          m_writeTimeout(~0ull)
+          m_verifySslCertificate(false),
+          m_verifySslCertificateHost(true),
+          m_timerManager(timerManager),
+          m_httpReadTimeout(~0ull),
+          m_httpWriteTimeout(~0ull),
+          m_sslReadTimeout(~0ull),
+          m_sslWriteTimeout(~0ull),
+          m_sslCtx(NULL)
     {}
 
-    void readTimeout(unsigned long long timeout) { m_readTimeout = timeout; }
-    void writeTimeout(unsigned long long timeout) { m_writeTimeout = timeout; }
+    void connectionsPerHost(size_t connections) { m_connectionsPerHost = connections; }
+    void httpReadTimeout(unsigned long long timeout) { m_httpReadTimeout = timeout; }
+    void httpWriteTimeout(unsigned long long timeout) { m_httpWriteTimeout = timeout; }
+    void sslReadTimeout(unsigned long long timeout) { m_sslReadTimeout = timeout; }
+    void sslWriteTimeout(unsigned long long timeout) { m_sslWriteTimeout = timeout; }
+    void sslCtx(SSL_CTX *ctx) { m_sslCtx = ctx; }
+    void verifySslCertificate(bool verify) { m_verifySslCertificate = verify; }
+    void verifySslCertificateHost(bool verify) { m_verifySslCertificateHost = verify; }
+    // Required to support any proxies
+    void proxyForURI(boost::function<std::vector<URI> (const URI &)> proxyForURIDg)
+    { m_proxyForURIDg = proxyForURIDg; }
+    // Required to support HTTPS proxies
+    void proxyRequestBroker(boost::shared_ptr<RequestBroker> broker)
+    { m_proxyBroker = broker; }
 
-    std::pair<ClientConnection::ptr, bool>
+    std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false);
 
-    void closeConnections();
+    void closeIdleConnections();
+    void abortConnections();
+
+private:
+    typedef std::list<boost::shared_ptr<ClientConnection> > ConnectionList;
+    typedef std::map<URI, std::pair<ConnectionList, boost::shared_ptr<FiberCondition> > >
+        CachedConnectionMap;
+
+private:
+    std::pair<boost::shared_ptr<ClientConnection>, bool>
+        getConnectionViaProxyFromCache(const URI &uri, const URI &proxy);
+    std::pair<boost::shared_ptr<ClientConnection>, bool>
+        getConnectionViaProxy(const URI &uri, const URI &proxy,
+        FiberMutex::ScopedLock &lock);
+    void cleanOutDeadConns(CachedConnectionMap &conns);
+    void addSSL(const URI &uri, boost::shared_ptr<Stream> &stream);
 
 private:
     FiberMutex m_mutex;
     StreamBroker::ptr m_streamBroker;
     size_t m_connectionsPerHost;
 
-    typedef std::list<ClientConnection::ptr> ConnectionList;
-    std::map<URI, std::pair<ConnectionList, boost::shared_ptr<FiberCondition> > > m_conns;
-    bool m_closed;
+    CachedConnectionMap m_conns;
+    bool m_closed, m_verifySslCertificate, m_verifySslCertificateHost;
     TimerManager *m_timerManager;
-    unsigned long long m_readTimeout, m_writeTimeout;
+    unsigned long long m_httpReadTimeout, m_httpWriteTimeout, m_sslReadTimeout,
+        m_sslWriteTimeout;
+    SSL_CTX *m_sslCtx;
+    boost::function<std::vector<URI> (const URI &)> m_proxyForURIDg;
+    boost::shared_ptr<RequestBroker> m_proxyBroker;
 };
 
 class MockConnectionBroker : public ConnectionBroker
 {
 private:
     typedef std::map<URI,
-        std::pair<ClientConnection::ptr, ServerConnection::ptr> >
+        std::pair<boost::shared_ptr<ClientConnection>,
+            boost::shared_ptr<ServerConnection> > >
         ConnectionCache;
 public:
-    MockConnectionBroker(boost::function<void (const URI &uri, ServerRequest::ptr)> dg,
+    MockConnectionBroker(boost::function<void (const URI &uri,
+            boost::shared_ptr<ServerRequest>)> dg,
         TimerManager *timerManager = NULL, unsigned long long readTimeout = ~0ull,
         unsigned long long writeTimeout = ~0ull)
         : m_dg(dg),
@@ -172,11 +188,11 @@ public:
           m_writeTimeout(writeTimeout)
     {}
 
-    std::pair<ClientConnection::ptr, bool>
+    std::pair<boost::shared_ptr<ClientConnection>, bool>
         getConnection(const URI &uri, bool forceNewConnection = false);
 
 private:
-    boost::function<void (const URI &uri, ServerRequest::ptr)> m_dg;
+    boost::function<void (const URI &uri, boost::shared_ptr<ServerRequest>)> m_dg;
     ConnectionCache m_conns;
     TimerManager *m_timerManager;
     unsigned long long m_readTimeout, m_writeTimeout;
@@ -191,9 +207,10 @@ public:
 public:
     virtual ~RequestBroker() {}
 
-    virtual ClientRequest::ptr request(Request &requestHeaders,
+    virtual boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL) = 0;
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL)
+        = 0;
 };
 
 class RequestBrokerFilter : public RequestBroker
@@ -207,9 +224,10 @@ public:
 
     RequestBroker::ptr parent();
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL) = 0;
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL)
+        = 0;
 
 private:
     RequestBroker::ptr m_parent;
@@ -240,9 +258,9 @@ public:
         : m_weakConnectionBroker(connectionBroker)
     {}
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
     ConnectionBroker::ptr m_connectionBroker;
@@ -265,9 +283,9 @@ public:
 
     void sharedRetryCounter(size_t *retries) { mp_retries = retries; }
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
     boost::function<bool (size_t)> m_delayDg;
@@ -305,9 +323,9 @@ public:
     void handleFound(bool handle) { m_handle302 = handle; }
     void handleTemporaryRedirect(bool handle) { m_handle307 = handle; }
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
     size_t m_maxRedirects;
@@ -323,9 +341,9 @@ public:
           m_userAgent(userAgent)
     {}
 
-    ClientRequest::ptr request(Request &requestHeaders,
+    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
-        boost::function<void (ClientRequest::ptr)> bodyDg = NULL);
+        boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL);
 
 private:
     ProductAndCommentList m_userAgent;
@@ -343,7 +361,6 @@ struct RequestBrokerOptions
         sslConnectWriteTimeout(~0ull),
         httpReadTimeout(~0ull),
         httpWriteTimeout(~0ull),
-        fallbackToDirectOnProxyFailure(false),
         sslCtx(NULL),
         verifySslCertificate(false),
         verifySslCertificateHost(true)
@@ -359,18 +376,20 @@ struct RequestBrokerOptions
     unsigned long long sslConnectWriteTimeout;
     unsigned long long httpReadTimeout;
     unsigned long long httpWriteTimeout;
-    boost::function<URI (const URI &)> proxyForURIDg;
+    boost::function<std::vector<URI> (const URI &)> proxyForURIDg;
+    /// Required to enable https proxy support
+    RequestBroker::ptr proxyRequestBroker;
     boost::function<bool (const URI &,
-            ClientRequest::ptr /* priorRequest = ClientRequest::ptr() */,
+            boost::shared_ptr<ClientRequest> /* priorRequest = ClientRequest::ptr() */,
             std::string & /* scheme */, std::string & /* realm */,
             std::string & /* username */, std::string & /* password */,
             size_t /* attempts */)>
             getCredentialsDg, getProxyCredentialsDg;
-    bool fallbackToDirectOnProxyFailure;
     StreamBrokerFilter::ptr customStreamBrokerFilter;
     SSL_CTX *sslCtx;
     bool verifySslCertificate;
     bool verifySslCertificateHost;
+    ProductAndCommentList userAgent;
 };
 
 std::pair<RequestBroker::ptr, ConnectionCache::ptr>

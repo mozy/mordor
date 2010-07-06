@@ -10,6 +10,7 @@
 
 #include "chunked.h"
 #include "mordor/assert.h"
+#include "mordor/fiber.h"
 #include "mordor/log.h"
 #include "mordor/scheduler.h"
 #include "mordor/streams/limited.h"
@@ -19,6 +20,7 @@
 #include "mordor/streams/transfer.h"
 #include "mordor/util.h"
 #include "mordor/atomic.h"
+#include "multipart.h"
 #include "parser.h"
 
 namespace Mordor {
@@ -73,7 +75,7 @@ ClientRequest::ptr
 ClientConnection::request(const Request &requestHeaders)
 {
     ClientRequest::ptr request(new ClientRequest(shared_from_this(), requestHeaders));
-    request->doRequest();
+    request->waitForRequest();
     return request;
 }
 
@@ -136,8 +138,10 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
     invariant();
     MORDOR_ASSERT(m_currentRequest != m_pendingRequests.end());
     MORDOR_ASSERT(request == *m_currentRequest);
-    MORDOR_ASSERT(request->m_requestState == ClientRequest::BODY);
-    MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " request complete";
+    MORDOR_ASSERT(request->m_requestState == ClientRequest::BODY ||
+        request->m_requestState == ClientRequest::HEADERS);
+    MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-"
+        << request->m_requestNumber << " request complete";
     std::list<ClientRequest *>::iterator it(m_currentRequest);
     ++it;
     if (it == m_pendingRequests.end()) {
@@ -155,7 +159,8 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         request->m_requestState = ClientRequest::HEADERS;
         MORDOR_ASSERT(request->m_scheduler);
         MORDOR_ASSERT(request->m_fiber);
-        MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-" << request->m_requestNumber << " scheduling request";
+        MORDOR_LOG_TRACE(g_log) << m_connectionNumber << "-"
+            << request->m_requestNumber << " scheduling request";
         request->m_scheduler->schedule(request->m_fiber);
         request->m_scheduler = NULL;
         request->m_fiber.reset();
@@ -463,7 +468,7 @@ ClientRequest::~ClientRequest()
 #endif
 }
 
-const Request &
+Request &
 ClientRequest::request()
 {
     return m_request;
@@ -481,6 +486,7 @@ ClientRequest::requestStream()
 {
     if (m_requestStream)
         return m_requestStream;
+    doRequest();
     MORDOR_ASSERT(!m_requestMultipart);
     MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
     if (!hasRequestBody()) {
@@ -500,6 +506,7 @@ ClientRequest::requestMultipart()
 {
     if (m_requestMultipart)
         return m_requestMultipart;
+    doRequest();
     MORDOR_ASSERT(m_request.entity.contentType.type == "multipart");
     MORDOR_ASSERT(!m_requestStream);
     MORDOR_ASSERT(m_requestState == BODY);
@@ -751,76 +758,8 @@ ClientRequest::finish()
 }
 
 void
-ClientRequest::doRequest()
+ClientRequest::waitForRequest()
 {
-    RequestLine &requestLine = m_request.requestLine;
-    // 1.0, 1.1, or defaulted
-    MORDOR_ASSERT(requestLine.ver == Version() ||
-           requestLine.ver == Version(1, 0) ||
-           requestLine.ver == Version(1, 1));
-    // Have to request *something*
-    MORDOR_ASSERT(requestLine.uri.isDefined());
-    // Host header required with HTTP/1.1
-    MORDOR_ASSERT(!m_request.request.host.empty() || requestLine.ver != Version(1, 1));
-    // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
-    const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
-    if (!transferEncoding.empty()) {
-        MORDOR_ASSERT(transferEncoding.back().value == "chunked");
-        for (ParameterizedList::const_iterator it(transferEncoding.begin());
-            it + 1 != transferEncoding.end();
-            ++it) {
-            // Only the last one can be chunked
-            MORDOR_ASSERT(it->value != "chunked");
-            // identity is only acceptable in the TE header field
-            MORDOR_ASSERT(it->value != "identity");
-            if (it->value == "gzip" ||
-                it->value == "x-gzip" ||
-                it->value == "deflate") {
-                // Known Transfer-Codings
-                continue;
-            } else if (it->value == "compress" ||
-                it->value == "x-compress") {
-                // Unsupported Transfer-Codings
-                MORDOR_ASSERT(false);
-            } else {
-                // Unknown Transfer-Coding
-                MORDOR_ASSERT(false);
-            }
-        }
-    }
-
-    bool close;
-    // Default HTTP version... 1.1 if possible
-    if (requestLine.ver == Version()) {
-        if (m_request.request.host.empty())
-            requestLine.ver = Version(1, 0);
-        else
-            requestLine.ver = Version(1, 1);
-    }
-    // If not specified, try to keep the connection open
-    StringSet &connection = m_request.general.connection;
-    if (connection.find("close") == connection.end() && requestLine.ver == Version(1, 0)) {
-        connection.insert("Keep-Alive");
-    }
-    // Determine if we're closing the connection after this request
-    if (requestLine.ver == Version(1, 0)) {
-        if (connection.find("Keep-Alive") != connection.end()) {
-            close = false;
-        } else {
-            close = true;
-            connection.insert("close");
-        }
-    } else {
-        if (connection.find("close") != connection.end()) {
-            close = true;
-        } else {
-            close = false;
-        }
-    }
-    // TE is a connection-specific header
-    if (!m_request.request.te.empty())
-        m_request.general.connection.insert("TE");
-
     bool firstRequest;
     // Put the request in the queue
     {
@@ -856,8 +795,6 @@ ClientRequest::doRequest()
             MORDOR_ASSERT(m_fiber);
             MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " waiting to request";
         }
-        if (close)
-            m_conn->m_allowNewRequests = false;
     }
     // If we weren't the first request in the queue, we have to wait for
     // another request to schedule us
@@ -887,6 +824,86 @@ ClientRequest::doRequest()
         }
     }
     MORDOR_ASSERT(m_requestState == HEADERS);
+}
+
+void
+ClientRequest::doRequest()
+{
+    if (m_requestState > HEADERS)
+        return;
+
+    RequestLine &requestLine = m_request.requestLine;
+    // 1.0, 1.1, or defaulted
+    MORDOR_ASSERT(requestLine.ver == Version() ||
+           requestLine.ver == Version(1, 0) ||
+           requestLine.ver == Version(1, 1));
+    // Have to request *something*
+    MORDOR_ASSERT(requestLine.uri.isDefined());
+    // Host header required with HTTP/1.1
+    MORDOR_ASSERT(!m_request.request.host.empty() || requestLine.ver != Version(1, 1));
+    // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
+    const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
+    if (!transferEncoding.empty()) {
+        MORDOR_ASSERT(transferEncoding.back().value == "chunked");
+        for (ParameterizedList::const_iterator it(transferEncoding.begin());
+            it + 1 != transferEncoding.end();
+            ++it) {
+            // Only the last one can be chunked
+            MORDOR_ASSERT(it->value != "chunked");
+            // identity is only acceptable in the TE header field
+            MORDOR_ASSERT(it->value != "identity");
+            if (it->value == "gzip" ||
+                it->value == "x-gzip" ||
+                it->value == "deflate") {
+                // Known Transfer-Codings
+                continue;
+            } else if (it->value == "compress" ||
+                it->value == "x-compress") {
+                // Unsupported Transfer-Codings
+                MORDOR_NOTREACHED();
+            } else {
+                // Unknown Transfer-Coding
+                MORDOR_NOTREACHED();
+            }
+        }
+    }
+
+    bool close;
+    // Default HTTP version... 1.1 if possible
+    if (requestLine.ver == Version()) {
+        if (m_request.request.host.empty())
+            requestLine.ver = Version(1, 0);
+        else
+            requestLine.ver = Version(1, 1);
+    }
+    // If not specified, try to keep the connection open
+    StringSet &connection = m_request.general.connection;
+    if (connection.find("close") == connection.end() && requestLine.ver == Version(1, 0)) {
+        connection.insert("Keep-Alive");
+    }
+    // Determine if we're closing the connection after this request
+    if (requestLine.ver == Version(1, 0)) {
+        if (connection.find("Keep-Alive") != connection.end()) {
+            close = false;
+        } else {
+            close = true;
+            connection.insert("close");
+        }
+    } else {
+        if (connection.find("close") != connection.end()) {
+            close = true;
+        } else {
+            close = false;
+        }
+    }
+    if (close) {
+        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        m_conn->invariant();
+        m_conn->m_allowNewRequests = false;
+    }
+    // TE is a connection-specific header
+    if (!m_request.request.te.empty())
+        m_request.general.connection.insert("TE");
 
     try {
         // Do the request
@@ -912,41 +929,15 @@ ClientRequest::doRequest()
             MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_request.requestLine;
         }
         m_conn->m_stream->write(str.c_str(), str.size());
-        m_requestState = BODY;
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID, false)) {
             MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " no request body";
             m_conn->scheduleNextRequest(this);
+        } else {
+            m_requestState = BODY;
         }
     } catch(...) {
-        boost::mutex::scoped_lock lock(m_conn->m_mutex);
-        m_conn->invariant();
-        // requestFailed() already handled it; but didn't cancel the response
-        // (since a request with a request body could potentially get a
-        // response, but this one never made it to the server at all)
-        bool alreadyFailed = m_requestState == ERROR;
-        MORDOR_ASSERT(m_responseState == PENDING);
-        m_requestState = ERROR;
-        m_responseState = CANCELED;
-        MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
-        MORDOR_ASSERT(alreadyFailed || m_conn->m_currentRequest != m_conn->m_pendingRequests.end());
-        MORDOR_ASSERT(!alreadyFailed || m_conn->m_currentRequest == m_conn->m_pendingRequests.end());
-        MORDOR_ASSERT(alreadyFailed || *m_conn->m_currentRequest == this);
-        // If alreadyFailed is true, it's safe to assume that this is the last
-        // request in the queue, because scheduleAllRequests would have cleared
-        // out anything after this one because they would be in a waiting state
-        MORDOR_ASSERT(!alreadyFailed || m_conn->m_pendingRequests.back() == this);
-        m_conn->m_priorRequestFailed = true;
-        if (!alreadyFailed)
-            m_conn->m_currentRequest = m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
-        else
-            m_conn->m_pendingRequests.pop_back();
-        m_conn->scheduleAllWaitingRequests();
-        // Throw an HTTP exception if we can
-        if (m_conn->m_priorResponseClosed <= m_requestNumber)
-            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-        if (m_conn->m_priorResponseFailed <= m_requestNumber)
-            MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+        requestFailed();
         throw;
     }
 }
@@ -1200,7 +1191,9 @@ ClientRequest::requestDone()
 void
 ClientRequest::requestFailed()
 {
-    MORDOR_ASSERT(m_requestState == BODY);
+    if (m_requestState == ERROR)
+        return;
+    MORDOR_ASSERT(m_requestState == BODY || m_requestState == HEADERS);
     MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " request failed";
     if (m_requestStream) {
         // Break the circular reference
@@ -1216,14 +1209,45 @@ ClientRequest::requestFailed()
     MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
     MORDOR_ASSERT(this == *m_conn->m_currentRequest);
     m_conn->m_priorRequestFailed = true;
-    m_requestState = ERROR;
-    if (m_responseState >= COMPLETE) {
+    if (m_requestState == HEADERS) {
+        switch (m_responseState) {
+            case PENDING:
+                m_responseState = CANCELED;
+                m_conn->m_currentRequest =
+                    m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
+                break;
+            case WAITING:
+                MORDOR_ASSERT(m_conn->m_waitingResponses.find(this) !=
+                    m_conn->m_waitingResponses.end());
+                m_conn->m_waitingResponses.erase(this);
+                m_conn->m_currentRequest =
+                    m_conn->m_pendingRequests.erase(m_conn->m_currentRequest);
+                MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-"
+                    << m_requestNumber << " scheduling response";
+                m_scheduler->schedule(m_fiber);
+                m_scheduler = NULL;
+                m_fiber.reset();
+                m_responseState = CANCELED;
+                break;
+            case HEADERS:
+                m_conn->m_stream->cancelRead();
+            case BODY:
+                ++m_conn->m_currentRequest;
+                break;
+            default:
+                MORDOR_ASSERT(this == m_conn->m_pendingRequests.front());
+                ++m_conn->m_currentRequest;
+                m_conn->m_pendingRequests.pop_front();
+                break;
+        }
+    } else if (m_responseState >= COMPLETE) {
         MORDOR_ASSERT(this == m_conn->m_pendingRequests.front());
+        ++m_conn->m_currentRequest;
         m_conn->m_pendingRequests.pop_front();
-        m_conn->m_currentRequest = m_conn->m_pendingRequests.end();
     } else {
         ++m_conn->m_currentRequest;
     }
+    m_requestState = ERROR;
     m_conn->scheduleAllWaitingRequests();
     // Throw an HTTP exception if we can
     if (m_conn->m_priorResponseClosed <= m_requestNumber)
