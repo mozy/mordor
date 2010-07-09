@@ -65,6 +65,9 @@
 		C34893CB11BEB1300044E9C8 /* socks.h in Headers */ = {isa = PBXBuildFile; fileRef = C34893C911BEB1300044E9C8 /* socks.h */; };
 		E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E29FD2A81136FD1D004BC293 /* timeout.cpp */; };
 		E29FD2AB1136FD1D004BC293 /* timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = E29FD2A91136FD1D004BC293 /* timeout.h */; };
+		E2DE14B311E67ADD00D9622F /* antxmllistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */; };
+		E2DE14B611E67AFF00D9622F /* stdoutlistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2773112B096700607AEE /* stdoutlistener.cpp */; };
+		E2DE14B811E67AFF00D9622F /* test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2775112B096700607AEE /* test.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -233,7 +236,6 @@
 		3CAB276E112B096700607AEE /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zlib.h; sourceTree = "<group>"; };
 		3CAB276F112B096700607AEE /* string.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = string.cpp; sourceTree = "<group>"; };
 		3CAB2770112B096700607AEE /* string.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = string.h; sourceTree = "<group>"; };
-		3CAB2772112B096700607AEE /* mordortest.vcproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = mordortest.vcproj; sourceTree = "<group>"; };
 		3CAB2773112B096700607AEE /* stdoutlistener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = stdoutlistener.cpp; sourceTree = "<group>"; };
 		3CAB2774112B096700607AEE /* stdoutlistener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stdoutlistener.h; sourceTree = "<group>"; };
 		3CAB2775112B096700607AEE /* test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test.cpp; sourceTree = "<group>"; };
@@ -285,10 +287,20 @@
 		C34893C911BEB1300044E9C8 /* socks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socks.h; sourceTree = "<group>"; };
 		E29FD2A81136FD1D004BC293 /* timeout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timeout.cpp; sourceTree = "<group>"; };
 		E29FD2A91136FD1D004BC293 /* timeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timeout.h; sourceTree = "<group>"; };
+		E2DE14A811E67AB400D9622F /* libmordortest.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmordortest.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = antxmllistener.cpp; path = test/antxmllistener.cpp; sourceTree = "<group>"; };
+		E2DE14B211E67ADD00D9622F /* antxmllistener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = antxmllistener.h; path = test/antxmllistener.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		3CAB29AF112B340500607AEE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E2DE14A611E67AB400D9622F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -302,6 +314,7 @@
 			isa = PBXGroup;
 			children = (
 				3CAB29B1112B340600607AEE /* libmordor.a */,
+				E2DE14A811E67AB400D9622F /* libmordortest.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -334,6 +347,8 @@
 		3CAB26D4112B096700607AEE /* mordor */ = {
 			isa = PBXGroup;
 			children = (
+				E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */,
+				E2DE14B211E67ADD00D9622F /* antxmllistener.h */,
 				C34893C811BEB1300044E9C8 /* socks.cpp */,
 				C34893C911BEB1300044E9C8 /* socks.h */,
 				3CAB26D5112B096700607AEE /* .gitignore */,
@@ -531,7 +546,6 @@
 		3CAB2771112B096700607AEE /* test */ = {
 			isa = PBXGroup;
 			children = (
-				3CAB2772112B096700607AEE /* mordortest.vcproj */,
 				3CAB2773112B096700607AEE /* stdoutlistener.cpp */,
 				3CAB2774112B096700607AEE /* stdoutlistener.h */,
 				3CAB2775112B096700607AEE /* test.cpp */,
@@ -601,6 +615,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E2DE14A411E67AB400D9622F /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
@@ -622,6 +643,23 @@
 			productReference = 3CAB29B1112B340600607AEE /* libmordor.a */;
 			productType = "com.apple.product-type.library.static";
 		};
+		E2DE14A711E67AB400D9622F /* mordortest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E2DE14B511E67ADE00D9622F /* Build configuration list for PBXNativeTarget "mordortest" */;
+			buildPhases = (
+				E2DE14A411E67AB400D9622F /* Headers */,
+				E2DE14A511E67AB400D9622F /* Sources */,
+				E2DE14A611E67AB400D9622F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = mordortest;
+			productName = mordortest;
+			productReference = E2DE14A811E67AB400D9622F /* libmordortest.a */;
+			productType = "com.apple.product-type.library.static";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -636,6 +674,7 @@
 			projectRoot = "";
 			targets = (
 				3CAB29B0112B340500607AEE /* mordor */,
+				E2DE14A711E67AB400D9622F /* mordortest */,
 			);
 		};
 /* End PBXProject section */
@@ -700,6 +739,16 @@
 				E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */,
 				3CAC4A341151622F00F85725 /* iomanager_kqueue.cpp in Sources */,
 				C34893CA11BEB1300044E9C8 /* socks.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E2DE14A511E67AB400D9622F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E2DE14B611E67AFF00D9622F /* stdoutlistener.cpp in Sources */,
+				E2DE14B811E67AFF00D9622F /* test.cpp in Sources */,
+				E2DE14B311E67ADD00D9622F /* antxmllistener.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -782,6 +831,41 @@
 			};
 			name = Release;
 		};
+		E2DE14A911E67AB500D9622F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					/opt/local/include,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = mordortest;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
+			};
+			name = Debug;
+		};
+		E2DE14AA11E67AB500D9622F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					/opt/local/include,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = mordortest;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -799,6 +883,15 @@
 			buildConfigurations = (
 				3CAB29B2112B340600607AEE /* Debug */,
 				3CAB29B3112B340600607AEE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E2DE14B511E67ADE00D9622F /* Build configuration list for PBXNativeTarget "mordortest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E2DE14A911E67AB500D9622F /* Debug */,
+				E2DE14AA11E67AB500D9622F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
