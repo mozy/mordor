@@ -5,9 +5,12 @@
 #include "handle.h"
 
 #include "mordor/exception.h"
+#include "mordor/log.h"
 #include "mordor/runtime_linking.h"
 
 namespace Mordor {
+
+static Logger::ptr g_log = Log::lookup("mordor:streams:handle");
 
 HandleStream::HandleStream()
 : m_ioManager(NULL),
@@ -59,7 +62,10 @@ HandleStream::~HandleStream()
 {
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
         SchedulerSwitcher switcher(m_scheduler);
-        CloseHandle(m_hFile);
+        BOOL result = CloseHandle(m_hFile);
+        MORDOR_LOG_LEVEL(g_log, result ? Log::VERBOSE : Log::ERROR) << this
+            << " CloseHandle(" << m_hFile << "): " << result << " ("
+            << GetLastError() << ")";
     }
 }
 
@@ -86,8 +92,13 @@ HandleStream::close(CloseType type)
     MORDOR_ASSERT(type == BOTH);
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
         SchedulerSwitcher switcher(m_scheduler);
-        if (!CloseHandle(m_hFile))
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CloseHandle");
+        BOOL result = CloseHandle(m_hFile);
+        DWORD error = GetLastError();
+        MORDOR_LOG_LEVEL(g_log, result ? Log::VERBOSE : Log::ERROR) << this
+            << " CloseHandle(" << m_hFile << "): " << result << " ("
+            << error << ")";
+        if (!result)
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CloseHandle");
         m_hFile = INVALID_HANDLE_VALUE;
     }
 }
@@ -111,12 +122,27 @@ HandleStream::read(void *buffer, size_t length)
     }
     length = std::min(length, m_maxOpSize);
     BOOL ret = ReadFile(m_hFile, buffer, (DWORD)length, &read, overlapped);
+    Log::Level level = Log::DEBUG;
+    if (!ret) {
+        if (GetLastError() == ERROR_HANDLE_EOF) {
+        } else if (m_ioManager) {
+            if (GetLastError() == ERROR_IO_PENDING)
+                level = Log::TRACE;
+            else
+                level = Log::ERROR;
+        } else {
+            level = Log::ERROR;
+        }
+    }
+    DWORD error = GetLastError();
+    MORDOR_LOG_LEVEL(g_log, level) << this << " ReadFile(" << m_hFile << ", "
+        << length << "): " << ret << " - " << read << " (" << error << ")";
     if (m_ioManager) {
-        if (!ret && GetLastError() == ERROR_HANDLE_EOF) {
+        if (!ret && error == ERROR_HANDLE_EOF) {
             m_ioManager->unregisterEvent(&m_readEvent);
             return 0;
         }
-        if (!ret && GetLastError() != ERROR_IO_PENDING) {
+        if (!ret && error != ERROR_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_readEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
         }
@@ -125,6 +151,9 @@ HandleStream::read(void *buffer, size_t length)
         else
             Scheduler::yieldTo();
         DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_readEvent.overlapped.Internal);
+        MORDOR_LOG_LEVEL(g_log, error && error != ERROR_HANDLE_EOF ? Log::ERROR : Log::VERBOSE)
+            << this << " ReadFile(" << m_hFile << ", " << length << "): "
+            << m_readEvent.overlapped.InternalHigh << " (" << error << ")";
         if (error == ERROR_HANDLE_EOF)
             return 0;
         if (error)
@@ -136,7 +165,7 @@ HandleStream::read(void *buffer, size_t length)
         return m_readEvent.overlapped.InternalHigh;
     }
     if (!ret)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ReadFile");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ReadFile");
     return read;
 }
 
@@ -171,8 +200,18 @@ HandleStream::write(const void *buffer, size_t length)
     }
     length = std::min(length, m_maxOpSize);
     BOOL ret = WriteFile(m_hFile, buffer, (DWORD)length, &written, overlapped);
+    Log::Level level = Log::DEBUG;
+    if (!ret) {
+        if (m_ioManager && GetLastError() == ERROR_IO_PENDING)
+            level = Log::TRACE;
+        else
+            level = Log::ERROR;
+    }
+    DWORD error = GetLastError();
+    MORDOR_LOG_LEVEL(g_log, level) << this << " WriteFile(" << m_hFile << ", "
+        << length << "): " << ret << " - " << written << " (" << error << ")";
     if (m_ioManager) {
-        if (!ret && GetLastError() != ERROR_IO_PENDING) {
+        if (!ret && error != ERROR_IO_PENDING) {
             m_ioManager->unregisterEvent(&m_writeEvent);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
         }
@@ -181,6 +220,9 @@ HandleStream::write(const void *buffer, size_t length)
         else
             Scheduler::yieldTo();
         DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_writeEvent.overlapped.Internal);
+        MORDOR_LOG_LEVEL(g_log, error ? Log::ERROR : Log::VERBOSE) << this
+            << " WriteFile(" << m_hFile << ", " << length << "): "
+            << m_writeEvent.overlapped.InternalHigh << " (" << error << ")";
         if (error)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "WriteFile");
         if (supportsSeek()) {
@@ -190,7 +232,7 @@ HandleStream::write(const void *buffer, size_t length)
         return m_writeEvent.overlapped.InternalHigh;
     }
     if (!ret)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WriteFile");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "WriteFile");
     return written;
 }
 
@@ -241,10 +283,14 @@ HandleStream::seek(long long offset, Anchor anchor)
     }
 
     long long pos;
-    if (!SetFilePointerEx(m_hFile, *(LARGE_INTEGER*)&offset,
-        (LARGE_INTEGER*)&pos, (DWORD)anchor)) {
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetFilePointerEx");
-    }
+    BOOL ret = SetFilePointerEx(m_hFile, *(LARGE_INTEGER*)&offset,
+        (LARGE_INTEGER*)&pos, (DWORD)anchor);
+    DWORD error = GetLastError();
+    MORDOR_LOG_LEVEL(g_log, ret ? Log::VERBOSE : Log::ERROR) << this
+        << " SetFilePointerEx(" << m_hFile << ", " << offset << ", " << pos
+        << ", " << anchor << "): " << ret << " (" << error << ")";
+    if (!ret)
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "SetFilePointerEx");
     return pos;
 }
 
@@ -253,9 +299,12 @@ HandleStream::size()
 {
     SchedulerSwitcher switcher(m_scheduler);
     long long size;
-    if (!GetFileSizeEx(m_hFile, (LARGE_INTEGER*)&size)) {
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetFileSizeEx");
-    }
+    BOOL ret = GetFileSizeEx(m_hFile, (LARGE_INTEGER*)&size);
+    DWORD error = GetLastError();
+    MORDOR_LOG_VERBOSE(g_log) << this << " GetFileSizeEx(" << m_hFile << ", "
+        << size << "): " << ret << " (" << error << ")";
+    if (!ret)
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "GetFileSizeEx");
     return size;
 }
 
@@ -266,18 +315,26 @@ HandleStream::truncate(long long size)
     long long pos = seek(0, CURRENT);
     seek(size, BEGIN);
     BOOL ret = SetEndOfFile(m_hFile);
-    DWORD lastError = GetLastError();
+    DWORD error = GetLastError();
+    MORDOR_LOG_LEVEL(g_log, ret ? Log::VERBOSE : Log::ERROR) << this
+        << " SetEndOfFile(" << m_hFile << "): " << ret << " ("
+        << error << ")";
     seek(pos, BEGIN);
     if (!ret)
-        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(lastError, "SetEndOfFile");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "SetEndOfFile");
 }
 
 void
 HandleStream::flush(bool flushParent)
 {
     SchedulerSwitcher switcher(m_scheduler);
-    if (!FlushFileBuffers(m_hFile))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("FlushFileBuffers");
+    BOOL ret = FlushFileBuffers(m_hFile);
+    DWORD error = GetLastError();
+    MORDOR_LOG_LEVEL(g_log, ret ? Log::VERBOSE : Log::ERROR) << this
+        << " FlushFileBuffers(" << m_hFile << "): " << ret << " (" << error
+        << ")";
+    if (!ret)
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "FlushFileBuffers");
 }
 
 }

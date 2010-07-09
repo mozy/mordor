@@ -9,8 +9,11 @@
 #include <sys/uio.h>
 
 #include "mordor/exception.h"
+#include "mordor/log.h"
 
 namespace Mordor {
+
+static Logger::ptr g_log = Log::lookup("mordor:streams:fd");
 
 FDStream::FDStream()
 : m_ioManager(NULL),
@@ -43,7 +46,9 @@ FDStream::~FDStream()
 {
     if (m_own && m_fd >= 0) {
         SchedulerSwitcher switcher(m_scheduler);
-        ::close(m_fd);
+        int rc = ::close(m_fd);
+        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+            << " close(" << m_fd << "): " << rc << " (" << errno << ")";
     }
 }
 
@@ -53,8 +58,12 @@ FDStream::close(CloseType type)
     MORDOR_ASSERT(type == BOTH);
     if (m_fd > 0 && m_own) {
         SchedulerSwitcher switcher(m_scheduler);
-        if (::close(m_fd))
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("close");
+        int rc = ::close(m_fd);
+        int error = errno;
+        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+            << " close(" << m_fd << "): " << rc << " (" << error << ")";
+        if (rc)
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "close");
         m_fd = -1;
     }
 }
@@ -69,12 +78,18 @@ FDStream::read(Buffer &buffer, size_t length)
     std::vector<iovec> iovs = buffer.writeBuffers(length);
     int rc = readv(m_fd, &iovs[0], iovs.size());
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
+        MORDOR_LOG_TRACE(g_log) << this << " readv(" << m_fd << ", " << length
+            << "): " << rc << " (EAGAIN)";
         m_ioManager->registerEvent(m_fd, IOManager::READ);
         Scheduler::yieldTo();
         rc = readv(m_fd, &iovs[0], iovs.size());
     }
+    int error = errno;
+    MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::DEBUG) << this
+        << " readv(" << m_fd << ", " << length << "): " << rc << " (" << error
+        << ")";
     if (rc < 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("readv");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "readv");
     buffer.produce(rc);
     return rc;
 }
@@ -88,12 +103,18 @@ FDStream::read(void *buffer, size_t length)
         length = 0xfffffffe;
     int rc = ::read(m_fd, buffer, length);
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
+        MORDOR_LOG_TRACE(g_log) << this << " read(" << m_fd << ", " << length
+            << "): " << rc << " (EAGAIN)";
         m_ioManager->registerEvent(m_fd, IOManager::READ);
         Scheduler::yieldTo();
         rc = ::read(m_fd, buffer, length);
     }
+    int error = errno;
+    MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::DEBUG) << this
+        << " read(" << m_fd << ", " << length << "): " << rc << " (" << error
+        << ")";
     if (rc < 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("read");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "read");
     return rc;
 }
 
@@ -107,14 +128,20 @@ FDStream::write(const Buffer &buffer, size_t length)
     const std::vector<iovec> iovs = buffer.readBuffers(length);
     int rc = writev(m_fd, &iovs[0], iovs.size());
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
+        MORDOR_LOG_TRACE(g_log) << this << " writev(" << m_fd << ", " << length
+            << "): " << rc << " (EAGAIN)";
         m_ioManager->registerEvent(m_fd, IOManager::WRITE);
         Scheduler::yieldTo();
         rc = writev(m_fd, &iovs[0], iovs.size());
     }
+    int error = errno;
+    MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::DEBUG) << this
+        << " writev(" << m_fd << ", " << length << "): " << rc << " (" << error
+        << ")";
     if (rc == 0)
         MORDOR_THROW_EXCEPTION(std::runtime_error("Zero length write"));
     if (rc < 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("writev");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "writev");
     return rc;
 }
 
@@ -127,14 +154,20 @@ FDStream::write(const void *buffer, size_t length)
         length = 0xfffffffe;
     int rc = ::write(m_fd, buffer, length);
     while (rc < 0 && errno == EAGAIN && m_ioManager) {
+        MORDOR_LOG_TRACE(g_log) << this << " write(" << m_fd << ", " << length
+            << "): " << rc << " (EAGAIN)";
         m_ioManager->registerEvent(m_fd, IOManager::WRITE);
         Scheduler::yieldTo();
         rc = ::write(m_fd, buffer, length);
     }
+    int error = errno;
+    MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::DEBUG) << this
+        << " write(" << m_fd << ", " << length << "): " << rc << " (" << error
+        << ")";
     if (rc == 0)
         MORDOR_THROW_EXCEPTION(std::runtime_error("Zero length write"));
     if (rc < 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("write");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "write");
     return rc;
 }
 
@@ -144,8 +177,12 @@ FDStream::seek(long long offset, Anchor anchor)
     SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     long long pos = lseek(m_fd, offset, (int)anchor);
+    int error = errno;
+    MORDOR_LOG_LEVEL(g_log, pos < 0 ? Log::ERROR : Log::VERBOSE) << this
+        << " lseek(" << m_fd << ", " << offset << ", " << anchor << "): "
+        << pos << " (" << error << ")";
     if (pos < 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("lseek");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "lseek");
     return pos;
 }
 
@@ -155,8 +192,12 @@ FDStream::size()
     SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     struct stat statbuf;
-    if (fstat(m_fd, &statbuf))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fstat");
+    int rc = fstat(m_fd, &statbuf);
+    int error = errno;
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+        << " fstat(" << m_fd << "): " << rc << " (" << error << ")";
+    if (rc)
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "fstat");
     return statbuf.st_size;
 }
 
@@ -165,8 +206,13 @@ FDStream::truncate(long long size)
 {
     SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
-    if (ftruncate(m_fd, size))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ftruncate");
+    int rc = ftruncate(m_fd, size);
+    int error = errno;
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+        << " ftruncate(" << m_fd << ", " << size << "): " << rc
+        << " (" << error << ")";
+    if (rc)
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ftruncate");
 }
 
 void
@@ -174,8 +220,12 @@ FDStream::flush(bool flushParent)
 {
     SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
-    if (fsync(m_fd))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fsync");
+    int rc = fsync(m_fd);
+    int error = errno;
+    MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
+        << " fsync(" << m_fd << "): " << rc << " (" << error << ")";
+    if (rc)
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "fsync");
 }
 
 }

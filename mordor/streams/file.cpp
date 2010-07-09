@@ -5,9 +5,12 @@
 #include "file.h"
 
 #include "mordor/exception.h"
+#include "mordor/log.h"
 #include "mordor/string.h"
 
 namespace Mordor {
+
+static Logger::ptr g_log = Log::lookup("mordor:streams:file");
 
 FileStream::FileStream()
 : m_supportsRead(false),
@@ -43,8 +46,12 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
         createFlags,
         flags,
         NULL);
+    DWORD error = GetLastError();
+    MORDOR_LOG_VERBOSE(g_log) << "CreateFileW(" << path << ", " << access
+        << ", " << createFlags << ", " << flags << "): " << handle << " ("
+        << error << ")";
     if (handle == INVALID_HANDLE_VALUE)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CreateFileW");
 #else
     int oflags = (int)accessFlags;
     switch (createFlags & ~DELETE_ON_CLOSE) {
@@ -66,8 +73,11 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
             MORDOR_NOTREACHED();
     }
     handle = open(path.c_str(), oflags, 0777);
+    int error = errno;
+    MORDOR_LOG_VERBOSE(g_log) << "open(" << path << ", " << oflags << "): "
+        << handle << " (" << error << ")";
     if (handle < 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("open");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "open");
     if (createFlags & DELETE_ON_CLOSE) {
         int rc = unlink(path.c_str());
         if (rc != 0) {
@@ -113,8 +123,12 @@ FileStream::init(const std::wstring &path, AccessFlags accessFlags,
         createFlags,
         flags,
         NULL);
+    DWORD error = GetLastError();
+    MORDOR_LOG_VERBOSE(g_log) << "CreateFileW(" << toUtf8(path) << ", "
+        << access << ", " << createFlags << ", " << flags << "): " << handle
+        << " (" << error << ")";
     if (handle == INVALID_HANDLE_VALUE)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateFileW");
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CreateFileW");
     NativeStream::init(handle, ioManager, scheduler);
     m_supportsRead = accessFlags == READ || accessFlags == READWRITE;
     m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||
