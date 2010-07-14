@@ -413,6 +413,7 @@ endif
 LIBMORDOROBJECTS := 							\
 	mordor/assert.o							\
 	mordor/config.o							\
+	mordor/daemon.o							\
 	mordor/date_time.o						\
 	mordor/exception.o						\
 	mordor/fiber.o							\

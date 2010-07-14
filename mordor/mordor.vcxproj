@@ -93,6 +93,7 @@
     <ClCompile Include="http\basic.cpp" />
     <ClCompile Include="http\broker.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="daemon.cpp" />
     <ClCompile Include="socks.cpp" />
     <ClCompile Include="streams\buffer.cpp" />
     <ClCompile Include="streams\buffered.cpp" />
@@ -160,6 +161,7 @@
     <ClInclude Include="http\basic.h" />
     <ClInclude Include="http\broker.h" />
     <ClInclude Include="main.h" />
+    <ClInclude Include="daemon.h" />
     <ClInclude Include="socks.h" />
     <ClInclude Include="streams\buffer.h" />
     <ClInclude Include="streams\buffered.h" />
