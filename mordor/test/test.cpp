@@ -138,7 +138,7 @@ Test::allTests()
 }
 
 TestSuites
-Test::testsForArguments(int argc, const char **argv)
+Test::testsForArguments(int argc, char **argv)
 {
     TestSuites tests;
     const TestSuites &all = allTests();

@@ -9,6 +9,7 @@
 #include "mordor/http/client.h"
 #include "mordor/http/proxy.h"
 #include "mordor/iomanager.h"
+#include "mordor/main.h"
 #include "mordor/socket.h"
 #include "mordor/streams/duplex.h"
 #include "mordor/streams/socket.h"
@@ -150,7 +151,7 @@ static void socketServer(Socket::ptr s, IOManager &ioManager,
     }
 }
 
-int main(int argc, const char *argv[])
+MORDOR_MAIN(int argc, char *argv[])
 {
     Config::loadFromEnvironment();
     IOManager ioManager;

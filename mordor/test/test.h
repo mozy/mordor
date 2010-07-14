@@ -83,7 +83,7 @@ void registerSuiteInvariant(const std::string &suite, TestDg invariant);
 
 // Public functions
 const TestSuites &allTests();
-TestSuites testsForArguments(int argc, const char **argv);
+TestSuites testsForArguments(int argc, char **argv);
 bool runTests();
 bool runTests(const TestSuites &suites);
 bool runTests(TestListener &listener);

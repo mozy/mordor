@@ -179,6 +179,9 @@
     <ClCompile Include="socks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h">
@@ -413,6 +416,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="socks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

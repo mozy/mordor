@@ -7,11 +7,12 @@
 #include "mordor/config.h"
 #include "mordor/fiber.h"
 #include "mordor/iomanager.h"
+#include "mordor/main.h"
 #include "mordor/socket.h"
 
 using namespace Mordor;
 
-int main(int argc, const char *argv[])
+MORDOR_MAIN(int argc, char *argv[])
 {
     try {
         Config::loadFromEnvironment();

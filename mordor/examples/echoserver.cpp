@@ -8,6 +8,7 @@
 #include "mordor/http/multipart.h"
 #include "mordor/http/server.h"
 #include "mordor/iomanager.h"
+#include "mordor/main.h"
 #include "mordor/socket.h"
 #ifdef WINDOWS
 #include "mordor/streams/namedpipe.h"
@@ -137,7 +138,7 @@ void namedPipeServer(IOManager &ioManager)
 }
 #endif
 
-int main(int argc, const char *argv[])
+MORDOR_MAIN(int argc, char *argv[])
 {
     try {
         Config::loadFromEnvironment();

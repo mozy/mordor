@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "mordor/config.h"
+#include "mordor/main.h"
 #include "mordor/version.h"
 #include "mordor/statistics.h"
 #include "mordor/test/antxmllistener.h"
@@ -21,7 +22,7 @@ using namespace Mordor::Test;
 static ConfigVar<std::string>::ptr g_xmlDirectory = Config::lookup<std::string>(
     "test.antxml.directory", std::string(), "Location to put XML files");
 
-int main(int argc, const char **argv)
+MORDOR_MAIN(int argc, char *argv[])
 {
     Config::loadFromEnvironment();
     std::string newDirectory = argv[0];

@@ -16,6 +16,7 @@
 #include "mordor/http/multipart.h"
 #include "mordor/http/proxy.h"
 #include "mordor/iomanager.h"
+#include "mordor/main.h"
 #include "mordor/sleep.h"
 #include "mordor/socket.h"
 #include "mordor/streams/socket.h"
@@ -61,7 +62,7 @@ static bool getCredentials(HTTP::ClientRequest::ptr priorRequest,
     return false;
 }
 
-int main(int argc, char *argv[])
+MORDOR_MAIN(int argc, char *argv[])
 {
     Config::loadFromEnvironment();
     StdoutStream stdoutStream;
