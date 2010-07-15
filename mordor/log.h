@@ -103,6 +103,26 @@ public:
         Log::Level level, const std::string &str,
         const char *file, int line);
 };
+#else
+class SyslogLogSink : public LogSink
+{
+public:
+    SyslogLogSink(int facility);
+
+    void log(const std::string &logger,
+        boost::posix_time::ptime now, unsigned long long elapsed,
+        tid_t thread, void *fiber,
+        Log::Level level, const std::string &str,
+        const char *file, int line);
+
+    int facility() const { return m_facility; }
+
+    static int facilityFromString(const char *str);
+    static const char *facilityToString(int facility);
+
+private:
+    int m_facility;
+};
 #endif
 
 class FileLogSink : public LogSink
