@@ -153,10 +153,10 @@ BufferedStream::flushWrite(size_t length)
             if (m_flushMultiplesOfBuffer)
                 toWrite = toWrite / m_bufferSize * m_bufferSize;
             MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
-                << m_writeBuffer.readAvailable() << ")";
+                << toWrite << ")";
             result = parent()->write(m_writeBuffer, toWrite);
             MORDOR_LOG_DEBUG(g_log) << this << " parent()->write("
-                << m_writeBuffer.readAvailable() << "): " << result;
+                << toWrite << "): " << result;
             m_writeBuffer.consume(result);
         } catch (...) {
             // If this entire write is still in our buffer,
