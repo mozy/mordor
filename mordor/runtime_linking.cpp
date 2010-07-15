@@ -4,7 +4,8 @@
 
 #include "runtime_linking.h"
 
-#include "wspiapi.h"
+#include <IPHlpApi.h>
+#include <wspiapi.h>
 
 #pragma comment(lib, "ws2_32")
 
@@ -105,6 +106,14 @@ MORDOR_RUNTIME_LINK_DEFINITION(FreeAddrInfoW, VOID, WSAAPI,
     }
     if (pAddrInfo)
         LocalFree((HLOCAL)pAddrInfo);
+}
+
+MORDOR_RUNTIME_LINK_DEFINITION(GetAdaptersAddresses, ULONG, WINAPI,
+    (ULONG Family, ULONG Flags, PVOID Reserved, PIP_ADAPTER_ADDRESSES AdapterAddresses, PULONG SizePointer),
+    (Family, Flags, Reserved, AdapterAddresses, SizePointer),
+    L"iphlpapi.dll")
+{
+    return ERROR_CALL_NOT_IMPLEMENTED;
 }
 
 MORDOR_RUNTIME_LINK_DEFINITION(GetAddrInfoW, INT, WSAAPI,

@@ -185,6 +185,8 @@ public:
     static std::vector<ptr>
         lookup(const std::string& host, int family = AF_UNSPEC,
             int type = 0, int protocol = 0);
+    static std::map<std::string, std::vector<ptr> >
+        getInterfaceAddresses();
     static ptr create(const sockaddr *name, socklen_t nameLen,
         int type = 0, int protocol = 0);
 

@@ -14,14 +14,17 @@
 
 #ifdef WINDOWS
 #include <mswsock.h>
+#include <IPHlpApi.h>
 
 #include "eventloop.h"
 #include "runtime_linking.h"
 
 #pragma comment(lib, "ws2_32")
 #pragma comment(lib, "mswsock")
+#pragma comment(lib, "iphlpapi")
 #else
 #include <fcntl.h>
+#include <ifaddrs.h>
 #include <netdb.h>
 #define closesocket close
 #endif
@@ -1532,6 +1535,82 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     freeaddrinfo(results);
 #endif
     return result;
+}
+
+std::map<std::string, std::vector<Address::ptr> >
+Address::getInterfaceAddresses()
+{
+    std::map<std::string, std::vector<Address::ptr> > result;
+#ifdef WINDOWS
+    char buf[15 * 1024];
+    IP_ADAPTER_ADDRESSES *addresses = (IP_ADAPTER_ADDRESSES *)buf;
+    ULONG size = sizeof(buf);
+    ULONG error = pGetAdaptersAddresses(AF_UNSPEC, 0, NULL, addresses, &size);
+    if (error && error != ERROR_CALL_NOT_IMPLEMENTED)
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "GetAdaptersAddresses");
+    if (error == ERROR_CALL_NOT_IMPLEMENTED) {
+        PIP_ADAPTER_INFO addresses2 = (PIP_ADAPTER_INFO)buf;
+        size = sizeof(buf);
+        error = GetAdaptersInfo(addresses2, &size);
+        if (error)
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "PIP_ADAPTER_INFO");
+        for (; addresses2; addresses2 = addresses2->Next) {
+            std::map<std::string, std::vector<Address::ptr> >::iterator it =
+            result.insert(std::make_pair(addresses2->AdapterName,
+                std::vector<Address::ptr>())).first;
+            IP_ADDR_STRING *address = &addresses2->IpAddressList;
+            for (; address; address = address->Next) {
+                sockaddr_in addr;
+                memset(&addr, 0, sizeof(sockaddr_in));
+                addr.sin_family = AF_INET;
+                addr.sin_addr.s_addr = inet_addr(address->IpAddress.String);
+                it->second.push_back(Address::create((sockaddr *)&addr,
+                    sizeof(sockaddr_in)));
+            }
+        }
+
+        return result;
+    }
+
+    for (; addresses; addresses = addresses->Next) {
+        std::map<std::string, std::vector<Address::ptr> >::iterator it =
+            result.insert(std::make_pair(addresses->AdapterName,
+                std::vector<Address::ptr>())).first;
+        IP_ADAPTER_UNICAST_ADDRESS *address = addresses->FirstUnicastAddress;
+        for (; address; address = address->Next)
+            it->second.push_back(Address::create(address->Address.lpSockaddr,
+                address->Address.iSockaddrLength));
+    }
+    return result;
+#else
+    struct ifaddrs *next, *results;
+    if (getifaddrs(&results) != 0)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getifaddrs");
+    try {
+        next = results;
+        while (next) {
+            Address::ptr address;
+            switch (next->ifa_addr->sa_family) {
+                case AF_INET:
+                    address = create(next->ifa_addr, sizeof(sockaddr_in));
+                    break;
+                case AF_INET6:
+                    address = create(next->ifa_addr, sizeof(sockaddr_in6));
+                    break;
+                default:
+                    break;
+            }
+            if (address)
+                result[next->ifa_name].push_back(address);
+            next = next->ifa_next;
+        }
+    } catch (...) {
+        freeifaddrs(results);
+        throw;
+    }
+    freeifaddrs(results);
+    return result;
+#endif
 }
 
 Address::ptr
