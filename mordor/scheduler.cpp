@@ -387,6 +387,8 @@ Scheduler::run()
                         dgFiber->yieldTo();
                         if (dgFiber->state() != Fiber::TERM)
                             dgFiber.reset();
+                        else
+                            dgFiber->reset(NULL);
                     }
                 } catch (...) {
                     MORDOR_LOG_FATAL(Log::root()) << boost::current_exception_diagnostic_information();
