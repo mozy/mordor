@@ -129,9 +129,7 @@ Config::loadFromJSON(const JSON::Value &json)
 ConfigVarBase::ptr
 Config::lookup(const std::string &name)
 {
-    ConfigVarBase var(name);
-    ConfigVarBase::ptr ptr(&var, &nop<ConfigVarBase *>);
-    std::set<ConfigVarBase::ptr, ConfigVarBase::Comparator>::iterator it = vars().find(ptr);
+    ConfigVarSet::iterator it = vars().find(name);
     if (it != vars().end())
         return *it;
     return ConfigVarBase::ptr();
@@ -140,21 +138,11 @@ Config::lookup(const std::string &name)
 void
 Config::visit(boost::function<void (ConfigVarBase::ptr)> dg)
 {
-    for (std::set<ConfigVarBase::ptr,
-            ConfigVarBase::Comparator>::const_iterator it = vars().begin();
+    for (ConfigVarSet::const_iterator it = vars().begin();
         it != vars().end();
         ++it) {
         dg(*it);
     }
-}
-
-bool
-ConfigVarBase::Comparator::operator()(const ConfigVarBase::ptr &lhs,
-                                      const ConfigVarBase::ptr &rhs) const
-{
-    MORDOR_ASSERT(lhs);
-    MORDOR_ASSERT(rhs);
-    return lhs->m_name < rhs->m_name;
 }
 
 }

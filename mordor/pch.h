@@ -101,11 +101,17 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/exception/all.hpp>
 #include <boost/function.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/global_fun.hpp>
+#include <boost/multi_index/member.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/regex.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/signals2/signal.hpp>
 #include <boost/thread.hpp>
 #include <boost/variant.hpp>
 
