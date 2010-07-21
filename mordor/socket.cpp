@@ -906,7 +906,7 @@ Socket::shutdown(int how)
     if (g_log->enabled(result == -1 ? Log::ERROR : Log::DEBUG)) {               \
         LogEvent event = g_log->log(result == -1 ? Log::ERROR : Log::DEBUG,     \
             __FILE__, __LINE__);                                                \
-        event.os() << this << " " << api << " (" << m_sock << ", "              \
+        event.os() << this << " " << api << "(" << m_sock << ", "              \
             << length;                                                          \
         if (isSend && address)                                                  \
             event.os() << ", " << *address;                                     \
