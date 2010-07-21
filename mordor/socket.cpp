@@ -153,6 +153,16 @@ static struct Initializer {
 #endif
 
 static Logger::ptr g_log = Log::lookup("mordor:socket");
+static int g_iosPortIndex;
+
+namespace {
+static struct IOSInitializer {
+    IOSInitializer::IOSInitializer()
+    {
+        g_iosPortIndex = std::ios_base::xalloc();
+    }
+} g_iosInit;
+}
 
 Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int initialize)
 : m_sock(-1),
@@ -1709,11 +1719,14 @@ std::ostream &
 IPv4Address::insert(std::ostream &os) const
 {
     int addr = htonl(sin.sin_addr.s_addr);
-    return os << ((addr >> 24) & 0xff) << '.'
+    os << ((addr >> 24) & 0xff) << '.'
         << ((addr >> 16) & 0xff) << '.'
         << ((addr >> 8) & 0xff) << '.'
-        << (addr & 0xff) << ':'
-        << htons(sin.sin_port);
+        << (addr & 0xff);
+    // "on" is 0, so that it's the default
+    if (!os.iword(g_iosPortIndex))
+        os << ':' << htons(sin.sin_port);
+    return os;
 }
 
 IPv6Address::IPv6Address(int type, int protocol)
@@ -1729,7 +1742,9 @@ std::ostream &
 IPv6Address::insert(std::ostream &os) const
 {
     std::ios_base::fmtflags flags = os.setf(std::ios_base::hex, std::ios_base::basefield);
-    os << '[';
+    bool includePort = !os.iword(g_iosPortIndex);
+    if (includePort)
+        os << '[';
     unsigned short *addr = (unsigned short *)sin.sin6_addr.s6_addr;
     bool usedZeros = false;
     for (size_t i = 0; i < 8; ++i) {
@@ -1746,7 +1761,8 @@ IPv6Address::insert(std::ostream &os) const
     if (!usedZeros && addr[7] == 0)
         os << "::";
 
-    os << "]:" << std::dec << (int)htons(sin.sin6_port);
+    if (includePort)
+        os << "]:" << std::dec << (int)htons(sin.sin6_port);
     os.setf(flags, std::ios_base::basefield);
     return os;
 }
@@ -1797,6 +1813,18 @@ operator <(const Address::ptr &lhs, const Address::ptr &rhs)
     if (!lhs || !rhs)
         return rhs;
     return *lhs < *rhs;
+}
+
+std::ostream &includePort(std::ostream &os)
+{
+    os.iword(g_iosPortIndex) = 0;
+    return os;
+}
+
+std::ostream &excludePort(std::ostream &os)
+{
+    os.iword(g_iosPortIndex) = 1;
+    return os;
 }
 
 }

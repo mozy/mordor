@@ -296,6 +296,9 @@ std::ostream &operator <<(std::ostream &os, const Address &addr);
 
 bool operator<(const Address::ptr &lhs, const Address::ptr &rhs);
 
+std::ostream &includePort(std::ostream &os);
+std::ostream &excludePort(std::ostream &os);
+
 }
 
 #endif
