@@ -157,7 +157,7 @@ static int g_iosPortIndex;
 
 namespace {
 static struct IOSInitializer {
-    IOSInitializer::IOSInitializer()
+    IOSInitializer()
     {
         g_iosPortIndex = std::ios_base::xalloc();
     }
