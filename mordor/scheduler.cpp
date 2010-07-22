@@ -420,6 +420,8 @@ Scheduler::run()
             MORDOR_LOG_DEBUG(g_log) << this << " idle fiber terminated";
             if (boost::this_thread::get_id() == m_rootThread)
                 m_callingFiber.reset();
+            // Unblock the next thread
+            tickle();
             return;
         }
         MORDOR_LOG_DEBUG(g_log) << this << " idling";

@@ -6,6 +6,7 @@
 
 #include "mordor/atomic.h"
 #include "mordor/fiber.h"
+#include "mordor/iomanager.h"
 #include "mordor/parallel.h"
 #include "mordor/sleep.h"
 #include "mordor/test/test.h"
@@ -329,4 +330,29 @@ MORDOR_UNITTEST(Scheduler, spreadTheLoad)
     }
     // Make sure we hit every thread
     MORDOR_TEST_ASSERT_EQUAL(threads.size(), 4u);
+}
+
+static void fail()
+{
+    MORDOR_NOTREACHED();
+}
+
+static void cancelTheTimer(Timer::ptr timer)
+{
+    // Wait for the other threads to get to idle first
+    Mordor::sleep(100000);
+    timer->cancel();
+}
+
+MORDOR_UNITTEST(Scheduler, stopIdleMultithreaded)
+{
+    IOManager ioManager(4);
+    unsigned long long start = TimerManager::now();
+    Timer::ptr timer = ioManager.registerTimer(10000000ull, &fail);
+    // Wait for the other threads to get to idle first
+    Mordor::sleep(100000);
+    ioManager.schedule(boost::bind(&cancelTheTimer, timer));
+    ioManager.stop();
+    // This should have taken less than a second, since we cancelled the timer
+    MORDOR_TEST_ASSERT_LESS_THAN(TimerManager::now() - start, 1000000ull);
 }

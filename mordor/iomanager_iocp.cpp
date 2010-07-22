@@ -265,12 +265,15 @@ IOManager::registerEvent(AsyncEvent *e)
     e->m_thread = boost::this_thread::get_id();
     e->m_fiber = Fiber::getThis();
     MORDOR_LOG_DEBUG(g_log) << this << " registerEvent(" << &e->overlapped << ")";
-    atomicIncrement(m_pendingEventCount);
 #ifdef DEBUG
     {
         boost::mutex::scoped_lock lock(m_mutex);
         MORDOR_ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
         m_pendingEvents[&e->overlapped] = e;
+#endif
+        atomicIncrement(m_pendingEventCount);
+#ifdef DEBUG
+        MORDOR_ASSERT(m_pendingEvents.size() == m_pendingEventCount);
     }
 #endif
 }
@@ -280,7 +283,6 @@ IOManager::unregisterEvent(AsyncEvent *e)
 {
     MORDOR_ASSERT(e);
     MORDOR_LOG_DEBUG(g_log) << this << " unregisterEvent(" << &e->overlapped << ")";
-    atomicDecrement(m_pendingEventCount);
     e->m_thread = boost::thread::id();
     e->m_scheduler = NULL;
     e->m_fiber.reset();
@@ -291,6 +293,10 @@ IOManager::unregisterEvent(AsyncEvent *e)
             m_pendingEvents.find(&e->overlapped);
         MORDOR_ASSERT(it != m_pendingEvents.end());
         m_pendingEvents.erase(it);
+#endif
+        atomicDecrement(m_pendingEventCount);
+#ifdef DEBUG
+        MORDOR_ASSERT(m_pendingEvents.size() == m_pendingEventCount);
     }
 #endif
 }
@@ -446,14 +452,14 @@ IOManager::idle()
             e->m_scheduler = NULL;
             e->m_fiber.reset();
         }
+        if (count != tickles)
+            atomicAdd(m_pendingEventCount, (size_t)(-(ptrdiff_t)(count - tickles)));
 #ifdef DEBUG
-        if (lock.owns_lock())
+        if (lock.owns_lock()) {
+            MORDOR_ASSERT(m_pendingEventCount == m_pendingEvents.size());
             lock.unlock();
+        }
 #endif
-        atomicAdd(m_pendingEventCount, (size_t)(-(ptrdiff_t)(count - tickles)));
-        // We could have possibly retrieved more tickles than we needed;
-        // retickle so other threads will get them
-        while (--tickles > 0) tickle();
         Fiber::yield();
     }
 }
