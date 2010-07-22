@@ -331,14 +331,21 @@ Scheduler::run()
     Fiber::ptr dgFiber;
     // use a vector for O(1) .size()
     std::vector<FiberAndThread> batch(m_batchSize);
+    bool cameFromIdle = true;
     while (true) {
         batch.clear();
         bool dontIdle = false;
         bool tickleMe = false;
         {
             boost::mutex::scoped_lock lock(m_mutex);
-            for (std::list<FiberAndThread>::iterator it(m_fibers.begin());
-                 it != m_fibers.end() && batch.size() < m_batchSize; ) {
+            std::list<FiberAndThread>::iterator it(m_fibers.begin());
+            while (it != m_fibers.end()) {
+                // If we've met our batch size, and we're not checking to see
+                // if we need to tickle another thread, then break
+                if ( (!cameFromIdle || tickleMe || threadCount() == 1) &&
+                    batch.size() == m_batchSize)
+                    break;
+
                 if (it->thread != boost::thread::id() &&
                     it->thread != boost::this_thread::get_id()) {
                     MORDOR_LOG_DEBUG(g_log) << this
@@ -359,10 +366,19 @@ Scheduler::run()
                     dontIdle = true;
                     continue;
                 }
+                // We were just checking if there is more work; there is, so
+                // set the flag and don't actually take this piece of work
+                if (batch.size() == m_batchSize) {
+                    tickleMe = true;
+                    break;
+                }
                 batch.push_back(*it);
                 it = m_fibers.erase(it);
             }
         }
+        cameFromIdle = false;
+        if (tickleMe)
+            tickle();
         MORDOR_LOG_DEBUG(g_log) << this
             << " got " << batch.size() << " fiber/dgs to process (max: "
             << m_batchSize << ")";
@@ -390,14 +406,13 @@ Scheduler::run()
                             dgFiber->reset(NULL);
                     }
                 } catch (...) {
-                    MORDOR_LOG_FATAL(Log::root()) << boost::current_exception_diagnostic_information();
+                    MORDOR_LOG_FATAL(Log::root())
+                        << boost::current_exception_diagnostic_information();
                     throw;
                 }
             }
             continue;
         }
-        if (tickleMe)
-            tickle();
         if (dontIdle)
             continue;
 
@@ -409,6 +424,7 @@ Scheduler::run()
         }
         MORDOR_LOG_DEBUG(g_log) << this << " idling";
         idleFiber->call();
+        cameFromIdle = true;
     }
 }
 

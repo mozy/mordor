@@ -4,9 +4,10 @@
 
 #include <boost/bind.hpp>
 
-#include "mordor/exception.h"
+#include "mordor/atomic.h"
 #include "mordor/fiber.h"
 #include "mordor/parallel.h"
+#include "mordor/sleep.h"
 #include "mordor/test/test.h"
 #include "mordor/workerpool.h"
 
@@ -296,3 +297,36 @@ MORDOR_UNITTEST(Scheduler, scheduleForThreadNotOnScheduler)
     pool.stop();
 }
 #endif
+
+static void sleepForABit(std::set<boost::thread::id> &threads,
+    boost::mutex &mutex, Fiber::ptr scheduleMe, int &count)
+{
+    {
+        boost::mutex::scoped_lock lock(mutex);
+        threads.insert(boost::this_thread::get_id());
+    }
+    Mordor::sleep(10000);
+    if (atomicDecrement(count) == 0)
+        Scheduler::getThis()->schedule(scheduleMe);
+}
+
+MORDOR_UNITTEST(Scheduler, spreadTheLoad)
+{
+    std::set<boost::thread::id> threads;
+    {
+        boost::mutex mutex;
+        WorkerPool pool(4);
+        // Wait for the other threads to get to idle first
+        Mordor::sleep(100000);
+        int count = 8;
+        for (size_t i = 0; i < 8; ++i)
+            pool.schedule(boost::bind(&sleepForABit, boost::ref(threads),
+                boost::ref(mutex), Fiber::getThis(), boost::ref(count)));
+        // We have to have one of these fibers reschedule us, because if we
+        // let the pool destruct, it will call stop which will wake up all
+        // the threads
+        Scheduler::yieldTo();
+    }
+    // Make sure we hit every thread
+    MORDOR_TEST_ASSERT_EQUAL(threads.size(), 4u);
+}
