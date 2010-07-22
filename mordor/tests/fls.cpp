@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/fiber.h"
 #include "mordor/scheduler.h"
 #include "mordor/test/test.h"

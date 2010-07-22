@@ -1,7 +1,5 @@
 // Copyright (c) 2010 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/iomanager.h"
 #include "mordor/streams/buffer.h"
 #include "mordor/streams/pipe.h"

@@ -1,47 +1,27 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordor", "mordor.vcproj", "{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cat", "examples\cat.vcproj", "{05A7ECD4-456F-43FE-9CEA-68213832E9AD}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simpleclient", "examples\simpleclient.vcproj", "{EAD0A645-D849-44FA-82B5-74A1055AE3AA}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wget", "examples\wget.vcproj", "{6CC00BFB-5A32-4033-BF7E-64D524B2A247}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echoserver", "examples\echoserver.vcproj", "{35655735-9C38-4255-81E8-F8CDABEB358E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordortest", "test\mordortest.vcproj", "{CD888334-383F-4DB6-BE16-153BA25D98FB}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcproj", "{5C6B7FB7-B009-423F-BC44-89E70163AFCB}"
-	ProjectSection(ProjectDependencies) = postProject
-		{CD888334-383F-4DB6-BE16-153BA25D98FB} = {CD888334-383F-4DB6-BE16-153BA25D98FB}
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tunnel", "examples\tunnel.vcproj", "{41B0154E-EBCA-4518-8957-47623868F2FA}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{466AF846-D383-4A5B-8BD5-4CF6071C31F3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iombench", "examples\iombench.vcproj", "{C96B814F-E7C2-4465-8FFB-C49105929E68}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordor", "mordor\mordor.vcxproj", "{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cat", "mordor\examples\cat.vcxproj", "{05A7ECD4-456F-43FE-9CEA-68213832E9AD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simpleclient", "mordor\examples\simpleclient.vcxproj", "{EAD0A645-D849-44FA-82B5-74A1055AE3AA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wget", "mordor\examples\wget.vcxproj", "{6CC00BFB-5A32-4033-BF7E-64D524B2A247}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echoserver", "mordor\examples\echoserver.vcxproj", "{35655735-9C38-4255-81E8-F8CDABEB358E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordortest", "mordor\test\mordortest.vcxproj", "{CD888334-383F-4DB6-BE16-153BA25D98FB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "mordor\tests\tests.vcxproj", "{5C6B7FB7-B009-423F-BC44-89E70163AFCB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tunnel", "mordor\examples\tunnel.vcxproj", "{41B0154E-EBCA-4518-8957-47623868F2FA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iombench", "mordor\examples\iombench.vcxproj", "{C96B814F-E7C2-4465-8FFB-C49105929E68}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "decodebacktrace", "mordor\examples\decodebacktrace.vcxproj", "{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -123,16 +103,25 @@ Global
 		{C96B814F-E7C2-4465-8FFB-C49105929E68}.Release|Win32.Build.0 = Release|Win32
 		{C96B814F-E7C2-4465-8FFB-C49105929E68}.Release|x64.ActiveCfg = Release|x64
 		{C96B814F-E7C2-4465-8FFB-C49105929E68}.Release|x64.Build.0 = Release|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|Win32.Build.0 = Debug|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|x64.ActiveCfg = Debug|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|x64.Build.0 = Debug|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|Win32.ActiveCfg = Release|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|Win32.Build.0 = Release|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|x64.ActiveCfg = Release|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{EAD0A645-D849-44FA-82B5-74A1055AE3AA} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
-		{6CC00BFB-5A32-4033-BF7E-64D524B2A247} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
-		{35655735-9C38-4255-81E8-F8CDABEB358E} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
-		{41B0154E-EBCA-4518-8957-47623868F2FA} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
 		{05A7ECD4-456F-43FE-9CEA-68213832E9AD} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{35655735-9C38-4255-81E8-F8CDABEB358E} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
 		{C96B814F-E7C2-4465-8FFB-C49105929E68} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{EAD0A645-D849-44FA-82B5-74A1055AE3AA} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{41B0154E-EBCA-4518-8957-47623868F2FA} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{6CC00BFB-5A32-4033-BF7E-64D524B2A247} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
 	EndGlobalSection
 EndGlobal

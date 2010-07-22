@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/iomanager.h"
 #include "mordor/parallel.h"
 #include "mordor/streams/null.h"

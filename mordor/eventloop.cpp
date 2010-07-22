@@ -1,7 +1,5 @@
 // Copyright (c) 2010 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "eventloop.h"
 
 #include "assert.h"

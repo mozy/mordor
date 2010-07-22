@@ -132,7 +132,7 @@ ifdef GPROF
 endif
 
 # add current dir to include dir
-INC_FLAGS := -I$(SRCDIR)
+INC_FLAGS := -I$(SRCDIR) -include mordor/pch.h
 
 ifeq ($(PLATFORM), Darwin)
     INC_FLAGS := $(INC_FLAGS) -I/opt/local/include
@@ -219,7 +219,7 @@ ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++-header $< -o $@
 
 #
 # Include the dependency information generated during the previous compile

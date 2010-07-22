@@ -1,7 +1,5 @@
 // Copyright (c) 2010 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/xml/parser.h"
 #include "mordor/test/test.h"
 

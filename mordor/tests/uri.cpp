@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/uri.h"
 #include "mordor/streams/buffer.h"
 #include "mordor/test/test.h"

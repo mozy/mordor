@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #ifdef WINDOWS
 
 #include <boost/bind.hpp>

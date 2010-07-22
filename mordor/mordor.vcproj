@@ -59,6 +59,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="4"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -127,6 +128,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="3"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -195,6 +197,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="3"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -264,6 +267,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="3"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -395,10 +399,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\http.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\http.cpp"
 				>
 				<FileConfiguration
@@ -433,6 +433,10 @@
 						ObjectFile="$(IntDir)\http_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\http\http.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\http\http_parser.cpp"

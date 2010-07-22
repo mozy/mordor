@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "runtime_linking.h"
 
 #include <IPHlpApi.h>

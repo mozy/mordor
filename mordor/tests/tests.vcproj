@@ -53,6 +53,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="4"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -128,6 +129,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="3"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -203,6 +205,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="3"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -281,6 +284,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="3"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"

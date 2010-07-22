@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/streams/memory.h"
 #include "mordor/streams/buffered.h"
 #include "mordor/streams/singleplex.h"
