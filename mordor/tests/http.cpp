@@ -9,6 +9,7 @@
 #include "mordor/http/multipart.h"
 #include "mordor/http/parser.h"
 #include "mordor/http/server.h"
+#include "mordor/iomanager.h"
 #include "mordor/scheduler.h"
 #include "mordor/sleep.h"
 #include "mordor/streams/buffered.h"

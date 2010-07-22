@@ -2,6 +2,8 @@
 
 #include "pch.h"
 
+#ifdef BSD
+
 #include "iomanager_kqueue.h"
 
 #include "assert.h"
@@ -12,7 +14,7 @@ namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:iomanager");
 
-IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
+IOManager::IOManager(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_kqfd = kqueue();
@@ -52,7 +54,7 @@ IOManagerKQueue::IOManagerKQueue(int threads, bool useCaller)
     }    
 }
 
-IOManagerKQueue::~IOManagerKQueue()
+IOManager::~IOManager()
 {
     stop();
     close(m_kqfd);
@@ -63,14 +65,14 @@ IOManagerKQueue::~IOManagerKQueue()
 }
 
 bool
-IOManagerKQueue::stopping()
+IOManager::stopping()
 {
     unsigned long long timeout;
     return stopping(timeout);
 }
 
 void
-IOManagerKQueue::registerEvent(int fd, Event events,
+IOManager::registerEvent(int fd, Event events,
                                boost::function<void ()> dg)
 {
     MORDOR_ASSERT(fd > 0);
@@ -103,7 +105,7 @@ IOManagerKQueue::registerEvent(int fd, Event events,
 }
 
 void
-IOManagerKQueue::cancelEvent(int fd, Event events)
+IOManager::cancelEvent(int fd, Event events)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     std::map<std::pair<int, Event>, AsyncEvent>::iterator it =
@@ -129,7 +131,7 @@ IOManagerKQueue::cancelEvent(int fd, Event events)
 }
 
 bool
-IOManagerKQueue::stopping(unsigned long long &nextTimeout)
+IOManager::stopping(unsigned long long &nextTimeout)
 {
     nextTimeout = nextTimer();
     if (nextTimeout == ~0ull && Scheduler::stopping()) {
@@ -141,7 +143,7 @@ IOManagerKQueue::stopping(unsigned long long &nextTimeout)
 }
 
 void
-IOManagerKQueue::idle()
+IOManager::idle()
 {
     struct kevent events[64];
     while (true) {
@@ -207,7 +209,7 @@ IOManagerKQueue::idle()
 }
 
 void
-IOManagerKQueue::tickle()
+IOManager::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
     MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
@@ -216,3 +218,5 @@ IOManagerKQueue::tickle()
 }
 
 }
+
+#endif

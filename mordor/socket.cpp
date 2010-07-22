@@ -8,8 +8,9 @@
 
 #include "assert.h"
 #include "exception.h"
+#include "iomanager.h"
 #include "log.h"
-#include "mordor/string.h"
+#include "string.h"
 #include "version.h"
 
 #ifdef WINDOWS
@@ -484,7 +485,7 @@ Socket::connect(const Address &to)
                 Timer::ptr timeout;
                 if (m_sendTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                        &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
+                        &IOManager::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
                 Scheduler::yieldTo();
                 if (timeout)
                     timeout->cancel();
@@ -745,7 +746,7 @@ Socket::accept(Socket &target)
                 Timer::ptr timeout;
                 if (m_receiveTimeout != ~0ull)
                     timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
-                        &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
+                        &IOManager::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_receiveEvent));
                 Scheduler::yieldTo();
                 if (timeout)
                     timeout->cancel();
@@ -1006,7 +1007,7 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
             Timer::ptr timer;
             if (timeout != ~0ull)
                 timer = m_ioManager->registerTimer(timeout, boost::bind(
-                    &IOManagerIOCP::cancelEvent, m_ioManager, (HANDLE)m_sock,
+                    &IOManager::cancelEvent, m_ioManager, (HANDLE)m_sock,
                     &event));
             Scheduler::yieldTo();
             if (timer)
@@ -1348,13 +1349,13 @@ Socket::cancelIo(error_t &cancelled, error_t error)
 }
 #else
 void
-Socket::cancelIo(IOManager::Event event, error_t &cancelled, error_t error)
+Socket::cancelIo(int event, error_t &cancelled, error_t error)
 {
     MORDOR_ASSERT(error);
     if (cancelled)
         return;
     cancelled = error;
-    m_ioManager->cancelEvent(m_sock, event);
+    m_ioManager->cancelEvent(m_sock, (IOManager::Event)event);
 }
 #endif
 

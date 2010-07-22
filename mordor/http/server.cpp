@@ -8,6 +8,7 @@
 
 #include "mordor/exception.h"
 #include "mordor/log.h"
+#include "mordor/scheduler.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/transfer.h"
 #include "multipart.h"

@@ -2,6 +2,8 @@
 
 #include "pch.h"
 
+#ifdef LINUX
+
 #include "iomanager_epoll.h"
 
 #include "assert.h"
@@ -89,7 +91,7 @@ static std::ostream &operator <<(std::ostream &os, epoll_events_t events)
     return os;
 }
 
-IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
+IOManager::IOManager(int threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_epfd = epoll_create(5000);
@@ -121,7 +123,7 @@ IOManagerEPoll::IOManagerEPoll(int threads, bool useCaller)
     }
 }
 
-IOManagerEPoll::~IOManagerEPoll()
+IOManager::~IOManager()
 {
     stop();
     close(m_epfd);
@@ -132,14 +134,14 @@ IOManagerEPoll::~IOManagerEPoll()
 }
 
 bool
-IOManagerEPoll::stopping()
+IOManager::stopping()
 {
     unsigned long long timeout;
     return stopping(timeout);
 }
 
 void
-IOManagerEPoll::registerEvent(int fd, Event events, boost::function<void ()> dg)
+IOManager::registerEvent(int fd, Event events, boost::function<void ()> dg)
 {
     MORDOR_ASSERT(fd > 0);
     MORDOR_ASSERT(Scheduler::getThis());
@@ -214,7 +216,7 @@ IOManagerEPoll::registerEvent(int fd, Event events, boost::function<void ()> dg)
 }
 
 bool
-IOManagerEPoll::unregisterEvent(int fd, Event events)
+IOManager::unregisterEvent(int fd, Event events)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     std::map<int, AsyncEvent>::iterator it = m_pendingEvents.find(fd);
@@ -259,7 +261,7 @@ IOManagerEPoll::unregisterEvent(int fd, Event events)
 }
 
 void
-IOManagerEPoll::cancelEvent(int fd, Event events)
+IOManager::cancelEvent(int fd, Event events)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     std::map<int, AsyncEvent>::iterator it = m_pendingEvents.find(fd);
@@ -311,7 +313,7 @@ IOManagerEPoll::cancelEvent(int fd, Event events)
 }
 
 bool
-IOManagerEPoll::stopping(unsigned long long &nextTimeout)
+IOManager::stopping(unsigned long long &nextTimeout)
 {
     nextTimeout = nextTimer();
     if (nextTimeout == ~0ull && Scheduler::stopping()) {
@@ -324,7 +326,7 @@ IOManagerEPoll::stopping(unsigned long long &nextTimeout)
 }
 
 void
-IOManagerEPoll::idle()
+IOManager::idle()
 {
     epoll_event events[64];
     while (true) {
@@ -436,7 +438,7 @@ m_pendingEvents.find(event.data.fd);
 }
 
 void
-IOManagerEPoll::tickle()
+IOManager::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
     MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
@@ -445,3 +447,5 @@ IOManagerEPoll::tickle()
 }
 
 }
+
+#endif

@@ -65,8 +65,6 @@ ifeq ($(PLATFORM), Darwin)
     BOOST_EXT := 
     BOOST_LIB_FLAGS := -L/opt/local/lib
     PQ_LIB_FLAGS := -L/opt/local/lib/postgresql83
-    IOMANAGER := kqueue
-    UNDERSCORE := _underscore
     GCC_ARCH := $(shell file -L `which gcc` | grep x86_64 -o | uniq)
     ifndef GCC_ARCH
         GCC_ARCH := $(shell file -L `which gcc` | grep ppc -o | uniq)
@@ -96,13 +94,6 @@ ifeq ($(PLATFORM), Darwin)
         endif
     endif
 endif
-ifeq ($(PLATFORM), FreeBSD)
-    IOMANAGER := kqueue
-endif
-ifeq ($(shell uname), Linux)
-    IOMANAGER := epoll
-endif
-
 
 # set optimization level (disable for gcov builds)
 # example: 'make OPT=2' will add -O2 to the compilation options
@@ -430,7 +421,8 @@ LIBMORDOROBJECTS := 							\
 	mordor/http/http_parser.o					\
 	mordor/http/proxy.o						\
 	mordor/http/server.o						\
-	mordor/iomanager_$(IOMANAGER).o					\
+	mordor/iomanager_epoll.o					\
+	mordor/iomanager_kqueue.o					\
 	mordor/json.o							\
 	mordor/log.o							\
 	mordor/ragel.o							\

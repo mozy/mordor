@@ -17,7 +17,7 @@
 
 namespace Mordor {
 
-class IOManagerKQueue : public Scheduler, public TimerManager
+class IOManager : public Scheduler, public TimerManager
 {
 public:
     enum Event {
@@ -39,8 +39,8 @@ private:
     };
 
 public:
-    IOManagerKQueue(int threads = 1, bool useCaller = true);
-    ~IOManagerKQueue();
+    IOManager(int threads = 1, bool useCaller = true);
+    ~IOManager();
 
     bool stopping();
 

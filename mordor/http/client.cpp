@@ -18,6 +18,7 @@
 #include "mordor/streams/null.h"
 #include "mordor/streams/timeout.h"
 #include "mordor/streams/transfer.h"
+#include "mordor/timer.h"
 #include "mordor/util.h"
 #include "mordor/atomic.h"
 #include "multipart.h"

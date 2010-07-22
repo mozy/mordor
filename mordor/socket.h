@@ -8,11 +8,11 @@
 #include <boost/shared_ptr.hpp>
 
 #include "exception.h"
-#include "iomanager.h"
 #include "version.h"
 
 #ifdef WINDOWS
 #include <ws2tcpip.h>
+#include "iomanager.h"
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -24,6 +24,9 @@
 #endif
 
 namespace Mordor {
+
+class EventLoop;
+class IOManager;
 
 #ifdef WINDOWS
 struct iovec
@@ -42,8 +45,6 @@ struct iovec
 #define SHUT_RDWR SD_BOTH
 typedef u_long iov_len_t;
 typedef SOCKET socket_t;
-
-class EventLoop;
 #else
 typedef size_t iov_len_t;
 typedef int socket_t;
@@ -137,7 +138,7 @@ private:
     // For WSAEventSelect
     void cancelIo(error_t &cancelled, error_t error);
 #else
-    void cancelIo(IOManager::Event event, error_t &cancelled, error_t error);
+    void cancelIo(int event, error_t &cancelled, error_t error);
 #endif
 
 private:

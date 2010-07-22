@@ -8,6 +8,7 @@
 #include "client.h"
 #include "mordor/atomic.h"
 #include "mordor/future.h"
+#include "mordor/iomanager.h"
 #include "mordor/socks.h"
 #include "mordor/streams/buffered.h"
 #include "mordor/streams/pipe.h"

@@ -7,8 +7,9 @@
 #include <boost/thread/mutex.hpp>
 
 #include "mordor/exception.h"
-#include "mordor/fiber.h"
 #include "mordor/log.h"
+#include "mordor/scheduler.h"
+#include "stream.h"
 
 namespace Mordor {
 
@@ -44,7 +45,7 @@ private:
     bool m_cancelledRead, m_cancelledWrite;
     CloseType m_closed, m_otherClosed;
     Scheduler *m_pendingWriterScheduler, *m_pendingReaderScheduler;
-    Fiber::ptr m_pendingWriter, m_pendingReader;
+    boost::shared_ptr<Fiber> m_pendingWriter, m_pendingReader;
 };
 
 std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t bufferSize)

@@ -4,7 +4,7 @@
 
 #include <windows.h>
 
-#include "mordor/iomanager_iocp.h"
+#include "mordor/iomanager.h"
 #include "stream.h"
 
 namespace Mordor {
@@ -45,11 +45,11 @@ public:
     HANDLE handle() { return m_hFile; }
 
 protected:
-    IOManagerIOCP *m_ioManager;
+    IOManager *m_ioManager;
     bool m_skipCompletionPortOnSuccess;
     Scheduler *m_scheduler;
-    AsyncEventIOCP m_readEvent;
-    AsyncEventIOCP m_writeEvent;
+    AsyncEvent m_readEvent;
+    AsyncEvent m_writeEvent;
     long long m_pos;
     HANDLE m_hFile;
     bool m_own, m_cancelRead, m_cancelWrite;

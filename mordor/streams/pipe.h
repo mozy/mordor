@@ -2,11 +2,16 @@
 #define __MORDOR_PIPE_STREAM_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "stream.h"
+#include <utility>
+
+#include <boost/shared_ptr.hpp>
 
 namespace Mordor {
 
-std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t bufferSize = ~0);
+class Stream;
+
+std::pair<boost::shared_ptr<Stream>, boost::shared_ptr<Stream> >
+    pipeStream(size_t bufferSize = ~0);
 
 }
 
