@@ -4,10 +4,11 @@
 
 #include <boost/bind.hpp>
 
-#include <boost/exception/all.hpp>
 #include "mordor/exception.h"
-#include "mordor/scheduler.h"
+#include "mordor/fiber.h"
+#include "mordor/parallel.h"
 #include "mordor/test/test.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 using namespace Mordor::Test;

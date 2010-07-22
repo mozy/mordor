@@ -13,6 +13,7 @@
 #include "mordor/streams/file.h"
 #include "mordor/streams/std.h"
 #include "mordor/streams/transfer.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 

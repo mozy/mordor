@@ -2,8 +2,10 @@
 
 #include "mordor/pch.h"
 
-#include "mordor/scheduler.h"
+#include "mordor/fiber.h"
+#include "mordor/fibersynchronization.h"
 #include "mordor/test/test.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 

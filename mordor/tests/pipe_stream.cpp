@@ -11,6 +11,7 @@
 #include "mordor/streams/stream.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/test/test.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 using namespace Mordor::Test;

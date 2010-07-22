@@ -5,11 +5,12 @@
 #include <openssl/ssl.h>
 
 #include "http.h"
-#include "mordor/scheduler.h"
+#include "mordor/fibersynchronization.h"
 
 namespace Mordor {
 
 class IOManager;
+class Scheduler;
 class Socket;
 class Stream;
 class TimerManager;

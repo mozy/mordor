@@ -7,9 +7,8 @@
 #include <boost/bind.hpp>
 
 #include "assert.h"
-#include "exception.h"
+#include "fiber.h"
 #include "iomanager.h"
-#include "log.h"
 #include "string.h"
 #include "version.h"
 

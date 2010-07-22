@@ -7,8 +7,7 @@
 #include "iomanager_kqueue.h"
 
 #include "assert.h"
-#include "exception.h"
-#include "log.h"
+#include "fiber.h"
 
 namespace Mordor {
 

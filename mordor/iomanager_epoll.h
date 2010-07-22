@@ -14,6 +14,8 @@
 
 namespace Mordor {
 
+class Fiber;
+
 class IOManager : public Scheduler, public TimerManager
 {
 public:
@@ -35,7 +37,7 @@ private:
         epoll_event event;
 
         Scheduler *m_schedulerIn, *m_schedulerOut, *m_schedulerClose, *m_schedulerError;
-        Fiber::ptr m_fiberIn, m_fiberOut, m_fiberClose, m_fiberError;
+        boost::shared_ptr<Fiber> m_fiberIn, m_fiberOut, m_fiberClose, m_fiberError;
         boost::function<void ()> m_dgIn, m_dgOut, m_dgClose, m_dgError;
     };
 

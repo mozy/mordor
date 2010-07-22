@@ -14,6 +14,7 @@
 
 #include "mordor/atomic.h"
 #include "mordor/config.h"
+#include "mordor/fibersynchronization.h"
 #include "mordor/iomanager.h"
 #include "mordor/log.h"
 #include "mordor/main.h"

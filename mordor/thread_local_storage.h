@@ -12,6 +12,8 @@
 #include <pthread.h>
 #endif
 
+#include "exception.h"
+
 namespace Mordor {
 
 template <class T>

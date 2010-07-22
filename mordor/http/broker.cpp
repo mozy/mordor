@@ -7,6 +7,7 @@
 #include "auth.h"
 #include "client.h"
 #include "mordor/atomic.h"
+#include "mordor/fiber.h"
 #include "mordor/future.h"
 #include "mordor/iomanager.h"
 #include "mordor/socks.h"

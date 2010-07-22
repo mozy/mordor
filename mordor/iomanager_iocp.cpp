@@ -8,8 +8,7 @@
 
 #include "assert.h"
 #include "atomic.h"
-#include "exception.h"
-#include "log.h"
+#include "fiber.h"
 #include "runtime_linking.h"
 
 namespace Mordor {

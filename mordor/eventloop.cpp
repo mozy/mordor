@@ -5,7 +5,7 @@
 #include "eventloop.h"
 
 #include "assert.h"
-#include "log.h"
+#include "fiber.h"
 
 namespace Mordor {
 

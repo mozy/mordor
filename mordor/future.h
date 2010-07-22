@@ -9,6 +9,7 @@
 
 #include "assert.h"
 #include "atomic.h"
+#include "fiber.h"
 #include "scheduler.h"
 
 namespace Mordor {

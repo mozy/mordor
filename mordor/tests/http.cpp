@@ -4,6 +4,7 @@
 
 #include <boost/bind.hpp>
 
+#include "mordor/fiber.h"
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
 #include "mordor/http/multipart.h"
@@ -25,6 +26,7 @@
 #include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
 #include "mordor/util.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 using namespace Mordor::HTTP;
@@ -805,7 +807,7 @@ doSingleRequest(const char *request, Response &response)
     Stream::ptr stream(new DuplexStream(input, output));
     ServerConnection::ptr conn(new ServerConnection(stream, &httpRequest));
     WorkerPool pool;
-    pool.schedule(Fiber::ptr(new Fiber(boost::bind(&ServerConnection::processRequests, conn))));
+    pool.schedule(boost::bind(&ServerConnection::processRequests, conn));
     pool.dispatch();
     ResponseParser parser(response);
     parser.run(output->buffer());

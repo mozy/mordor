@@ -347,6 +347,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\daemon.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\date_time.cpp"
 				>
 			</File>
@@ -371,6 +375,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\fibersynchronization.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\file.cpp"
 				>
 			</File>
@@ -384,6 +392,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\hash.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\http\http.cpp"
 				>
 			</File>
 			<File
@@ -423,10 +435,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\http\http.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\http\http_parser.cpp"
 				>
 			</File>
@@ -444,6 +452,10 @@
 			</File>
 			<File
 				RelativePath=".\log.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\main.cpp"
 				>
 			</File>
 			<File
@@ -468,6 +480,10 @@
 			</File>
 			<File
 				RelativePath=".\http\oauth.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\parallel.cpp"
 				>
 			</File>
 			<File
@@ -639,6 +655,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\workerpool.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\xml\xml_parser.cpp"
 				>
 			</File>
@@ -709,6 +729,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\daemon.h"
+				>
+			</File>
+			<File
 				RelativePath=".\date_time.h"
 				>
 			</File>
@@ -742,6 +766,10 @@
 			</File>
 			<File
 				RelativePath=".\fiber.h"
+				>
+			</File>
+			<File
+				RelativePath=".\fibersynchronization.h"
 				>
 			</File>
 			<File
@@ -797,6 +825,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\main.h"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\memory.h"
 				>
 			</File>
@@ -822,6 +854,10 @@
 			</File>
 			<File
 				RelativePath=".\http\oauth.h"
+				>
+			</File>
+			<File
+				RelativePath=".\parallel.h"
 				>
 			</File>
 			<File
@@ -865,11 +901,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\scheduler.h"
+				RelativePath=".\streams\scheduler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\scheduler.h"
+				RelativePath=".\scheduler.h"
 				>
 			</File>
 			<File
@@ -962,6 +998,10 @@
 			</File>
 			<File
 				RelativePath=".\version.h"
+				>
+			</File>
+			<File
+				RelativePath=".\workerpool.h"
 				>
 			</File>
 			<File

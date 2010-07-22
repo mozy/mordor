@@ -7,6 +7,7 @@
 #include "sleep.h"
 
 #include "assert.h"
+#include "fiber.h"
 #include "scheduler.h"
 #include "timer.h"
 

@@ -154,7 +154,7 @@ private:
     // All this, just so a connect/accept can be cancelled on win2k
     bool m_unregistered;
     HANDLE m_hEvent;
-    Fiber::ptr m_fiber;
+    boost::shared_ptr<Fiber> m_fiber;
     Scheduler *m_scheduler;
 
     AsyncEvent m_sendEvent, m_receiveEvent;

@@ -47,14 +47,14 @@ void startSocketServer(IOManager &ioManager)
         ++it) {
         Socket::ptr s = (*it)->createSocket(ioManager);
         s->bind(*it);
-        Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&socketServer, s))));
+        Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
     }
 
 #ifndef WINDOWS
     UnixAddress echoaddress("/tmp/echo", SOCK_STREAM);
     Socket::ptr s = echoaddress.createSocket(ioManager);
     s->bind(echoaddress);
-    Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&socketServer, s))));
+    Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
 #endif
 }
 
@@ -110,7 +110,7 @@ void httpServer(Socket::ptr listen)
         Socket::ptr socket = listen->accept();
         Stream::ptr stream(new SocketStream(socket));
         HTTP::ServerConnection::ptr conn(new HTTP::ServerConnection(stream, &httpRequest));
-        Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&HTTP::ServerConnection::processRequests, conn))));
+        Scheduler::getThis()->schedule(boost::bind(&HTTP::ServerConnection::processRequests, conn));
     }
 }
 
@@ -123,7 +123,7 @@ void startHttpServer(IOManager &ioManager)
         ++it) {
         Socket::ptr s = (*it)->createSocket(ioManager);
         s->bind(*it);
-        Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&httpServer, s))));
+        Scheduler::getThis()->schedule(boost::bind(&httpServer, s));
     }
 }
 

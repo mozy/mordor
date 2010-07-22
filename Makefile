@@ -382,9 +382,9 @@ endif
 mordor/examples/wget: mordor/examples/wget.o				\
 	mordor/libmordor.a
 ifeq ($(Q),@)
-	@echo ld $@ -lboost_program_options$(BOOST_EXT)
+	@echo ld $@
 endif
-	$(COMPLINK) -lboost_program_options$(BOOST_EXT)
+	$(COMPLINK)
 
 mordor/streams/socket_stream.o: mordor/streams/socket.cpp
 ifeq ($(Q),@)
@@ -408,6 +408,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/date_time.o						\
 	mordor/exception.o						\
 	mordor/fiber.o							\
+	mordor/fibersynchronization.o					\
 	mordor/http/auth.o						\
 	mordor/http/basic.o						\
 	mordor/http/broker.o						\
@@ -425,6 +426,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/iomanager_kqueue.o					\
 	mordor/json.o							\
 	mordor/log.o							\
+	mordor/parallel.o						\
 	mordor/ragel.o							\
 	mordor/scheduler.o						\
 	mordor/semaphore.o						\
@@ -458,6 +460,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/zlib.o						\
 	mordor/string.o							\
 	mordor/timer.o							\
+	mordor/workerpool.o						\
 	mordor/uri.o							\
 	mordor/xml/xml_parser.o
 

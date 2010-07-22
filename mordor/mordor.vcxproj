@@ -89,11 +89,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="assert.cpp" />
+    <ClCompile Include="fibersynchronization.cpp" />
     <ClCompile Include="http\auth.cpp" />
     <ClCompile Include="http\basic.cpp" />
     <ClCompile Include="http\broker.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="daemon.cpp" />
+    <ClCompile Include="parallel.cpp" />
     <ClCompile Include="socks.cpp" />
     <ClCompile Include="streams\buffer.cpp" />
     <ClCompile Include="streams\buffered.cpp" />
@@ -154,16 +156,19 @@
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="streams\transfer.cpp" />
     <ClCompile Include="streams\zlib.cpp" />
+    <ClCompile Include="workerpool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h" />
     <ClInclude Include="assert.h" />
     <ClInclude Include="atomic.h" />
+    <ClInclude Include="fibersynchronization.h" />
     <ClInclude Include="http\auth.h" />
     <ClInclude Include="http\basic.h" />
     <ClInclude Include="http\broker.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="daemon.h" />
+    <ClInclude Include="parallel.h" />
     <ClInclude Include="socks.h" />
     <ClInclude Include="streams\buffer.h" />
     <ClInclude Include="streams\buffered.h" />
@@ -203,6 +208,7 @@
     <ClInclude Include="streams\null.h" />
     <ClInclude Include="http\oauth.h" />
     <ClInclude Include="http\parser.h" />
+    <ClInclude Include="workerpool.h" />
     <ClInclude Include="xml\parser.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="streams\pipe.h" />

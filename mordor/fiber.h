@@ -2,11 +2,6 @@
 #define __MORDOR_FIBER_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
-#ifdef WIN32
-#else
-#include <stddef.h>
-#endif
-
 #include <list>
 
 #include <boost/enable_shared_from_this.hpp>

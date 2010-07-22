@@ -31,7 +31,7 @@ private:
         struct kevent event;
 
         Scheduler *m_scheduler;
-        Fiber::ptr m_fiber;
+        boost::shared_ptr<Fiber> m_fiber;
         boost::function<void ()> m_dg;
 
         bool operator<(const AsyncEvent &rhs) const

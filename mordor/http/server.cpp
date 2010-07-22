@@ -6,8 +6,7 @@
 
 #include <boost/bind.hpp>
 
-#include "mordor/exception.h"
-#include "mordor/log.h"
+#include "mordor/fiber.h"
 #include "mordor/scheduler.h"
 #include "mordor/socket.h"
 #include "mordor/streams/null.h"

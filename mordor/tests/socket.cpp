@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "mordor/exception.h"
+#include "mordor/fiber.h"
 #include "mordor/iomanager.h"
 #include "mordor/socket.h"
 #include "mordor/test/test.h"
@@ -251,7 +252,7 @@ MORDOR_SOCKET_UNITTEST(cancelAccept)
     Connection conns = establishConn(scheduler);
 
     // cancelMe will get run when this fiber yields because it would block
-    scheduler.schedule(Fiber::ptr(new Fiber(boost::bind(&cancelMe, conns.listen))));
+    scheduler.schedule(boost::bind(&cancelMe, conns.listen));
     MORDOR_TEST_ASSERT_EXCEPTION(conns.listen->accept(), OperationAbortedException);
 }
 

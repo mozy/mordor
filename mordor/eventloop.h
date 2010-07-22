@@ -32,7 +32,7 @@ private:
         Event m_events;
 
         Scheduler *m_schedulerRead, *m_schedulerWrite;
-        Fiber::ptr m_fiberRead, m_fiberWrite;
+        boost::shared_ptr<Fiber> m_fiberRead, m_fiberWrite;
     };
 
 public:
