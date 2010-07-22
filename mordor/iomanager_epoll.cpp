@@ -18,11 +18,6 @@ enum epoll_ctl_op_t
     epoll_ctl_op_t_dummy = 0x7ffffff
 };
 
-enum epoll_events_t
-{
-    epoll_events_t_dummy = 0x7ffffff
-};
-
 static std::ostream &operator <<(std::ostream &os, epoll_ctl_op_t op)
 {
     switch (op) {
@@ -37,7 +32,7 @@ static std::ostream &operator <<(std::ostream &os, epoll_ctl_op_t op)
     }
 }
 
-static std::ostream &operator <<(std::ostream &os, epoll_events_t events)
+static std::ostream &operator <<(std::ostream &os, EPOLL_EVENTS events)
 {
     if (!events) {
         return os << '0';
@@ -82,7 +77,7 @@ static std::ostream &operator <<(std::ostream &os, epoll_events_t events)
         os << "EPOLLONESHOT";
         one = true;
     }
-    events = (epoll_events_t)(events & ~(EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET | EPOLLONESHOT));
+    events = (EPOLL_EVENTS)(events & ~(EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET | EPOLLONESHOT));
     if (events) {
         if (one) os << " | ";
         os << (uint32_t)events;
@@ -108,12 +103,12 @@ IOManager::IOManager(int threads, bool useCaller)
     MORDOR_ASSERT(m_tickleFds[0] > 0);
     MORDOR_ASSERT(m_tickleFds[1] > 0);
     epoll_event event;
-    event.events = EPOLLIN;
+    event.events = EPOLLIN | EPOLLET;
     event.data.fd = m_tickleFds[0];
     rc = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_ADD, " << m_tickleFds[0]
-        << ", EPOLLIN): " << rc << " (" << errno << ")";
+        << ", EPOLLIN | EPOLLET): " << rc << " (" << errno << ")";
     if (rc) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
@@ -146,7 +141,7 @@ IOManager::registerEvent(int fd, Event events, boost::function<void ()> dg)
     MORDOR_ASSERT(Scheduler::getThis());
     MORDOR_ASSERT(Fiber::getThis());
 
-    int epollevents = (int)events & (EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLERR);
+    int epollevents = ((int)events & (EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLERR)) | EPOLLET;
     MORDOR_ASSERT(epollevents != 0);
     boost::mutex::scoped_lock lock(m_mutex);
     int op;
@@ -161,8 +156,8 @@ IOManager::registerEvent(int fd, Event events, boost::function<void ()> dg)
         op = EPOLL_CTL_MOD;
         event = &it->second;
         // OR == XOR means that none of the same bits were set
-        MORDOR_ASSERT((event->event.events | epollevents)
-            == (event->event.events ^ epollevents));
+        MORDOR_ASSERT((event->event.events | (epollevents & ~EPOLLET))
+            == (event->event.events ^ (epollevents & ~EPOLLET)));
         event->event.events |= epollevents;
     }
     if (epollevents & EPOLLIN) {
@@ -208,7 +203,7 @@ IOManager::registerEvent(int fd, Event events, boost::function<void ()> dg)
     int rc = epoll_ctl(m_epfd, op, event->event.data.fd, &event->event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
-        << event->event.data.fd << ", " << (epoll_events_t)event->event.events << "): " << rc
+        << event->event.data.fd << ", " << (EPOLL_EVENTS)event->event.events << "): " << rc
         << " (" << errno << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
@@ -251,7 +246,7 @@ IOManager::unregisterEvent(int fd, Event events)
     int rc = epoll_ctl(m_epfd, op, fd, &e.event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", " << fd
-        << ", " << (epoll_events_t)e.event.events << "): " << rc << " (" << errno << ")";
+        << ", " << (EPOLL_EVENTS)e.event.events << "): " << rc << " (" << errno << ")";
     if (op == EPOLL_CTL_DEL)
         m_pendingEvents.erase(it);
     if (rc)
@@ -300,11 +295,12 @@ IOManager::cancelEvent(int fd, Event events)
         e.m_fiberError.reset();
     }
     e.event.events &= ~events;
-    int op = e.event.events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
+    int op = e.event.events == (unsigned int)EPOLLET ? EPOLL_CTL_DEL : EPOLL_CTL_MOD;
     int rc = epoll_ctl(m_epfd, op, fd, &e.event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", " << fd
-        << ", " << (epoll_events_t)e.event.events << "): " << rc << " (" << errno << ")";
+        << ", " << (EPOLL_EVENTS)e.event.events << "): " << rc << " ("
+        << errno << ")";
     if (op == EPOLL_CTL_DEL)
         m_pendingEvents.erase(it);
     if (rc)
@@ -334,8 +330,9 @@ IOManager::idle()
             return;
         int rc = -1;
         errno = EINTR;
+        int timeout;
         while (rc < 0 && errno == EINTR) {
-            int timeout = -1;
+            timeout = -1;
             if (nextTimeout != ~0ull)
                 timeout = (int)(nextTimeout / 1000) + 1;
             rc = epoll_wait(m_epfd, events, 64, timeout);
@@ -343,7 +340,8 @@ IOManager::idle()
                 nextTimeout = nextTimer();
         }
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
-            << " epoll_wait(" << m_epfd << "): " << rc << " (" << errno << ")";
+            << " epoll_wait(" << m_epfd << ", 64, " << timeout << "): " << rc
+            << " (" << errno << ")";
         if (rc < 0)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_wait");
         std::vector<boost::function<void ()> > expired = processTimers();
@@ -366,8 +364,8 @@ m_pendingEvents.find(event.data.fd);
                 continue;
             AsyncEvent &e = it->second;
             MORDOR_LOG_TRACE(g_log) << " epoll_event {"
-                << (epoll_events_t)event.events << ", " << event.data.fd
-                << "}, registered for " << (epoll_events_t)e.event.events;
+                << (EPOLL_EVENTS)event.events << ", " << event.data.fd
+                << "}, registered for " << (EPOLL_EVENTS)e.event.events;
             if ((event.events & EPOLLERR) && (e.event.events & EPOLLERR)) {
                 if (e.m_dgError)
                     e.m_schedulerError->schedule(e.m_dgError);
@@ -420,12 +418,12 @@ m_pendingEvents.find(event.data.fd);
             }
             e.event.events &= ~event.events;
 
-            int op = e.event.events == 0 ? EPOLL_CTL_DEL : EPOLL_CTL_MOD;
+            int op = e.event.events == (unsigned int)EPOLLET ? EPOLL_CTL_DEL : EPOLL_CTL_MOD;
             int rc2 = epoll_ctl(m_epfd, op, event.data.fd,
                 &e.event);
             MORDOR_LOG_LEVEL(g_log, rc2 ? Log::ERROR : Log::VERBOSE) << this
                 << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
-                << event.data.fd << ", " << (epoll_events_t)e.event.events << "): " << rc2
+                << event.data.fd << ", " << (EPOLL_EVENTS)e.event.events << "): " << rc2
                 << " (" << errno << ")";
             if (rc2)
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
