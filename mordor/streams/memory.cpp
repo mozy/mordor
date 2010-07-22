@@ -6,6 +6,8 @@
 
 #include <stdexcept>
 
+#include "mordor/assert.h"
+
 namespace Mordor {
 
 MemoryStream::MemoryStream()

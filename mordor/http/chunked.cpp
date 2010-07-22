@@ -7,7 +7,8 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "mordor/log.h"
+#include "mordor/assert.h"
+#include "mordor/streams/buffer.h"
 #include "mordor/version.h"
 
 namespace Mordor {

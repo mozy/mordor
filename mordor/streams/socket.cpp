@@ -4,16 +4,17 @@
 
 #include "socket.h"
 
+#include "buffer.h"
 #include "mordor/assert.h"
 #include "mordor/socket.h"
 
 namespace Mordor {
 
-SocketStream::SocketStream(boost::shared_ptr<Socket> s, bool own)
-: m_socket(s),
+SocketStream::SocketStream(Socket::ptr socket, bool own)
+: m_socket(socket),
   m_own(own)
 {
-    MORDOR_ASSERT(s);
+    MORDOR_ASSERT(socket);
 }
 
 void

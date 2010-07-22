@@ -6,6 +6,8 @@
 
 namespace Mordor {
 
+class Fiber;
+
 class EFSStream : public Stream
 {
 public:
@@ -35,7 +37,7 @@ private:
         PULONG ulLength);
 
 private:
-    Fiber::ptr m_fiber;
+    boost::shared_ptr<Fiber> m_fiber;
     void *m_context;
     bool m_read, m_own;
     union {

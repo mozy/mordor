@@ -7,11 +7,11 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "mordor/assert.h"
 #include "mordor/predef.h"
-#include "buffer.h"
 
 namespace Mordor {
+
+struct Buffer;
 
 /// @brief Byte-oriented stream
 /// @details
@@ -91,8 +91,8 @@ public:
 
     /// @brief Read data from the Stream
     /// @details
-    /// read() is allowed to return less than length, even if there is more data
-    /// available. A return value of 0 is the @b only reliable method of
+    /// read() is allowed to return less than length, even if there is more
+    /// data available. A return value of 0 is the @b only reliable method of
     /// detecting EOF. If an exception is thrown, you can be assured that
     /// nothing was read from the underlying implementation.
     /// @param buffer The Buffer to read in to
@@ -130,8 +130,8 @@ public:
     /// Buffer
     /// @note
     /// A default implementation is provided which calls
-    /// write(const Buffer &, size_t).  Only implement if it can be more efficient
-    /// than creating a new Buffer.
+    /// write(const Buffer &, size_t).  Only implement if it can be more
+    /// efficient than creating a new Buffer.
     virtual size_t write(const void *buffer, size_t length);
     /// @copydoc write(const Buffer &, size_t)
     /// @brief
@@ -150,10 +150,11 @@ public:
     /// @brief Change the current stream pointer
     /// @param offset Where to seek to
     /// @param anchor Where to seek from
-    /// @exception std::invalid_argument The resulting position would be negative
+    /// @exception std::invalid_argument The resulting position would be
+    /// negative
     /// @return The new stream pointer position
     /// @pre supportsSeek() || supportsTell()
-    virtual long long seek(long long offset, Anchor anchor = BEGIN) { MORDOR_NOTREACHED(); }
+    virtual long long seek(long long offset, Anchor anchor = BEGIN);
 
     /// @brief Convenience method to call seek(0, CURRENT)
     /// @note Cannot be overridden.
@@ -164,12 +165,12 @@ public:
     /// @brief Return the size of the stream
     /// @return The size of the stream
     /// @pre supportsSize()
-    virtual long long size() { MORDOR_NOTREACHED(); }
+    virtual long long size();
 
     /// @brief Truncate the stream
     /// @param size The new size of the stream
     /// @pre supportsTruncate()
-    virtual void truncate(long long size) { MORDOR_NOTREACHED(); }
+    virtual void truncate(long long size);
 
     /// @brief Flush the stream
 
@@ -195,8 +196,10 @@ public:
     /// @return Offset from the current stream position of the found
     /// @c delimiter
     /// @pre supportsFind()
-    virtual ptrdiff_t find(char delimiter, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
-    virtual ptrdiff_t find(const std::string &delimiter, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
+    virtual ptrdiff_t find(char delimiter, size_t sanitySize = ~0,
+        bool throwIfNotFound = true);
+    virtual ptrdiff_t find(const std::string &delimiter,
+        size_t sanitySize = ~0, bool throwIfNotFound = true);
     //@}
 
     /// @brief Convenience function for calling find() then read(), and return
@@ -215,8 +218,10 @@ public:
     /// @return The data from the current stream position up to and including
     /// the delimiter
     /// @pre supportsFind() && supportsRead()
-    std::string getDelimited(char delimiter = '\n', bool eofIsDelimiter = false);
-    std::string getDelimited(const std::string &delimiter, bool eofIsDelimiter = false);
+    std::string getDelimited(char delimiter = '\n',
+        bool eofIsDelimiter = false);
+    std::string getDelimited(const std::string &delimiter,
+        bool eofIsDelimiter = false);
 
     /// @brief Return data to the stream to be read again
 
@@ -224,7 +229,7 @@ public:
     /// @param length How much data to return
     /// @pre @c buffer.readAvailable() >= @c length
     /// @pre supportsUnread()
-    virtual void unread(const Buffer &buffer, size_t length) { MORDOR_NOTREACHED(); }
+    virtual void unread(const Buffer &buffer, size_t length);
 
 protected:
     size_t read(Buffer &buffer, size_t length, bool coalesce);

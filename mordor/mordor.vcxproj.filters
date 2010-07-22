@@ -185,6 +185,12 @@
     <ClCompile Include="daemon.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="streams\filter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="streams\singleplex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h">

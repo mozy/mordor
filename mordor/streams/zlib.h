@@ -4,7 +4,9 @@
 
 #include <zlib.h>
 
+#include "buffer.h"
 #include "filter.h"
+#include "mordor/exception.h"
 
 namespace Mordor {
 

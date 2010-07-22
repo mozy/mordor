@@ -3,6 +3,7 @@
 #include "mordor/pch.h"
 
 #include "mordor/iomanager.h"
+#include "mordor/streams/buffer.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/timeout.h"
 #include "mordor/test/test.h"

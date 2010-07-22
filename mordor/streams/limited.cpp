@@ -6,6 +6,8 @@
 
 #include <stdexcept>
 
+#include "mordor/assert.h"
+
 namespace Mordor {
 
 LimitedStream::LimitedStream(Stream::ptr parent, long long size, bool own)
@@ -74,6 +76,11 @@ LimitedStream::size()
     }
 }
 
+void
+LimitedStream::truncate(long long size)
+{
+    MORDOR_NOTREACHED();
+}
 
 void
 LimitedStream::unread(const Buffer &b, size_t len)

@@ -3,6 +3,7 @@
 #include "random.h"
 
 #include "mordor/endian.h"
+#include "mordor/exception.h"
 
 #ifndef WINDOWS
 #include <openssl/rand.h>

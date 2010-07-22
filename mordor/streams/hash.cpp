@@ -6,6 +6,9 @@
 
 #include <boost/bind.hpp>
 
+#include "buffer.h"
+#include "mordor/assert.h"
+
 namespace Mordor {
 
 size_t
@@ -40,6 +43,12 @@ HashStream::write(const void *buffer, size_t length)
     size_t result = parent()->write(buffer, length);
     updateHash(buffer, result);
     return result;
+}
+
+long long
+HashStream::seek(long long offset, Anchor anchor)
+{
+    MORDOR_NOTREACHED();
 }
 
 SHA0Stream::SHA0Stream(Stream::ptr parent, bool own)

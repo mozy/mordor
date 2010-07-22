@@ -14,7 +14,7 @@ public:
     typedef boost::shared_ptr<SocketStream> ptr;
 
 public:
-    SocketStream(boost::shared_ptr<Socket> s, bool own = true);
+    SocketStream(boost::shared_ptr<Socket> socket, bool own = true);
 
     bool supportsHalfClose() { return true; }
     bool supportsRead() { return true; }

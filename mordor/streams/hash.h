@@ -30,7 +30,7 @@ public:
     size_t read(void *buffer, size_t length);
     size_t write(const Buffer &buffer, size_t length);
     size_t write(const void *buffer, size_t length);
-    long long seek(long long offset, Anchor anchor = BEGIN) { MORDOR_NOTREACHED(); }
+    long long seek(long long offset, Anchor anchor = BEGIN);
 
     // Returns the hash in *binary*
     virtual std::string hash() const = 0;

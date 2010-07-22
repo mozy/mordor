@@ -4,6 +4,7 @@
 
 #include "throttle.h"
 
+#include "mordor/assert.h"
 #include "mordor/log.h"
 #include "mordor/sleep.h"
 #include "mordor/timer.h"

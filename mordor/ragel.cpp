@@ -6,6 +6,7 @@
 
 #include "assert.h"
 #include "log.h"
+#include "streams/buffer.h"
 #include "streams/stream.h"
 #include "string.h"
 

@@ -6,6 +6,9 @@
 
 #include <string.h>
 
+#include "buffer.h"
+#include "mordor/assert.h"
+
 namespace Mordor {
 
 size_t
@@ -92,6 +95,37 @@ Stream::write(const Buffer &buffer, size_t length, bool coalesce)
     return write(iov.iov_base, iov.iov_len);
 }
 
+long long
+Stream::seek(long long offset, Anchor anchor)
+{
+    MORDOR_NOTREACHED();
+}
+
+long long
+Stream::size()
+{
+    MORDOR_NOTREACHED();
+}
+
+void
+Stream::truncate(long long size)
+{
+    MORDOR_NOTREACHED();
+}
+
+ptrdiff_t
+Stream::find(char delimiter, size_t sanitySize, bool throwIfNotFound)
+{
+    MORDOR_NOTREACHED();
+}
+
+ptrdiff_t
+Stream::find(const std::string &delimiter, size_t sanitySize,
+    bool throwIfNotFound)
+{
+    MORDOR_NOTREACHED();
+}
+
 std::string
 Stream::getDelimited(char delim, bool eofIsDelimiter)
 {
@@ -124,6 +158,12 @@ Stream::getDelimited(const std::string &delim, bool eofIsDelimiter)
     read((char *)result.c_str(), result.size());
     MORDOR_ASSERT(readResult == result.size());
     return result;
+}
+
+void
+Stream::unread(const Buffer &buffer, size_t length)
+{
+    MORDOR_NOTREACHED();
 }
 
 }

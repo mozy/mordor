@@ -4,6 +4,8 @@
 
 #include "cat.h"
 
+#include "mordor/assert.h"
+
 namespace Mordor {
 
 CatStream::CatStream(const std::vector<Stream::ptr> &streams)

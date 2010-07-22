@@ -14,71 +14,30 @@ public:
         WRITE
     };
 
-    SingleplexStream(Stream::ptr parent, Type type, bool own = true)
-        : FilterStream(parent, own),
-          m_type(type)
-    {
-        MORDOR_ASSERT(type == READ || type == WRITE);
-        if (type == READ) MORDOR_ASSERT(parent->supportsRead());
-        if (type == WRITE) MORDOR_ASSERT(parent->supportsWrite());
-    }
+    SingleplexStream(Stream::ptr parent, Type type, bool own = true);
 
     bool supportsRead() { return m_type == READ; }
     bool supportsWrite() { return m_type == WRITE; }
-    bool supportsTruncate() { return m_type == WRITE && parent()->supportsTruncate(); }
-    bool supportsFind() { return m_type == READ && parent()->supportsFind(); }
-    bool supportsUnread() { return m_type == READ && parent()->supportsUnread(); }
+    bool supportsTruncate()
+    { return m_type == WRITE && parent()->supportsTruncate(); }
+    bool supportsFind()
+    { return m_type == READ && parent()->supportsFind(); }
+    bool supportsUnread()
+    { return m_type == READ && parent()->supportsUnread(); }
 
-    void close(CloseType type = BOTH)
-    {
-        if (ownsParent()) {
-            if (m_type == READ && (type & Stream::READ)) {
-                parent()->close(parent()->supportsHalfClose() ?
-                    Stream::READ : BOTH);
-            } else if (m_type == WRITE && (type & Stream::WRITE)) {
-                parent()->close(parent()->supportsHalfClose() ?
-                    Stream::WRITE : BOTH);
-            }
-        }
-    }
+    void close(CloseType type = BOTH);
 
-    size_t read(Buffer &b, size_t len)
-    {
-        MORDOR_ASSERT(m_type == READ);
-        return parent()->read(b, len);
-    }
-    size_t write(const Buffer &b, size_t len)
-    {
-        MORDOR_ASSERT(m_type == WRITE);
-        return parent()->write(b, len);
-    }
-    void truncate(long long size)
-    {
-        MORDOR_ASSERT(m_type == WRITE);
-        return parent()->truncate(size);
-    }
-    void flush(bool flushParent = true)
-    {
-        if (m_type == READ)
-            return;
-        return parent()->flush(flushParent);
-    }
-    ptrdiff_t find(char delim)
-    {
-        MORDOR_ASSERT(m_type == READ);
-        return parent()->find(delim);
-    }
-    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0,
-        bool throwIfNotFound = true)
-    {
-        MORDOR_ASSERT(m_type == READ);
-        return parent()->find(str, sanitySize, throwIfNotFound);
-    }
-    void unread(const Buffer &b, size_t len)
-    {
-        MORDOR_ASSERT(m_type == READ);
-        return parent()->unread(b, len);
-    }
+    size_t read(Buffer &buffer, size_t length);
+    size_t read(void *buffer, size_t length);
+    size_t write(const Buffer &buffer, size_t length);
+    size_t write(const void *buffer, size_t length);
+    void truncate(long long size);
+    void flush(bool flushParent = true);
+    ptrdiff_t find(char delimiter, size_t sanitySize = ~0,
+        bool throwIfNotFound = true);
+    ptrdiff_t find(const std::string &delimiter,
+        size_t sanitySize = ~0, bool throwIfNotFound = true);
+    void unread(const Buffer &buffer, size_t length);
 
 private:
     Type m_type;

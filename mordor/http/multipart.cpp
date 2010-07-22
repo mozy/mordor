@@ -7,6 +7,7 @@
 #include <boost/bind.hpp>
 
 #include "mordor/assert.h"
+#include "mordor/streams/buffer.h"
 #include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/transfer.h"

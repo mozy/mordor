@@ -8,6 +8,7 @@
 
 #include <openssl/ssl.h>
 
+#include "buffer.h"
 #include "mordor/scheduler.h"
 
 namespace Mordor {

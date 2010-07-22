@@ -5,6 +5,7 @@
 #include "http.h"
 
 #include "mordor/http/client.h"
+#include "mordor/socket.h"
 #include "null.h"
 #include "transfer.h"
 

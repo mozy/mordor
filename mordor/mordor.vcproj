@@ -375,15 +375,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\filter.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\handle.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\streams\hash.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\http\http.cpp"
 				>
 			</File>
 			<File
@@ -421,6 +421,10 @@
 						ObjectFile="$(IntDir)\http_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\http\http.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\http\http_parser.cpp"
@@ -532,6 +536,10 @@
 			</File>
 			<File
 				RelativePath=".\http\server.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\singleplex.cpp"
 				>
 			</File>
 			<File

@@ -9,6 +9,7 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
+#include "mordor/assert.h"
 #include "mordor/log.h"
 #include "mordor/util.h"
 

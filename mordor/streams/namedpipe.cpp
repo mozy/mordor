@@ -4,6 +4,7 @@
 
 #include "namedpipe.h"
 
+#include "mordor/assert.h"
 #include "mordor/exception.h"
 #include "mordor/log.h"
 #include "mordor/runtime_linking.h"

@@ -6,9 +6,11 @@
 
 #include <boost/bind.hpp>
 
+#include "mordor/assert.h"
 #include "mordor/exception.h"
 #include "mordor/log.h"
 #include "mordor/scheduler.h"
+#include "mordor/streams/buffer.h"
 #include "mordor/streams/null.h"
 #include "stream.h"
 

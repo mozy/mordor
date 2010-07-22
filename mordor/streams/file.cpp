@@ -4,8 +4,7 @@
 
 #include "file.h"
 
-#include "mordor/exception.h"
-#include "mordor/log.h"
+#include "mordor/assert.h"
 #include "mordor/string.h"
 
 namespace Mordor {

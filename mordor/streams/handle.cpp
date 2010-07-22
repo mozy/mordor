@@ -4,7 +4,7 @@
 
 #include "handle.h"
 
-#include "mordor/exception.h"
+#include "mordor/assert.h"
 #include "mordor/log.h"
 #include "mordor/runtime_linking.h"
 

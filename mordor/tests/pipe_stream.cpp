@@ -7,6 +7,7 @@
 #include "mordor/exception.h"
 #include "mordor/fiber.h"
 #include "mordor/scheduler.h"
+#include "mordor/streams/buffer.h"
 #include "mordor/streams/stream.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/test/test.h"

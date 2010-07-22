@@ -6,6 +6,8 @@
 
 #include <boost/thread/mutex.hpp>
 
+#include "buffer.h"
+#include "mordor/assert.h"
 #include "mordor/exception.h"
 #include "mordor/log.h"
 #include "mordor/scheduler.h"

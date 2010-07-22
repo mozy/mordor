@@ -437,6 +437,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/cat.o						\
 	mordor/streams/fd.o						\
 	mordor/streams/file.o						\
+	mordor/streams/filter.o						\
 	mordor/streams/hash.o						\
 	mordor/streams/http_stream.o					\
 	mordor/streams/limited.o					\
@@ -444,6 +445,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/null.o						\
 	mordor/streams/pipe.o						\
 	mordor/streams/random.o						\
+	mordor/streams/singleplex.o					\
 	mordor/streams/socket_stream.o					\
 	mordor/streams/ssl.o						\
 	mordor/streams/std.o						\

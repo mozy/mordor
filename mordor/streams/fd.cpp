@@ -8,8 +8,8 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 
-#include "mordor/exception.h"
-#include "mordor/log.h"
+#include "buffer.h"
+#include "mordor/assert.h"
 
 namespace Mordor {
 

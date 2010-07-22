@@ -109,6 +109,7 @@
     <ClCompile Include="exception.cpp" />
     <ClCompile Include="fiber.cpp" />
     <ClCompile Include="streams\file.cpp" />
+    <ClCompile Include="streams\filter.cpp" />
     <ClCompile Include="streams\handle.cpp" />
     <ClCompile Include="streams\hash.cpp" />
     <ClCompile Include="streams\http.cpp">
@@ -136,6 +137,7 @@
     <ClCompile Include="semaphore.cpp" />
     <ClCompile Include="http\server.cpp" />
     <ClCompile Include="sleep.cpp" />
+    <ClCompile Include="streams\singleplex.cpp" />
     <ClCompile Include="streams\socket.cpp">
       <ObjectFileName>$(IntDir)socket_stream.obj</ObjectFileName>
     </ClCompile>
