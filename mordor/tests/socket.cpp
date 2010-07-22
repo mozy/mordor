@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+#include <boost/scoped_array.hpp>
+#include <boost/shared_array.hpp>
+
 #include "mordor/exception.h"
 #include "mordor/fiber.h"
 #include "mordor/iomanager.h"

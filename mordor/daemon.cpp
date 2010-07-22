@@ -148,6 +148,10 @@ int run(int argc, char **argv,
     }
 }
 #else
+
+#include <errno.h>
+#include <signal.h>
+
 static sigset_t blockedSignals()
 {
     sigset_t result;

@@ -2,6 +2,14 @@
 
 #include "assert.h"
 
+#include "version.h"
+
+#ifdef LINUX
+#include <fcntl.h>
+#elif defined(OSX)
+#include <sys/sysctl.h>
+#endif
+
 namespace Mordor {
 
 bool Assertion::throwOnAssertion;

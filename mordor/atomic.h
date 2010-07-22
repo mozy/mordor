@@ -9,6 +9,10 @@
 #include <boost/smart_ptr/detail/sp_counted_base_spin.hpp>
 #endif
 
+#ifdef OSX
+#include <libkern/OSAtomic.h>
+#endif
+
 namespace Mordor {
 
 #ifdef WINDOWS
@@ -165,8 +169,8 @@ typename boost::enable_if_c<sizeof(T) == sizeof(int64_t), T>::type
 atomicSwap(volatile T &t, T newvalue)
 {
     int64_t comparand = (int64_t)t;
-    while (!OSAtomicCompareAndSwap64Barrier((int64_t)comparand, (int64_t)newvalue,
-        comparand = (int64_t)t));
+    while (!OSAtomicCompareAndSwap64Barrier((int64_t)comparand, (int64_t)newvalue, (volatile int64_t *)&t))
+        comparand = (int64_t)t;
     return comparand;
 }
 #endif

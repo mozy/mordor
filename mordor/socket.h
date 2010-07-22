@@ -4,6 +4,7 @@
 
 #include <vector>
 
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -14,7 +15,9 @@
 #include <ws2tcpip.h>
 #include "iomanager.h"
 #else
+#include <stdint.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 #ifndef OSX
 # include <netinet/in_systm.h>

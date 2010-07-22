@@ -161,7 +161,7 @@ ifeq ($(RAGEL_MAJOR), 6)
     RLCODEGEN :=
 endif
 
-LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_program_options $(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
+LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_program_options $(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl -lstdc++
 
 ifeq ($(PLATFORM), Darwin)
    LIBS += -framework SystemConfiguration -framework CoreFoundation -framework CoreServices -framework Security

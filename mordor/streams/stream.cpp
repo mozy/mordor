@@ -2,6 +2,8 @@
 
 #include "stream.h"
 
+#include <boost/scoped_array.hpp>
+
 #include <string.h>
 
 #include "buffer.h"

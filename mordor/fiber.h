@@ -237,14 +237,14 @@ template <class T>
 class FiberLocalStorage : public FiberLocalStorageBase<T>
 {
 public:
-    T operator =(T t) { set(t); return t; }
+    T operator =(T t) { FiberLocalStorageBase<T>::set(t); return t; }
 };
 
 template <class T>
 class FiberLocalStorage<T *> : public FiberLocalStorageBase<T *>
 {
 public:
-    T * operator =(T *const t) { set(t); return t; }
+    T * operator =(T *const t) { FiberLocalStorageBase<T *>::set(t); return t; }
     T & operator*() { return *FiberLocalStorageBase<T *>::get(); }
     T * operator->() { return FiberLocalStorageBase<T *>::get(); }
 };

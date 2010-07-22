@@ -18,14 +18,14 @@ class Connection
 public:
     boost::shared_ptr<Stream> stream() { return m_stream; }
 
-protected:
-    Connection(boost::shared_ptr<Stream> stream);
-
     static bool hasMessageBody(const GeneralHeaders &general,
         const EntityHeaders &entity,
         Method method,
         Status status,
         bool includeEmpty = true);
+
+protected:
+    Connection(boost::shared_ptr<Stream> stream);
 
     boost::shared_ptr<Stream> getStream(const GeneralHeaders &general,
         const EntityHeaders &entity,

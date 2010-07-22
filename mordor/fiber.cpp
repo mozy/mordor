@@ -2,6 +2,8 @@
 
 #include "fiber.h"
 
+#include <boost/thread/tss.hpp>
+
 #include "assert.h"
 #include "config.h"
 #include "exception.h"

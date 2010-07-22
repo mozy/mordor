@@ -4,9 +4,15 @@
 
 #include <iostream>
 
+#include <boost/date_time/posix_time/posix_time_io.hpp>
+
 #ifndef WINDOWS
 #define SYSLOG_NAMES
 #include <syslog.h>
+#endif
+
+#ifdef LINUX
+#include <syscall.h>
 #endif
 
 #include <boost/bind.hpp>
@@ -241,7 +247,7 @@ void
 SyslogLogSink::log(const std::string &logger,
         boost::posix_time::ptime now, unsigned long long elapsed,
         tid_t thread, void *fiber,
-        Log::Level level, const std::string &str,
+        Log::Level level, const std::string &string,
         const char *file, int line)
 {
     int syslogLevel = LOG_NOTICE;
@@ -268,7 +274,7 @@ SyslogLogSink::log(const std::string &logger,
     std::ostringstream os;
     os << now << " " << elapsed << " " << level << " " << thread << " "
         << fiber << " " << logger << " " << file << ":" << line << " "
-        << str << std::endl;
+        << string << std::endl;
     std::string str = os.str();
     syslog(syslogLevel | m_facility, "%.*s", (int)str.size(), str.c_str());
 }

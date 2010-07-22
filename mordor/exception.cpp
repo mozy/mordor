@@ -11,6 +11,7 @@
 #else
 #include <errno.h>
 #include <execinfo.h>
+#include <netdb.h>
 #include <string.h>
 #endif
 
