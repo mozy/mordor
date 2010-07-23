@@ -18,7 +18,7 @@ ThrottleStream::read(Buffer &b, size_t len)
     unsigned int throttle = m_dg();
     if (throttle == 0 || throttle == ~0u) {
         m_read = 0;
-        return parent()->write(b, len);
+        return parent()->read(b, len);
     }
     unsigned long long now = TimerManager::now();
     unsigned long long minTime = 1000000ull * (m_read * 8) / throttle;
