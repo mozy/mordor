@@ -396,7 +396,7 @@ URI::operator=(const std::string& uri)
     URIParser parser(*this);
     parser.run(uri);
     if (parser.error() || !parser.final())
-        throw std::invalid_argument("uri");
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("uri"));
     return *this;
 }
 
@@ -407,7 +407,7 @@ URI::operator=(const Buffer &uri)
     URIParser parser(*this);
     parser.run(uri);
     if (parser.error() || !parser.final())
-        throw std::invalid_argument("uri");
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("uri"));
     return *this;
 }
 
@@ -533,7 +533,7 @@ URI::Path::operator=(const std::string& path)
     URIPathParser parser(*this);
     parser.run(path);
     if (parser.error() || !parser.final())
-        throw std::invalid_argument("path");
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("path"));
     return *this;
 }
 
