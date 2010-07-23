@@ -61,6 +61,17 @@
 		3CAB29E9112B347400607AEE /* timer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2798112B096700607AEE /* timer.cpp */; };
 		3CAC4A341151622F00F85725 /* iomanager_kqueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB271B112B096700607AEE /* iomanager_kqueue.cpp */; };
 		3CC4CE561138646D001C21F2 /* progress.h in Headers */ = {isa = PBXBuildFile; fileRef = 3CC4CE551138646D001C21F2 /* progress.h */; };
+		C32025B811F949CF00E09E5A /* daemon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32025AD11F949CF00E09E5A /* daemon.cpp */; };
+		C32025B911F949CF00E09E5A /* daemon.h in Headers */ = {isa = PBXBuildFile; fileRef = C32025AE11F949CF00E09E5A /* daemon.h */; };
+		C32025BA11F949CF00E09E5A /* fibersynchronization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32025AF11F949CF00E09E5A /* fibersynchronization.cpp */; };
+		C32025BB11F949CF00E09E5A /* fibersynchronization.h in Headers */ = {isa = PBXBuildFile; fileRef = C32025B011F949CF00E09E5A /* fibersynchronization.h */; };
+		C32025BC11F949CF00E09E5A /* future.h in Headers */ = {isa = PBXBuildFile; fileRef = C32025B111F949CF00E09E5A /* future.h */; };
+		C32025BD11F949CF00E09E5A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32025B211F949CF00E09E5A /* main.cpp */; };
+		C32025BE11F949CF00E09E5A /* main.h in Headers */ = {isa = PBXBuildFile; fileRef = C32025B311F949CF00E09E5A /* main.h */; };
+		C32025BF11F949CF00E09E5A /* parallel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32025B411F949CF00E09E5A /* parallel.cpp */; };
+		C32025C011F949CF00E09E5A /* parallel.h in Headers */ = {isa = PBXBuildFile; fileRef = C32025B511F949CF00E09E5A /* parallel.h */; };
+		C32025C111F949CF00E09E5A /* workerpool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32025B611F949CF00E09E5A /* workerpool.cpp */; };
+		C32025C211F949CF00E09E5A /* workerpool.h in Headers */ = {isa = PBXBuildFile; fileRef = C32025B711F949CF00E09E5A /* workerpool.h */; };
 		C34893CA11BEB1300044E9C8 /* socks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C34893C811BEB1300044E9C8 /* socks.cpp */; };
 		C34893CB11BEB1300044E9C8 /* socks.h in Headers */ = {isa = PBXBuildFile; fileRef = C34893C911BEB1300044E9C8 /* socks.h */; };
 		E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E29FD2A81136FD1D004BC293 /* timeout.cpp */; };
@@ -283,6 +294,17 @@
 		3CAB27A1112B096700607AEE /* xml_parser.rl */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp.preprocessed; fileEncoding = 4; path = xml_parser.rl; sourceTree = "<group>"; };
 		3CAB29B1112B340600607AEE /* libmordor.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmordor.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		3CC4CE551138646D001C21F2 /* progress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = progress.h; sourceTree = "<group>"; };
+		C32025AD11F949CF00E09E5A /* daemon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = daemon.cpp; sourceTree = "<group>"; };
+		C32025AE11F949CF00E09E5A /* daemon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = daemon.h; sourceTree = "<group>"; };
+		C32025AF11F949CF00E09E5A /* fibersynchronization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fibersynchronization.cpp; sourceTree = "<group>"; };
+		C32025B011F949CF00E09E5A /* fibersynchronization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fibersynchronization.h; sourceTree = "<group>"; };
+		C32025B111F949CF00E09E5A /* future.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = future.h; sourceTree = "<group>"; };
+		C32025B211F949CF00E09E5A /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		C32025B311F949CF00E09E5A /* main.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
+		C32025B411F949CF00E09E5A /* parallel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = parallel.cpp; sourceTree = "<group>"; };
+		C32025B511F949CF00E09E5A /* parallel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = parallel.h; sourceTree = "<group>"; };
+		C32025B611F949CF00E09E5A /* workerpool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = workerpool.cpp; sourceTree = "<group>"; };
+		C32025B711F949CF00E09E5A /* workerpool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = workerpool.h; sourceTree = "<group>"; };
 		C34893C811BEB1300044E9C8 /* socks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = socks.cpp; sourceTree = "<group>"; };
 		C34893C911BEB1300044E9C8 /* socks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socks.h; sourceTree = "<group>"; };
 		E29FD2A81136FD1D004BC293 /* timeout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timeout.cpp; sourceTree = "<group>"; };
@@ -347,6 +369,17 @@
 		3CAB26D4112B096700607AEE /* mordor */ = {
 			isa = PBXGroup;
 			children = (
+				C32025AD11F949CF00E09E5A /* daemon.cpp */,
+				C32025AE11F949CF00E09E5A /* daemon.h */,
+				C32025AF11F949CF00E09E5A /* fibersynchronization.cpp */,
+				C32025B011F949CF00E09E5A /* fibersynchronization.h */,
+				C32025B111F949CF00E09E5A /* future.h */,
+				C32025B211F949CF00E09E5A /* main.cpp */,
+				C32025B311F949CF00E09E5A /* main.h */,
+				C32025B411F949CF00E09E5A /* parallel.cpp */,
+				C32025B511F949CF00E09E5A /* parallel.h */,
+				C32025B611F949CF00E09E5A /* workerpool.cpp */,
+				C32025B711F949CF00E09E5A /* workerpool.h */,
 				E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */,
 				E2DE14B211E67ADD00D9622F /* antxmllistener.h */,
 				C34893C811BEB1300044E9C8 /* socks.cpp */,
@@ -612,6 +645,12 @@
 				E29FD2AB1136FD1D004BC293 /* timeout.h in Headers */,
 				3CC4CE561138646D001C21F2 /* progress.h in Headers */,
 				C34893CB11BEB1300044E9C8 /* socks.h in Headers */,
+				C32025B911F949CF00E09E5A /* daemon.h in Headers */,
+				C32025BB11F949CF00E09E5A /* fibersynchronization.h in Headers */,
+				C32025BC11F949CF00E09E5A /* future.h in Headers */,
+				C32025BE11F949CF00E09E5A /* main.h in Headers */,
+				C32025C011F949CF00E09E5A /* parallel.h in Headers */,
+				C32025C211F949CF00E09E5A /* workerpool.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -667,7 +706,11 @@
 			isa = PBXProject;
 			buildConfigurationList = 1DEB916408733D950010E9CD /* Build configuration list for PBXProject "mordor" */;
 			compatibilityVersion = "Xcode 3.1";
+			developmentRegion = English;
 			hasScannedForEncodings = 1;
+			knownRegions = (
+				en,
+			);
 			mainGroup = 0867D691FE84028FC02AAC07 /* mordor */;
 			productRefGroup = 034768DDFF38A45A11DB9C8B /* Products */;
 			projectDirPath = "";
@@ -739,6 +782,11 @@
 				E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */,
 				3CAC4A341151622F00F85725 /* iomanager_kqueue.cpp in Sources */,
 				C34893CA11BEB1300044E9C8 /* socks.cpp in Sources */,
+				C32025B811F949CF00E09E5A /* daemon.cpp in Sources */,
+				C32025BA11F949CF00E09E5A /* fibersynchronization.cpp in Sources */,
+				C32025BD11F949CF00E09E5A /* main.cpp in Sources */,
+				C32025BF11F949CF00E09E5A /* parallel.cpp in Sources */,
+				C32025C111F949CF00E09E5A /* workerpool.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -765,6 +813,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_VERSION = 4.2;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -782,6 +831,7 @@
 				);
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_VERSION = 4.2;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
@@ -799,6 +849,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREFIX_HEADER = mordor/pch.h;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = (
 					/opt/local/include,
 					/usr/local/include,
@@ -818,6 +869,7 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
 				GCC_PREFIX_HEADER = mordor/pch.h;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = (
 					/opt/local/include,
 					/usr/local/include,

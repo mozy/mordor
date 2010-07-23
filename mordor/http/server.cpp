@@ -656,7 +656,11 @@ ServerRequest::commit()
 #ifdef DEBUG
             bool inserted =
 #endif
-            m_conn->m_waitingResponses.insert(this).second;
+            m_conn->m_waitingResponses.insert(this)
+#ifdef DEBUG
+            .second
+#endif
+            ;
             MORDOR_ASSERT(inserted);
             wait = true;
             MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " waiting to respond";

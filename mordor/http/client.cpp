@@ -979,7 +979,11 @@ ClientRequest::ensureResponse()
         #ifdef DEBUG
                 bool inserted =
         #endif
-                m_conn->m_waitingResponses.insert(this).second;
+                m_conn->m_waitingResponses.insert(this)
+#ifdef DEBUG
+                .second
+#endif
+                ;
                 MORDOR_ASSERT(inserted);
                 wait = true;
                 m_responseState = WAITING;
