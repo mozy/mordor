@@ -13,7 +13,7 @@ namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:iomanager");
 
-IOManager::IOManager(int threads, bool useCaller)
+IOManager::IOManager(size_t threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_kqfd = kqueue();
@@ -44,7 +44,7 @@ IOManager::IOManager(int threads, bool useCaller)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     }
     try {
-        if (threads - (useCaller ? 1 : 0)) start();
+        start();
     } catch (...) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
@@ -203,7 +203,11 @@ IOManager::idle()
                 e.m_scheduler->schedule(e.m_fiber);
             m_pendingEvents.erase(it);
         }
-        Fiber::yield();
+        try {
+            Fiber::yield();
+        } catch (OperationAbortedException &) {
+            return;
+        }
     }
 }
 

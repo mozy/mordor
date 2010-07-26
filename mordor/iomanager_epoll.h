@@ -42,7 +42,7 @@ private:
     };
 
 public:
-    IOManager(int threads = 1, bool useCaller = true);
+    IOManager(size_t threads = 1, bool useCaller = true);
     ~IOManager();
 
     bool stopping();

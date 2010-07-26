@@ -42,7 +42,7 @@ public:
     /// @param batchSize Number of operations to pull off the scheduler queue
     /// on every iteration
     /// @pre if (useCaller == true) Scheduler::getThis() == NULL
-    Scheduler(int threads = 1, bool useCaller = true, size_t batchSize = 1);
+    Scheduler(size_t threads = 1, bool useCaller = true, size_t batchSize = 1);
     /// Destroys the scheduler, implicitly calling stop()
     virtual ~Scheduler();
 
@@ -141,6 +141,8 @@ public:
     {
         return m_threadCount + (m_rootFiber ? 1 : 0);
     }
+    /// Change the number of threads in this scheduler
+    void threadCount(size_t threads);
 
 protected:
     /// Derived classes can query stopping() to see if the Scheduler is trying

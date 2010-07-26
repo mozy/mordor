@@ -14,7 +14,7 @@ namespace Mordor {
 class WorkerPool : public Scheduler
 {
 public:
-    WorkerPool(int threads = 1, bool useCaller = true, size_t batchSize = 1);
+    WorkerPool(size_t threads = 1, bool useCaller = true, size_t batchSize = 1);
     ~WorkerPool() { stop(); }
 
 protected:

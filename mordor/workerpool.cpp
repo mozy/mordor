@@ -9,7 +9,7 @@ namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:workerpool");
 
-WorkerPool::WorkerPool(int threads, bool useCaller, size_t batchSize)
+WorkerPool::WorkerPool(size_t threads, bool useCaller, size_t batchSize)
     : Scheduler(threads, useCaller, batchSize)
 {
     start();
@@ -23,7 +23,11 @@ WorkerPool::idle()
             return;
         }
         m_semaphore.wait();
-        Fiber::yield();
+        try {
+            Fiber::yield();
+        } catch (OperationAbortedException &) {
+            return;
+        }
     }
 }
 

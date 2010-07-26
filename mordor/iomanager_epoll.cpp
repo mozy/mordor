@@ -85,7 +85,7 @@ static std::ostream &operator <<(std::ostream &os, EPOLL_EVENTS events)
     return os;
 }
 
-IOManager::IOManager(int threads, bool useCaller)
+IOManager::IOManager(size_t threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_epfd = epoll_create(5000);
@@ -114,6 +114,14 @@ IOManager::IOManager(int threads, bool useCaller)
         close(m_tickleFds[1]);
         close(m_epfd);
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+    }
+    try {
+        start();
+    } catch (...) {
+        close(m_tickleFds[0]);
+        close(m_tickleFds[1]);
+        close(m_epfd);
+        throw;
     }
 }
 
@@ -430,7 +438,11 @@ m_pendingEvents.find(event.data.fd);
             if (op == EPOLL_CTL_DEL)
                 m_pendingEvents.erase(it);
         }
-        Fiber::yield();
+        try {
+            Fiber::yield();
+        } catch (OperationAbortedException &) {
+            return;
+        }
     }
 }
 

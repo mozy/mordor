@@ -211,7 +211,7 @@ IOManager::WaitBlock::removeEntry(int index)
     memmove(&m_recurring[index], &m_recurring[index + 1], (m_inUseCount - index) * sizeof(bool));
 }
 
-IOManager::IOManager(int threads, bool useCaller)
+IOManager::IOManager(size_t threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_pendingEventCount = 0;
@@ -222,7 +222,7 @@ IOManager::IOManager(int threads, bool useCaller)
     if (!m_hCompletionPort)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
     try {
-        if (threads - (useCaller ? 1 : 0)) start();
+        start();
     } catch (...) {
         CloseHandle(m_hCompletionPort);
         throw;
@@ -409,7 +409,11 @@ IOManager::idle()
                 std::vector<boost::function<void ()> > expired = processTimers();
                 if (!expired.empty()) {
                     schedule(expired.begin(), expired.end());
-                    Fiber::yield();
+                    try {
+                        Fiber::yield();
+                    } catch (OperationAbortedException &) {
+                        return;
+                    }
                 }
                 continue;
             }
@@ -458,7 +462,11 @@ IOManager::idle()
             lock.unlock();
         }
 #endif
-        Fiber::yield();
+        try {
+            Fiber::yield();
+        } catch (OperationAbortedException &) {
+            return;
+        }
     }
 }
 
