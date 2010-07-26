@@ -15,22 +15,6 @@ namespace Mordor {
 
 class Fiber;
 
-class ThreadPool
-{
-public:
-    void init(boost::function<void ()> proc);
-    void start(size_t threads = 1);
-
-    size_t size();
-    void join_all();
-    bool contains(boost::thread::id id);
-
-private:
-    boost::function<void ()> m_proc;
-    boost::mutex m_mutex;
-    std::list<boost::shared_ptr<boost::thread> > m_threads;
-};
-
 /// Cooperative user-mode thread (Fiber) Scheduler
 
 /// A Scheduler is used to cooperatively schedule fibers on threads,
@@ -202,8 +186,8 @@ private:
     boost::thread::id m_rootThread;
     boost::shared_ptr<Fiber> m_rootFiber;
     boost::shared_ptr<Fiber> m_callingFiber;
-    ThreadPool m_threads;
-    size_t m_threadCount;
+    std::vector<boost::shared_ptr<boost::thread> > m_threads;
+    size_t m_threadCount, m_activeThreadCount;
     bool m_stopping;
     bool m_autoStop;
     size_t m_batchSize;

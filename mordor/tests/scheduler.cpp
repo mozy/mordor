@@ -298,14 +298,14 @@ MORDOR_UNITTEST(Scheduler, scheduleForThreadNotOnScheduler)
 #endif
 
 static void sleepForABit(std::set<boost::thread::id> &threads,
-    boost::mutex &mutex, Fiber::ptr scheduleMe, int &count)
+    boost::mutex &mutex, Fiber::ptr scheduleMe, int *count)
 {
     {
         boost::mutex::scoped_lock lock(mutex);
         threads.insert(boost::this_thread::get_id());
     }
     Mordor::sleep(10000);
-    if (atomicDecrement(count) == 0)
+    if (count && atomicDecrement(*count) == 0)
         Scheduler::getThis()->schedule(scheduleMe);
 }
 
@@ -320,7 +320,7 @@ MORDOR_UNITTEST(Scheduler, spreadTheLoad)
         int count = 8;
         for (size_t i = 0; i < 8; ++i)
             pool.schedule(boost::bind(&sleepForABit, boost::ref(threads),
-                boost::ref(mutex), Fiber::getThis(), boost::ref(count)));
+                boost::ref(mutex), Fiber::getThis(), &count));
         // We have to have one of these fibers reschedule us, because if we
         // let the pool destruct, it will call stop which will wake up all
         // the threads
@@ -353,4 +353,31 @@ MORDOR_UNITTEST(Scheduler, stopIdleMultithreaded)
     ioManager.stop();
     // This should have taken less than a second, since we cancelled the timer
     MORDOR_TEST_ASSERT_LESS_THAN(TimerManager::now() - start, 1000000ull);
+}
+
+static void startTheFibers(std::set<boost::thread::id> &threads,
+    boost::mutex &mutex)
+{
+    Mordor::sleep(100000);
+    for (size_t i = 0; i < 8; ++i)
+        Scheduler::getThis()->schedule(boost::bind(&sleepForABit,
+            boost::ref(threads), boost::ref(mutex), Fiber::ptr(),
+            (int *)NULL));
+}
+
+MORDOR_UNITTEST(Scheduler, spreadTheLoadWhileStopping)
+{
+    std::set<boost::thread::id> threads;
+    {
+        boost::mutex mutex;
+        WorkerPool pool(4);
+        // Wait for the other threads to get to idle first
+        Mordor::sleep(100000);
+
+        pool.schedule(boost::bind(&startTheFibers, boost::ref(threads),
+            boost::ref(mutex)));
+        pool.stop();
+    }
+    // Make sure we hit every thread
+    MORDOR_TEST_ASSERT_EQUAL(threads.size(), 4u);
 }
