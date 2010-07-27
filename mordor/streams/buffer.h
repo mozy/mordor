@@ -101,6 +101,10 @@ public:
 
     ptrdiff_t find(char delimiter, size_t length = ~0) const;
     ptrdiff_t find(const std::string &string, size_t length = ~0) const;
+    std::string getDelimited(char delimiter, bool eofIsDelimiter = true,
+        bool includeDelimiter = true);
+    std::string getDelimited(const std::string &delimiter,
+        bool eofIsDelimiter = true, bool includeDelimiter = true);
 
     void visit(boost::function<void (const void *, size_t)> dg, size_t length = ~0) const;
 

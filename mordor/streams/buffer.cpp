@@ -731,6 +731,46 @@ Buffer::find(const std::string &string, size_t length) const
     return -1;
 }
 
+std::string
+Buffer::getDelimited(char delimiter, bool eofIsDelimiter, bool includeDelimiter)
+{
+    ptrdiff_t offset = find(delimiter, ~0);
+    MORDOR_ASSERT(offset >= -1);
+    if (offset == -1 && !eofIsDelimiter)
+        MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+    eofIsDelimiter = offset == -1;
+    if (offset == -1)
+        offset = readAvailable();;
+    std::string result;
+    result.resize(offset + (eofIsDelimiter ? 0 : (includeDelimiter ? 1 : 0)));
+    copyOut(&result[0], result.size());
+    consume(result.size());
+    if (!eofIsDelimiter && !includeDelimiter)
+        consume(1u);
+    return result;
+}
+
+std::string
+Buffer::getDelimited(const std::string &delimiter, bool eofIsDelimiter,
+    bool includeDelimiter)
+{
+    ptrdiff_t offset = find(delimiter, ~0);
+    MORDOR_ASSERT(offset >= -1);
+    if (offset == -1 && !eofIsDelimiter)
+        MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+    eofIsDelimiter = offset == -1;
+    if (offset == -1)
+        offset = readAvailable();;
+    std::string result;
+    result.resize(offset + (eofIsDelimiter ? 0 :
+        (includeDelimiter ? delimiter.size() : 0)));
+    copyOut(&result[0], result.size());
+    consume(result.size());
+    if (!eofIsDelimiter && !includeDelimiter)
+        consume(delimiter.size());
+    return result;
+}
+
 void
 Buffer::visit(boost::function<void (const void *, size_t)> dg, size_t length) const
 {

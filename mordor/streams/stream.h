@@ -215,13 +215,14 @@ public:
     /// @param delimiter The byte to look for
     /// @param eofIsDelimiter Instead of throwing an exception if the delimiter
     /// is not found, return the remainder of the stream.
-    /// @return The data from the current stream position up to and including
-    /// the delimiter
+    /// @param includeDelimiter Include the delimiter in returned string
+    /// @return The data from the current stream position up to and possibly
+    /// including the delimiter
     /// @pre supportsFind() && supportsRead()
     std::string getDelimited(char delimiter = '\n',
-        bool eofIsDelimiter = false);
+        bool eofIsDelimiter = false, bool includeDelimiter = true);
     std::string getDelimited(const std::string &delimiter,
-        bool eofIsDelimiter = false);
+        bool eofIsDelimiter = false, bool includeDelimiter = true);
 
     /// @brief Return data to the stream to be read again
 

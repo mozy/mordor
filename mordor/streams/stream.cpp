@@ -127,7 +127,7 @@ Stream::find(const std::string &delimiter, size_t sanitySize,
 }
 
 std::string
-Stream::getDelimited(char delim, bool eofIsDelimiter)
+Stream::getDelimited(char delim, bool eofIsDelimiter, bool includeDelimiter)
 {
     ptrdiff_t offset = find(delim, ~0, !eofIsDelimiter);
     eofIsDelimiter = offset < 0;
@@ -140,11 +140,14 @@ Stream::getDelimited(char delim, bool eofIsDelimiter)
 #endif
     read((char *)result.c_str(), result.size());
     MORDOR_ASSERT(readResult == result.size());
+    if (!eofIsDelimiter && !includeDelimiter)
+        result.resize(result.size() - 1);
     return result;
 }
 
 std::string
-Stream::getDelimited(const std::string &delim, bool eofIsDelimiter)
+Stream::getDelimited(const std::string &delim, bool eofIsDelimiter,
+    bool includeDelimiter)
 {
     ptrdiff_t offset = find(delim, ~0, !eofIsDelimiter);
     eofIsDelimiter = offset < 0;
@@ -157,6 +160,8 @@ Stream::getDelimited(const std::string &delim, bool eofIsDelimiter)
 #endif
     read((char *)result.c_str(), result.size());
     MORDOR_ASSERT(readResult == result.size());
+    if (!eofIsDelimiter && !includeDelimiter)
+        result.resize(result.size() - delim.size());
     return result;
 }
 
