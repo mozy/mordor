@@ -85,6 +85,13 @@ public:
         }
     }
 
+    void reset()
+    {
+        m_fiber = NULL;
+        if (!m_dg)
+            m_scheduler = NULL;
+    }
+
 private:
     // We're going to stuff a couple of things into m_fiber, and do some bit
     // manipulation, so it's going to be easier to declare it as intptr_t
@@ -160,6 +167,13 @@ public:
             MORDOR_ASSERT(!m_dg);
             m_scheduler->schedule(((Fiber *)newValue)->shared_from_this());
         }
+    }
+
+    void reset()
+    {
+        m_fiber = NULL;
+        if (!m_dg)
+            m_scheduler = NULL;
     }
 
 private:
