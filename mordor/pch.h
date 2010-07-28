@@ -113,7 +113,8 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/regex.hpp>
 #include <boost/signals2/signal.hpp>
-#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/thread.hpp>
 #include <boost/variant.hpp>
 #endif
 

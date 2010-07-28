@@ -7,7 +7,8 @@
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/thread.hpp>
 
 #include "thread_local_storage.h"
 
