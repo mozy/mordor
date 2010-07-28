@@ -1675,8 +1675,6 @@ Address::insert(std::ostream &os) const
 bool
 Address::operator<(const Address &rhs) const
 {
-    if (m_type >= rhs.m_type || m_protocol >= rhs.m_protocol)
-        return false;
     socklen_t minimum = std::min(nameLen(), rhs.nameLen());
     int result = memcmp(name(), rhs.name(), minimum);
     if (result < 0)
