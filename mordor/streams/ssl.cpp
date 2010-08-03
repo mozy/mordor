@@ -564,6 +564,23 @@ SSLStream::connect()
 }
 
 void
+SSLStream::serverNameIndication(const std::string &hostname)
+{
+    // Older versions of OpenSSL don't support this (I'm looking at you,
+    // Leopard); just ignore it then
+#ifdef SSL_set_tlsext_host_name
+    if (!SSL_set_tlsext_host_name(m_ssl.get(), hostname.c_str())) {
+        MORDOR_VERIFY(hasOpenSSLError());
+        std::string message = getOpenSSLErrorMessage();
+        MORDOR_LOG_ERROR(g_log) << this << " SSL_set_tlsext_host_name("
+            << m_ssl.get() << ", " << hostname.c_str() << "): " << message;
+        MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+            << boost::errinfo_api_function("SSL_set_tlsext_host_name");
+    }
+#endif
+}
+
+void
 SSLStream::verifyPeerCertificate()
 {
     long verifyResult = SSL_get_verify_result(m_ssl.get());

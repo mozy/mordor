@@ -463,6 +463,7 @@ ConnectionCache::addSSL(const URI &uri, Stream::ptr &stream)
         BufferedStream::ptr bufferedStream(new BufferedStream(stream));
         bufferedStream->allowPartialReads(true);
         SSLStream::ptr sslStream(new SSLStream(bufferedStream, true, true, m_sslCtx));
+        sslStream->serverNameIndication(uri.authority.host());
         sslStream->connect();
         if (m_verifySslCertificate)
             sslStream->verifyPeerCertificate();

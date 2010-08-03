@@ -64,6 +64,8 @@ public:
     void accept();
     void connect();
 
+    void serverNameIndication(const std::string &hostname);
+
     void verifyPeerCertificate();
     void verifyPeerCertificate(const std::string &hostname);
 
