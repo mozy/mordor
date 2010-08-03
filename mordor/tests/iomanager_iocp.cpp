@@ -3,7 +3,7 @@
 #ifdef WINDOWS
 
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
+#include <boost/thread/thread.hpp>
 
 #include "mordor/iomanager.h"
 #include "mordor/test/test.h"

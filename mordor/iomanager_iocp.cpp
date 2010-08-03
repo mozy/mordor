@@ -258,10 +258,11 @@ void
 IOManager::registerEvent(AsyncEvent *e)
 {
     MORDOR_ASSERT(e);
-    MORDOR_ASSERT(Scheduler::getThis());
     e->m_scheduler = Scheduler::getThis();
     e->m_thread = boost::this_thread::get_id();
     e->m_fiber = Fiber::getThis();
+    MORDOR_ASSERT(e->m_scheduler);
+    MORDOR_ASSERT(e->m_fiber);
     MORDOR_LOG_DEBUG(g_log) << this << " registerEvent(" << &e->overlapped << ")";
 #ifdef DEBUG
     {
@@ -443,16 +444,20 @@ IOManager::idle()
             MORDOR_ASSERT(e == it->second);
             m_pendingEvents.erase(it);
 #endif
+            MORDOR_ASSERT(e->m_scheduler);
+            MORDOR_ASSERT(e->m_fiber);
 
             MORDOR_LOG_TRACE(g_log) << this << " OVERLAPPED_ENTRY {"
                 << events[i].lpCompletionKey << ", " << events[i].lpOverlapped
                 << ", " << events[i].Internal << ", "
                 << events[i].dwNumberOfBytesTransferred << "}";
 
-            e->m_scheduler->schedule(e->m_fiber);
+            Scheduler *scheduler = e->m_scheduler;
+            Fiber::ptr fiber;
+            fiber.swap(e->m_fiber);
             e->m_thread = boost::thread::id();
             e->m_scheduler = NULL;
-            e->m_fiber.reset();
+            scheduler->schedule(fiber);
         }
         if (count != tickles)
             atomicAdd(m_pendingEventCount, (size_t)(-(ptrdiff_t)(count - tickles)));
