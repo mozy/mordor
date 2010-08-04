@@ -1,0 +1,47 @@
+{
+   strftime
+   Memcheck:Cond
+   fun:__strftime_internal
+   fun:strftime_l
+}
+{
+   global Fiber::ptr
+   Memcheck:Leak
+   fun:_Znwm
+   ...
+   fun:_ZN5boost19thread_specific_ptrINS_10shared_ptrIN6Mordor5FiberEEEE*
+}
+{
+   boost::once_pre_thread_epoch
+   Memcheck:Leak
+   fun:malloc
+   fun:_ZN5boost6detail25get_once_per_thread_epochEv
+   obj:/usr/lib/libboost_thread.so.1.40.0
+   fun:_ZN5boost6detail23get_current_thread_dataEv
+   fun:_ZN5boost6detail13find_tss_dataEPKv
+   fun:_ZN5boost6detail12get_tss_dataEPKv
+}
+{
+   SSL_COMP_get_compressions_methods
+   Memcheck:Leak
+   fun:malloc
+   fun:CRYPTO_malloc
+   obj:/usr/lib/libssl.so.0.9.8
+   fun:SSL_COMP_get_compression_methods
+   fun:SSL_library_init
+}
+{
+   backtrace pthread_once init
+   Memcheck:Leak
+   fun:malloc
+   fun:_dl_map_object_deps
+   fun:dl_open_worker
+   fun:_dl_catch_error
+   fun:_dl_open
+   fun:do_dlopen
+   fun:_dl_catch_error
+   fun:__libc_dlopen_mode
+   fun:init
+   fun:pthread_once
+   fun:backtrace
+}
