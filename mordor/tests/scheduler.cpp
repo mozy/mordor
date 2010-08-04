@@ -292,17 +292,17 @@ MORDOR_UNITTEST(Scheduler, scheduleForThreadNotOnScheduler)
 {
     Fiber::ptr doNothingFiber(new Fiber(&doNothing));
     WorkerPool pool(1, false);
-    MORDOR_TEST_ASSERT_ASSERTED(pool.schedule(doNothingFiber, boost::this_thread::get_id()));
+    MORDOR_TEST_ASSERT_ASSERTED(pool.schedule(doNothingFiber, gettid()));
     pool.stop();
 }
 #endif
 
-static void sleepForABit(std::set<boost::thread::id> &threads,
+static void sleepForABit(std::set<tid_t> &threads,
     boost::mutex &mutex, Fiber::ptr scheduleMe, int *count)
 {
     {
         boost::mutex::scoped_lock lock(mutex);
-        threads.insert(boost::this_thread::get_id());
+        threads.insert(gettid());
     }
     Mordor::sleep(10000);
     if (count && atomicDecrement(*count) == 0)
@@ -311,7 +311,7 @@ static void sleepForABit(std::set<boost::thread::id> &threads,
 
 MORDOR_UNITTEST(Scheduler, spreadTheLoad)
 {
-    std::set<boost::thread::id> threads;
+    std::set<tid_t> threads;
     {
         boost::mutex mutex;
         WorkerPool pool(4);
@@ -355,7 +355,7 @@ MORDOR_UNITTEST(Scheduler, stopIdleMultithreaded)
     MORDOR_TEST_ASSERT_LESS_THAN(TimerManager::now() - start, 1000000ull);
 }
 
-static void startTheFibers(std::set<boost::thread::id> &threads,
+static void startTheFibers(std::set<tid_t> &threads,
     boost::mutex &mutex)
 {
     Mordor::sleep(100000);
@@ -367,7 +367,7 @@ static void startTheFibers(std::set<boost::thread::id> &threads,
 
 MORDOR_UNITTEST(Scheduler, spreadTheLoadWhileStopping)
 {
-    std::set<boost::thread::id> threads;
+    std::set<tid_t> threads;
     {
         boost::mutex mutex;
         WorkerPool pool(4);

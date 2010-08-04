@@ -12,8 +12,9 @@
 #include <boost/noncopyable.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/thread.hpp>
 
+// For tid_t
+#include "thread.h"
 #include "version.h"
 
 #ifdef WINDOWS
@@ -61,12 +62,6 @@ public:
 
     static boost::shared_ptr<Logger> root();
 };
-
-#ifdef WINDOWS
-typedef DWORD tid_t;
-#else
-typedef pid_t tid_t;
-#endif
 
 class LogSink
 {

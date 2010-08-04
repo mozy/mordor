@@ -157,6 +157,7 @@
     <ClCompile Include="streams\test.cpp" />
     <ClCompile Include="streams\throttle.cpp" />
     <ClCompile Include="streams\timeout.cpp" />
+    <ClCompile Include="thread.cpp" />
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="streams\transfer.cpp" />
     <ClCompile Include="streams\zlib.cpp" />
@@ -212,6 +213,7 @@
     <ClInclude Include="streams\null.h" />
     <ClInclude Include="http\oauth.h" />
     <ClInclude Include="http\parser.h" />
+    <ClInclude Include="thread.h" />
     <ClInclude Include="workerpool.h" />
     <ClInclude Include="xml\parser.h" />
     <ClInclude Include="pch.h" />

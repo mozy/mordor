@@ -533,6 +533,6 @@ static void gimmeYourFiber(Fiber::ptr &threadFiber)
 MORDOR_UNITTEST(Fibers, threadFiberHeldAfterThreadEnd)
 {
     Fiber::ptr threadFiber;
-    boost::thread thread(boost::bind(&gimmeYourFiber, boost::ref(threadFiber)));
+    Thread thread(boost::bind(&gimmeYourFiber, boost::ref(threadFiber)));
     thread.join();
 }

@@ -459,6 +459,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/transfer.o					\
 	mordor/streams/zlib.o						\
 	mordor/string.o							\
+	mordor/thread.o							\
 	mordor/timer.o							\
 	mordor/workerpool.o						\
 	mordor/uri.o							\

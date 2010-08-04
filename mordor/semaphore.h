@@ -4,6 +4,8 @@
 
 #include "version.h"
 
+#include <boost/noncopyable.hpp>
+
 #ifdef WINDOWS
 #include <windows.h>
 #elif defined(OSX)
@@ -15,7 +17,7 @@
 
 namespace Mordor {
 
-class Semaphore
+class Semaphore : boost::noncopyable
 {
 public:
     Semaphore(unsigned int count = 0);

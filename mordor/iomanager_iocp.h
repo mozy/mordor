@@ -26,7 +26,7 @@ struct AsyncEvent
     OVERLAPPED overlapped;
 
     Scheduler  *m_scheduler;
-    boost::thread::id m_thread;
+    tid_t m_thread;
     boost::shared_ptr<Fiber> m_fiber;
 };
 

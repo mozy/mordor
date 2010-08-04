@@ -2,6 +2,8 @@
 #define __MORDOR_HTTP_SERVER_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
+#include <boost/thread/mutex.hpp>
+
 #include "connection.h"
 
 namespace Mordor {

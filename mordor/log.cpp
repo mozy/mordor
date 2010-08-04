@@ -11,10 +11,6 @@
 #include <syslog.h>
 #endif
 
-#ifdef LINUX
-#include <syscall.h>
-#endif
-
 #include <boost/bind.hpp>
 #include <boost/regex.hpp>
 
@@ -484,13 +480,7 @@ Logger::log(Log::Level level, const std::string &str,
     unsigned long long elapsed = TimerManager::now() - g_start;
     boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
     Logger::ptr _this = shared_from_this();
-#ifdef WINDOWS
-    DWORD thread = GetCurrentThreadId();
-#elif defined(LINUX)
-    pid_t thread = syscall(__NR_gettid);
-#else
-    pid_t thread = getpid();
-#endif
+    tid_t thread = gettid();
     void *fiber = Fiber::getThis().get();
     bool somethingLogged = false;
     while (_this) {

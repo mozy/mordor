@@ -399,6 +399,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\http.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\http.cpp"
 				>
 				<FileConfiguration
@@ -433,10 +437,6 @@
 						ObjectFile="$(IntDir)\http_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\http\http.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\http\http_parser.cpp"
@@ -567,10 +567,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -607,6 +603,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\socks.cpp"
 				>
 			</File>
@@ -636,6 +636,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\test.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\thread.cpp"
 				>
 			</File>
 			<File
@@ -966,6 +970,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\test.h"
+				>
+			</File>
+			<File
+				RelativePath=".\thread.h"
 				>
 			</File>
 			<File

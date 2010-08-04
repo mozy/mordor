@@ -8,8 +8,8 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
 
+#include "thread.h"
 #include "thread_local_storage.h"
 
 namespace Mordor {
@@ -75,16 +75,14 @@ public:
     /// @param f The Fiber to schedule
     /// @param thread Optionally provide a specific thread for the Fiber to run
     /// on
-    void schedule(boost::shared_ptr<Fiber> fiber,
-        boost::thread::id thread = boost::thread::id());
+    void schedule(boost::shared_ptr<Fiber> fiber, tid_t thread = emptytid());
     /// Schedule a generic functor to be executed on the Scheduler
 
     /// The functor will be executed on a new Fiber.
     /// @param dg The functor to schedule
     /// @param thread Optionally provide a specific thread for the functor to
     /// run on
-    void schedule(boost::function<void ()> dg,
-        boost::thread::id thread = boost::thread::id());
+    void schedule(boost::function<void ()> dg, tid_t thread = emptytid());
 
     /// Schedule multiple items to be executed at once
 
@@ -114,7 +112,7 @@ public:
     /// @param thread Optionally provide a specific thread for this Fiber to
     /// run on
     /// @post Scheduler::getThis() == this
-    void switchTo(boost::thread::id thread = boost::thread::id());
+    void switchTo(tid_t thread = emptytid());
 
     /// Yield to the Scheduler to allow other Fibers to execute on this thread
 
@@ -172,24 +170,24 @@ private:
     void run();
 
     bool scheduleNoLock(boost::shared_ptr<Fiber> fiber,
-        boost::thread::id thread = boost::thread::id());
+        tid_t thread = emptytid());
     bool scheduleNoLock(boost::function<void ()> dg,
-        boost::thread::id thread = boost::thread::id());
+        tid_t thread = emptytid());
 
 private:
     struct FiberAndThread {
         boost::shared_ptr<Fiber> fiber;
         boost::function<void ()> dg;
-        boost::thread::id thread;
+        tid_t thread;
     };
     static ThreadLocalStorage<Scheduler *> t_scheduler;
     static ThreadLocalStorage<Fiber *> t_fiber;
     boost::mutex m_mutex;
     std::list<FiberAndThread> m_fibers;
-    boost::thread::id m_rootThread;
+    tid_t m_rootThread;
     boost::shared_ptr<Fiber> m_rootFiber;
     boost::shared_ptr<Fiber> m_callingFiber;
-    std::vector<boost::shared_ptr<boost::thread> > m_threads;
+    std::vector<boost::shared_ptr<Thread> > m_threads;
     size_t m_threadCount, m_activeThreadCount;
     bool m_stopping;
     bool m_autoStop;

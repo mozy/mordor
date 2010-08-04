@@ -66,7 +66,7 @@ IOManager::WaitBlock::registerEvent(HANDLE hEvent,
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " registerEvent(" << hEvent
         << ", " << dg << ")";
     if (m_inUseCount == 1) {
-        boost::thread thread(boost::bind(&WaitBlock::run, this));
+        Thread thread(boost::bind(&WaitBlock::run, this));
     } else {
         if (!SetEvent(m_handles[0]))
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
@@ -259,7 +259,7 @@ IOManager::registerEvent(AsyncEvent *e)
 {
     MORDOR_ASSERT(e);
     e->m_scheduler = Scheduler::getThis();
-    e->m_thread = boost::this_thread::get_id();
+    e->m_thread = gettid();
     e->m_fiber = Fiber::getThis();
     MORDOR_ASSERT(e->m_scheduler);
     MORDOR_ASSERT(e->m_fiber);
@@ -282,7 +282,7 @@ IOManager::unregisterEvent(AsyncEvent *e)
 {
     MORDOR_ASSERT(e);
     MORDOR_LOG_DEBUG(g_log) << this << " unregisterEvent(" << &e->overlapped << ")";
-    e->m_thread = boost::thread::id();
+    e->m_thread = emptytid();
     e->m_scheduler = NULL;
     e->m_fiber.reset();
 #ifdef DEBUG
@@ -347,10 +347,10 @@ IOManager::cancelEvent(HANDLE hFile, AsyncEvent *e)
     if (!pCancelIoEx(hFile, &e->overlapped)) {
         DWORD lastError = GetLastError();
         if (lastError == ERROR_CALL_NOT_IMPLEMENTED) {
-            if (e->m_thread == boost::thread::id()) {
+            if (e->m_thread == emptytid()) {
                 // Nothing to cancel
                 return;
-            } else if (e->m_thread == boost::this_thread::get_id()) {
+            } else if (e->m_thread == gettid()) {
                 if (!CancelIo(hFile))
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIo");
             } else {
@@ -455,7 +455,7 @@ IOManager::idle()
             Scheduler *scheduler = e->m_scheduler;
             Fiber::ptr fiber;
             fiber.swap(e->m_fiber);
-            e->m_thread = boost::thread::id();
+            e->m_thread = emptytid();
             e->m_scheduler = NULL;
             scheduler->schedule(fiber);
         }

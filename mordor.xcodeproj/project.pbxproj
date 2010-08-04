@@ -29,7 +29,6 @@
 		3CAB29C8112B347400607AEE /* proxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB270F112B096700607AEE /* proxy.cpp */; };
 		3CAB29C9112B347400607AEE /* server.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2711112B096700607AEE /* server.cpp */; };
 		3CAB29CB112B347400607AEE /* log.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB271F112B096700607AEE /* log.cpp */; };
-		3CAB29CC112B347400607AEE /* pch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2723112B096700607AEE /* pch.cpp */; };
 		3CAB29CD112B347400607AEE /* ragel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2728112B096700607AEE /* ragel.cpp */; };
 		3CAB29CE112B347400607AEE /* scheduler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB272D112B096700607AEE /* scheduler.cpp */; };
 		3CAB29CF112B347400607AEE /* semaphore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB272F112B096700607AEE /* semaphore.cpp */; };
@@ -72,6 +71,8 @@
 		C32025C011F949CF00E09E5A /* parallel.h in Headers */ = {isa = PBXBuildFile; fileRef = C32025B511F949CF00E09E5A /* parallel.h */; };
 		C32025C111F949CF00E09E5A /* workerpool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32025B611F949CF00E09E5A /* workerpool.cpp */; };
 		C32025C211F949CF00E09E5A /* workerpool.h in Headers */ = {isa = PBXBuildFile; fileRef = C32025B711F949CF00E09E5A /* workerpool.h */; };
+		C32854BE120A1E750079C4A2 /* thread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32854BC120A1E750079C4A2 /* thread.cpp */; };
+		C32854BF120A1E750079C4A2 /* thread.h in Headers */ = {isa = PBXBuildFile; fileRef = C32854BD120A1E750079C4A2 /* thread.h */; };
 		C34893CA11BEB1300044E9C8 /* socks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C34893C811BEB1300044E9C8 /* socks.cpp */; };
 		C34893CB11BEB1300044E9C8 /* socks.h in Headers */ = {isa = PBXBuildFile; fileRef = C34893C911BEB1300044E9C8 /* socks.h */; };
 		E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E29FD2A81136FD1D004BC293 /* timeout.cpp */; };
@@ -168,9 +169,6 @@
 		3CAB271E112B096700607AEE /* json.rl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = json.rl; sourceTree = "<group>"; };
 		3CAB271F112B096700607AEE /* log.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = log.cpp; sourceTree = "<group>"; };
 		3CAB2720112B096700607AEE /* log.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = log.h; sourceTree = "<group>"; };
-		3CAB2721112B096700607AEE /* mordor.sln */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mordor.sln; sourceTree = "<group>"; };
-		3CAB2722112B096700607AEE /* mordor.vcproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = mordor.vcproj; sourceTree = "<group>"; };
-		3CAB2723112B096700607AEE /* pch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pch.cpp; sourceTree = "<group>"; };
 		3CAB2724112B096700607AEE /* pch.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; path = pch.h; sourceTree = "<group>"; };
 		3CAB2725112B096700607AEE /* pq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pq.cpp; sourceTree = "<group>"; };
 		3CAB2726112B096700607AEE /* pq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pq.h; sourceTree = "<group>"; };
@@ -305,6 +303,8 @@
 		C32025B511F949CF00E09E5A /* parallel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = parallel.h; sourceTree = "<group>"; };
 		C32025B611F949CF00E09E5A /* workerpool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = workerpool.cpp; sourceTree = "<group>"; };
 		C32025B711F949CF00E09E5A /* workerpool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = workerpool.h; sourceTree = "<group>"; };
+		C32854BC120A1E750079C4A2 /* thread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = thread.cpp; sourceTree = "<group>"; };
+		C32854BD120A1E750079C4A2 /* thread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = thread.h; sourceTree = "<group>"; };
 		C34893C811BEB1300044E9C8 /* socks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = socks.cpp; sourceTree = "<group>"; };
 		C34893C911BEB1300044E9C8 /* socks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socks.h; sourceTree = "<group>"; };
 		E29FD2A81136FD1D004BC293 /* timeout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timeout.cpp; sourceTree = "<group>"; };
@@ -369,6 +369,8 @@
 		3CAB26D4112B096700607AEE /* mordor */ = {
 			isa = PBXGroup;
 			children = (
+				C32854BC120A1E750079C4A2 /* thread.cpp */,
+				C32854BD120A1E750079C4A2 /* thread.h */,
 				C32025AD11F949CF00E09E5A /* daemon.cpp */,
 				C32025AE11F949CF00E09E5A /* daemon.h */,
 				C32025AF11F949CF00E09E5A /* fibersynchronization.cpp */,
@@ -412,9 +414,6 @@
 				3CAB271E112B096700607AEE /* json.rl */,
 				3CAB271F112B096700607AEE /* log.cpp */,
 				3CAB2720112B096700607AEE /* log.h */,
-				3CAB2721112B096700607AEE /* mordor.sln */,
-				3CAB2722112B096700607AEE /* mordor.vcproj */,
-				3CAB2723112B096700607AEE /* pch.cpp */,
 				3CAB2724112B096700607AEE /* pch.h */,
 				3CAB2725112B096700607AEE /* pq.cpp */,
 				3CAB2726112B096700607AEE /* pq.h */,
@@ -651,6 +650,7 @@
 				C32025BE11F949CF00E09E5A /* main.h in Headers */,
 				C32025C011F949CF00E09E5A /* parallel.h in Headers */,
 				C32025C211F949CF00E09E5A /* workerpool.h in Headers */,
+				C32854BF120A1E750079C4A2 /* thread.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -706,7 +706,6 @@
 			isa = PBXProject;
 			buildConfigurationList = 1DEB916408733D950010E9CD /* Build configuration list for PBXProject "mordor" */;
 			compatibilityVersion = "Xcode 3.1";
-			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
 				en,
@@ -749,7 +748,6 @@
 				3CAB29C8112B347400607AEE /* proxy.cpp in Sources */,
 				3CAB29C9112B347400607AEE /* server.cpp in Sources */,
 				3CAB29CB112B347400607AEE /* log.cpp in Sources */,
-				3CAB29CC112B347400607AEE /* pch.cpp in Sources */,
 				3CAB29CD112B347400607AEE /* ragel.cpp in Sources */,
 				3CAB29CE112B347400607AEE /* scheduler.cpp in Sources */,
 				3CAB29CF112B347400607AEE /* semaphore.cpp in Sources */,
@@ -787,6 +785,7 @@
 				C32025BD11F949CF00E09E5A /* main.cpp in Sources */,
 				C32025BF11F949CF00E09E5A /* parallel.cpp in Sources */,
 				C32025C111F949CF00E09E5A /* workerpool.cpp in Sources */,
+				C32854BE120A1E750079C4A2 /* thread.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

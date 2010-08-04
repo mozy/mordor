@@ -28,7 +28,9 @@ Scheduler::Scheduler(size_t threads, bool useCaller, size_t batchSize)
         m_rootFiber.reset(new Fiber(boost::bind(&Scheduler::run, this)));
         t_scheduler = this;
         t_fiber = m_rootFiber.get();
-        m_rootThread = boost::this_thread::get_id();
+        m_rootThread = gettid();
+    } else {
+        m_rootThread = emptytid();
     }
     m_threadCount = threads;
 }
@@ -57,7 +59,7 @@ Scheduler::start()
     MORDOR_ASSERT(m_threads.empty());
     m_threads.resize(m_threadCount);
     for (size_t i = 0; i < m_threadCount; ++i) {
-        m_threads[i] = boost::shared_ptr<boost::thread>(new boost::thread(
+        m_threads[i] = boost::shared_ptr<Thread>(new Thread(
             boost::bind(&Scheduler::run, this)));
     }
 }
@@ -85,7 +87,7 @@ Scheduler::stop()
     }
 
     bool exitOnThisFiber = false;
-    if (m_rootThread != boost::thread::id()) {
+    if (m_rootThread != emptytid()) {
         // A thread-hijacking scheduler must be stopped
         // from within itself to return control to the
         // original thread
@@ -123,12 +125,12 @@ Scheduler::stop()
         Scheduler::getThis() != this) {
         MORDOR_LOG_DEBUG(g_log) << this
             << " waiting for other threads to stop";
-        std::vector<boost::shared_ptr<boost::thread> > threads;
+        std::vector<boost::shared_ptr<Thread> > threads;
         {
             boost::mutex::scoped_lock lock(m_mutex);
             threads.swap(m_threads);
         }
-        for (std::vector<boost::shared_ptr<boost::thread> >::const_iterator it
+        for (std::vector<boost::shared_ptr<Thread> >::const_iterator it
             (threads.begin());
             it != threads.end();
             ++it) {
@@ -146,7 +148,7 @@ Scheduler::stopping()
 }
 
 void
-Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
+Scheduler::schedule(Fiber::ptr f, tid_t thread)
 {
     bool tickleMe;
     {
@@ -158,7 +160,7 @@ Scheduler::schedule(Fiber::ptr f, boost::thread::id thread)
 }
 
 void
-Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
+Scheduler::schedule(boost::function<void ()> dg, tid_t thread)
 {
     bool tickleMe;
     {
@@ -169,24 +171,24 @@ Scheduler::schedule(boost::function<void ()> dg, boost::thread::id thread)
         tickle();
 }
 
-static bool contains(const std::vector<boost::shared_ptr<boost::thread> >
-    &threads, boost::thread::id thread)
+static bool contains(const std::vector<boost::shared_ptr<Thread> >
+    &threads, tid_t thread)
 {
-    for (std::vector<boost::shared_ptr<boost::thread> >::const_iterator it =
+    for (std::vector<boost::shared_ptr<Thread> >::const_iterator it =
         threads.begin(); it != threads.end(); ++it)
-        if ((*it)->get_id() == thread)
+        if ((*it)->tid() == thread)
             return true;
     return false;
 }
 
 bool
-Scheduler::scheduleNoLock(Fiber::ptr f, boost::thread::id thread)
+Scheduler::scheduleNoLock(Fiber::ptr f, tid_t thread)
 {
     MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << f << " on thread "
         << thread;
     MORDOR_ASSERT(f);
     // Not thread-targeted, or this scheduler owns the targetted thread
-    MORDOR_ASSERT(thread == boost::thread::id() || thread == m_rootThread ||
+    MORDOR_ASSERT(thread == emptytid() || thread == m_rootThread ||
         contains(m_threads, thread));
     FiberAndThread ft = {f, NULL, thread };
     bool tickleMe = m_fibers.empty();
@@ -195,13 +197,13 @@ Scheduler::scheduleNoLock(Fiber::ptr f, boost::thread::id thread)
 }
 
 bool
-Scheduler::scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread)
+Scheduler::scheduleNoLock(boost::function<void ()> dg, tid_t thread)
 {
     MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << dg << " on thread "
         << thread;
     MORDOR_ASSERT(dg);
     // Not thread-targeted, or this scheduler owns the targetted thread
-    MORDOR_ASSERT(thread == boost::thread::id() || thread == m_rootThread ||
+    MORDOR_ASSERT(thread == emptytid() || thread == m_rootThread ||
         contains(m_threads, thread));
     FiberAndThread ft = {Fiber::ptr(), dg, thread };
     bool tickleMe = m_fibers.empty();
@@ -210,15 +212,13 @@ Scheduler::scheduleNoLock(boost::function<void ()> dg, boost::thread::id thread)
 }
 
 void
-Scheduler::switchTo(boost::thread::id thread)
+Scheduler::switchTo(tid_t thread)
 {
     MORDOR_ASSERT(Scheduler::getThis() != NULL);
     MORDOR_LOG_DEBUG(g_log) << this << " switching to thread " << thread;
     if (Scheduler::getThis() == this) {
-        if (thread == boost::thread::id() ||
-            thread == boost::this_thread::get_id()) {
+        if (thread == emptytid() || thread == gettid())
             return;
-        }
     }
     schedule(Fiber::getThis(), thread);
     Scheduler::yieldTo();
@@ -231,7 +231,7 @@ Scheduler::yieldTo()
     MORDOR_ASSERT(self);
     MORDOR_LOG_DEBUG(g_log) << self << " yielding to scheduler";
     MORDOR_ASSERT(t_fiber.get());
-    if (self->m_rootThread == boost::this_thread::get_id() &&
+    if (self->m_rootThread == gettid() &&
         (t_fiber->state() == Fiber::INIT || t_fiber->state() == Fiber::TERM)) {
         self->m_callingFiber = Fiber::getThis();
         self->yieldTo(true);
@@ -252,8 +252,7 @@ void
 Scheduler::dispatch()
 {
     MORDOR_LOG_DEBUG(g_log) << this << " dispatching";
-    MORDOR_ASSERT(m_rootThread == boost::this_thread::get_id() &&
-        m_threadCount == 0);
+    MORDOR_ASSERT(m_rootThread == gettid() && m_threadCount == 0);
     m_stopping = true;
     m_autoStop = true;
     yieldTo();
@@ -272,7 +271,7 @@ Scheduler::threadCount(size_t threads)
     } else if (threads > m_threadCount) {
         m_threads.resize(threads);
         for (size_t i = m_threadCount; i < threads; ++i)
-            m_threads[i] = boost::shared_ptr<boost::thread>(new boost::thread(
+            m_threads[i] = boost::shared_ptr<Thread>(new Thread(
             boost::bind(&Scheduler::run, this)));
     }
     m_threadCount = threads;
@@ -284,7 +283,7 @@ Scheduler::yieldTo(bool yieldToCallerOnTerminate)
     MORDOR_ASSERT(t_fiber.get());
     MORDOR_ASSERT(Scheduler::getThis() == this);
     if (yieldToCallerOnTerminate)
-        MORDOR_ASSERT(m_rootThread == boost::this_thread::get_id());
+        MORDOR_ASSERT(m_rootThread == gettid());
     if (t_fiber->state() != Fiber::HOLD) {
         m_stopping = m_autoStop || m_stopping;
         t_fiber->reset();
@@ -296,7 +295,7 @@ void
 Scheduler::run()
 {
     t_scheduler = this;
-    if (boost::this_thread::get_id() != m_rootThread) {
+    if (gettid() != m_rootThread) {
         // Running in own thread
         t_fiber = Fiber::getThis().get();
     } else {
@@ -316,8 +315,7 @@ Scheduler::run()
         {
             boost::mutex::scoped_lock lock(m_mutex);
             // Kill ourselves off if needed
-            if (m_threads.size() > m_threadCount &&
-                boost::this_thread::get_id() != m_rootThread) {
+            if (m_threads.size() > m_threadCount && gettid() != m_rootThread) {
                 // Accounting
                 if (isActive)
                     --m_activeThreadCount;
@@ -329,11 +327,11 @@ Scheduler::run()
                     idleFiber->inject(boost::current_exception());
                 }
                 // Detach our thread
-                for (std::vector<boost::shared_ptr<boost::thread> >
+                for (std::vector<boost::shared_ptr<Thread> >
                     ::iterator it = m_threads.begin();
                     it != m_threads.end();
                     ++it)
-                    if ((*it)->get_id() == boost::this_thread::get_id()) {
+                    if ((*it)->tid() == gettid()) {
                         m_threads.erase(it);
                         if (m_threads.size() > m_threadCount)
                             tickle();
@@ -350,8 +348,7 @@ Scheduler::run()
                     batch.size() == m_batchSize)
                     break;
 
-                if (it->thread != boost::thread::id() &&
-                    it->thread != boost::this_thread::get_id()) {
+                if (it->thread != emptytid() && it->thread != gettid()) {
                     MORDOR_LOG_DEBUG(g_log) << this
                         << " skipping item scheduled for thread "
                         << it->thread;
@@ -431,7 +428,7 @@ Scheduler::run()
 
         if (idleFiber->state() == Fiber::TERM) {
             MORDOR_LOG_DEBUG(g_log) << this << " idle fiber terminated";
-            if (boost::this_thread::get_id() == m_rootThread)
+            if (gettid() == m_rootThread)
                 m_callingFiber.reset();
             // Unblock the next thread
             tickle();

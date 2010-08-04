@@ -114,7 +114,7 @@
 #include <boost/regex.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
+#include <boost/thread/tss.hpp>
 #include <boost/variant.hpp>
 #endif
 
