@@ -28,6 +28,13 @@ static struct SSLInitializer {
         SSL_library_init();
         SSL_load_error_strings();
     }
+    ~SSLInitializer()
+    {
+        ERR_free_strings();
+        CRYPTO_cleanup_all_ex_data();
+        EVP_cleanup();
+        sk_SSL_COMP_free(SSL_COMP_get_compression_methods());
+    }
 } g_init;
 
 }
