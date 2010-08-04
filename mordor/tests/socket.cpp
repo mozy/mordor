@@ -265,6 +265,7 @@ MORDOR_SOCKET_UNITTEST(cancelSend)
     scheduler.dispatch();
 
     boost::scoped_array<char> array(new char[65536]);
+    memset(array.get(), 1, 65536);
     struct iovec iov;
     iov.iov_base = array.get();
     iov.iov_len = 65536;
@@ -281,6 +282,7 @@ MORDOR_SOCKET_UNITTEST(cancelReceive)
     scheduler.dispatch();
 
     char buf[3];
+    memset(buf, 1, 3);
     struct iovec iov;
     iov.iov_base = buf;
     iov.iov_len = 3;

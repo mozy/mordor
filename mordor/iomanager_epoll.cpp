@@ -103,6 +103,7 @@ IOManager::IOManager(size_t threads, bool useCaller)
     MORDOR_ASSERT(m_tickleFds[0] > 0);
     MORDOR_ASSERT(m_tickleFds[1] > 0);
     epoll_event event;
+    memset(&event, 0, sizeof(epoll_event));
     event.events = EPOLLIN | EPOLLET;
     event.data.fd = m_tickleFds[0];
     rc = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
