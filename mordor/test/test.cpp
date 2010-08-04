@@ -21,10 +21,8 @@
 #include <sys/sysctl.h>
 #endif
 
-using namespace Mordor;
-using namespace Mordor::Test;
-
-static TestSuites *g_allTests;
+namespace Mordor {
+namespace Test {
 
 static ConfigVar<bool>::ptr g_protect = Config::lookup(
     "test.protect", false,
@@ -33,26 +31,28 @@ static ConfigVar<bool>::ptr g_wait = Config::lookup(
     "test.waitfordebugger", false,
     "Wait for a debugger to attach before running tests");
 
+TestSuites &allTests()
+{
+    static TestSuites s_allTests;
+    return s_allTests;
+}
+
 void
-Test::registerTest(const std::string &suite, const std::string &testName,
+registerTest(const std::string &suite, const std::string &testName,
              TestDg test)
 {
-    if (!g_allTests)
-        g_allTests = new TestSuites();
-    (*g_allTests)[suite].second[testName] = test;
+    allTests()[suite].second[testName] = test;
 }
 
 void
-Test::registerSuiteInvariant(const std::string &suite, TestDg invariant)
+registerSuiteInvariant(const std::string &suite, TestDg invariant)
 {
-    if (!g_allTests)
-        g_allTests = new TestSuites();
-    MORDOR_ASSERT((*g_allTests)[suite].first == NULL);
-    (*g_allTests)[suite].first = invariant;
+    MORDOR_ASSERT(allTests()[suite].first == NULL);
+    allTests()[suite].first = invariant;
 }
 
 void
-Test::assertion(const char *file, int line, const char *function,
+assertion(const char *file, int line, const char *function,
                 const std::string &expr)
 {
     throw boost::enable_current_exception(Assertion(expr))
@@ -102,7 +102,7 @@ runTests(const TestSuites *suites, TestListener *listener)
         debugBreak();
     }
     bool result = true;
-    if (!suites) suites = g_allTests;
+    if (!suites) suites = &allTests();
     if (suites) {
         for (TestSuites::const_iterator it(suites->begin());
             it != suites->end();
@@ -129,16 +129,8 @@ runTests(const TestSuites *suites, TestListener *listener)
     return result;
 }
 
-const TestSuites &
-Test::allTests()
-{
-    if (!g_allTests)
-        g_allTests = new TestSuites();
-    return *g_allTests;
-}
-
 TestSuites
-Test::testsForArguments(int argc, char **argv)
+testsForArguments(int argc, char **argv)
 {
     TestSuites tests;
     const TestSuites &all = allTests();
@@ -165,31 +157,31 @@ Test::testsForArguments(int argc, char **argv)
 }
 
 bool
-Test::runTests()
+runTests()
 {
-    return ::runTests(g_allTests, NULL);
+    return runTests(&allTests(), NULL);
 }
 
 bool
-Test::runTests(const TestSuites &suites)
+runTests(const TestSuites &suites)
 {
-    return ::runTests(&suites, NULL);
+    return runTests(&suites, NULL);
 }
 
 bool
-Test::runTests(TestListener &listener)
+runTests(TestListener &listener)
 {
-    return ::runTests(g_allTests, &listener);
+    return runTests(&allTests(), &listener);
 }
 
 bool
-Test::runTests(const TestSuites &suites, TestListener &listener)
+runTests(const TestSuites &suites, TestListener &listener)
 {
-    return ::runTests(&suites, &listener);
+    return runTests(&suites, &listener);
 }
 
 template <>
-void Test::assertEqual<const char *, const char *>(const char *file,
+void assertEqual<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -200,7 +192,7 @@ void Test::assertEqual<const char *, const char *>(const char *file,
 }
 
 template <>
-void Test::assertNotEqual<const char *, const char *>(const char *file,
+void assertNotEqual<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -211,7 +203,7 @@ void Test::assertNotEqual<const char *, const char *>(const char *file,
 }
 
 template <>
-void Test::assertLessThan<const char *, const char *>(const char *file,
+void assertLessThan<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -222,7 +214,7 @@ void Test::assertLessThan<const char *, const char *>(const char *file,
 }
 
 template <>
-void Test::assertLessThanOrEqual<const char *, const char *>(const char *file,
+void assertLessThanOrEqual<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -233,7 +225,7 @@ void Test::assertLessThanOrEqual<const char *, const char *>(const char *file,
 }
 
 template <>
-void Test::assertGreaterThan<const char *, const char *>(const char *file,
+void assertGreaterThan<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -244,7 +236,7 @@ void Test::assertGreaterThan<const char *, const char *>(const char *file,
 }
 
 template <>
-void Test::assertGreaterThanOrEqual<const char *, const char *>(const char *file,
+void assertGreaterThanOrEqual<const char *, const char *>(const char *file,
     int line, const char *function, const char *lhs, const char *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -256,7 +248,7 @@ void Test::assertGreaterThanOrEqual<const char *, const char *>(const char *file
 
 #ifdef WINDOWS
 template <>
-void Test::assertEqual<const wchar_t *, const wchar_t *>(const char *file,
+void assertEqual<const wchar_t *, const wchar_t *>(const char *file,
     int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -267,7 +259,7 @@ void Test::assertEqual<const wchar_t *, const wchar_t *>(const char *file,
 }
 
 template <>
-void Test::assertNotEqual<const wchar_t *, const wchar_t *>(const char *file,
+void assertNotEqual<const wchar_t *, const wchar_t *>(const char *file,
     int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -278,7 +270,7 @@ void Test::assertNotEqual<const wchar_t *, const wchar_t *>(const char *file,
 }
 
 template <>
-void Test::assertLessThan<const wchar_t *, const wchar_t *>(const char *file,
+void assertLessThan<const wchar_t *, const wchar_t *>(const char *file,
     int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -289,7 +281,7 @@ void Test::assertLessThan<const wchar_t *, const wchar_t *>(const char *file,
 }
 
 template <>
-void Test::assertLessThanOrEqual<const wchar_t *, const wchar_t *>(const char *file,
+void assertLessThanOrEqual<const wchar_t *, const wchar_t *>(const char *file,
     int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -300,7 +292,7 @@ void Test::assertLessThanOrEqual<const wchar_t *, const wchar_t *>(const char *f
 }
 
 template <>
-void Test::assertGreaterThan<const wchar_t *, const wchar_t *>(const char *file,
+void assertGreaterThan<const wchar_t *, const wchar_t *>(const char *file,
     int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -311,7 +303,7 @@ void Test::assertGreaterThan<const wchar_t *, const wchar_t *>(const char *file,
 }
 
 template <>
-void Test::assertGreaterThanOrEqual<const wchar_t *, const wchar_t *>(const char *file,
+void assertGreaterThanOrEqual<const wchar_t *, const wchar_t *>(const char *file,
     int line, const char *function, const wchar_t *lhs, const wchar_t *rhs,
     const char *lhsExpr, const char *rhsExpr)
 {
@@ -321,3 +313,5 @@ void Test::assertGreaterThanOrEqual<const wchar_t *, const wchar_t *>(const char
     }
 }
 #endif
+
+}}
