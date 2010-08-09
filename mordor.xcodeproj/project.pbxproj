@@ -862,6 +862,7 @@
 					/usr/local/include,
 				);
 				INSTALL_PATH = /usr/local/lib;
+				OTHER_CFLAGS = "-DDEBUG";
 				PREBINDING = NO;
 				PRODUCT_NAME = mordor;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
