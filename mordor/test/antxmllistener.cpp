@@ -100,6 +100,7 @@ AntXMLListener::testAsserted(const std::string &suite, const std::string &test,
         suiteInfo.end = testInfo.end = TimerManager::now();
         testInfo.exceptionType = "Assertion";
         testInfo.exceptionMessage = assertion.what();
+        replace(testInfo.exceptionMessage, "&", "&amp;");
         replace(testInfo.exceptionMessage, "\"", "&quot;");
         testInfo.exceptionDetails = boost::current_exception_diagnostic_information();
     }
@@ -117,6 +118,7 @@ AntXMLListener::testException(const std::string &suite, const std::string &test)
             throw;
         } catch (std::exception &ex) {
             testInfo.exceptionMessage = ex.what();
+            replace(testInfo.exceptionMessage, "&", "&amp;");
             replace(testInfo.exceptionMessage, "\"", "&quot;");
             testInfo.exceptionType = typeid(ex).name();
         } catch (boost::exception &ex) {
