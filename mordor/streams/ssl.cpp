@@ -576,7 +576,7 @@ SSLStream::serverNameIndication(const std::string &hostname)
     // Leopard); just ignore it then
 #ifdef SSL_set_tlsext_host_name
     if (!SSL_set_tlsext_host_name(m_ssl.get(), hostname.c_str())) {
-        MORDOR_VERIFY(hasOpenSSLError());
+        if (!hasOpenSSLError()) return;
         std::string message = getOpenSSLErrorMessage();
         MORDOR_LOG_ERROR(g_log) << this << " SSL_set_tlsext_host_name("
             << m_ssl.get() << ", " << hostname.c_str() << "): " << message;
