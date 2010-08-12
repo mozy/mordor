@@ -38,15 +38,15 @@ void
 parallel_do(const std::vector<boost::function<void ()> > &dgs,
             std::vector<Fiber::ptr> &fibers);
 
-template<class T>
+template<class Iterator, class Functor>
 static
 void
-parallel_foreach_impl(boost::function<bool (T&)> dg, T *&t,
+parallel_foreach_impl(Functor &functor, Iterator &it,
                       int &result, boost::exception_ptr &exception,
                       Scheduler *scheduler, Fiber::ptr caller)
 {
     try {
-        result = dg(*t) ? 1 : 0;
+        result = functor(*it) ? 1 : 0;
     } catch (boost::exception &ex) {
         result = 0;
         removeTopFrames(ex);
@@ -55,7 +55,6 @@ parallel_foreach_impl(boost::function<bool (T&)> dg, T *&t,
         result = 0;
         exception = boost::current_exception();
     }
-    t = NULL;
     scheduler->schedule(caller);
 }
 
@@ -73,9 +72,9 @@ parallel_foreach_impl(boost::function<bool (T&)> dg, T *&t,
 /// @param end The end of the collection
 /// @param dg The functor to be passed each object in the collection
 /// @param parallelism How many objects to Schedule in parallel
-template<class Iterator, class T>
+template<class Iterator, class Functor>
 bool
-parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
+parallel_foreach(Iterator begin, Iterator end, Functor functor,
     int parallelism = -1)
 {
     if (parallelism == -1)
@@ -84,9 +83,9 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
     Fiber::ptr caller = Fiber::getThis();
     Iterator it = begin;
 
-    if (parallelism == 1) {
+    if (parallelism == 1 || !scheduler) {
         while (it != end) {
-            if (!dg(*it))
+            if (!functor(*it))
                 return false;
             ++it;
         }
@@ -94,7 +93,7 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
     }
 
     std::vector<Fiber::ptr> fibers;
-    std::vector<T *> current;
+    std::vector<Iterator> current;
     // Not bool, because that's specialized, and it doesn't return just a
     // bool &, but instead some reference wrapper that the compiler hates
     std::vector<int> result;
@@ -104,14 +103,16 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
     result.resize(parallelism);
     exceptions.resize(parallelism);
     for (int i = 0; i < parallelism; ++i) {
-        fibers[i] = Fiber::ptr(new Fiber(boost::bind(&parallel_foreach_impl<T>,
-            dg, boost::ref(current[i]), boost::ref(result[i]),
+        fibers[i] = Fiber::ptr(new Fiber(boost::bind(
+            &parallel_foreach_impl<Iterator, Functor>,
+            boost::ref(functor), boost::ref(current[i]), boost::ref(result[i]),
             boost::ref(exceptions[i]), scheduler, caller)));
     }
 
     int curFiber = 0;
     while (it != end && curFiber < parallelism) {
-        current[curFiber] = &*it;
+        current[curFiber] = it;
+        result[curFiber] = -1;
         scheduler->schedule(fibers[curFiber]);
         ++curFiber;
         ++it;
@@ -127,7 +128,7 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
         Scheduler::yieldTo();
         // Figure out who just finished and scheduled us
         for (int i = 0; i < parallelism; ++i) {
-            if (current[i] == NULL) {
+            if (result[i] != -1) {
                 curFiber = i;
                 break;
             }
@@ -136,7 +137,8 @@ parallel_foreach(Iterator begin, Iterator end, boost::function<bool (T &)> dg,
             --parallelism;
             break;
         }
-        current[curFiber] = &*it;
+        current[curFiber] = it;
+        result[curFiber] = -1;
         fibers[curFiber]->reset();
         scheduler->schedule(fibers[curFiber]);
         ++it;

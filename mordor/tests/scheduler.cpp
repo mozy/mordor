@@ -227,7 +227,7 @@ MORDOR_UNITTEST(Scheduler, parallelForEach)
     WorkerPool pool;
 
     int sequence = 1;
-    parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
+    parallel_foreach(&values[0], &values[10], boost::bind(
         &checkEqual, _1, boost::ref(sequence)), 4);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 11);
 }
@@ -238,7 +238,7 @@ MORDOR_UNITTEST(Scheduler, parallelForEachLessThanParallelism)
     WorkerPool pool;
 
     int sequence = 1;
-    parallel_foreach<const int *, const int>(&values[0], &values[2], boost::bind(
+    parallel_foreach(&values[0], &values[2], boost::bind(
         &checkEqual, _1, boost::ref(sequence)), 4);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
 }
@@ -256,7 +256,7 @@ MORDOR_UNITTEST(Scheduler, parallelForEachStopShort)
     WorkerPool pool;
 
     int sequence = 1;
-    parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
+    parallel_foreach(&values[0], &values[10], boost::bind(
         &checkEqualStop5, _1, boost::ref(sequence)), 4);
     // 5 was told to stop, 6, 7, and 8 were already scheduled
     MORDOR_TEST_ASSERT_EQUAL(sequence, 9);
@@ -278,7 +278,7 @@ MORDOR_UNITTEST(Scheduler, parallelForEachException)
 
     int sequence = 1;
     try {
-        parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
+        parallel_foreach(&values[0], &values[10], boost::bind(
             &checkEqualExceptionOn5, _1, boost::ref(sequence)), 4);
         MORDOR_TEST_ASSERT(false);
     } catch (OperationAbortedException)
