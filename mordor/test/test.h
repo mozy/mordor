@@ -174,6 +174,14 @@ MORDOR_NO_SERIALIZE_BARE(std::vector<T>)
     } catch (exception &) {                                                     \
     }
 
+#define MORDOR_TEST_ASSERT_ANY_EXCEPTION(code)                                  \
+    try {                                                                       \
+        code;                                                                   \
+        ::Mordor::Test::assertion(__FILE__, __LINE__, BOOST_CURRENT_FUNCTION,   \
+            "Expected an exception from " #code);                               \
+    } catch (...) {                                                             \
+    }
+
 #define MORDOR_TEST_ASSERT_ASSERTED(code)                                       \
     {                                                                           \
         bool __selfAsserted = false;                                            \
