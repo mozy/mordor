@@ -171,6 +171,7 @@ Scheduler::schedule(boost::function<void ()> dg, tid_t thread)
         tickle();
 }
 
+#ifdef DEBUG
 static bool contains(const std::vector<boost::shared_ptr<Thread> >
     &threads, tid_t thread)
 {
@@ -180,6 +181,7 @@ static bool contains(const std::vector<boost::shared_ptr<Thread> >
             return true;
     return false;
 }
+#endif
 
 bool
 Scheduler::scheduleNoLock(Fiber::ptr f, tid_t thread)

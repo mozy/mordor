@@ -257,7 +257,7 @@ all: $(ALLBINS)
 
 .PHONY: check
 check: all
-	$(Q)mordor/tests/run_tests
+	$(Q)cd mordor/tests && ./run_tests
 
 .PHONY: lcov
 lcov:
