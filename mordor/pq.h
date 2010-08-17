@@ -2,17 +2,20 @@
 #define __MORDOR_PQ_H__
 // Copyright (c) 2010 Mozy, Inc.
 
+#include "mordor/predef.h"
+
 #include <boost/noncopyable.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 
-#include <postgresql/libpq-fe.h>
+#include <libpq-fe.h>
 
 #include "mordor/exception.h"
-#include "mordor/iomanager.h"
 
 namespace Mordor {
 
+class IOManager;
 class Stream;
 
 namespace PQ {

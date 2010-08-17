@@ -1,13 +1,17 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "pq.h"
 
 #include "assert.h"
 #include "endian.h"
+#include "iomanager.h"
 #include "log.h"
+#include "streams/buffer.h"
 #include "streams/stream.h"
+
+#ifdef MSVC
+#pragma comment(lib, "libpq")
+#endif
 
 #define BOOLOID 16
 #define CHAROID 18
@@ -293,8 +297,11 @@ static void throwException(PGresult *result)
 
 Connection::Connection(const std::string &conninfo, IOManager *ioManager, bool connectImmediately)
 : m_conninfo(conninfo),
-  m_ioManager(ioManager)
+ m_ioManager(ioManager)
 {
+#ifdef WINDOWS
+    MORDOR_VERIFY(!ioManager)
+#endif
     if (connectImmediately)
         connect();
 }
@@ -311,6 +318,7 @@ void
 Connection::connect()
 {
     if (m_ioManager) {
+#ifndef WINDOWS
         m_conn.reset(PQconnectStart(m_conninfo.c_str()), &PQfinish);
         if (!m_conn)
             MORDOR_THROW_EXCEPTION(std::bad_alloc());
@@ -343,6 +351,7 @@ Connection::connect()
             }
             whatToPoll = PQconnectPoll(m_conn.get());
         }
+#endif
     } else {
         m_conn.reset(PQconnectdb(m_conninfo.c_str()), &PQfinish);
         if (!m_conn)
@@ -357,6 +366,7 @@ void
 Connection::reset()
 {
     if (m_ioManager) {
+#ifndef WINDOWS
         if (!PQresetStart(m_conn.get()))
             throwException(m_conn.get());
         int fd = PQsocket(m_conn.get());
@@ -383,6 +393,7 @@ Connection::reset()
             }
             whatToPoll = PQresetPoll(m_conn.get());
         }
+#endif
     } else {
         PQreset(m_conn.get());
         if (status() == CONNECTION_BAD)
@@ -436,6 +447,9 @@ Connection::escapeBinary(const std::string &blob)
 
 static void flush(PGconn *conn, IOManager *ioManager)
 {
+#ifdef WINDOWS
+    MORDOR_NOTREACHED();
+#else
     while (true) {
         int result = PQflush(conn);
         MORDOR_LOG_DEBUG(g_log) << conn << " PQflush(): " << result;
@@ -452,10 +466,14 @@ static void flush(PGconn *conn, IOManager *ioManager)
                 MORDOR_NOTREACHED();
         }
     }
+#endif
 }
 
 static PGresult *nextResult(PGconn *conn, IOManager *ioManager)
 {
+#ifdef WINDOWS
+    MORDOR_NOTREACHED();
+#else
     while (true) {
         if (!PQconsumeInput(conn))
             throwException(conn);
@@ -468,6 +486,7 @@ static PGresult *nextResult(PGconn *conn, IOManager *ioManager)
         MORDOR_LOG_DEBUG(g_log) << conn << " PQconsumeInput()";
         return PQgetResult(conn);
     }
+#endif
 }
 
 PreparedStatement
@@ -652,14 +671,16 @@ public:
             switch (status) {
                 case 1:
                     return length;
+                case -1:
+                    throwException(conn);
+#ifndef WINDOWS
                 case 0:
                     MORDOR_ASSERT(m_ioManager);
                     m_ioManager->registerEvent(PQsocket(conn),
                         IOManager::WRITE);
                     Scheduler::yieldTo();
                     break;
-                case -1:
-                    throwException(conn);
+#endif
                 default:
                     MORDOR_NOTREACHED();
             }
@@ -675,14 +696,16 @@ private:
             switch (status) {
                 case 1:
                     break;
+                case -1:
+                    throwException(conn);
+#ifndef WINDOWS
                 case 0:
                     MORDOR_ASSERT(m_ioManager);
                     m_ioManager->registerEvent(PQsocket(conn),
                         IOManager::WRITE);
                     Scheduler::yieldTo();
                     break;
-                case -1:
-                    throwException(conn);
+#endif
                 default:
                     MORDOR_NOTREACHED();
             }
@@ -742,11 +765,15 @@ public:
             status = PQgetCopyData(conn, &data, m_ioManager ? 1 : 0);
             switch (status) {
                 case 0:
+#ifdef WINDOWS
+                    MORDOR_NOTREACHED();
+#else
                     MORDOR_ASSERT(m_ioManager);
                     m_ioManager->registerEvent(PQsocket(conn),
                         IOManager::READ);
                     Scheduler::yieldTo();
                     continue;
+#endif
                 case -1:
                     break;
                 case -2:
@@ -1069,7 +1096,8 @@ PreparedStatement::execute()
     int *paramLengths = NULL, *paramFormats = NULL;
     const char **params = NULL;
     if (nParams) {
-        paramTypes = &m_paramTypes[0];
+        if (m_name.empty())
+            paramTypes = &m_paramTypes[0];
         params = &m_params[0];
         paramLengths = &m_paramLengths[0];
         paramFormats = &m_paramFormats[0];
@@ -1319,7 +1347,7 @@ Result::get<boost::posix_time::ptime>(size_t row, size_t column) const
     MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
     long long microseconds = htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
     return postgres_epoch +
-        boost::posix_time::seconds(microseconds / 1000000) +
+        boost::posix_time::seconds((long)(microseconds / 1000000)) +
         boost::posix_time::microseconds(microseconds % 1000000);
 }
 
