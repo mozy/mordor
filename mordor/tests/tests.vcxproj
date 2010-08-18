@@ -72,7 +72,6 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -82,6 +81,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -101,7 +101,6 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -111,6 +110,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -137,6 +137,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -168,6 +169,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
