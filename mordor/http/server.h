@@ -24,6 +24,15 @@ public:
     typedef boost::shared_ptr<ServerRequest> ptr;
     typedef boost::shared_ptr<const ServerRequest> const_ptr;
 
+    enum State {
+        PENDING,
+        WAITING,
+        HEADERS,
+        BODY,
+        COMPLETE,
+        ERROR
+    };
+
 private:
     ServerRequest(boost::shared_ptr<ServerConnection> conn);
 
@@ -43,7 +52,7 @@ public:
     boost::shared_ptr<Multipart> responseMultipart();
     EntityHeaders &responseTrailer();
 
-    bool committed() const { return m_committed; }
+    bool committed() const { return m_responseState >= HEADERS; }
 
     void cancel();
     void finish();
@@ -63,7 +72,8 @@ private:
     Request m_request;
     Response m_response;
     EntityHeaders m_requestTrailer, m_responseTrailer;
-    bool m_requestDone, m_committed, m_responseDone, m_responseInFlight, m_aborted, m_willClose;
+    State m_requestState, m_responseState;
+    bool m_willClose;
     boost::shared_ptr<Stream> m_requestStream, m_responseStream;
     boost::shared_ptr<Multipart> m_requestMultipart, m_responseMultipart;
 };
