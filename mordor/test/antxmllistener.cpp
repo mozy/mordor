@@ -52,13 +52,13 @@ AntXMLListener::AntXMLListener(const std::string &directory)
 : m_directory(directory)
 {
     m_logSink.reset(new AntXMLLogSink());
-    Log::addSink(m_logSink);
+    Log::root()->addSink(m_logSink);
 }
 
 AntXMLListener::~AntXMLListener()
 {
     if (m_logSink)
-        Log::removeSink(m_logSink);
+        Log::root()->removeSink(m_logSink);
 }
 
 void

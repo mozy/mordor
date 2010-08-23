@@ -142,11 +142,11 @@ static void enableStdoutLogging()
     static LogSink::ptr stdoutSink;
     bool log = g_logStdout->val();
     if (stdoutSink.get() && !log) {
-        Log::removeSink(stdoutSink);
+        Log::root()->removeSink(stdoutSink);
         stdoutSink.reset();
     } else if (!stdoutSink.get() && log) {
         stdoutSink.reset(new StdoutLogSink());
-        Log::addSink(stdoutSink);
+        Log::root()->addSink(stdoutSink);
     }
 }
 
@@ -156,11 +156,11 @@ static void enableDebugLogging()
     static LogSink::ptr debugSink;
     bool log = g_logDebugWindow->val();
     if (debugSink.get() && !log) {
-        Log::removeSink(debugSink);
+        Log::root()->removeSink(debugSink);
         debugSink.reset();
     } else if (!debugSink.get() && log) {
         debugSink.reset(new DebugLogSink());
-        Log::addSink(debugSink);
+        Log::root()->addSink(debugSink);
     }
 }
 #else
@@ -170,18 +170,18 @@ static void enableSyslogLogging()
     int facility = SyslogLogSink::facilityFromString(
         g_logSyslogFacility->val().c_str());
     if (syslogSink.get() && facility == -1) {
-        Log::removeSink(syslogSink);
+        Log::root()->removeSink(syslogSink);
         syslogSink.reset();
     } else if (facility != -1) {
         if (syslogSink.get()) {
             if (static_cast<SyslogLogSink*>(syslogSink.get())->facility() ==
                 facility)
                 return;
-            Log::removeSink(syslogSink);
+            Log::root()->removeSink(syslogSink);
             syslogSink.reset();
         }
         syslogSink.reset(new SyslogLogSink(facility));
-        Log::addSink(syslogSink);
+        Log::root()->addSink(syslogSink);
     }
 }
 #endif
@@ -191,17 +191,17 @@ static void enableFileLogging()
     static LogSink::ptr fileSink;
     std::string file = g_logFile->val();
     if (fileSink.get() && file.empty()) {
-        Log::removeSink(fileSink);
+        Log::root()->removeSink(fileSink);
         fileSink.reset();
     } else if (!file.empty()) {
         if (fileSink.get()) {
             if (static_cast<FileLogSink*>(fileSink.get())->file() == file)
                 return;
-            Log::removeSink(fileSink);
+            Log::root()->removeSink(fileSink);
             fileSink.reset();
         }
         fileSink.reset(new FileLogSink(file));
-        Log::addSink(fileSink);
+        Log::root()->addSink(fileSink);
     }
 }
 
@@ -389,24 +389,6 @@ Log::visit(boost::function<void (boost::shared_ptr<Logger>)> dg)
             toVisit.push_back(*it);
         }
     }
-}
-
-void
-Log::addSink(LogSink::ptr sink)
-{
-    root()->addSink(sink);
-}
-
-void
-Log::removeSink(LogSink::ptr sink)
-{
-    root()->removeSink(sink);
-}
-
-void
-Log::clearSinks()
-{
-    root()->clearSinks();
 }
 
 LogDisabler::LogDisabler()
