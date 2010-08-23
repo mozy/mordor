@@ -8,6 +8,7 @@
 #include "mordor/fiber.h"
 #include "mordor/future.h"
 #include "mordor/iomanager.h"
+#include "mordor/log.h"
 #include "mordor/socks.h"
 #include "mordor/streams/buffered.h"
 #include "mordor/streams/pipe.h"
@@ -171,6 +172,8 @@ static bool least(const ClientConnection::ptr &lhs,
     MORDOR_NOTREACHED();
 }
 
+static Logger::ptr g_cacheLog = Log::lookup("mordor:http:connectioncache");
+
 std::pair<ClientConnection::ptr, bool>
 ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
 {
@@ -197,6 +200,22 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
     std::pair<ClientConnection::ptr, bool> result;
 
     FiberMutex::ScopedLock lock(m_mutex);
+
+    if (g_cacheLog->enabled(Log::DEBUG)) {
+        std::ostringstream os;
+        os << this << " getting connection for " << schemeAndAuthority
+        << ", proxies: {";
+        for (std::vector<URI>::iterator it(proxies.begin());
+             it != proxies.end();
+             ++it) {
+            if (it != proxies.begin())
+                os << ", ";
+            os << *it;
+        }
+        os << "}";
+        MORDOR_LOG_DEBUG(g_cacheLog) << os.str();
+    }
+
     if (m_closed)
         MORDOR_THROW_EXCEPTION(OperationAbortedException());
     // Clean out any dead conns
@@ -255,12 +274,20 @@ ConnectionCache::getConnectionViaProxyFromCache(const URI &uri, const URI &proxy
                 connsForThisUri.end(), &least);
             // No connection has completed yet (but it's in progress)
             if (!*it2) {
+                MORDOR_LOG_TRACE(g_cacheLog) << this << " waiting for connection to "
+                    << endpoint;
                 // Wait for somebody to let us try again
-                it->second.second->wait();
+                // Have to copy the shared ptr to this stack, because the element may be
+                // removed while we're waiting for it; the wait will then crash because
+                // the object gets deleted out from under it
+                boost::shared_ptr<FiberCondition> condition = it->second.second;
+                condition->wait();
                 // We let go of the mutex, and the last connection may have
                 // disappeared
                 it = m_conns.find(endpoint);
             } else {
+                MORDOR_LOG_TRACE(g_cacheLog) << this << " returning cached connection "
+                    << *it2 << " to " << endpoint;
                 // Return the existing, completed connection
                 return std::make_pair(*it2, proxied);
             }
@@ -292,6 +319,7 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
     // Add a placeholder for the new connection
     it->second.first.push_back(ClientConnection::ptr());
 
+    MORDOR_LOG_TRACE(g_cacheLog) << this << " establishing connection to " << endpoint;
     lock.unlock();
 
     ConnectionList::iterator it2;
@@ -325,6 +353,8 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
             MORDOR_THROW_EXCEPTION(OperationAbortedException());
         result = std::make_pair(ClientConnection::ptr(
             new ClientConnection(stream, m_timerManager)), proxied);
+        MORDOR_LOG_TRACE(g_cacheLog) << this << " connection " << result.first
+            << " to " << endpoint << " established";
         if (m_httpReadTimeout != ~0ull)
             result.first->readTimeout(m_httpReadTimeout);
         if (m_httpWriteTimeout != ~0ull)
@@ -344,6 +374,8 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
         it->second.second->broadcast();
     } catch (...) {
         lock.lock();
+        MORDOR_LOG_TRACE(g_cacheLog) << this << " connection to " << endpoint
+            << " failed: " << boost::current_exception_diagnostic_information();
         // Somebody called abortConnections while we were unlocked; no need to
         // clean up the temporary spot for this connection, since it's gone;
         // pass the original exception on, though
@@ -373,6 +405,7 @@ void
 ConnectionCache::closeIdleConnections()
 {
     FiberMutex::ScopedLock lock(m_mutex);
+    MORDOR_LOG_DEBUG(g_cacheLog) << " dropping idle connections";
     // We don't just clear the list, because there may be a connection in
     // in progress that has an iterator into it
     std::map<URI, std::pair<ConnectionList,
@@ -404,6 +437,7 @@ void
 ConnectionCache::abortConnections()
 {
     FiberMutex::ScopedLock lock(m_mutex);
+    MORDOR_LOG_DEBUG(g_cacheLog) << " aborting all connections";
     m_closed = true;
     std::map<URI, std::pair<ConnectionList,
         boost::shared_ptr<FiberCondition> > >::iterator it;
