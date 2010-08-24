@@ -195,7 +195,9 @@
     <ClCompile Include="fls.cpp" />
     <ClCompile Include="future.cpp" />
     <ClCompile Include="hmac.cpp" />
-    <ClCompile Include="http.cpp" />
+    <ClCompile Include="http_parser.cpp" />
+    <ClCompile Include="http_client.cpp" />
+    <ClCompile Include="http_server.cpp" />
     <ClCompile Include="iomanager.cpp" />
     <ClCompile Include="iomanager_iocp.cpp" />
     <ClCompile Include="json.cpp" />

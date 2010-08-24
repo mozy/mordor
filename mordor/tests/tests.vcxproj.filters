@@ -48,9 +48,6 @@
     <ClCompile Include="hmac.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="http.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="iomanager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -109,6 +106,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="unicode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="http_server.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="http_client.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="http_parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -290,7 +290,9 @@ TESTOBJECTS :=								\
 	mordor/tests/fls.o						\
 	mordor/tests/future.o						\
 	mordor/tests/hmac.o						\
-	mordor/tests/http.o						\
+	mordor/tests/http_client.o					\
+	mordor/tests/http_parser.o					\
+	mordor/tests/http_server.o					\
 	mordor/tests/iomanager.o					\
 	mordor/tests/json.o						\
 	mordor/tests/log.o						\
