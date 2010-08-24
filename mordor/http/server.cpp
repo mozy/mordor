@@ -382,16 +382,16 @@ ServerRequest::cancel()
 void
 ServerRequest::finish()
 {
-    if (m_responseState >= COMPLETE)
-        return;
-    if (committed() && hasResponseBody()) {
-        cancel();
-        return;
-    }
-    commit();
-    if (hasResponseBody()) {
-        cancel();
-        return;
+    if (m_responseState < COMPLETE) {
+        if (committed() && hasResponseBody()) {
+            cancel();
+            return;
+        }
+        commit();
+        if (hasResponseBody()) {
+            cancel();
+            return;
+        }
     }
     if (m_requestState == BODY && !m_willClose) {
         if (m_request.entity.contentType.type == "multipart") {
@@ -550,6 +550,8 @@ ServerRequest::doRequest()
             MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
                 << " no request body";
             m_conn->requestComplete(this);
+        } else {
+            m_requestState = BODY;
         }
         m_conn->m_dg(shared_from_this());
         finish();
@@ -727,6 +729,8 @@ ServerRequest::commit()
             MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
                 << " no response body";
             responseDone();
+        } else {
+            m_responseState = BODY;
         }
     } catch(...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);

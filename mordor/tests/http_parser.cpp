@@ -2,29 +2,13 @@
 
 #include <boost/bind.hpp>
 
-#include "mordor/fiber.h"
-#include "mordor/http/broker.h"
-#include "mordor/http/client.h"
-#include "mordor/http/multipart.h"
 #include "mordor/http/parser.h"
-#include "mordor/http/server.h"
-#include "mordor/iomanager.h"
-#include "mordor/scheduler.h"
-#include "mordor/sleep.h"
 #include "mordor/streams/buffered.h"
-#include "mordor/streams/cat.h"
 #include "mordor/streams/duplex.h"
-#include "mordor/streams/limited.h"
 #include "mordor/streams/memory.h"
-#include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
-#include "mordor/streams/pipe.h"
-#include "mordor/streams/random.h"
-#include "mordor/streams/test.h"
-#include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
 #include "mordor/util.h"
-#include "mordor/workerpool.h"
 
 using namespace Mordor;
 using namespace Mordor::HTTP;

@@ -2,25 +2,16 @@
 
 #include <boost/bind.hpp>
 
-#include "mordor/fiber.h"
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
 #include "mordor/http/multipart.h"
 #include "mordor/http/parser.h"
 #include "mordor/http/server.h"
-#include "mordor/iomanager.h"
-#include "mordor/scheduler.h"
-#include "mordor/sleep.h"
-#include "mordor/streams/buffered.h"
-#include "mordor/streams/cat.h"
 #include "mordor/streams/duplex.h"
 #include "mordor/streams/limited.h"
-#include "mordor/streams/memory.h"
-#include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
-#include "mordor/streams/pipe.h"
+#include "mordor/streams/memory.h"
 #include "mordor/streams/random.h"
-#include "mordor/streams/test.h"
 #include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
 #include "mordor/util.h"
@@ -213,4 +204,30 @@ MORDOR_UNITTEST(HTTPServer, disconnectDuringResponse)
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     // Don't read the response body
     request->cancel(true);
+}
+
+static void quickResponseServer(const URI &uri, ServerRequest::ptr request)
+{
+    respondError(request, OK, "hello");
+}
+
+MORDOR_UNITTEST(HTTPServer, responseCompletesBeforeRequest)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&quickResponseServer);
+    ClientConnection::ptr connection =
+        server.getConnection("http://localhost/").first;
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/responseCompletesBeforeRequest";
+    requestHeaders.entity.contentLength = 5;
+
+    ClientRequest::ptr request = connection->request(requestHeaders);
+    request->doRequest();
+    Stream::ptr requestStream = request->requestStream();
+    requestStream->flush();
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    transferStream(request->responseStream(), NullStream::get());
+    requestStream->write("hello", 5);
+    requestStream->close();
 }
