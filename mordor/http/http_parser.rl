@@ -27,18 +27,6 @@ parseVersion(const char *str)
     return ver;
 }
 
-static
-Method
-parseMethod(const char *str, const char *end)
-{
-    for(size_t i = 0; i < 8; ++i) {
-        if (strnicmp(str, methods[i], end - str) == 0) {
-            return (Method)i;
-        }
-    }
-    throw std::invalid_argument("Unrecognized method");
-}
-
 static boost::posix_time::time_input_facet rfc1123Facet_in("%a, %d %b %Y %H:%M:%S GMT",
         1 /* starting refcount, so this never gets deleted */);
 static boost::posix_time::time_input_facet rfc850Facet_in("%A, %d-%b-%y %H:%M:%S GMT",
@@ -480,8 +468,8 @@ unquote(const std::string &str)
     include http_parser;
     include uri_parser "../uri.rl";
 
-    action parse_Method {
-        m_request->requestLine.method = parseMethod(mark, fpc);
+    action save_Method {
+        m_request->requestLine.method = std::string(mark, fpc - mark);
         mark = NULL;
     }
 
@@ -680,7 +668,7 @@ unquote(const std::string &str)
 
     request_header = Accept_Charset | Accept_Encoding | Authorization | Expect | Host | If_Match | If_Modified_Since | If_None_Match | If_Range | If_Unmodified_Since | Proxy_Authorization | Range | Referer | TE | User_Agent;
 
-    Method = token >mark %parse_Method;
+    Method = token >mark %save_Method;
     # we explicitly add query to path_absolute, because the URI spec changed from RFC 2396 to RFC 3986
     # with the query not being part of hier_part
     Request_URI = ( "*" | absolute_URI | (path_absolute ( "?" query )?) | authority);

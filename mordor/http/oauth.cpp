@@ -45,7 +45,7 @@ extractCredentials(ClientRequest::ptr request)
 
 std::pair<std::string, std::string>
 getTemporaryCredentials(RequestBroker::ptr requestBroker, const URI &uri,
-    Method method, const std::string &signatureMethod,
+    const std::string &method, const std::string &signatureMethod,
     const std::pair<std::string, std::string> &clientCredentials,
     const URI &callbackUri)
 {
@@ -100,7 +100,7 @@ getTemporaryCredentials(RequestBroker::ptr requestBroker, const URI &uri,
 
 std::pair<std::string, std::string>
 getTokenCredentials(RequestBroker::ptr requestBroker, const URI &uri,
-    Method method, const std::string signatureMethod,
+    const std::string &method, const std::string &signatureMethod,
     const std::pair<std::string, std::string> &clientCredentials,
     const std::pair<std::string, std::string> &temporaryCredentials,
     const std::string &verifier)
@@ -229,7 +229,7 @@ template void nonceAndTimestamp<URI::QueryString>(URI::QueryString &);
 
 template <class T>
 std::string
-generateSignature(const URI &uri, Method method,
+generateSignature(const URI &uri, const std::string &method,
     const std::string &clientSecret, const std::string &tokenSecret,
     const T &oauthParameters, const URI::QueryString &postParameters)
 {
@@ -290,7 +290,7 @@ generateSignature(const URI &uri, Method method,
 }
 
 template <class T>
-void sign(const URI &uri, Method method,
+void sign(const URI &uri, const std::string &method,
     const std::string &signatureMethod, const std::string &clientSecret,
     const std::string &tokenSecret, T &oauthParameters,
     const URI::QueryString &postParameters)
@@ -311,15 +311,15 @@ void sign(const URI &uri, Method method,
         oauthParameters, postParameters)));
 }
 
-template void sign<StringMap>(const URI &, Method, const std::string &,
-    const std::string &, const std::string &, StringMap &,
+template void sign<StringMap>(const URI &, const std::string &,
+    const std::string &, const std::string &, const std::string &, StringMap &,
     const URI::QueryString &);
-template void sign<URI::QueryString>(const URI &, Method, const std::string &,
-    const std::string &, const std::string &, URI::QueryString &,
-    const URI::QueryString &);
+template void sign<URI::QueryString>(const URI &, const std::string &,
+    const std::string &, const std::string &, const std::string &,
+    URI::QueryString &, const URI::QueryString &);
 
 template <class T>
-bool validate(const URI &uri, Method method,
+bool validate(const URI &uri, const std::string &method,
     const std::string &clientSecret, const std::string &tokenSecret,
     const T &oauthParameters,
     const URI::QueryString &postParameters)
@@ -343,10 +343,10 @@ bool validate(const URI &uri, Method method,
         clientSecret, tokenSecret, oauthParameters, postParameters);
 }
 
-template bool validate<StringMap>(const URI &, Method,
+template bool validate<StringMap>(const URI &, const std::string &,
     const std::string &, const std::string &, const StringMap &,
     const URI::QueryString &);
-template bool validate<URI::QueryString>(const URI &, Method,
+template bool validate<URI::QueryString>(const URI &, const std::string &,
     const std::string &, const std::string &, const URI::QueryString &,
     const URI::QueryString &);
 

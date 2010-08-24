@@ -20,7 +20,7 @@ public:
 
     static bool hasMessageBody(const GeneralHeaders &general,
         const EntityHeaders &entity,
-        Method method,
+        const std::string &method,
         Status status,
         bool includeEmpty = true);
 
@@ -29,7 +29,7 @@ protected:
 
     boost::shared_ptr<Stream> getStream(const GeneralHeaders &general,
         const EntityHeaders &entity,
-        Method method,
+        const std::string &method,
         Status status,
         boost::function<void ()> notifyOnEof,
         boost::function<void ()> notifyOnException,

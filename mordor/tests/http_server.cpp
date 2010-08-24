@@ -28,49 +28,45 @@ struct DummyException {};
 static void
 httpRequest(ServerRequest::ptr request)
 {
-    switch (request->request().requestLine.method) {
-        case GET:
-        case HEAD:
-        case PUT:
-        case POST:
-            if (request->request().requestLine.uri == "/exceptionReadingRequest") {
-                MORDOR_ASSERT(request->hasRequestBody());
-                MORDOR_THROW_EXCEPTION(DummyException());
-            }
-            request->response().entity.contentLength = request->request().entity.contentLength;
-            request->response().entity.contentType = request->request().entity.contentType;
-            request->response().general.transferEncoding = request->request().general.transferEncoding;
-            request->response().status.status = OK;
-            request->response().entity.extension = request->request().entity.extension;
-            if (request->hasRequestBody()) {
-                if (request->request().requestLine.method != HEAD) {
-                    if (request->request().entity.contentType.type == "multipart") {
-                        Multipart::ptr requestMultipart = request->requestMultipart();
-                        Multipart::ptr responseMultipart = request->responseMultipart();
-                        for (BodyPart::ptr requestPart = requestMultipart->nextPart();
-                            requestPart;
-                            requestPart = requestMultipart->nextPart()) {
-                            BodyPart::ptr responsePart = responseMultipart->nextPart();
-                            responsePart->headers() = requestPart->headers();
-                            transferStream(requestPart->stream(), responsePart->stream());
-                            responsePart->stream()->close();
-                        }
-                        responseMultipart->finish();
-                    } else {
-                        respondStream(request, request->requestStream());
-                        return;
+    const std::string &method = request->request().requestLine.method;
+    if (method == HTTP::GET || method == HTTP::HEAD || method == HTTP::PUT ||
+        method == HTTP::POST) {
+        if (request->request().requestLine.uri == "/exceptionReadingRequest") {
+            MORDOR_ASSERT(request->hasRequestBody());
+            MORDOR_THROW_EXCEPTION(DummyException());
+        }
+        request->response().entity.contentLength = request->request().entity.contentLength;
+        request->response().entity.contentType = request->request().entity.contentType;
+        request->response().general.transferEncoding = request->request().general.transferEncoding;
+        request->response().status.status = OK;
+        request->response().entity.extension = request->request().entity.extension;
+        if (request->hasRequestBody()) {
+            if (request->request().requestLine.method != HEAD) {
+                if (request->request().entity.contentType.type == "multipart") {
+                    Multipart::ptr requestMultipart = request->requestMultipart();
+                    Multipart::ptr responseMultipart = request->responseMultipart();
+                    for (BodyPart::ptr requestPart = requestMultipart->nextPart();
+                        requestPart;
+                        requestPart = requestMultipart->nextPart()) {
+                        BodyPart::ptr responsePart = responseMultipart->nextPart();
+                        responsePart->headers() = requestPart->headers();
+                        transferStream(requestPart->stream(), responsePart->stream());
+                        responsePart->stream()->close();
                     }
+                    responseMultipart->finish();
                 } else {
-                    request->finish();
+                    respondStream(request, request->requestStream());
+                    return;
                 }
             } else {
-                request->response().entity.contentLength = 0;
                 request->finish();
             }
-            break;
-        default:
-            respondError(request, METHOD_NOT_ALLOWED);
-            break;
+        } else {
+            request->response().entity.contentLength = 0;
+            request->finish();
+        }
+    } else {
+        respondError(request, METHOD_NOT_ALLOWED);
     }
 }
 

@@ -21,7 +21,7 @@ namespace Mordor {
 namespace HTTP {
 
 static void authorize(const ChallengeList *challenge, AuthParams &authorization,
-    const URI &uri, Method method, const std::string &scheme,
+    const URI &uri, const std::string &method, const std::string &scheme,
     const std::string &realm, const std::string &username,
     const std::string &password)
 {

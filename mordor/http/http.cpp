@@ -171,16 +171,14 @@ static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithOp
     return os;
 }
 
-const char *methods[] = {
-    "GET",
-    "HEAD",
-    "POST",
-    "PUT",
-    "DELETE",
-    "CONNECT",
-    "OPTIONS",
-    "TRACE"
-};
+const std::string GET("GET");
+const std::string HEAD("HEAD");
+const std::string POST("POST");
+const std::string PUT("PUT");
+const std::string DELETE("DELETE");
+const std::string CONNECT("CONNECT");
+const std::string OPTIONS("OPTIONS");
+const std::string TRACE("TRACE");
 
 const char *reason(Status s)
 {
@@ -392,13 +390,6 @@ preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters
         }
     }
     return NULL;
-}
-
-std::ostream& operator<<(std::ostream& os, Method m)
-{
-    if (m < GET || m > TRACE)
-        return os << "INVALID";
-    return os << methods[(size_t)m];
 }
 
 std::ostream& operator<<(std::ostream& os, Status s)

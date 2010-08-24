@@ -50,18 +50,14 @@ public:
     {}
 };
 
-enum Method
-{
-    GET,
-    HEAD,
-    POST,
-    PUT,
-    DELETE,
-    CONNECT,
-    OPTIONS,
-    TRACE
-};
-extern const char *methods[];
+extern const std::string GET;
+extern const std::string HEAD;
+extern const std::string POST;
+extern const std::string PUT;
+extern const std::string DELETE;
+extern const std::string CONNECT;
+extern const std::string OPTIONS;
+extern const std::string TRACE;
 
 enum Status
 {
@@ -327,7 +323,7 @@ struct RequestLine
 {
     RequestLine() : method(GET) {}
 
-    Method method;
+    std::string method;
     URI uri;
     Version ver;
 };
@@ -421,7 +417,6 @@ bool isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithPar
 bool isPreferred(const AcceptListWithParameters &list, const AcceptValueWithParameters &lhs, const AcceptValueWithParameters &rhs);
 const AcceptValueWithParameters *preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters &available);
 
-std::ostream& operator<<(std::ostream& os, Method m);
 std::ostream& operator<<(std::ostream& os, Status s);
 std::ostream& operator<<(std::ostream& os, Version v);
 std::ostream& operator<<(std::ostream& os, const ETag &e);
