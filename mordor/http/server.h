@@ -67,6 +67,7 @@ private:
 
 private:
     boost::shared_ptr<ServerConnection> m_conn;
+    unsigned long long m_requestNumber;
     Scheduler *m_scheduler;
     boost::shared_ptr<Fiber> m_fiber;
     Request m_request;
@@ -88,16 +89,16 @@ private:
     friend class ServerRequest;
 public:
     ServerConnection(boost::shared_ptr<Stream> stream,
-        boost::function<void (ServerRequest::ptr)> dg, size_t maxPipelineDepth = 5);
+        boost::function<void (ServerRequest::ptr)> dg);
 
     void processRequests();
 
     std::vector<ServerRequest::const_ptr> requests();
 
 private:
-    void scheduleSingleRequest();
     void scheduleNextRequest(ServerRequest *currentRequest);
-    void scheduleNextResponse(ServerRequest *currentRequest);
+    void requestComplete(ServerRequest *currentRequest);
+    void responseComplete(ServerRequest *currentRequest);
     void scheduleAllWaitingResponses();
 
 private:
@@ -106,7 +107,7 @@ private:
     std::list<ServerRequest *> m_pendingRequests;
     std::set<ServerRequest *> m_waitingResponses;
     bool m_priorRequestFailed, m_priorRequestClosed, m_priorResponseClosed;
-    size_t m_maxPipelineDepth;
+    unsigned long long m_requestCount;
 
     void invariant() const;
 };
