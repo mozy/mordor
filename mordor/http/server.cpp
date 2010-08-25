@@ -112,25 +112,19 @@ ServerConnection::responseComplete(ServerRequest *request)
         MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
             << " response complete";
         std::list<ServerRequest *>::iterator it = m_pendingRequests.begin();
-        if (request != *it) {
-            it = std::find(it, m_pendingRequests.end(), request);
-            MORDOR_ASSERT(it != m_pendingRequests.end());
-            request->m_responseState = ServerRequest::COMPLETE;
-            m_pendingRequests.erase(it);
-            scheduleNextRequest(request);
-            return;
-        }
+        MORDOR_ASSERT(request == *it);
         ++it;
         if (it != m_pendingRequests.end()) {
             std::set<ServerRequest *>::iterator waitIt(m_waitingResponses.find(*it));
             if (waitIt != m_waitingResponses.end()) {
-                request->m_responseState = ServerRequest::HEADERS;
+                request->m_responseState = ServerRequest::COMPLETE;
                 if (request->m_requestState >= ServerRequest::COMPLETE) {
                     m_pendingRequests.pop_front();
                     scheduleNextRequest(request);
                 }
-                m_waitingResponses.erase(waitIt);
                 request = *it;
+                request->m_responseState = ServerRequest::HEADERS;
+                m_waitingResponses.erase(waitIt);
                 MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
                     << " scheduling response";
                 request->m_scheduler->schedule(request->m_fiber);

@@ -14,6 +14,7 @@
 #include "mordor/streams/random.h"
 #include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
+#include "mordor/timer.h"
 #include "mordor/util.h"
 #include "mordor/workerpool.h"
 
@@ -226,4 +227,38 @@ MORDOR_UNITTEST(HTTPServer, responseCompletesBeforeRequest)
     transferStream(request->responseStream(), NullStream::get());
     requestStream->write("hello", 5);
     requestStream->close();
+}
+
+static void pipelineWait(const URI &uri, ServerRequest::ptr request)
+{
+    if (request->request().requestLine.uri == "/one") {
+        Scheduler::yield();
+        Scheduler::yield();
+        Scheduler::yield();
+    }
+    request->response().entity.extension["X-Timestamp"] =
+        boost::lexical_cast<std::string>(TimerManager::now());
+    respondError(request, OK);
+}
+
+MORDOR_UNITTEST(HTTPServer, pipelineResponseWaits)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&pipelineWait);
+    ClientConnection::ptr connection =
+        server.getConnection("http://localhost/").first;
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/one";
+
+    ClientRequest::ptr request1 = connection->request(requestHeaders);
+    request1->doRequest();
+    requestHeaders.requestLine.uri = "/two";
+    ClientRequest::ptr request2 = connection->request(requestHeaders);
+    request2->doRequest();
+    unsigned long long timeStamp1 = boost::lexical_cast<unsigned long long>(
+        request1->response().entity.extension.find("X-Timestamp")->second);
+    unsigned long long timeStamp2 = boost::lexical_cast<unsigned long long>(
+        request2->response().entity.extension.find("X-Timestamp")->second);
+    MORDOR_TEST_ASSERT_LESS_THAN(timeStamp2, timeStamp1);
 }
