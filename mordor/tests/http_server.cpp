@@ -2,6 +2,7 @@
 
 #include <boost/bind.hpp>
 
+#include "mordor/fiber.h"
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
 #include "mordor/http/multipart.h"
@@ -12,6 +13,7 @@
 #include "mordor/streams/null.h"
 #include "mordor/streams/memory.h"
 #include "mordor/streams/random.h"
+#include "mordor/streams/test.h"
 #include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
 #include "mordor/timer.h"
@@ -261,4 +263,57 @@ MORDOR_UNITTEST(HTTPServer, pipelineResponseWaits)
     unsigned long long timeStamp2 = boost::lexical_cast<unsigned long long>(
         request2->response().entity.extension.find("X-Timestamp")->second);
     MORDOR_TEST_ASSERT_LESS_THAN(timeStamp2, timeStamp1);
+}
+
+static void respondToTwo(TestStream::ptr testOutput, Fiber::ptr &fiber,
+    int &sequence)
+{
+    testOutput->onWrite(NULL);
+    while (!fiber)
+        Scheduler::yield();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+    Scheduler::getThis()->schedule(fiber);
+    Scheduler::yield();
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
+}
+
+static void yieldTwoServer(ServerRequest::ptr request, Fiber::ptr &fiber2,
+    int &sequence)
+{
+    if (request->request().requestLine.uri == "/two") {
+        MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+        fiber2 = Fiber::getThis();
+        Scheduler::yieldTo();
+        MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
+        respondError(request, OK);
+        MORDOR_TEST_ASSERT_EQUAL(++sequence, 7);
+        return;
+    }
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);
+    respondError(request, OK);
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 6);
+}
+
+MORDOR_UNITTEST(HTTPServer, pipelineResponseWhilePriorResponseFlushing)
+{
+    Fiber::ptr fiber2;
+    int sequence = 0;
+    Stream::ptr input(new MemoryStream(Buffer(
+        "GET /one HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "\r\n"
+        "GET /two HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "\r\n")));
+    MemoryStream::ptr output(new MemoryStream());
+    TestStream::ptr testOutput(new TestStream(output));
+    testOutput->onWrite(boost::bind(&respondToTwo, testOutput,
+        boost::ref(fiber2), boost::ref(sequence)), 0);
+    Stream::ptr stream(new DuplexStream(input, testOutput));
+    ServerConnection::ptr conn(new ServerConnection(stream,
+        boost::bind(&yieldTwoServer, _1, boost::ref(fiber2),
+        boost::ref(sequence))));
+    WorkerPool pool;
+    pool.schedule(boost::bind(&ServerConnection::processRequests, conn));
+    pool.dispatch();
 }

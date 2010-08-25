@@ -106,8 +106,8 @@ private:
     boost::mutex m_mutex;
     std::list<ServerRequest *> m_pendingRequests;
     std::set<ServerRequest *> m_waitingResponses;
-    bool m_priorRequestFailed, m_priorRequestClosed, m_priorResponseClosed;
-    unsigned long long m_requestCount;
+    unsigned long long m_requestCount, m_priorRequestFailed,
+        m_priorRequestClosed, m_priorResponseClosed;
 
     void invariant() const;
 };

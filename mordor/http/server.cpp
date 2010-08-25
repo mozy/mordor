@@ -20,10 +20,10 @@ static Logger::ptr g_log = Log::lookup("mordor:http:server");
 ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg)
 : Connection(stream),
   m_dg(dg),
-  m_priorRequestFailed(false),
-  m_priorRequestClosed(false),
-  m_priorResponseClosed(false),
-  m_requestCount(0)
+  m_requestCount(0),
+  m_priorRequestFailed(~0ull),
+  m_priorRequestClosed(~0ull),
+  m_priorResponseClosed(~0ull)
 {
     MORDOR_ASSERT(m_dg);
 }
@@ -58,8 +58,8 @@ ServerConnection::scheduleNextRequest(ServerRequest *request)
     if (m_requestCount == 0 ||
         (request->m_requestNumber == m_requestCount &&
         request->m_requestState == ServerRequest::COMPLETE &&
-        !m_priorRequestFailed && !m_priorRequestClosed &&
-        !m_priorResponseClosed)) {
+        m_priorRequestFailed == ~0ull && m_priorRequestClosed == ~0ull &&
+        m_priorResponseClosed == ~0ull)) {
         ServerRequest::ptr nextRequest(new ServerRequest(shared_from_this()));
         m_pendingRequests.push_back(nextRequest.get());
         MORDOR_LOG_TRACE(g_log) << this << "-" << nextRequest->m_requestNumber
@@ -92,7 +92,7 @@ ServerConnection::requestComplete(ServerRequest *request)
         if (!close) {
             scheduleNextRequest(request);
         } else {
-            m_priorRequestClosed = true;
+            m_priorRequestClosed = request->m_requestNumber;
             MORDOR_LOG_TRACE(g_log) << this << " closing";
         }
     }
@@ -133,7 +133,7 @@ ServerConnection::responseComplete(ServerRequest *request)
         }
         MORDOR_LOG_TRACE(g_log) << this << " flushing";
         if (request->m_willClose) {
-            m_priorResponseClosed = true;
+            m_priorResponseClosed = request->m_requestNumber;
             MORDOR_LOG_TRACE(g_log) << this << " closing";
         }
     }
@@ -172,14 +172,18 @@ ServerConnection::responseComplete(ServerRequest *request)
 void
 ServerConnection::scheduleAllWaitingResponses()
 {
-    MORDOR_ASSERT(m_priorRequestFailed || m_priorResponseClosed);
+    MORDOR_ASSERT(m_priorRequestFailed != ~0ull || m_priorResponseClosed != ~0ull);
     // MORDOR_ASSERT(m_mutex.locked());
     MORDOR_LOG_TRACE(g_log) << this << " scheduling all responses";
 
+    unsigned long long firstFailedRequest = std::min(m_priorRequestFailed,
+        m_priorResponseClosed);
     for (std::list<ServerRequest *>::iterator it(m_pendingRequests.begin());
         it != m_pendingRequests.end();
         ++it) {
         ServerRequest *request = *it;
+        if (request->m_requestNumber < firstFailedRequest)
+            continue;
         std::set<ServerRequest *>::iterator waiting = m_waitingResponses.find(request);
         if (waiting != m_waitingResponses.end()) {
             MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
@@ -364,7 +368,8 @@ ServerRequest::cancel()
     m_conn->invariant();
     m_requestState = ERROR;
     m_responseState = ERROR;
-    m_conn->m_priorRequestFailed = true;
+    m_conn->m_priorRequestFailed = std::min(m_conn->m_priorRequestFailed,
+        m_requestNumber);
     std::list<ServerRequest *>::iterator it =
         std::find(m_conn->m_pendingRequests.begin(),
             m_conn->m_pendingRequests.end(), this);
@@ -418,7 +423,7 @@ ServerRequest::doRequest()
             }
             if (parser.error() || !parser.complete()) {
                 m_requestState = ERROR;
-                m_conn->m_priorRequestClosed = true;
+                m_conn->m_priorRequestClosed = m_requestNumber;
                 respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
                 return;
             }
@@ -569,7 +574,8 @@ ServerRequest::doRequest()
             }
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
-            m_conn->m_priorRequestFailed = true;
+            m_conn->m_priorRequestFailed =
+                std::min(m_conn->m_priorRequestFailed, m_requestNumber);
             m_conn->scheduleAllWaitingResponses();
         }
     }
@@ -641,13 +647,14 @@ ServerRequest::commit()
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseClosed) {
+        if (m_conn->m_priorRequestFailed <= m_requestNumber ||
+            m_conn->m_priorResponseClosed <= m_requestNumber) {
             std::list<ServerRequest *>::iterator it;
             it = std::find(m_conn->m_pendingRequests.begin(), m_conn->m_pendingRequests.end(),
                 this);
             MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
             m_conn->m_pendingRequests.erase(it);
-            if (m_conn->m_priorRequestFailed)
+            if (m_conn->m_priorRequestFailed <= m_requestNumber)
                 MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
             else
                 MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
@@ -673,7 +680,7 @@ ServerRequest::commit()
             MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
                 << " responding";
             if (m_willClose) {
-                m_conn->m_priorResponseClosed = true;
+                m_conn->m_priorResponseClosed = m_requestNumber;
                 m_conn->scheduleAllWaitingResponses();
             }
         }
@@ -693,12 +700,12 @@ ServerRequest::commit()
         m_conn->invariant();
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
         MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
-        if (m_conn->m_priorRequestFailed)
+        if (m_conn->m_priorRequestFailed <= m_requestNumber)
             MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
-        else if (m_conn->m_priorResponseClosed)
+        else if (m_conn->m_priorResponseClosed <= m_requestNumber)
             MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
         if (m_willClose) {
-            m_conn->m_priorResponseClosed = true;
+            m_conn->m_priorResponseClosed = m_requestNumber;
             m_conn->scheduleAllWaitingResponses();
         }
         m_responseState = HEADERS;
@@ -729,7 +736,8 @@ ServerRequest::commit()
     } catch(...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        m_conn->m_priorRequestFailed = true;
+        m_conn->m_priorRequestFailed = std::min(m_conn->m_priorRequestFailed,
+            m_requestNumber);
         m_conn->scheduleAllWaitingResponses();
         throw;
     }
