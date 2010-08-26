@@ -10,7 +10,7 @@ Mordor::URI{
 				";")
 			) #else ( "" ),
 			#if ($e.authority.m_hostDefined) ( #("//", $e.authority) ) #else ( "" ),
-			#if ($e.path.type == ABSOLUTE || $e.path.segments._Myfirst != $e.path.segments._Mylast) ( $e.path ) #else ( "" ),
+			#if ($e.path.segments._Myfirst != $e.path.segments._Mylast) ( $e.path ) #else ( "" ),
 			#if ($e.m_queryDefined) ( #(
 				"?",
 				#if (($e.m_query._Myres) < ($e.m_query._BUF_SIZE)) ( [$e.m_query._Bx._Buf,sb] ) #else ( [$e.m_query._Bx._Ptr,sb] ))
@@ -25,7 +25,7 @@ Mordor::URI{
 		#(
 			#if ($e.m_schemeDefined) ( #(scheme: $e.m_scheme) ) #else ( #array(expr: 0, size: 0) ),
 			#if ($e.authority.m_hostDefined) ( #(authority: $e.authority) ) #else ( #array(expr: 0, size: 0) ),
-			#if ($e.path.type == ABSOLUTE || $e.path.segments._Myfirst != $e.path.segments._Mylast) ( #(path: $e.path) ) #else ( #array(expr: 0, size: 0) ),
+			#if ($e.path.segments._Myfirst != $e.path.segments._Mylast) ( #(path: $e.path) ) #else ( #array(expr: 0, size: 0) ),
 			#if ($e.m_queryDefined) ( #(query: $e.m_query) ) #else ( #array(expr: 0, size: 0) ),
 			#if ($e.m_fragmentDefined) ( #(fragment: $e.m_fragment) ) #else ( #array(expr: 0, size: 0) ),
 			#(Actual Members: [$e,!])
@@ -53,24 +53,18 @@ Mordor::URI::Authority{
 
 Mordor::URI::Path{
 	preview (
-		#if ($e.type == RELATIVE && $e.segments._Myfirst == $e.segments._Mylast) (
+		#if ($e.segments._Myfirst == $e.segments._Mylast) (
 			""
 		) #else (
-			#(
-				#if ($e.type == ABSOLUTE) (
-					"/"
-				) #else (
-					""
-				),
-				#array(
-					expr:
-						#if ((($e.segments._Myfirst[$i])._Myres) < (($e.segments._Myfirst[$i])._BUF_SIZE)) (
-							[($e.segments._Myfirst[$i])._Bx._Buf,sb]
-						) #else (
-							[($e.segments._Myfirst[$i])._Bx._Ptr,sb]
-						),
-					size: $e.segments._Mylast - $e.segments._Myfirst
-				)
+			#array(
+				expr:
+					;[$e.segments._Myfirst[$i],
+					#if ((($e.segments._Myfirst[$i])._Myres) < (($e.segments._Myfirst[$i])._BUF_SIZE)) (
+						[($e.segments._Myfirst[$i])._Bx._Buf,sb]
+					) #else (
+						[($e.segments._Myfirst[$i])._Bx._Ptr,sb]
+					),
+				size: $e.segments._Mylast - $e.segments._Myfirst
 			)
 		)
 	)

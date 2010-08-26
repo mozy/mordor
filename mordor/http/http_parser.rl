@@ -475,7 +475,7 @@ unquote(const std::string &str)
 
     action set_request_uri {
         m_uri = &m_request->requestLine.uri;
-        m_path = &m_uri->path;
+        m_segments = &m_uri->path.segments;
     }
 
     action save_accept_list_element {
@@ -605,7 +605,7 @@ unquote(const std::string &str)
 
     action set_referer {
         m_uri = &m_request->request.referer;
-        m_path = &m_uri->path;
+        m_segments = &m_uri->path.segments;
     }
 
     action save_accept_attribute {
@@ -721,7 +721,7 @@ Parser::adjustPointers(ptrdiff_t offset)
 RequestParser::RequestParser(Request& request)
 : m_request(&request),
   m_ver(&request.requestLine.ver),
-  m_path(&request.requestLine.uri.path),
+  m_segments(&request.requestLine.uri.path.segments),
   m_general(&request.general),
   m_entity(&request.entity)
 {}
@@ -825,7 +825,7 @@ ResponseParser::ResponseParser(Response& response)
 : m_response(&response),
   m_ver(&response.status.ver),
   m_uri(&response.response.location),
-  m_path(&response.response.location.path),
+  m_segments(&response.response.location.path.segments),
   m_general(&response.general),
   m_entity(&response.entity)
 {}

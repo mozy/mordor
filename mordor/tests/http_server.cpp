@@ -357,13 +357,11 @@ static void doRespondStream(RequestBroker &requestBroker, bool head,
     Request requestHeaders;
     if (head)
         requestHeaders.requestLine.method = HEAD;
-    requestHeaders.requestLine.uri.scheme("http");
-    requestHeaders.requestLine.uri.authority.host("localhost");
-    requestHeaders.requestLine.uri.path.type = URI::Path::ABSOLUTE;
+    requestHeaders.requestLine.uri = "http://localhost/";
     if (!seekable)
-        requestHeaders.requestLine.uri.path.segments.push_back("unseekable");
+        requestHeaders.requestLine.uri.path.append("unseekable");
     if (!sizeable)
-        requestHeaders.requestLine.uri.path.segments.push_back("unsizeable");
+        requestHeaders.requestLine.uri.path.append("unsizeable");
 
     // Request the whole stream
     MemoryStream response;

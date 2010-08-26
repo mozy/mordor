@@ -55,7 +55,7 @@ private:
     Request *m_request;
     Version *m_ver;
     URI *m_uri;
-    URI::Path *m_path;
+    std::vector<std::string> *m_segments;
     GeneralHeaders *m_general;
     EntityHeaders *m_entity;
 };
@@ -74,7 +74,7 @@ private:
     Response *m_response;
     Version *m_ver;
     URI *m_uri;
-    URI::Path *m_path;
+    std::vector<std::string> *m_segments;
     GeneralHeaders *m_general;
     EntityHeaders *m_entity;
 };
