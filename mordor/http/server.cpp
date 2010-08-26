@@ -780,7 +780,8 @@ ServerRequest::responseDone()
     if (m_responseStream && m_responseStream->supportsSize() && m_responseStream->supportsTell())
         MORDOR_ASSERT(m_responseStream->size() == m_responseStream->tell());
     m_responseStream.reset();
-    if (!m_response.general.transferEncoding.empty()) {
+    if (!m_response.general.transferEncoding.empty() &&
+        m_request.requestLine.method != HEAD) {
         std::ostringstream os;
         os << m_responseTrailer << "\r\n";
         std::string str = os.str();
@@ -843,6 +844,11 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
             fullEntity = true;
             break;
         }
+        // TODO: support this; put Content-Range in trailer
+        if (it->second == ~0ull && size == ~0ull) {
+            fullEntity = true;
+            break;
+        }
         // First byte is beyond end of stream
         if (it->first >= size && size != ~0ull && it->first != ~0ull) {
             respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
@@ -897,11 +903,10 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                         cr.first = it->first;
                         cr.last = std::min(it->second, size - 1);
                     }
-                    if (response->supportsSeek()) {
-                        response->seek(cr.first, Stream::BEGIN);
-                    } else {
+                    if (response->supportsSeek())
+                        response->seek(cr.first);
+                    else
                         transferStream(response, NullStream::get(), cr.first - currentPos);
-                    }
                     transferStream(response, part->stream(), cr.last - cr.first + 1);
                     part->stream()->close();
                     currentPos = cr.last + 1;
@@ -922,26 +927,29 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                 cr.first = range.front().first;
                 cr.last = std::min(range.front().second, size - 1);
             }
+            request->response().status.status = PARTIAL_CONTENT;
             request->response().entity.contentLength = cr.last - cr.first + 1;
 
-            if (response->supportsSeek()) {
-                try {
-                   response->seek(cr.first, Stream::BEGIN);
-                } catch (UnexpectedEofException) {
-                    respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
-                    return;
+            if (request->request().requestLine.method != HEAD) {
+                if (response->supportsSeek()) {
+                    response->seek(cr.first, Stream::BEGIN);
+                } else {
+                    try {
+                        unsigned long long transferred = transferStream(
+                            response, NullStream::get(), cr.first);
+                        if (transferred != cr.first) {
+                            respondError(request,
+                                REQUESTED_RANGE_NOT_SATISFIABLE);
+                            return;
+                        }
+                    } catch (UnexpectedEofException &) {
+                        respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
+                        return;
+                    }
                 }
-            } else {
-                try {
-                    transferStream(response, NullStream::get(), cr.first);
-                } catch (UnexpectedEofException) {
-                    respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
-                    return;
-                }
-                if (request->request().requestLine.method != HEAD) {
-                    transferStream(response, request->responseStream(), cr.last - cr.first + 1);
-                    request->responseStream()->close();
-                }
+                transferStream(response, request->responseStream(),
+                    cr.last - cr.first + 1);
+                request->responseStream()->close();
             }
         }
     }

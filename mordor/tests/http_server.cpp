@@ -317,3 +317,312 @@ MORDOR_UNITTEST(HTTPServer, pipelineResponseWhilePriorResponseFlushing)
     pool.schedule(boost::bind(&ServerConnection::processRequests, conn));
     pool.dispatch();
 }
+
+namespace {
+class UnseekableStream : public FilterStream
+{
+public:
+    UnseekableStream(Stream::ptr parent, bool seekable, bool sizeable)
+        : FilterStream(parent),
+          m_seekable(seekable),
+          m_sizeable(sizeable)
+    {}
+
+    bool supportsSeek() { return m_seekable; }
+    bool supportsSize() { return m_sizeable; }
+
+    size_t read(Buffer &buffer, size_t length)
+    { return parent()->read(buffer, length); }
+
+private:
+    bool m_seekable, m_sizeable;
+};
+}
+
+static void streamServer(const URI &uri, ServerRequest::ptr request)
+{
+    Stream::ptr memoryStream(new MemoryStream(Buffer("hello world!")));
+    if (request->request().requestLine.uri == "/unseekable")
+        memoryStream.reset(new UnseekableStream(memoryStream, false, true));
+    if (request->request().requestLine.uri == "/unsizeable")
+        memoryStream.reset(new UnseekableStream(memoryStream, true, false));
+    if (request->request().requestLine.uri == "/unseekable/unsizeable")
+        memoryStream.reset(new UnseekableStream(memoryStream, false, false));
+    respondStream(request, memoryStream);
+}
+
+static void doRespondStream(RequestBroker &requestBroker, bool head,
+    bool seekable, bool sizeable)
+{
+    Request requestHeaders;
+    if (head)
+        requestHeaders.requestLine.method = HEAD;
+    requestHeaders.requestLine.uri.scheme("http");
+    requestHeaders.requestLine.uri.authority.host("localhost");
+    requestHeaders.requestLine.uri.path.type = URI::Path::ABSOLUTE;
+    if (!seekable)
+        requestHeaders.requestLine.uri.path.segments.push_back("unseekable");
+    if (!sizeable)
+        requestHeaders.requestLine.uri.path.segments.push_back("unsizeable");
+
+    // Request the whole stream
+    MemoryStream response;
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.acceptRanges.size(),
+        1u);
+    MORDOR_TEST_ASSERT_EQUAL(*request->response().response.acceptRanges.begin(),
+        "bytes");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentLength,
+        sizeable ? 12ull : ~0ull);
+    if (!sizeable)
+        MORDOR_TEST_ASSERT(!request->response().general.transferEncoding.empty());
+    if (!head) {
+        transferStream(request->responseStream(), response);
+        MORDOR_TEST_ASSERT(response.buffer() == "hello world!");
+        response.truncate(0ull);
+        response.seek(0ull);
+    }
+
+    // Request just the first byte
+    requestHeaders.request.range.push_back(std::make_pair(0ull, 0ull));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, PARTIAL_CONTENT);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.acceptRanges.size(),
+        1u);
+    MORDOR_TEST_ASSERT_EQUAL(*request->response().response.acceptRanges.begin(),
+        "bytes");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentLength, 1ull);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentRange,
+        ContentRange(0ull, 0ull, sizeable ? 12ull : ~0ull));
+    if (!head) {
+        transferStream(request->responseStream(), response);
+        MORDOR_TEST_ASSERT(response.buffer() == "h");
+        response.truncate(0ull);
+        response.seek(0ull);
+    }
+
+    // Request second byte until the end
+    requestHeaders.request.range.clear();
+    requestHeaders.request.range.push_back(std::make_pair(1ull, ~0ull));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.acceptRanges.size(),
+        1u);
+    MORDOR_TEST_ASSERT_EQUAL(*request->response().response.acceptRanges.begin(),
+        "bytes");
+    if (sizeable) {
+        MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, PARTIAL_CONTENT);
+        MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentLength, 11ull);
+        MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentRange,
+            ContentRange(1ull, 11ull, 12ull));
+        if (!head) {
+            transferStream(request->responseStream(), response);
+            MORDOR_TEST_ASSERT(response.buffer() == "ello world!");
+            response.truncate(0ull);
+            response.seek(0ull);
+        }
+    } else {
+        MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+        MORDOR_TEST_ASSERT(!request->response().general.transferEncoding.empty());
+        if (!head) {
+            transferStream(request->responseStream(), response);
+            MORDOR_TEST_ASSERT(response.buffer() == "hello world!");
+            response.truncate(0ull);
+            response.seek(0ull);
+        }
+    }
+
+    // Request last byte
+    requestHeaders.request.range.clear();
+    requestHeaders.request.range.push_back(std::make_pair(~0ull, 1ull));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.acceptRanges.size(),
+        1u);
+    MORDOR_TEST_ASSERT_EQUAL(*request->response().response.acceptRanges.begin(),
+        "bytes");
+    if (sizeable) {
+        MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, PARTIAL_CONTENT);
+        MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentLength, 1ull);
+        MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentRange,
+            ContentRange(11ull, 11ull, 12ull));
+        if (!head) {
+            transferStream(request->responseStream(), response);
+            MORDOR_TEST_ASSERT(response.buffer() == "!");
+            response.truncate(0ull);
+            response.seek(0ull);
+        }
+    } else {
+        MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+            OK);
+        MORDOR_TEST_ASSERT(!request->response().general.transferEncoding.empty());
+        if (!head) {
+            transferStream(request->responseStream(), response);
+            MORDOR_TEST_ASSERT(response.buffer() == "hello world!");
+            response.truncate(0ull);
+            response.seek(0ull);
+        }
+    }
+
+    // Request entire file
+    requestHeaders.request.range.clear();
+    requestHeaders.request.range.push_back(std::make_pair(0ull, 11ull));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        sizeable ? OK : PARTIAL_CONTENT);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.acceptRanges.size(),
+        1u);
+    MORDOR_TEST_ASSERT_EQUAL(*request->response().response.acceptRanges.begin(),
+        "bytes");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentLength, 12ull);
+    if (!head) {
+        transferStream(request->responseStream(), response);
+        MORDOR_TEST_ASSERT(response.buffer() == "hello world!");
+        response.truncate(0ull);
+        response.seek(0ull);
+    }
+
+    // Request entire file, with a suffix range
+    requestHeaders.request.range.clear();
+    requestHeaders.request.range.push_back(std::make_pair(~0ull, 12ull));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.acceptRanges.size(),
+        1u);
+    MORDOR_TEST_ASSERT_EQUAL(*request->response().response.acceptRanges.begin(),
+        "bytes");
+    if (sizeable)
+        MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentLength, 12ull);
+    else
+        MORDOR_TEST_ASSERT(!request->response().general.transferEncoding.empty());
+    if (!head) {
+        transferStream(request->responseStream(), response);
+        MORDOR_TEST_ASSERT(response.buffer() == "hello world!");
+        response.truncate(0ull);
+        response.seek(0ull);
+    }
+
+    // Invalid range gets full file
+    requestHeaders.request.range.clear();
+    requestHeaders.request.range.push_back(std::make_pair(1ull, 0ull));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.acceptRanges.size(),
+        1u);
+    MORDOR_TEST_ASSERT_EQUAL(*request->response().response.acceptRanges.begin(),
+        "bytes");
+    if (sizeable)
+        MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentLength, 12ull);
+    else
+        MORDOR_TEST_ASSERT(!request->response().general.transferEncoding.empty());
+    if (!head) {
+        transferStream(request->responseStream(), response);
+        MORDOR_TEST_ASSERT(response.buffer() == "hello world!");
+        response.truncate(0ull);
+        response.seek(0ull);
+    }
+
+    // TODO: this test cannot currently be run for unsizeable but seekable
+    // stream; fix it
+    if (sizeable || !seekable) {
+        // Beyond end of file
+        requestHeaders.request.range.clear();
+        requestHeaders.request.range.push_back(std::make_pair(13ull, 13ull));
+        request = requestBroker.request(requestHeaders);
+        MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+            REQUESTED_RANGE_NOT_SATISFIABLE);
+        request->finish();
+    }
+
+    // Suffix range beyond end of file
+    requestHeaders.request.range.clear();
+    requestHeaders.request.range.push_back(std::make_pair(~0ull, 13ull));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.acceptRanges.size(),
+        1u);
+    MORDOR_TEST_ASSERT_EQUAL(*request->response().response.acceptRanges.begin(),
+        "bytes");
+    if (sizeable)
+        MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentLength, 12ull);
+    else
+        MORDOR_TEST_ASSERT(!request->response().general.transferEncoding.empty());
+    if (!head) {
+        transferStream(request->responseStream(), response);
+        MORDOR_TEST_ASSERT(response.buffer() == "hello world!");
+        response.truncate(0ull);
+        response.seek(0ull);
+    }
+
+    // Non-contiguous range
+    requestHeaders.request.range.clear();
+    requestHeaders.request.range.push_back(std::make_pair(0ull, 0ull));
+    requestHeaders.request.range.push_back(std::make_pair(2ull, 3ull));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentType.type,
+        "multipart");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentType.subtype,
+        "byteranges");
+    if (!head) {
+        Multipart::ptr multipart = request->responseMultipart();
+        BodyPart::ptr part = multipart->nextPart();
+        MORDOR_TEST_ASSERT_EQUAL(part->headers().contentRange,
+            ContentRange(0ull, 0ull, sizeable ? 12ull : ~0ull));
+        transferStream(part->stream(), response);
+        MORDOR_TEST_ASSERT(response.buffer() == "h");
+        response.truncate(0ull);
+        response.seek(0ull);
+
+        part = multipart->nextPart();
+        MORDOR_TEST_ASSERT_EQUAL(part->headers().contentRange,
+            ContentRange(2ull, 3ull, sizeable ? 12ull : ~0ull));
+        transferStream(part->stream(), response);
+        MORDOR_TEST_ASSERT(response.buffer() == "ll");
+        response.truncate(0ull);
+        response.seek(0ull);
+    }
+}
+
+MORDOR_UNITTEST(HTTPServer, respondStreamRegular)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&streamServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server,
+        &nop<ConnectionBroker *>));
+
+    doRespondStream(requestBroker, false, true, true);
+    doRespondStream(requestBroker, true, true, true);
+}
+
+MORDOR_UNITTEST(HTTPServer, respondStreamUnseekable)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&streamServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server,
+        &nop<ConnectionBroker *>));
+
+    doRespondStream(requestBroker, false, false, true);
+    doRespondStream(requestBroker, true, false, true);
+}
+
+MORDOR_UNITTEST(HTTPServer, respondStreamUnsizeable)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&streamServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server,
+        &nop<ConnectionBroker *>));
+
+    doRespondStream(requestBroker, false, true, false);
+    doRespondStream(requestBroker, true, true, false);
+}
+
+MORDOR_UNITTEST(HTTPServer, respondStreamUnseekableUnsizeable)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&streamServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server,
+        &nop<ConnectionBroker *>));
+
+    doRespondStream(requestBroker, false, true, false);
+    doRespondStream(requestBroker, true, true, false);
+}

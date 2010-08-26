@@ -483,8 +483,10 @@ ClientRequest::hasRequestBody() const
 Stream::ptr
 ClientRequest::requestStream()
 {
-    if (m_requestStream)
+    if (m_requestStream) {
+        MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
         return m_requestStream;
+    }
     doRequest();
     MORDOR_ASSERT(!m_requestMultipart);
     MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
@@ -556,6 +558,7 @@ ClientRequest::responseStream()
     Stream::ptr result = m_responseStream.lock();
     if (result || m_hasResponseBody) {
         MORDOR_ASSERT(result);
+        MORDOR_ASSERT(m_response.entity.contentType.type != "multipart");
         return result;
     }
     ensureResponse();

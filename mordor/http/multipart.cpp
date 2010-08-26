@@ -13,17 +13,16 @@
 
 namespace Mordor {
 
-static const char *allowedBoundaryChars =
+static const char allowedBoundaryChars[] =
     "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'()+_,-./:=?";
 
 std::string
 Multipart::randomBoundary()
 {
     std::string result;
-    result.resize(70);
-    for (size_t i = 0; i < 70; ++i) {
-        result[i] = allowedBoundaryChars[rand() % 36];
-    }
+    result.resize(40);
+    for (size_t i = 0; i < 40; ++i)
+        result[i] = allowedBoundaryChars[rand() % 74];
     return result;
 }
 
@@ -41,7 +40,7 @@ Multipart::Multipart(Stream::ptr stream, std::string boundary)
     MORDOR_ASSERT(m_boundary.size() <= 70);
     if (m_boundary.find_first_not_of(allowedBoundaryChars) != std::string::npos) {
         if (stream->supportsWrite()) {
-            MORDOR_ASSERT(false);
+            MORDOR_NOTREACHED();
         } else {
             MORDOR_THROW_EXCEPTION(InvalidMultipartBoundaryException());
         }

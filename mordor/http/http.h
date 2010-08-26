@@ -274,11 +274,27 @@ struct MediaType
 typedef std::vector<std::pair<unsigned long long, unsigned long long> > RangeSet;
 struct ContentRange
 {
-    ContentRange() : first(~0ULL), last(~0ULL), instance(~0ULL) {}
+    ContentRange(unsigned long long first_ = ~0ull,
+        unsigned long long last_ = ~0ull,
+        unsigned long long instance_ = ~0ull)
+        : first(first_),
+          last(last_),
+          instance(instance_)
+    {}
 
     unsigned long long first;
     unsigned long long last;
     unsigned long long instance;
+
+    bool operator==(const ContentRange &rhs) const
+    {
+        return first == rhs.first && last == rhs.last &&
+            instance == rhs.instance;
+    }
+    bool operator!=(const ContentRange &rhs) const
+    {
+        return !(*this == rhs);
+    }
 };
 
 struct AcceptValue
