@@ -524,7 +524,7 @@ MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
     schemeAndAuthority.queryDefined(false);
     schemeAndAuthority.fragmentDefined(false);
     ConnectionCache::iterator it = m_conns.find(schemeAndAuthority);
-    if (it != m_conns.end() && !it->second.first->newRequestsAllowed()) {
+    if (it != m_conns.end() && !it->second->newRequestsAllowed()) {
         m_conns.erase(it);
         it = m_conns.end();
     }
@@ -541,10 +541,10 @@ MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
                 schemeAndAuthority, _1)));
         Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(
             &ServerConnection::processRequests, server))));
-        m_conns[schemeAndAuthority] = std::make_pair(client, server);
+        m_conns[schemeAndAuthority] = client;
         return std::make_pair(client, false);
     }
-    return std::make_pair(it->second.first, false);
+    return std::make_pair(it->second, false);
 }
 
 RequestBroker::ptr

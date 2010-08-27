@@ -174,9 +174,7 @@ private:
 class MockConnectionBroker : public ConnectionBroker
 {
 private:
-    typedef std::map<URI,
-        std::pair<boost::shared_ptr<ClientConnection>,
-            boost::shared_ptr<ServerConnection> > >
+    typedef std::map<URI, boost::shared_ptr<ClientConnection> >
         ConnectionCache;
 public:
     MockConnectionBroker(boost::function<void (const URI &uri,

@@ -366,8 +366,12 @@ ServerRequest::cancel()
     MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " aborting";
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
     m_conn->invariant();
-    m_requestState = ERROR;
-    m_responseState = ERROR;
+    if (m_requestState < COMPLETE)
+        m_requestState = ERROR;
+    if (m_responseState < COMPLETE)
+        m_responseState = ERROR;
+    m_conn->m_stream->cancelRead();
+    m_conn->m_stream->cancelWrite();
     m_conn->m_priorRequestFailed = std::min(m_conn->m_priorRequestFailed,
         m_requestNumber);
     std::list<ServerRequest *>::iterator it =

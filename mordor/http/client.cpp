@@ -557,7 +557,8 @@ ClientRequest::responseStream()
 {
     Stream::ptr result = m_responseStream.lock();
     if (result || m_hasResponseBody) {
-        MORDOR_ASSERT(result);
+        MORDOR_ASSERT(result &&
+            "responseStream() can only be accessed once without caching it");
         MORDOR_ASSERT(m_response.entity.contentType.type != "multipart");
         return result;
     }

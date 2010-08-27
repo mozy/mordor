@@ -624,3 +624,34 @@ MORDOR_UNITTEST(HTTPServer, respondStreamUnseekableUnsizeable)
     doRespondStream(requestBroker, false, true, false);
     doRespondStream(requestBroker, true, true, false);
 }
+
+static void exceptionAfterCommitServer(const URI &uri,
+    ServerRequest::ptr request)
+{
+    request->response().entity.contentLength = 10;
+    request->responseStream()->write("hello", 5);
+    request->responseStream()->flush();
+    throw std::runtime_error("Expected");
+}
+
+MORDOR_UNITTEST(HTTPServer, exceptionAfterCommit)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&exceptionAfterCommitServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server,
+        &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentLength, 10u);
+    char buffer[10];
+    Stream::ptr responseStream = request->responseStream();
+    MORDOR_TEST_ASSERT_EQUAL(responseStream->read(buffer, 10), 5u);
+    buffer[5] = '\0';
+    MORDOR_TEST_ASSERT_EQUAL((const char *)buffer, "hello");
+    MORDOR_TEST_ASSERT_EXCEPTION(responseStream->read(buffer, 10),
+        BrokenPipeException);
+}
