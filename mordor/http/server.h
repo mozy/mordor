@@ -41,19 +41,46 @@ public:
 
     const Request &request() const { return m_request; }
     bool hasRequestBody() const;
+    /// A stream representing the request body
+    ///
+    /// The stream will be fully "decoded" according to the request headers.
+    /// I.e. transfer encodings will already be applied, and it will have a
+    /// size if Content-Length is set.
+    /// @pre hasRequestBody()
     boost::shared_ptr<Stream> requestStream();
     const EntityHeaders &requestTrailer() const;
     boost::shared_ptr<Multipart> requestMultipart();
 
+    /// Response Headers
+    ///
+    /// Changes to the headers will not do anything if the response has already
+    /// been committed().
     Response &response() { return m_response; }
     const Response &response() const { return m_response; }
     bool hasResponseBody() const;
+
+    /// A stream representing the response body
+    ///
+    /// Only the actual response needs to be written.  Transfer encodings
+    /// will be automatically applied, and you will be unable to write beyond
+    /// the size of Content-Length was set.  The response headers will be
+    /// automatically committed if they have not been committed already
     boost::shared_ptr<Stream> responseStream();
     boost::shared_ptr<Multipart> responseMultipart();
     EntityHeaders &responseTrailer();
 
     bool committed() const { return m_responseState >= HEADERS; }
 
+    /// Start reading the next request
+    ///
+    /// Even if this request hasn't responded yet; enables pipelining.
+    /// If this request isn't complete, it will set a flag to immediately
+    /// start reading the next request as soon as this one is complete.
+    void processNextRequest();
+
+    /// Abort the request
+    ///
+    /// Aborts this request, and any subsequent requests or responses
     void cancel();
     void finish();
 
@@ -74,12 +101,34 @@ private:
     Response m_response;
     EntityHeaders m_requestTrailer, m_responseTrailer;
     State m_requestState, m_responseState;
-    bool m_willClose;
+    bool m_willClose, m_pipeline;
     boost::shared_ptr<Stream> m_requestStream, m_responseStream;
     boost::shared_ptr<Multipart> m_requestMultipart, m_responseMultipart;
 };
 
-class ServerConnection : public Connection, public boost::enable_shared_from_this<ServerConnection>, boost::noncopyable
+/// Individual connection to an HTTP server
+///
+/// A ServerConnection operates over any reliable, full-duplex stream. An HTTP
+/// server needs to establish the physical connection, create a
+/// ServerConnection, and call processRequests.  The ServerConnection will then
+/// manager the underlying stream, and read requests off of it.  As each
+/// request is read, dg is called with a ServerRequest object, and is
+/// responsible for responding to it.  If dg returns without fulfilling any of
+/// its duties (reading the request body, responding, exception), it will be
+/// dealt with appropriately:
+///  * Responding 500 if an exception happened before the headers were
+///    committed
+///  * Closing the connection if an exception happened after the headers were
+///    committed
+///  * Closing the connection if the response body was not fully written
+///  * Reading the rest of the request body if it was not fully read
+/// The connection will automatically manage keep alive, and responding to
+/// unparseable and invalid requests (i.e. no Host header for HTTP/1.1).
+/// It fully supports server side pipelining, but it is an opt-in feature:
+/// ServerRequest::processNextRequest() must be called before the server will
+/// start reading a pipelined request.
+class ServerConnection : public Connection,
+    public boost::enable_shared_from_this<ServerConnection>, boost::noncopyable
 {
 public:
     typedef boost::shared_ptr<ServerConnection> ptr;
@@ -91,6 +140,7 @@ public:
     ServerConnection(boost::shared_ptr<Stream> stream,
         boost::function<void (ServerRequest::ptr)> dg);
 
+    /// Does not block; simply schedules a new fiber to read the first request
     void processRequests();
 
     std::vector<ServerRequest::const_ptr> requests();

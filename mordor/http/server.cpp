@@ -56,7 +56,7 @@ ServerConnection::scheduleNextRequest(ServerRequest *request)
     // MORDOR_ASSERT(m_mutex.locked());
     MORDOR_ASSERT(request || m_requestCount == 0);
     if (m_requestCount == 0 ||
-        (request->m_requestNumber == m_requestCount &&
+        (request && request->m_requestNumber == m_requestCount &&
         request->m_requestState == ServerRequest::COMPLETE &&
         m_priorRequestFailed == ~0ull && m_priorRequestClosed == ~0ull &&
         m_priorResponseClosed == ~0ull)) {
@@ -90,7 +90,8 @@ ServerConnection::requestComplete(ServerRequest *request)
         }
         close = request->m_willClose;
         if (!close) {
-            scheduleNextRequest(request);
+            if (request->m_pipeline)
+                scheduleNextRequest(request);
         } else {
             m_priorRequestClosed = request->m_requestNumber;
             MORDOR_LOG_TRACE(g_log) << this << " closing";
@@ -130,14 +131,19 @@ ServerConnection::responseComplete(ServerRequest *request)
                 request->m_scheduler->schedule(request->m_fiber);
                 return;
             }
+        } else {
+            // Do not remove from m_pendingRequests until we finish flushing
+            // The next request can start before the flush completes, though
+            if (request->m_requestState >= ServerRequest::COMPLETE)
+                scheduleNextRequest(request);
         }
-        MORDOR_LOG_TRACE(g_log) << this << " flushing";
         if (request->m_willClose) {
             m_priorResponseClosed = request->m_requestNumber;
             MORDOR_LOG_TRACE(g_log) << this << " closing";
+        } else {
+            MORDOR_LOG_TRACE(g_log) << this << " flushing";
         }
     }
-    m_stream->flush();
     if (request->m_willClose) {
         try {
             m_stream->close();
@@ -145,6 +151,8 @@ ServerConnection::responseComplete(ServerRequest *request)
             request->cancel();
             throw;
         }
+    } else {
+        m_stream->flush();
     }
     boost::mutex::scoped_lock lock(m_mutex);
     invariant();
@@ -233,7 +241,8 @@ ServerRequest::ServerRequest(ServerConnection::ptr conn)
   m_scheduler(NULL),
   m_requestState(HEADERS),
   m_responseState(PENDING),
-  m_willClose(false)
+  m_willClose(false),
+  m_pipeline(false)
 {}
 
 ServerRequest::~ServerRequest()
@@ -356,6 +365,15 @@ ServerRequest::responseTrailer()
 {
     MORDOR_ASSERT(!m_response.general.transferEncoding.empty());
     return m_responseTrailer;
+}
+
+void
+ServerRequest::processNextRequest()
+{
+    boost::mutex::scoped_lock lock(m_conn->m_mutex);
+    m_pipeline = true;
+    m_conn->invariant();
+    m_conn->scheduleNextRequest(this);
 }
 
 void

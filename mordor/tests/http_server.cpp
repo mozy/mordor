@@ -233,6 +233,7 @@ MORDOR_UNITTEST(HTTPServer, responseCompletesBeforeRequest)
 
 static void pipelineWait(const URI &uri, ServerRequest::ptr request)
 {
+    request->processNextRequest();
     if (request->request().requestLine.uri == "/one") {
         Scheduler::yield();
         Scheduler::yield();
@@ -280,6 +281,7 @@ static void respondToTwo(TestStream::ptr testOutput, Fiber::ptr &fiber,
 static void yieldTwoServer(ServerRequest::ptr request, Fiber::ptr &fiber2,
     int &sequence)
 {
+    request->processNextRequest();
     if (request->request().requestLine.uri == "/two") {
         MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
         fiber2 = Fiber::getThis();

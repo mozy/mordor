@@ -1517,6 +1517,7 @@ static void
 serverDelaysFirstResponse(const URI &uri, ServerRequest::ptr request,
                           TimerManager &timerManager)
 {
+    request->processNextRequest();
     if (request->request().requestLine.uri == "/delay") {
         sleep(timerManager, 200000);
         request->response().status.status = OK;
