@@ -594,11 +594,6 @@ ServerRequest::doRequest()
             } catch(...) {
                 // Swallow any exceptions that happen while trying to report the error
             }
-            boost::mutex::scoped_lock lock(m_conn->m_mutex);
-            m_conn->invariant();
-            m_conn->m_priorRequestFailed =
-                std::min(m_conn->m_priorRequestFailed, m_requestNumber);
-            m_conn->scheduleAllWaitingResponses();
         }
     }
 }
@@ -669,14 +664,14 @@ ServerRequest::commit()
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (m_conn->m_priorRequestFailed <= m_requestNumber ||
-            m_conn->m_priorResponseClosed <= m_requestNumber) {
+        if (m_conn->m_priorRequestFailed < m_requestNumber ||
+            m_conn->m_priorResponseClosed < m_requestNumber) {
             std::list<ServerRequest *>::iterator it;
             it = std::find(m_conn->m_pendingRequests.begin(), m_conn->m_pendingRequests.end(),
                 this);
             MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
             m_conn->m_pendingRequests.erase(it);
-            if (m_conn->m_priorRequestFailed <= m_requestNumber)
+            if (m_conn->m_priorRequestFailed < m_requestNumber)
                 MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
             else
                 MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
