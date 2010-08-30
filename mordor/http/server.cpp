@@ -273,10 +273,10 @@ ServerRequest::hasRequestBody() const
 Stream::ptr
 ServerRequest::requestStream()
 {
-    if (m_requestStream)
-        return m_requestStream;
     MORDOR_ASSERT(!m_requestMultipart);
     MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
+    if (m_requestStream)
+        return m_requestStream;
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ServerRequest::requestDone, this),
@@ -328,10 +328,10 @@ ServerRequest::hasResponseBody() const
 Stream::ptr
 ServerRequest::responseStream()
 {
-    if (m_responseStream)
-        return m_responseStream;
     MORDOR_ASSERT(!m_responseMultipart);
     MORDOR_ASSERT(m_response.entity.contentType.type != "multipart");
+    if (m_responseStream)
+        return m_responseStream;
     commit();
     return m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
@@ -616,6 +616,18 @@ ServerRequest::commit()
     MORDOR_ASSERT(m_response.status.ver == Version(1, 0) ||
            m_response.status.ver == Version(1, 1));
 
+    // Use chunked encoding for undelimited bodies on 1.1, or force the
+    // connection to close on 1.0
+    if (m_response.entity.contentLength == ~0ull &&
+        m_response.general.transferEncoding.empty() &&
+        m_response.entity.contentType.type != "multipart") {
+        if (m_response.status.ver == Version(1, 1) && isAcceptable(m_request.request.te,
+            AcceptValueWithParameters("chunked"), true))
+            m_response.general.transferEncoding.push_back("chunked");
+        else
+            m_willClose = true;
+    }
+
     if (m_willClose)
         m_response.general.connection.insert("close");
     else if (m_response.status.ver == Version(1, 0))
@@ -630,6 +642,7 @@ ServerRequest::commit()
 
     // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
     if (!transferEncoding.empty()) {
+        MORDOR_ASSERT(m_response.status.ver == Version(1, 1));
         MORDOR_ASSERT(transferEncoding.back().value == "chunked");
         for (ParameterizedList::const_iterator it(transferEncoding.begin());
             it + 1 != transferEncoding.end();
