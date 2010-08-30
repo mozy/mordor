@@ -536,3 +536,64 @@ MORDOR_UNITTEST(Fibers, threadFiberHeldAfterThreadEnd)
     Thread thread(boost::bind(&gimmeYourFiber, boost::ref(threadFiber)));
     thread.join();
 }
+
+namespace {
+struct LastObject
+{
+    LastObject(Fiber::ptr mainFiber, int &sequence)
+        : m_mainFiber(mainFiber),
+          m_sequence(sequence)
+    {
+        MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+    }
+
+    ~LastObject()
+    {
+        MORDOR_TEST_ASSERT(Fiber::getThis() == m_mainFiber.lock());
+        MORDOR_TEST_ASSERT_EQUAL(++m_sequence, 6);
+    }
+
+private:
+    Fiber::weak_ptr m_mainFiber;
+    int &m_sequence;
+};
+struct ExceptionDestructsBeforeFiberDestructsException : virtual Exception
+{
+    ExceptionDestructsBeforeFiberDestructsException(Fiber::ptr mainFiber,
+        int &sequence)
+        : m_lastObject(new LastObject(mainFiber, sequence))
+    {}
+
+private:
+    boost::shared_ptr<LastObject> m_lastObject;
+};
+}
+
+static void exceptionDestructsBeforeFiberDestructs(Fiber::ptr mainFiber,
+    int &sequence)
+{
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
+    MORDOR_THROW_EXCEPTION(ExceptionDestructsBeforeFiberDestructsException(
+        mainFiber, sequence));
+}
+
+MORDOR_UNITTEST(Fibers, exceptionDestructsBeforeFiberDestructs)
+{
+    int sequence = 0;
+    {
+        Fiber::ptr mainFiber = Fiber::getThis();
+        Fiber::ptr throwingFiber(new Fiber(boost::bind(
+            &exceptionDestructsBeforeFiberDestructs, mainFiber,
+            boost::ref(sequence))));
+
+        MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);
+        try {
+            throwingFiber->call();
+            MORDOR_NOTREACHED();
+        } catch (ExceptionDestructsBeforeFiberDestructsException &) {
+            MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
+        }
+        MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
+    }
+    MORDOR_TEST_ASSERT_EQUAL(++sequence, 7);
+}

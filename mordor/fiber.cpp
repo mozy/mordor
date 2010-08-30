@@ -124,11 +124,6 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
 
 Fiber::~Fiber()
 {
-    if (m_state == EXCEPT) {
-        m_exception = boost::exception_ptr();
-        call(true);
-        m_state = TERM;
-    }
     if (!m_stack || m_stack == m_sp) {
         // Thread entry fiber
         MORDOR_ASSERT(!m_dg);
@@ -150,7 +145,7 @@ Fiber::~Fiber()
         // Otherwise, there's not a thread left to clean up
     } else {
         // Regular fiber
-        MORDOR_ASSERT(m_state == TERM || m_state == INIT);
+        MORDOR_ASSERT(m_state == TERM || m_state == INIT || m_state == EXCEPT);
         freeStack();
     }
 }
@@ -159,10 +154,8 @@ void
 Fiber::reset()
 {
     m_exception = boost::exception_ptr();
-    if (m_state == EXCEPT)
-        call(true);
     MORDOR_ASSERT(m_stack);
-    MORDOR_ASSERT(m_state == TERM || m_state == INIT);
+    MORDOR_ASSERT(m_state == TERM || m_state == INIT || m_state == EXCEPT);
     MORDOR_ASSERT(m_dg);
     initStack();
     m_state = INIT;
@@ -172,10 +165,8 @@ void
 Fiber::reset(boost::function<void ()> dg)
 {
     m_exception = boost::exception_ptr();
-    if (m_state == EXCEPT)
-        call(true);
     MORDOR_ASSERT(m_stack);
-    MORDOR_ASSERT(m_state == TERM || m_state == INIT);
+    MORDOR_ASSERT(m_state == TERM || m_state == INIT || m_state == EXCEPT);
     m_dg = dg;
     initStack();
     m_state = INIT;
@@ -201,7 +192,27 @@ Fiber::setThis(Fiber* f)
 void
 Fiber::call()
 {
-    call(false);
+    MORDOR_ASSERT(!m_outer);
+    ptr cur = getThis();
+    MORDOR_ASSERT(m_state == HOLD || m_state == INIT);
+    MORDOR_ASSERT(cur);
+    MORDOR_ASSERT(cur.get() != this);
+    setThis(this);
+    m_outer = cur;
+    m_state = m_exception ? EXCEPT : EXEC;
+    fiber_switchContext(&cur->m_sp, m_sp);
+    setThis(cur.get());
+    MORDOR_ASSERT(cur->m_yielder);
+    m_outer.reset();
+    if (cur->m_yielder) {
+        MORDOR_ASSERT(cur->m_yielder.get() == this);
+        Fiber::ptr yielder = cur->m_yielder;
+        yielder->m_state = cur->m_yielderNextState;
+        cur->m_yielder.reset();
+        if (yielder->m_state == EXCEPT && yielder->m_exception)
+            Mordor::rethrow_exception(yielder->m_exception);
+    }
+    MORDOR_ASSERT(cur->m_state == EXEC);
 }
 
 void
@@ -209,7 +220,7 @@ Fiber::inject(boost::exception_ptr exception)
 {
     MORDOR_ASSERT(exception);
     m_exception = exception;
-    call(false);
+    call();
 }
 
 Fiber::ptr
@@ -243,36 +254,6 @@ Fiber::State
 Fiber::state()
 {
     return m_state;
-}
-
-void
-Fiber::call(bool destructor)
-{
-    MORDOR_ASSERT(!m_outer);
-    ptr cur = getThis();
-    if (destructor) {
-        MORDOR_ASSERT(m_state == EXCEPT);
-    } else {
-        MORDOR_ASSERT(m_state == HOLD || m_state == INIT);
-        MORDOR_ASSERT(cur);
-        MORDOR_ASSERT(cur.get() != this);
-    }
-    setThis(this);
-    m_outer = cur;
-    m_state = m_exception ? EXCEPT : EXEC;
-    fiber_switchContext(&cur->m_sp, m_sp);
-    setThis(cur.get());
-    MORDOR_ASSERT(cur->m_yielder || destructor);
-    m_outer.reset();
-    if (cur->m_yielder) {
-        MORDOR_ASSERT(cur->m_yielder.get() == this);
-        Fiber::ptr yielder = cur->m_yielder;
-        yielder->m_state = cur->m_yielderNextState;
-        cur->m_yielder.reset();
-        if (yielder->m_state == EXCEPT && yielder->m_exception)
-            Mordor::rethrow_exception(yielder->m_exception);
-    }
-    MORDOR_ASSERT(cur->m_state == EXEC);
 }
 
 Fiber::ptr
@@ -331,7 +312,7 @@ Fiber::entryPoint()
         cur->m_yielder.reset();
     }
     MORDOR_ASSERT(cur->m_dg);
-    Fiber *curp = cur.get();
+    State nextState = TERM;
     try {
         if (cur->m_state == EXCEPT) {
             MORDOR_ASSERT(cur->m_exception);
@@ -340,56 +321,51 @@ Fiber::entryPoint()
         MORDOR_ASSERT(cur->m_state == EXEC);
         cur->m_dg();
     } catch (boost::exception &ex) {
-        Fiber::weak_ptr dummy = cur;
         removeTopFrames(ex);
         cur->m_exception = boost::current_exception();
-        exitPoint(cur, curp, EXCEPT);
-        if (curp->m_state == EXCEPT)
-            throw;
-        cur = dummy.lock();
+        nextState = EXCEPT;
     } catch (...) {
-        Fiber::weak_ptr dummy = cur;
         cur->m_exception = boost::current_exception();
-        exitPoint(cur, curp, EXCEPT);
-        if (curp->m_state == EXCEPT)
-            throw;
-        cur = dummy.lock();
+        nextState = EXCEPT;
     }
 
-    exitPoint(cur, curp, TERM);
+    exitPoint(cur, nextState);
 #ifndef NATIVE_WINDOWS_FIBERS
     MORDOR_NOTREACHED();
 #endif
 }
 
 void
-Fiber::exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState)
+Fiber::exitPoint(Fiber::ptr &cur, State targetState)
 {
-    if (!curp->m_terminateOuter.expired() && !curp->m_outer) {
-        ptr terminateOuter(curp->m_terminateOuter);
-        // Have to set this reference before calling yieldTo()
-        // so we can reset cur before we call yieldTo()
-        // (since it's not ever going to destruct)
-        terminateOuter->m_yielder = cur;
-        terminateOuter->m_yielderNextState = targetState;
-        Fiber* terminateOuterp = terminateOuter.get();
-        if (cur) {
-            MORDOR_ASSERT(!cur.unique());
-            cur.reset();
-        }
-        MORDOR_ASSERT(!terminateOuter.unique());
-        terminateOuter.reset();
-        terminateOuterp->yieldTo(false, targetState);
-        return;
+    Fiber::ptr outer;
+    Fiber *rawPtr = NULL;
+    if (!cur->m_terminateOuter.expired() && !cur->m_outer) {
+        outer = cur->m_terminateOuter.lock();
+        rawPtr = outer.get();
+    } else {
+        outer = cur->m_outer;
+        rawPtr = cur.get();
     }
-    MORDOR_ASSERT(curp->m_outer);
-    curp->m_outer->m_yielder = cur;
-    curp->m_outer->m_yielderNextState = targetState;
-    if (cur) {
-        MORDOR_ASSERT(!cur.unique());
-        cur.reset();
+    MORDOR_ASSERT(outer);
+    MORDOR_ASSERT(rawPtr);
+    MORDOR_ASSERT(outer != cur);
+
+    // Have to set this reference before calling yieldTo()
+    // so we can reset cur before we call yieldTo()
+    // (since it's not ever going to destruct)
+    outer->m_yielder = cur;
+    outer->m_yielderNextState = targetState;
+    MORDOR_ASSERT(!cur.unique());
+    cur.reset();
+    if (rawPtr == outer.get()) {
+        rawPtr = outer.get();
+        MORDOR_ASSERT(!outer.unique());
+        outer.reset();
+        rawPtr->yieldTo(false, targetState);
+    } else {
+        fiber_switchContext(&rawPtr->m_sp, rawPtr->m_outer->m_sp);
     }
-    fiber_switchContext(&curp->m_sp, curp->m_outer->m_sp);
 }
 
 #ifdef NATIVE_WINDOWS_FIBERS

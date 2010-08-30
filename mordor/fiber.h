@@ -155,11 +155,10 @@ public:
     std::vector<void *> backtrace();
 
 private:
-    void call(bool destructor);
     Fiber::ptr yieldTo(bool yieldToCallerOnTerminate, State targetState);
     static void setThis(Fiber *f);
     static void entryPoint();
-    static void exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState);
+    static void exitPoint(Fiber::ptr &cur, State targetState);
 
     void allocStack();
     void freeStack();
