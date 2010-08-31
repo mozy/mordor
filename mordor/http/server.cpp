@@ -833,6 +833,7 @@ respondError(ServerRequest::ptr request, Status status, const std::string &messa
     if (closeConnection)
         request->response().general.connection.insert("close");
     request->response().general.transferEncoding.clear();
+    request->response().general.trailer.clear();
     request->response().entity.contentLength = message.size();
     request->response().entity.contentType.type.clear();
     if (!message.empty()) {
@@ -851,19 +852,34 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
 {
     MORDOR_ASSERT(!request->committed());
     unsigned long long size = ~0ull;
-    request->response().response.acceptRanges.insert("bytes");
-    if (response->supportsSize()) {
+    if (response->supportsSize())
         size = response->size();
-    }
-    request->response().general.transferEncoding.clear();
+    bool trailers = (size == ~0ull &&
+        isAcceptable(request->request().request.te, "trailers"));
+    // Only advertise byte range request if it would be possible on the current
+    // request
+    if (trailers || size != ~0ull)
+        request->response().response.acceptRanges.insert("bytes");
+    ParameterizedList &transferEncoding =
+        request->response().general.transferEncoding;
+    transferEncoding.clear();
     const RangeSet &range = request->request().request.range;
     bool fullEntity = range.empty();
     // Validate range request
+    // If we don't know the size, and we don't support trailers, have to send
+    // the whole thing
+    if (size == ~0ull && !trailers)
+        fullEntity = true;
+    // If we're using trailers, it only works for a single range
+    if (trailers && range.size() > 1)
+        fullEntity = true;
     // TODO: sort and merge overlapping ranges
     unsigned long long previousLast = 0;
     for (RangeSet::const_iterator it(range.begin());
         it != range.end();
         ++it) {
+        if (fullEntity)
+            break;
         // Invalid; first is after last
         if (it->first > it->second && it->first != ~0ull) {
             fullEntity = true;
@@ -871,11 +887,6 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
         }
         // Unsupported - suffix range when we can't determine the size
         if (it->first == ~0ull && size == ~0ull) {
-            fullEntity = true;
-            break;
-        }
-        // TODO: support this; put Content-Range in trailer
-        if (it->second == ~0ull && size == ~0ull) {
             fullEntity = true;
             break;
         }
@@ -906,13 +917,18 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
         else
             previousLast = it->second;
     }
+    // We can satisfy the range request
     if (!fullEntity) {
+        // Multiple ranges; must use multipart; we don't support chunked
+        // encoding (does it make sense?), so don't advertise or worry about
+        // trailers or transfer encodings
         if (range.size() > 1) {
             MediaType contentType = request->response().entity.contentType;
             request->response().entity.contentLength = ~0;
             request->response().entity.contentType.type = "multipart";
             request->response().entity.contentType.subtype = "byteranges";
-            request->response().entity.contentType.parameters["boundary"] = Multipart::randomBoundary();
+            request->response().entity.contentType.parameters["boundary"] =
+                Multipart::randomBoundary();
             unsigned long long currentPos = 0;
 
             if (request->request().requestLine.method != HEAD) {
@@ -944,46 +960,113 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                 multipart->finish();
             }
         } else {
-            ContentRange &cr = request->response().entity.contentRange;
-            cr.instance = size;
-
-            if (range.front().first == ~0ull) {
-                if (range.front().second > size)
-                    cr.first = 0;
-                else
-                    cr.first = size - range.front().second;
-                cr.last = size - 1;
-            } else {
-                cr.first = range.front().first;
-                cr.last = std::min(range.front().second, size - 1);
-            }
+            // Single range; we'll support compression (advertise it, and use
+            // it if requested) and trailers (if necessary)
             request->response().status.status = PARTIAL_CONTENT;
-            request->response().entity.contentLength = cr.last - cr.first + 1;
-
-            if (request->request().requestLine.method != HEAD) {
-                if (response->supportsSeek()) {
-                    response->seek(cr.first, Stream::BEGIN);
+            if (request->request().requestLine.ver >= Version(1, 1)) {
+                AcceptListWithParameters available;
+                available.push_back(AcceptValueWithParameters("deflate", 1000));
+                available.push_back(AcceptValueWithParameters("gzip", 500));
+                available.push_back(AcceptValueWithParameters("x-gzip", 500));
+                const AcceptValueWithParameters *preferredEncoding =
+                    preferred(request->request().request.te, available);
+                if (preferredEncoding) {
+                    transferEncoding.push_back(preferredEncoding->value);
+                    transferEncoding.push_back("chunked");
+                }
+            }
+            // Set up headers (for trailers, or not for trailers)
+            ContentRange *cr;
+            if (trailers) {
+                request->response().general.trailer.insert("Content-Range");
+                if (transferEncoding.empty())
+                    transferEncoding.push_back("chunked");
+                cr = &request->responseTrailer().contentRange;
+                cr->first = range.front().first;
+                cr->last = range.front().second;
+                MORDOR_ASSERT(cr->first != ~0ull);
+            } else {
+                cr = &request->response().entity.contentRange;
+                cr->instance = size;
+                if (range.front().first == ~0ull) {
+                    if (range.front().second > size)
+                        cr->first = 0;
+                    else
+                        cr->first = size - range.front().second;
+                    cr->last = size - 1;
                 } else {
-                    try {
-                        unsigned long long transferred = transferStream(
-                            response, NullStream::get(), cr.first);
-                        if (transferred != cr.first) {
-                            respondError(request,
-                                REQUESTED_RANGE_NOT_SATISFIABLE);
-                            return;
-                        }
-                    } catch (UnexpectedEofException &) {
+                    cr->first = range.front().first;
+                    cr->last = std::min(range.front().second, size - 1);
+                }
+                request->response().entity.contentLength = cr->last - cr->first + 1;
+            }
+
+            bool isHead = (request->request().requestLine.method == HEAD);
+            
+            // Seek to the correct position            
+            // Skip the seek if it's a HEAD, and we don't need to check for
+            // out-of-range because we already know the size
+            if (!isHead || trailers) {
+                if (response->supportsSeek()) {
+                    response->seek(cr->first, Stream::BEGIN);
+                } else {
+                    // Can't seek, have to do this the old fashioned way
+                    unsigned long long transferred = transferStream(
+                        response, NullStream::get(), cr->first, UNTILEOF);
+                    // Make sure we're not out-of-range
+                    if (transferred != cr->first) {
                         respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
                         return;
                     }
                 }
-                transferStream(response, request->responseStream(),
-                    cr.last - cr.first + 1);
+            }
+            if (isHead) {
+                // On a head, when we don't know the size of the stream, we
+                // just need to verify that the Range isn't beyond the end of
+                // the stream (by reading a single byte)
+                if (trailers) {
+                    char byte;
+                    if (response->read(&byte, 1) == 0) {
+                        respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
+                        return;
+                    }
+                }
+            } else {
+                unsigned long long transferred = 0;
+                // There's an edge case where either the stream is seekable,
+                // but not sizable, or just not sizeable, and so we're pointing
+                // exactly at eof (or beyond), and don't know it; need to read
+                // a byte without committing to see if we can actually satisfy
+                // the request
+                if (trailers) {
+                    char byte;
+                    transferred = response->read(&byte, 1);
+                    if (transferred == 0) {
+                        respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
+                        return;
+                    }
+                    request->responseStream()->write(&byte, 1);
+                }
+                // Actually transfer the requested range
+                transferred += transferStream(response,
+                    request->responseStream(),
+                    cr->last - cr->first + 1 - transferred,
+                    trailers ? UNTILEOF : EXACT);
+                if (trailers) {
+                    // Set how much was actually transferred
+                    cr->last = cr->first + transferred - 1;
+                    // And discard the rest of the stream to get the size
+                    cr->instance = cr->last + transferStream(response,
+                        NullStream::get()) + 1;
+                } else if (transferred != cr->last - cr->first + 1) {
+                    // The stream LIED about its size!
+                    MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+                }
                 request->responseStream()->close();
             }
         }
-    }
-    if (fullEntity) {
+    } else {
+        // User only asked for, or it's only possible to send the full entity
         request->response().entity.contentLength = size;
         if (request->request().requestLine.ver >= Version(1, 1)) {
             AcceptListWithParameters available;
@@ -993,22 +1076,9 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
             const AcceptValueWithParameters *preferredEncoding =
                 preferred(request->request().request.te, available);
             if (preferredEncoding) {
-                ValueWithParameters vp;
-                vp.value = preferredEncoding->value;
-                request->response().general.transferEncoding.push_back(vp);
+                transferEncoding.push_back(preferredEncoding->value);
+                transferEncoding.push_back("chunked");
             }
-
-            if ((size == ~0ull && isAcceptable(request->request().request.te,
-                AcceptValueWithParameters("chunked"), true)) ||
-                !request->response().general.transferEncoding.empty()) {
-                ValueWithParameters vp;
-                vp.value = "chunked";
-                request->response().general.transferEncoding.push_back(vp);
-            } else if (size == ~0ull) {
-                request->response().general.connection.insert("close");
-            }
-        } else if (size == ~0ull) {
-            request->response().general.connection.insert("close");
         }
         if (request->request().requestLine.method != HEAD) {
             transferStream(response, request->responseStream());
