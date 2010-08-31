@@ -590,8 +590,7 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     URI &currentUri = requestHeaders.requestLine.uri;
     URI originalUri = currentUri;
     bool connect = requestHeaders.requestLine.method == CONNECT;
-    MORDOR_ASSERT(connect || originalUri.authority.hostDefined());
-    MORDOR_ASSERT(!connect || !requestHeaders.request.host.empty());
+    MORDOR_ASSERT(originalUri.authority.hostDefined());
     if (!connect) {
         requestHeaders.request.host = originalUri.authority.host();
     } else {
@@ -617,24 +616,15 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     }
     // We use an absolute URI if we're talking to a proxy, or if the path
     // starts with "//" (path_absolute does not allow an empty first segment;
-    // path_abempty as part of absolute_URI does)
-    bool useAbsoluteUri = !connect &&
-        (conn.second || (originalUri.path.isAbsolute() &&
+    // path_abempty as part of absolute_URI does); otherwise use only the path
+    // (and query)
+    if (!connect && !conn.second && !(originalUri.path.isAbsolute() &&
         originalUri.path.segments.size() > 2 &&
-        originalUri.path.segments[1].empty()));
+        originalUri.path.segments[1].empty())) {
+        currentUri.schemeDefined(false);
+        currentUri.authority.hostDefined(false);
+    }
     try {
-        // Fix up our URI for use with/without proxies
-        if (!connect) {
-            if (useAbsoluteUri && !currentUri.authority.hostDefined()) {
-                currentUri.authority = originalUri.authority;
-                if (originalUri.schemeDefined())
-                    currentUri.scheme(originalUri.scheme());
-            } else if (!useAbsoluteUri && currentUri.authority.hostDefined()) {
-                currentUri.schemeDefined(false);
-                currentUri.authority.hostDefined(false);
-            }
-        }
-
         ClientRequest::ptr request;
         try {
             request = conn.first->request(requestHeaders);
