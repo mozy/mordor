@@ -56,6 +56,7 @@ private:
     Version *m_ver;
     URI *m_uri;
     std::vector<std::string> *m_segments;
+    URI::Authority *m_authority;
     GeneralHeaders *m_general;
     EntityHeaders *m_entity;
 };
@@ -75,6 +76,7 @@ private:
     Version *m_ver;
     URI *m_uri;
     std::vector<std::string> *m_segments;
+    URI::Authority *m_authority;
     GeneralHeaders *m_general;
     EntityHeaders *m_entity;
 };

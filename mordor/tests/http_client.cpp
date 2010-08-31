@@ -2510,3 +2510,47 @@ MORDOR_UNITTEST(HTTPClient, failWhileRequestingResponseComplete)
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
 }
+
+static void connectServer(const URI &uri, ServerRequest::ptr request)
+{
+    MORDOR_TEST_ASSERT_EQUAL(request->request().requestLine.method, CONNECT);
+    MORDOR_TEST_ASSERT_EQUAL(request->request().requestLine.uri,
+        "//target:12345");
+    respondError(request, OK);
+}
+
+MORDOR_UNITTEST(HTTPClient, connect)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&connectServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.method = CONNECT;
+    // BaseRequestBroker expects the URI in a special format for a CONNECT
+    requestHeaders.requestLine.uri = "http://proxy/target:12345";
+    requestHeaders.request.host = "target:12345";
+
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+}
+
+static void absoluteUri(const URI &uri, ServerRequest::ptr request)
+{
+    MORDOR_TEST_ASSERT_EQUAL(request->request().requestLine.uri,
+        "http://localhost//");
+    respondError(request, OK);
+}
+
+MORDOR_UNITTEST(HTTPClient, forceAbsoluteUri)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&absoluteUri);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server, &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost//";
+
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+}

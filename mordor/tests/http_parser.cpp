@@ -727,3 +727,19 @@ MORDOR_UNITTEST(HTTP, comments)
     testCommentRoundTrip(")(", "(\\)\\()");
     testCommentRoundTrip("(()))()", "((())\\)())");
 }
+
+MORDOR_UNITTEST(HTTP, CONNECT)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("CONNECT http:80 HTTP/1.0\r\n\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+    MORDOR_TEST_ASSERT_EQUAL(request.requestLine.method, CONNECT);
+    MORDOR_TEST_ASSERT_EQUAL(request.requestLine.uri, "//http:80");
+    MORDOR_TEST_ASSERT_EQUAL(request.requestLine.ver, Version(1, 0));
+
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(request),
+        "CONNECT http:80 HTTP/1.0\r\n\r\n");
+}

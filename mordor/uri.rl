@@ -163,20 +163,20 @@ URI::decode(const std::string &str, CharacterClass charClass)
     action save_port
     {
         if (fpc == mark)
-            m_uri->authority.port(-1);
+            m_authority->port(-1);
         else
-            m_uri->authority.port(atoi(mark));
+            m_authority->port(atoi(mark));
         mark = NULL;
     }
     action save_userinfo
     {
-        m_uri->authority.userinfo(unescape(std::string(mark, fpc - mark)));
+        m_authority->userinfo(unescape(std::string(mark, fpc - mark)));
         mark = NULL;
     }
     action save_host
     {
         if (mark != NULL) {
-            m_uri->authority.host(unescape(std::string(mark, fpc - mark)));
+            m_authority->host(unescape(std::string(mark, fpc - mark)));
             mark = NULL;
         }
     }
@@ -268,6 +268,7 @@ public:
     {
         m_uri = &uri;
         m_segments = &m_uri->path.segments;
+        m_authority = &m_uri->authority;
     }
 
     void init()
@@ -308,6 +309,7 @@ public:
 private:
     URI *m_uri;
     std::vector<std::string> *m_segments;
+    URI::Authority *m_authority;
 };
 
 %%{
@@ -361,6 +363,59 @@ public:
 
 private:
     std::vector<std::string> *m_segments;
+};
+
+%%{
+    machine uri_authority_parser;
+    include uri_parser;
+    main := authority;
+    write data;
+}%%
+class URIAuthorityParser : public RagelParser
+{
+public:
+    URIAuthorityParser(URI::Authority &authority)
+    {
+        m_authority = &authority;
+    }
+
+    void init()
+    {
+        RagelParser::init();
+        %% write init;
+    }
+
+protected:
+    void exec()
+    {
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+        %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
+    }
+
+public:
+    bool complete() const
+    {
+        return false;
+    }
+
+    bool final() const
+    {
+        return cs >= uri_authority_parser_first_final;
+    }
+
+    bool error() const
+    {
+        return cs == uri_authority_parser_error;
+    }
+
+private:
+    URI::Authority *m_authority;
 };
 
 #ifdef MSVC
@@ -436,6 +491,32 @@ URI::Authority::Authority()
     portDefined(false);
 }
 
+URI::Authority::Authority(const char *authority)
+{
+    userinfoDefined(false);
+    hostDefined(false);
+    portDefined(false);
+    *this = authority;
+}
+
+URI::Authority::Authority(const std::string& authority)
+{
+    userinfoDefined(false);
+    hostDefined(false);
+    portDefined(false);
+    *this = authority;
+}
+
+URI::Authority&
+URI::Authority::operator=(const std::string& authority)
+{
+    URIAuthorityParser parser(*this);
+    parser.run(authority);
+    if (parser.error() || !parser.final())
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("authority"));
+    return *this;
+}
+
 void
 URI::Authority::normalize(const std::string& defaultHost, bool emptyHostValid,
     int defaultPort, bool emptyPortValid)
@@ -454,15 +535,6 @@ URI::Authority::normalize(const std::string& defaultHost, bool emptyHostValid,
 
 std::string
 URI::Authority::toString() const
-{
-    std::ostringstream os;
-    os << *this;
-    return os.str();
-}
-
-
-std::string
-URI::Path::toString() const
 {
     std::ostringstream os;
     os << *this;
@@ -651,6 +723,14 @@ URI::Path::serialize(bool schemeless) const
     return result;
 }
 
+std::string
+URI::Path::toString() const
+{
+    std::ostringstream os;
+    os << *this;
+    return os.str();
+}
+
 std::ostream&
 operator<<(std::ostream& os, const URI::Path::path_serializer &p)
 {
@@ -749,8 +829,12 @@ operator<<(std::ostream& os, const URI& uri)
     if (uri.schemeDefined())
         os << escape(uri.scheme(), scheme) << ":";
 
-    if (uri.authority.hostDefined())
+    if (uri.authority.hostDefined()) {
         os << "//" << uri.authority;
+        // authority is always part of hier_part, which only allows
+        // path_abempty
+        MORDOR_ASSERT(uri.path.isAbsolute() || uri.path.isEmpty());
+    }
 
     // Has scheme, but no authority, must ensure that an absolute path
     // doesn't begin with an empty segment (or could be mistaken for authority)

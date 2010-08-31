@@ -57,6 +57,11 @@ struct URI
     struct Authority
     {
         Authority();
+        Authority(const char *path);
+        Authority(const std::string& path);
+
+        Authority& operator=(const std::string& authority);
+        Authority& operator=(const char *authority) { return *this = std::string(authority); }
 
         std::string userinfo() const { MORDOR_ASSERT(m_userinfoDefined); return m_userinfo; }
         void userinfo(const std::string& ui) { m_userinfoDefined = true; m_hostDefined = true; m_userinfo = ui; }

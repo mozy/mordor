@@ -476,6 +476,7 @@ unquote(const std::string &str)
     action set_request_uri {
         m_uri = &m_request->requestLine.uri;
         m_segments = &m_uri->path.segments;
+        m_authority = &m_uri->authority;
     }
 
     action save_accept_list_element {
@@ -606,6 +607,7 @@ unquote(const std::string &str)
     action set_referer {
         m_uri = &m_request->request.referer;
         m_segments = &m_uri->path.segments;
+        m_authority = &m_uri->authority;
     }
 
     action save_accept_attribute {
@@ -669,11 +671,16 @@ unquote(const std::string &str)
     request_header = Accept_Charset | Accept_Encoding | Authorization | Expect | Host | If_Match | If_Modified_Since | If_None_Match | If_Range | If_Unmodified_Since | Proxy_Authorization | Range | Referer | TE | User_Agent;
 
     Method = token >mark %save_Method;
+
     # we explicitly add query to path_absolute, because the URI spec changed from RFC 2396 to RFC 3986
     # with the query not being part of hier_part
-    Request_URI = ( "*" | absolute_URI | (path_absolute ( "?" query )?) | authority);
-    Request_Line = Method SP Request_URI >set_request_uri SP HTTP_Version CRLF;
-    Request = Request_Line (((general_header | request_header | entity_header) %clearmark2 | message_header) CRLF)* CRLF @done;
+    Request_URI = ( "*" | absolute_URI | (path_absolute ( "?" query )?));
+    # HTTP specifies that a Request_URI may be an authority, but only for the
+    # CONNECT method; enforce that, and by so doing remove the ambiguity that
+    # an authority might be a scheme
+    Connect_Line = 'CONNECT' %save_Method SP authority >set_request_uri SP HTTP_Version CRLF;
+    Request_Line = (Method - 'CONNECT') SP Request_URI >set_request_uri SP HTTP_Version CRLF;
+    Request = (Request_Line | Connect_Line) (((general_header | request_header | entity_header) %clearmark2 | message_header) CRLF)* CRLF @done;
 
     main := Request;
     write data;
@@ -722,6 +729,7 @@ RequestParser::RequestParser(Request& request)
 : m_request(&request),
   m_ver(&request.requestLine.ver),
   m_segments(&request.requestLine.uri.path.segments),
+  m_authority(&request.requestLine.uri.authority),
   m_general(&request.general),
   m_entity(&request.entity)
 {}
@@ -826,6 +834,7 @@ ResponseParser::ResponseParser(Response& response)
   m_ver(&response.status.ver),
   m_uri(&response.response.location),
   m_segments(&response.response.location.path.segments),
+  m_authority(&response.response.location.authority),
   m_general(&response.general),
   m_entity(&response.entity)
 {}

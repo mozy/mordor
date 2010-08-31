@@ -638,10 +638,29 @@ std::ostream& operator<<(std::ostream& os, const AcceptListWithParameters &l)
 
 std::ostream& operator<<(std::ostream& os, const RequestLine &r)
 {
-    if (!r.uri.isDefined())
-        return os << r.method << " * " << r.ver;
-    else
-        return os << r.method << " " << r.uri << " " << r.ver;
+    // CONNECT is special cased to only do the authority
+    if (r.method == CONNECT) {
+        MORDOR_ASSERT(r.uri.authority.hostDefined());
+        MORDOR_ASSERT(!r.uri.schemeDefined());
+        MORDOR_ASSERT(r.uri.path.isEmpty());
+        MORDOR_ASSERT(!r.uri.queryDefined());
+        MORDOR_ASSERT(!r.uri.fragmentDefined());
+        return os << r.method << ' ' << r.uri.authority << ' ' << r.ver;
+    } else {
+        if (!r.uri.isDefined()) {
+            return os << r.method << " * " << r.ver;
+        } else {
+            MORDOR_ASSERT(!r.uri.fragmentDefined());
+#ifdef DEBUG
+            // Must be a absolute_URI or a path_absolute (with query allowed)
+            if (!r.uri.schemeDefined()) {
+                MORDOR_ASSERT(!r.uri.authority.hostDefined());
+                MORDOR_ASSERT(r.uri.path.isAbsolute());
+            }
+#endif
+            return os << r.method << " " << r.uri << " " << r.ver;
+        }
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const StatusLine &s)

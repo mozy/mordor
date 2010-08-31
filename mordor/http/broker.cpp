@@ -596,8 +596,9 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         requestHeaders.request.host = originalUri.authority.host();
     } else {
         MORDOR_ASSERT(originalUri.scheme() == "http");
-        MORDOR_ASSERT(originalUri.path.segments.size() == 1);
-        currentUri = originalUri.path.segments[0];
+        MORDOR_ASSERT(originalUri.path.segments.size() == 2);
+        currentUri = URI();
+        currentUri.authority = originalUri.path.segments[1];
     }
     ConnectionBroker::ptr connectionBroker = m_connectionBroker;
     if (!connectionBroker)
@@ -614,14 +615,21 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         currentUri = originalUri;
         throw;
     }
+    // We use an absolute URI if we're talking to a proxy, or if the path
+    // starts with "//" (path_absolute does not allow an empty first segment;
+    // path_abempty as part of absolute_URI does)
+    bool useAbsoluteUri = !connect &&
+        (conn.second || (originalUri.path.isAbsolute() &&
+        originalUri.path.segments.size() > 2 &&
+        originalUri.path.segments[1].empty()));
     try {
         // Fix up our URI for use with/without proxies
         if (!connect) {
-            if (conn.second && !currentUri.authority.hostDefined()) {
+            if (useAbsoluteUri && !currentUri.authority.hostDefined()) {
                 currentUri.authority = originalUri.authority;
                 if (originalUri.schemeDefined())
                     currentUri.scheme(originalUri.scheme());
-            } else if (!conn.second && currentUri.authority.hostDefined()) {
+            } else if (!useAbsoluteUri && currentUri.authority.hostDefined()) {
                 currentUri.schemeDefined(false);
                 currentUri.authority.hostDefined(false);
             }
