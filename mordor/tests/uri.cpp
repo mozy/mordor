@@ -394,6 +394,36 @@ MORDOR_UNITTEST(URI, append)
     MORDOR_TEST_ASSERT_EQUAL(path, "hi");
     path.append("bye");
     MORDOR_TEST_ASSERT_EQUAL(path, "hi/bye");
+
+    // The following four tests ensure that path's hidden pointer back to the
+    // URI owning it is copied/assigned correctly through URI and Path's
+    // copy constructors and assignement operators
+
+    // Force operator=(const URI &uri)
+    URI uri2 = "http://localhost";
+    uri = uri2;
+    uri2.authority.hostDefined(false);
+    uri.path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(uri, "http://localhost/hi");
+
+    // Force URI::URI(const URI &uri)
+    uri2.authority.host("localhost");
+    URI uri3(uri2);
+    uri2.authority.hostDefined(false);
+    uri3.path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(uri3, "http://localhost/hi");
+
+    // Force operator=(const Path &path)
+    path = uri3.path;
+    path.segments.clear();
+    path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(path, "hi");
+
+    // Force Path::Path(const Path &path)
+    URI::Path path2(uri3.path);
+    path2.segments.clear();
+    path2.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(path2, "hi");
 }
 
 MORDOR_UNITTEST(URI, makeAbsolute)

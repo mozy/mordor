@@ -423,31 +423,42 @@ private:
 #pragma warning(disable: 4355)
 #endif
 URI::URI()
-: path(*this)
+    : path(*this)
 {
     reset();
 }
 
 URI::URI(const std::string& uri)
-: path(*this)
+    : path(*this)
 {
     reset();
     *this = uri;
 }
 
 URI::URI(const char *uri)
-: path(*this)
+    : path(*this)
 {
     reset();
     *this = uri;
 }
 
 URI::URI(const Buffer &uri)
-: path(*this)
+    : path(*this)
 {
     reset();
     *this = uri;
 }
+
+URI::URI(const URI &uri)
+    : authority(uri.authority),
+      path(*this, uri.path),
+      m_scheme(uri.m_scheme),
+      m_query(uri.m_query),
+      m_fragment(uri.m_fragment),
+      m_schemeDefined(uri.m_schemeDefined),
+      m_queryDefined(uri.m_queryDefined),
+      m_fragmentDefined(uri.m_fragmentDefined)
+{}
 #ifdef MSVC
 #pragma warning(pop)
 #endif
@@ -590,26 +601,39 @@ operator<<(std::ostream& os, const URI::Authority& authority)
 }
 
 URI::Path::Path(const URI &uri)
- : m_uri(&uri)
-{
-}
+    : m_uri(&uri)
+{}
+
+URI::Path::Path(const URI &uri, const Path &path)
+    : segments(path.segments),
+      m_uri(&uri)
+{}
 
 URI::Path::Path()
- : m_uri(NULL)
+    : m_uri(NULL)
  {}
 
 URI::Path::Path(const char *path)
+    : m_uri(NULL)
 {
     *this = path;
 }
 
-URI::Path::Path(const std::string& path)
+URI::Path::Path(const std::string &path)
+    : m_uri(NULL)
 {
     *this = path;
 }
 
-URI::Path&
-URI::Path::operator=(const std::string& path)
+URI::Path::Path(const Path &path)
+    : segments(path.segments),
+      m_uri(NULL)
+{
+    segments = path.segments;
+}
+
+URI::Path &
+URI::Path::operator=(const std::string &path)
 {
     std::vector<std::string> result;
     URIPathParser parser(result);
@@ -617,6 +641,14 @@ URI::Path::operator=(const std::string& path)
     if (parser.error() || !parser.final())
         MORDOR_THROW_EXCEPTION(std::invalid_argument("path"));
     segments.swap(result);
+    return *this;
+}
+
+URI::Path &
+URI::Path::operator=(const Path &path)
+{
+    segments = path.segments;
+    // Do not copy m_uri
     return *this;
 }
 

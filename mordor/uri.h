@@ -42,6 +42,7 @@ struct URI
     URI(const std::string& uri);
     URI(const char *uri);
     URI(const Buffer &uri);
+    URI(const URI &uri);
 
     URI& operator=(const std::string& uri);
     URI& operator=(const char *uri) { return *this = std::string(uri); }
@@ -104,13 +105,16 @@ struct URI
         friend struct URI;
     private:
         Path(const URI &uri);
+        Path(const URI &uri, const Path &path);
     public:
         Path();
         Path(const char *path);
         Path(const std::string& path);
+        Path(const Path &path);
 
-        Path& operator=(const std::string& path);
-        Path& operator=(const char *path) { return *this = std::string(path); }
+        Path &operator=(const std::string &path);
+        Path &operator=(const char *path) { return *this = std::string(path); }
+        Path &operator=(const Path &path);
 
         bool isEmpty() const
         {
