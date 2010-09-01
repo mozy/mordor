@@ -32,7 +32,8 @@ static void writeOne(Stream &dst, Buffer *&buffer)
 }
 
 unsigned long long transferStream(Stream &src, Stream &dst,
-                                  unsigned long long toTransfer)
+                                  unsigned long long toTransfer,
+                                  ExactLength exactLength)
 {
     MORDOR_LOG_DEBUG(g_log) << "transferring " << toTransfer << " bytes from "
         << &src << " to " << &dst;
@@ -46,6 +47,9 @@ unsigned long long transferStream(Stream &src, Stream &dst,
     unsigned long long totalRead = 0;
     if (toTransfer == 0)
         return 0;
+    if (exactLength == INFER)
+        exactLength = (toTransfer == ~0ull ? UNTILEOF : EXACT);
+    MORDOR_ASSERT(exactLength == EXACT || exactLength == UNTILEOF);
 
     readBuffer = &buf1;
     todo = chunkSize;
@@ -53,7 +57,7 @@ unsigned long long transferStream(Stream &src, Stream &dst,
         todo = (size_t)(toTransfer - totalRead);
     readOne(src, readBuffer, todo, readResult);
     totalRead += readResult;
-    if (readResult == 0 && toTransfer != ~0ull)
+    if (readResult == 0 && exactLength == EXACT)
         MORDOR_THROW_EXCEPTION(UnexpectedEofException());
     if (readResult == 0)
         return totalRead;
@@ -69,7 +73,7 @@ unsigned long long transferStream(Stream &src, Stream &dst,
                 return totalRead;
             readOne(src, readBuffer, todo, readResult);
             totalRead += readResult;
-            if (readResult == 0 && toTransfer != ~0ull)
+            if (readResult == 0 && exactLength == EXACT)
                 MORDOR_THROW_EXCEPTION(UnexpectedEofException());
             if (readResult == 0)
                 return totalRead;
@@ -96,7 +100,7 @@ unsigned long long transferStream(Stream &src, Stream &dst,
             todo = (size_t)(toTransfer - totalRead);
         parallel_do(dgs, fibers);
         totalRead += readResult;
-        if (readResult == 0 && toTransfer != ~0ull && totalRead < toTransfer) {
+        if (readResult == 0 && exactLength == EXACT && totalRead < toTransfer) {
             MORDOR_LOG_ERROR(g_log) << "only read " << totalRead << "/"
                 << toTransfer << " from " << &src;
             MORDOR_THROW_EXCEPTION(UnexpectedEofException());
