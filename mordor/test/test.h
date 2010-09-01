@@ -196,6 +196,16 @@ MORDOR_NO_SERIALIZE_BARE(std::vector<T>)
         }                                                                       \
     }
 
+/// Asserts on destruction if it was alive for longer than us microseconds
+struct TimeConstraint
+{
+    TimeConstraint(unsigned long long us);
+    ~TimeConstraint();
+
+private:
+    unsigned long long m_us, m_start;
+};
+
 // Assertion internal functions
 void assertion(const char *file, int line, const char *function,
                const std::string &expr);

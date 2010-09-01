@@ -10,6 +10,7 @@
 
 #include "mordor/config.h"
 #include "mordor/sleep.h"
+#include "mordor/timer.h"
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -49,6 +50,16 @@ registerSuiteInvariant(const std::string &suite, TestDg invariant)
 {
     MORDOR_ASSERT(allTests()[suite].first == NULL);
     allTests()[suite].first = invariant;
+}
+
+TimeConstraint::TimeConstraint(unsigned long long us)
+    : m_us(us),
+      m_start(TimerManager::now())
+{}
+
+TimeConstraint::~TimeConstraint()
+{
+    MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(TimerManager::now() - m_start, m_us);
 }
 
 void
