@@ -40,7 +40,11 @@
 #endif
 
 #ifdef UCONTEXT_FIBERS
-#include <ucontext.h>
+#   ifdef __APPLE__
+#       include <sys/ucontext.h>
+#   else
+#       include <ucontext.h>
+#   endif
 #endif
 #ifdef SETJMP_FIBERS
 #include <setjmp.h>
