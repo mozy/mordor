@@ -102,7 +102,20 @@ public:
     void shutdown(int how = SHUT_RDWR);
 
     void getOption(int level, int option, void *result, size_t *len);
+    template <class T>
+    T getOption(int level, int option)
+    {
+        T result;
+        size_t length = sizeof(T);
+        getOption(level, option, &result, &length);
+        return result;
+    }
     void setOption(int level, int option, const void *value, size_t len);
+    template <class T>
+    void setOption(int level, int option, const T &value)
+    {
+        setOption(level, option, &value, sizeof(T));
+    }
 
     void cancelAccept();
     void cancelConnect();

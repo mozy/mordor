@@ -329,13 +329,13 @@ Socket::bind(const Address &addr)
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "bind");
     }
     MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock << ", " << addr << ")";
+    localAddress();
 }
 
 void
 Socket::bind(Address::ptr addr)
 {
     bind(*addr);
-    m_localAddress = addr;
 }
 
 void
@@ -407,42 +407,44 @@ Socket::connect(const Address &to)
     } else {
 #ifdef WINDOWS
         if (ConnectEx) {
-            // need to be bound, even to ADDR_ANY, before calling ConnectEx
-            switch (m_family) {
-                case AF_INET:
-                    {
-                        sockaddr_in addr;
-                        addr.sin_family = AF_INET;
-                        addr.sin_port = 0;
-                        addr.sin_addr.s_addr = ADDR_ANY;
-                        if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
-                            MORDOR_LOG_ERROR(g_log) << this << " bind(" << m_sock
-                                << ", 0.0.0.0:0): (" << lastError() << ")";
-                            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("bind");
+            if (!m_localAddress) {
+                // need to be bound, even to ADDR_ANY, before calling ConnectEx
+                switch (m_family) {
+                    case AF_INET:
+                        {
+                            sockaddr_in addr;
+                            addr.sin_family = AF_INET;
+                            addr.sin_port = 0;
+                            addr.sin_addr.s_addr = ADDR_ANY;
+                            if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in))) {
+                                MORDOR_LOG_ERROR(g_log) << this << " bind(" << m_sock
+                                    << ", 0.0.0.0:0): (" << lastError() << ")";
+                                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("bind");
+                            }
+                            MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock
+                                << ", 0.0.0.0:0)";
+                            break;
                         }
-                        MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock
-                            << ", 0.0.0.0:0)";
-                        break;
-                    }
-                case AF_INET6:
-                    {
-                        sockaddr_in6 addr;
-                        memset(&addr, 0, sizeof(sockaddr_in6));
-                        addr.sin6_family = AF_INET6;
-                        addr.sin6_port = 0;
-                        in6_addr anyaddr = IN6ADDR_ANY_INIT;
-                        addr.sin6_addr = anyaddr;
-                        if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in6))) {
-                            MORDOR_LOG_ERROR(g_log) << this << " bind(" << m_sock
-                                << ", [::]:0): (" << lastError() << ")";
-                            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("bind");
+                    case AF_INET6:
+                        {
+                            sockaddr_in6 addr;
+                            memset(&addr, 0, sizeof(sockaddr_in6));
+                            addr.sin6_family = AF_INET6;
+                            addr.sin6_port = 0;
+                            in6_addr anyaddr = IN6ADDR_ANY_INIT;
+                            addr.sin6_addr = anyaddr;
+                            if(::bind(m_sock, (sockaddr*)&addr, sizeof(sockaddr_in6))) {
+                                MORDOR_LOG_ERROR(g_log) << this << " bind(" << m_sock
+                                    << ", [::]:0): (" << lastError() << ")";
+                                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("bind");
+                            }
+                            MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock
+                                << ", [::]:0)";
+                            break;
                         }
-                        MORDOR_LOG_DEBUG(g_log) << this << " bind(" << m_sock
-                            << ", [::]:0)";
-                        break;
-                    }
-                default:
-                    MORDOR_NOTREACHED();
+                    default:
+                        MORDOR_NOTREACHED();
+                }
             }
 
             m_ioManager->registerEvent(&m_sendEvent);
