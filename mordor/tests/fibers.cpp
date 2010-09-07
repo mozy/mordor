@@ -8,7 +8,10 @@
 using namespace Mordor;
 using namespace Mordor::Test;
 
-struct DummyException : public boost::exception, public std::exception {};
+struct DummyException : public boost::exception, public std::exception
+{
+    ~DummyException() throw() {}
+};
 
 static void
 fiberProc1(Fiber::ptr mainFiber, Fiber::weak_ptr weakself, int &sequence)
@@ -563,6 +566,7 @@ struct ExceptionDestructsBeforeFiberDestructsException : virtual Exception
         int &sequence)
         : m_lastObject(new LastObject(mainFiber, sequence))
     {}
+    ~ExceptionDestructsBeforeFiberDestructsException() throw() {}
 
 private:
     boost::shared_ptr<LastObject> m_lastObject;
