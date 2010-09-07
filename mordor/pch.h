@@ -101,7 +101,6 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
-#ifndef __clang__
 #include <boost/blank.hpp>
 #include <boost/date_time.hpp>
 #include <boost/exception/all.hpp>
@@ -116,7 +115,6 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/tss.hpp>
 #include <boost/variant.hpp>
-#endif
 
 // Non-CRT C headers
 #include <openssl/aes.h>

@@ -118,6 +118,8 @@ public:
         : m_status(status), m_uri(uri)
     {}
 
+    ~Redirect() throw() {}
+
     Status status() const { return m_status; }
     const URI &uri() const { return m_uri; }
 
