@@ -132,7 +132,8 @@ ifdef GPROF
 endif
 
 # add current dir to include dir
-INC_FLAGS := -I$(SRCDIR) -include mordor/pch.h
+INC_FLAGS := -I$(SRCDIR)
+PCH_FLAGS := -include mordor/pch.h
 
 ifeq ($(PLATFORM), Darwin)
     INC_FLAGS := $(INC_FLAGS) -I/opt/local/include
@@ -194,7 +195,7 @@ ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(PCH_FLAGS) -c -o $@ $<
 
 %.o: %.c
 ifeq ($(Q),@)
@@ -331,6 +332,7 @@ EXAMPLEOBJECTS :=							\
 	mordor/examples/cat.o						\
 	mordor/examples/echoserver.o					\
 	mordor/examples/iombench.o					\
+	mordor/examples/netbench.o					\
 	mordor/examples/simpleclient.o					\
 	mordor/examples/tunnel.o					\
 	mordor/examples/udpstats.o					\

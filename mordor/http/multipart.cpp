@@ -132,9 +132,9 @@ public:
 
     size_t read(Buffer &b, size_t len)
     {
-        size_t boundary = parent()->find(m_boundary, len, false);
+        ptrdiff_t boundary = parent()->find(m_boundary, len, false);
         if (boundary >= 0)
-            len = std::min(boundary, len);
+            len = std::min((size_t)boundary, len);
         return parent()->read(b, len);
     }
 

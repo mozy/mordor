@@ -522,7 +522,7 @@ Buffer::writeBuffer(size_t length, bool coalesce)
         return result;
     }
     // Can use an existing write segment
-    if (writeAvailable() >= 0 && m_writeIt->writeAvailable() >= length) {
+    if (writeAvailable() > 0 && m_writeIt->writeAvailable() >= length) {
         SegmentData data = m_writeIt->writeBuffer().slice(0, length);
         result.iov_base = data.start();
         result.iov_len = iovLength(data.length());
