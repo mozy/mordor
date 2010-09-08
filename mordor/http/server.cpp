@@ -873,6 +873,11 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
     // If we're using trailers, it only works for a single range
     if (trailers && range.size() > 1)
         fullEntity = true;
+    const ETag *ifRange =
+        boost::get<ETag>(&request->request().request.ifRange);
+    if (!fullEntity && ifRange && !ifRange->unspecified &&
+        !ifRange->strongCompare(request->response().response.eTag))
+        fullEntity = true;
     // TODO: sort and merge overlapping ranges
     unsigned long long previousLast = 0;
     for (RangeSet::const_iterator it(range.begin());

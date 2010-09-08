@@ -344,6 +344,7 @@ private:
 static void streamServer(const URI &uri, ServerRequest::ptr request)
 {
     Stream::ptr memoryStream(new MemoryStream(Buffer("hello world!")));
+    request->response().response.eTag = ETag("hello");
     if (request->request().requestLine.uri == "/unseekable")
         memoryStream.reset(new UnseekableStream(memoryStream, false, true));
     if (request->request().requestLine.uri == "/unsizeable")
@@ -603,4 +604,34 @@ MORDOR_UNITTEST(HTTPServer, exceptionAfterCommit)
     MORDOR_TEST_ASSERT_EQUAL((const char *)buffer, "hello");
     MORDOR_TEST_ASSERT_EXCEPTION(responseStream->read(buffer, 10),
         BrokenPipeException);
+}
+
+MORDOR_UNITTEST(HTTPServer, respondStreamIfRange)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&streamServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server,
+        &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+
+    // Should respect the Range
+    requestHeaders.request.range.push_back(std::make_pair(0ull, 0ull));
+    requestHeaders.request.ifRange = ETag("hello");
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, PARTIAL_CONTENT);
+    request->finish();
+
+    // Should be a strong comparison
+    requestHeaders.request.ifRange = ETag("hello", true);
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    request->finish();
+
+    // Should return the entire entity
+    requestHeaders.request.ifRange = ETag("world");
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    request->finish();
 }

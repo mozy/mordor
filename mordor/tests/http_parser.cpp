@@ -743,3 +743,33 @@ MORDOR_UNITTEST(HTTP, CONNECT)
     MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(request),
         "CONNECT http:80 HTTP/1.0\r\n\r\n");
 }
+
+MORDOR_UNITTEST(HTTP, ETagComparison)
+{
+    // Strong comparisons
+    MORDOR_TEST_ASSERT(ETag("abc").strongCompare(ETag("abc")));
+    MORDOR_TEST_ASSERT(!ETag("abc").strongCompare(ETag("abc", true)));
+    MORDOR_TEST_ASSERT(!ETag("abc", true).strongCompare(ETag("abc", true)));
+    MORDOR_TEST_ASSERT(ETag().strongCompare(ETag()));
+    MORDOR_TEST_ASSERT(!ETag("abc").strongCompare(ETag("xyz")));
+    MORDOR_TEST_ASSERT(!ETag("abc").strongCompare(ETag("xyz", true)));
+    MORDOR_TEST_ASSERT(!ETag("abc", true).strongCompare(ETag("xyz", true)));
+
+    // Weak comparisons
+    MORDOR_TEST_ASSERT(ETag("abc").weakCompare(ETag("abc")));
+    MORDOR_TEST_ASSERT(ETag("abc").weakCompare(ETag("abc", true)));
+    MORDOR_TEST_ASSERT(ETag("abc", true).weakCompare(ETag("abc", true)));
+    MORDOR_TEST_ASSERT(ETag().weakCompare(ETag()));
+    MORDOR_TEST_ASSERT(!ETag("abc").weakCompare(ETag("xyz")));
+    MORDOR_TEST_ASSERT(!ETag("abc").weakCompare(ETag("xyz", true)));
+    MORDOR_TEST_ASSERT(!ETag("abc", true).weakCompare(ETag("xyz", true)));
+
+    // Exact comparisons
+    MORDOR_TEST_ASSERT_EQUAL(ETag("abc"), ETag("abc"));
+    MORDOR_TEST_ASSERT_NOT_EQUAL(ETag("abc"), ETag("abc", true));
+    MORDOR_TEST_ASSERT_EQUAL(ETag("abc", true), ETag("abc", true));
+    MORDOR_TEST_ASSERT_EQUAL(ETag(), ETag());
+    MORDOR_TEST_ASSERT_NOT_EQUAL(ETag("abc"), ETag("xyz"));
+    MORDOR_TEST_ASSERT_NOT_EQUAL(ETag("abc"), ETag("xyz", true));
+    MORDOR_TEST_ASSERT_NOT_EQUAL(ETag("abc", true), ETag("xyz", true));
+}

@@ -252,7 +252,7 @@ unquote(const std::string &str)
         m_eTagSet->insert(m_tempETag);
     }
 
-    weak = "W/" %save_weak;
+    weak = "W" "/" >save_weak;
     opaque_tag = quoted_string >mark %save_etag;
     entity_tag = ((weak)? opaque_tag) >start_etag;
 
@@ -568,9 +568,15 @@ unquote(const std::string &str)
         m_eTagSet = &m_request->request.ifNoneMatch;
     }
 
+    action clear_if_range_entity_tag {
+        m_eTag = NULL;
+    }
+
     action set_if_range_entity_tag {
-        m_request->request.ifRange = ETag();
-        m_eTag = boost::get<ETag>(&m_request->request.ifRange);
+        if (!m_eTag) {
+            m_request->request.ifRange = ETag();
+            m_eTag = boost::get<ETag>(&m_request->request.ifRange);
+        }
     }
 
     action set_if_range_http_date {
@@ -647,7 +653,11 @@ unquote(const std::string &str)
     If_Match = 'If-Match:'i @set_if_match etag_list;
     If_Modified_Since = 'If-Modified-Since:'i @set_if_modified_since LWS* HTTP_date LWS*;
     If_None_Match = 'If-None-Match:'i @set_if_none_match etag_list;
-    If_Range = 'If-Range:'i LWS* (entity_tag >set_if_range_entity_tag | HTTP_date >set_if_range_http_date)  LWS*;
+
+    weak_for_if_range = "W" "/" >set_if_range_entity_tag >save_weak;
+    entity_tag_for_if_range = ((weak_for_if_range)? opaque_tag >set_if_range_entity_tag) >clear_if_range_entity_tag;
+
+    If_Range = 'If-Range:'i LWS* (entity_tag_for_if_range | HTTP_date >set_if_range_http_date) LWS*;
     If_Unmodified_Since = 'If-Unmodified-Since:'i @set_if_unmodified_since LWS* HTTP_date LWS*;
 
     Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization credentials;

@@ -194,6 +194,26 @@ struct ETag
         return value < rhs.value;
     }
 
+    /// Compare two Entity Tags according to the weak comparison function
+    ///
+    /// @return if *this and rhs have the same value, ignoring weakness
+    bool weakCompare(const ETag &rhs) const
+    {
+        return unspecified == rhs.unspecified && value == rhs.value;
+    }
+
+    /// Compare two Entity Tags according to the strong comparison function
+    ///
+    /// @return if *this and rhs are both strong, and have the same value
+    bool strongCompare(const ETag &rhs) const
+    {
+        return !weak && !rhs.weak && unspecified == rhs.unspecified &&
+            value == rhs.value;
+    }
+
+    /// Compare two Entity Tags for exact equality
+    ///
+    /// @return if *this and rhs are identical (weakness and value)
     bool operator== (const ETag &rhs) const
     {
         return weak == rhs.weak && unspecified == rhs.unspecified &&
