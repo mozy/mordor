@@ -369,6 +369,7 @@
 			);
 			name = Source;
 			sourceTree = "<group>";
+			usesTabs = 0;
 		};
 		3CAB26D4112B096700607AEE /* mordor */ = {
 			isa = PBXGroup;
