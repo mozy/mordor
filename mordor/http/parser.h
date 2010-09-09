@@ -31,7 +31,7 @@ protected:
     unsigned long long *m_ulong;
     ETag *m_eTag;
     Product m_product;
-    ETagSet *m_eTagSet;
+    std::set<ETag> *m_eTagSet;
     ProductAndCommentList *m_productAndCommentList;
     boost::posix_time::ptime *m_date;
 

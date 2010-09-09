@@ -154,7 +154,7 @@ MORDOR_UNITTEST(HTTP, ifMatchHeader)
 {
     Request request;
     RequestParser parser(request);
-    ETagSet::iterator it;
+    std::set<ETag>::iterator it;
     std::ostringstream os;
 
     parser.run("GET / HTTP/1.0\r\n"

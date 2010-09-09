@@ -227,8 +227,6 @@ struct ETag
     }
 };
 
-typedef std::set<ETag> ETagSet;
-
 struct Product
 {
     Product() {}
@@ -392,9 +390,9 @@ struct RequestHeaders
     AuthParams authorization;
     ParameterizedKeyValueList expect;
     std::string host;
-    ETagSet ifMatch;
+    std::set<ETag> ifMatch;
     boost::posix_time::ptime ifModifiedSince;
-    ETagSet ifNoneMatch;
+    std::set<ETag> ifNoneMatch;
     boost::variant<ETag, boost::posix_time::ptime> ifRange;
     boost::posix_time::ptime ifUnmodifiedSince;
     AuthParams proxyAuthorization;
@@ -458,7 +456,7 @@ const AcceptValueWithParameters *preferred(const AcceptListWithParameters &accep
 std::ostream& operator<<(std::ostream& os, Status s);
 std::ostream& operator<<(std::ostream& os, Version v);
 std::ostream& operator<<(std::ostream& os, const ETag &e);
-std::ostream& operator<<(std::ostream& os, const ETagSet &v);
+std::ostream& operator<<(std::ostream& os, const std::set<ETag> &v);
 std::ostream& operator<<(std::ostream& os, const Product &p);
 std::ostream& operator<<(std::ostream& os, const ProductList &l);
 std::ostream& operator<<(std::ostream& os, const ProductAndCommentList &l);

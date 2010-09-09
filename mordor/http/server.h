@@ -163,9 +163,31 @@ private:
 };
 
 // Helper functions
+/// Respond with a status code
+///
+/// This will clear Transfer-Encoding, Content-Length, Content-Type,
+/// and optionally ETag headers.
+/// @param message The message to be used as the body of the response
+///                (Content-Type will be set to text/plain)
 void respondError(ServerRequest::ptr request, Status status,
-    const std::string &message = "", bool closeConnection = false);
-void respondStream(ServerRequest::ptr request, boost::shared_ptr<Stream> response);
+    const std::string &message = std::string(), bool closeConnection = false,
+    bool clearETag = true);
+
+/// Respond with a Stream
+///
+/// This function will process Range, If-Range, and TE headers to stream
+/// response in the most efficient way, applying transfer encodings if
+/// necessary or possible
+void respondStream(ServerRequest::ptr request,
+    boost::shared_ptr<Stream> response);
+
+/// Procesess If-Match, If-None-Match headers
+///
+/// @param request The request
+/// @param eTag The ETag of the entity currently
+/// @return If the request should continue; otherwise the error has already
+///         been processed, and the request is complete
+bool ifMatch(ServerRequest::ptr request, const ETag &eTag);
 
 }}
 

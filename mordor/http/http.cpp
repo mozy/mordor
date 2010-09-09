@@ -413,10 +413,10 @@ std::ostream& operator<<(std::ostream& os, const ETag &e)
     return os << quote(e.value, true);
 }
 
-std::ostream& operator<<(std::ostream& os, const ETagSet &v)
+std::ostream& operator<<(std::ostream& os, const std::set<ETag> &v)
 {
     MORDOR_ASSERT(!v.empty());
-    for (ETagSet::const_iterator it = v.begin();
+    for (std::set<ETag>::const_iterator it = v.begin();
         it != v.end();
         ++it) {
         if (it != v.begin())

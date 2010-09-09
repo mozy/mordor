@@ -826,7 +826,8 @@ ServerRequest::responseDone()
 
 
 void
-respondError(ServerRequest::ptr request, Status status, const std::string &message, bool closeConnection)
+respondError(ServerRequest::ptr request, Status status,
+    const std::string &message, bool closeConnection, bool clearETag)
 {
     MORDOR_ASSERT(!request->committed());
     request->response().status.status = status;
@@ -836,6 +837,8 @@ respondError(ServerRequest::ptr request, Status status, const std::string &messa
     request->response().general.trailer.clear();
     request->response().entity.contentLength = message.size();
     request->response().entity.contentType.type.clear();
+    if (clearETag)
+        request->response().response.eTag = ETag();
     if (!message.empty()) {
         request->response().entity.contentType.type = "text";
         request->response().entity.contentType.subtype = "plain";
@@ -878,6 +881,16 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
     if (!fullEntity && ifRange && !ifRange->unspecified &&
         !ifRange->strongCompare(request->response().response.eTag))
         fullEntity = true;
+    // Timestamps with If-Range is not supported (at this level we can't know
+    // if it was possible for the entity to have changed multiple times in a
+    // single second; see
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.3.3)
+    const boost::posix_time::ptime *httpDate =
+        boost::get<boost::posix_time::ptime>(
+            &request->request().request.ifRange);
+    if (httpDate && !httpDate->is_not_a_date_time())
+        fullEntity = true;
+
     // TODO: sort and merge overlapping ranges
     unsigned long long previousLast = 0;
     for (RangeSet::const_iterator it(range.begin());
@@ -1092,6 +1105,70 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
     }
     if (request->request().requestLine.method == HEAD)
         request->finish();
+}
+
+bool ifMatch(ServerRequest::ptr request, const ETag &eTag)
+{
+    const std::set<ETag> &ifMatch = request->request().request.ifMatch;
+
+    // Special case *; if it's there, and there's no ETag, fail
+    if (ifMatch.size() == 1 && ifMatch.begin()->unspecified) {
+        if (eTag.unspecified) {
+            respondError(request, PRECONDITION_FAILED);
+            return false;
+        }
+    } else if (!ifMatch.empty()) {
+        bool matched = false;
+        for (std::set<ETag>::const_iterator it(ifMatch.begin());
+            it != ifMatch.end();
+            ++it) {
+            if (it->strongCompare(eTag)) {
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            respondError(request, PRECONDITION_FAILED);
+            return false;
+        }
+    }
+
+    const std::string &method = request->request().requestLine.method;
+    bool getOrHead = (method == GET || method == HEAD);
+    const std::set<ETag> &ifNoneMatch = request->request().request.ifNoneMatch;
+    // Special case *; if it's there, and there is an entity, fail
+    if (ifNoneMatch.size() == 1 && ifNoneMatch.begin()->unspecified) {
+        if (!eTag.unspecified) {
+            if (getOrHead)
+                request->response().response.eTag = eTag;
+            respondError(request, getOrHead ? NOT_MODIFIED : PRECONDITION_FAILED,
+                std::string(), false, !getOrHead);
+            return false;
+        }
+    } else {
+        bool matched = false;
+        for (std::set<ETag>::const_iterator it(ifNoneMatch.begin());
+            it != ifNoneMatch.end();
+            ++it) {
+            if (getOrHead && it->weakCompare(eTag)) {
+                matched = true;
+                break;
+            } else if (!getOrHead && it->strongCompare(eTag)) {
+                matched = true;
+                break;
+            }
+        }
+        if (matched) {
+            if (getOrHead)
+                request->response().response.eTag = eTag;
+            respondError(request,
+                getOrHead ? NOT_MODIFIED : PRECONDITION_FAILED, std::string(),
+                false, !getOrHead);
+            return false;
+        }
+    }
+
+    return true;
 }
 
 }}

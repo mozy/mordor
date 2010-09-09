@@ -635,3 +635,111 @@ MORDOR_UNITTEST(HTTPServer, respondStreamIfRange)
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
     request->finish();
 }
+
+static void ifMatchServer(const URI &uri, ServerRequest::ptr request)
+{
+    if (request->request().requestLine.uri != "/new")
+        request->response().response.eTag = ETag("hello");
+    if (!ifMatch(request, request->response().response.eTag))
+        return;
+    respondError(request, OK);
+}
+
+MORDOR_UNITTEST(HTTPServer, ifMatch)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&ifMatchServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server,
+        &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+    requestHeaders.requestLine.method = PUT;
+
+    // PUT / If-Match: "world"
+    requestHeaders.request.ifMatch.insert(ETag("world"));
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        PRECONDITION_FAILED);
+
+    // PUT / If-Match: "hello", "world"
+    requestHeaders.request.ifMatch.insert(ETag("hello"));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+
+    // PUT / If-Match: *
+    requestHeaders.request.ifMatch.clear();
+    requestHeaders.request.ifMatch.insert(ETag());
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+
+    // PUT /new If-Match: *
+    requestHeaders.requestLine.uri.path.append("new");
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        PRECONDITION_FAILED);
+
+    // PUT /new If-Match: "world"
+    requestHeaders.request.ifMatch.clear();
+    requestHeaders.request.ifMatch.insert(ETag("world"));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        PRECONDITION_FAILED);
+
+    // PUT / If-None-Match: "world"
+    requestHeaders.requestLine.uri = "http://localhost/";
+    requestHeaders.request.ifMatch.clear();
+    requestHeaders.request.ifNoneMatch.insert(ETag("world"));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        OK);
+
+    // PUT / If-None-Match: "hello", "world"
+    requestHeaders.request.ifNoneMatch.insert(ETag("hello"));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        PRECONDITION_FAILED);
+
+    // PUT / If-None-Match: *
+    requestHeaders.request.ifNoneMatch.clear();
+    requestHeaders.request.ifNoneMatch.insert(ETag());
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        PRECONDITION_FAILED);
+
+    // PUT /new If-None-Match: *
+    requestHeaders.requestLine.uri.path.append("new");
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        OK);
+
+    // PUT /new If-None-Match: "hello"
+    requestHeaders.request.ifNoneMatch.clear();
+    requestHeaders.request.ifNoneMatch.insert(ETag("hello"));
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        OK);
+
+    requestHeaders.requestLine.method = GET;
+    // GET / If-None-Match: "world"
+    requestHeaders.requestLine.uri = "http://localhost/";
+    requestHeaders.request.ifNoneMatch.clear();
+    requestHeaders.request.ifNoneMatch.insert(ETag("world"));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        OK);
+
+    // GET / If-None-Match: "hello", "world"
+    requestHeaders.request.ifNoneMatch.insert(ETag("hello"));
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        NOT_MODIFIED);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.eTag, ETag("hello"));
+
+    // GET / If-None-Match: *
+    requestHeaders.request.ifNoneMatch.clear();
+    requestHeaders.request.ifNoneMatch.insert(ETag());
+    request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status,
+        NOT_MODIFIED);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().response.eTag, ETag("hello"));
+}
