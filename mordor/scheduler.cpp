@@ -54,7 +54,13 @@ Scheduler::start()
 {
     MORDOR_LOG_VERBOSE(g_log) << this << " starting " << m_threadCount << " threads";
     boost::mutex::scoped_lock lock(m_mutex);
-    MORDOR_ASSERT(m_stopping);
+    if (!m_stopping)
+        return;
+    // TODO: There may be a race condition here if one thread calls stop(),
+    // and another thread calls start() before the worker threads for this
+    // scheduler actually exit; they may resurrect themselves, and the stopping
+    // thread would block waiting for the thread to exit
+
     m_stopping = false;
     MORDOR_ASSERT(m_threads.empty());
     m_threads.resize(m_threadCount);

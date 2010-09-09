@@ -59,8 +59,9 @@ public:
 
     /// Explicitly stop the scheduler
 
-    /// This must be called for hybrid and spawned Schedulers.  It can be
-    /// called multiple times.
+    /// This must be called for hybrid and spawned Schedulers.  It is safe to
+    /// call stop() even if the Scheduler is already stopped (or stopping) -
+    /// it will be a no-op
     /// For hybrid or hijacking schedulers, it must be called from within
     /// the scheduler.  For spawned Schedulers, it must be called from outside
     /// the Scheduler.

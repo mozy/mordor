@@ -44,6 +44,28 @@ MORDOR_UNITTEST(Scheduler, idempotentStopSpawn)
     pool.stop();
 }
 
+// Start can be called multiple times without consequence
+MORDOR_UNITTEST(Scheduler, idempotentStartHijack)
+{
+    WorkerPool pool;
+    pool.start();
+    pool.start();
+}
+
+MORDOR_UNITTEST(Scheduler, idempotentStartHybrid)
+{
+    WorkerPool pool(2);
+    pool.start();
+    pool.start();
+}
+
+MORDOR_UNITTEST(Scheduler, idempotentStartSpawn)
+{
+    WorkerPool pool(1, false);
+    pool.start();
+    pool.start();
+}
+
 // When hijacking the calling thread, you can stop() from anywhere within
 // it
 MORDOR_UNITTEST(Scheduler, stopScheduledHijack)
