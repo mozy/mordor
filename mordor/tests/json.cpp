@@ -266,3 +266,13 @@ MORDOR_UNITTEST(JSON, unicodeEscape)
     MORDOR_ASSERT(!parser.error());
     MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(root), "\xe2\x80\xa8(2).docx");
 }
+
+MORDOR_UNITTEST(JSON, forwardSlashEscape)
+{
+    Value root;
+    Parser parser(root);
+    parser.run("\"\\/\"");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(root), "/");
+}

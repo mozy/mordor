@@ -109,7 +109,7 @@ std::string unquote(const std::string &string)
     ws = ' ' | '\t' | '\r' | '\n';
 
     unescaped = (any - ('"' | '\\') - cntrl);
-    char = unescaped | ('\\' ('"' | '\\' | 'b' | 'f' | 'n' | 'r' | 't' | ('u' [0-9A-Za-z]{4})));
+    char = unescaped | ('\\' ('"' | '\\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' | ('u' [0-9A-Za-z]{4})));
     string = '"' char* '"';
 
     action begin_number
