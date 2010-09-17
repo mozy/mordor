@@ -276,3 +276,23 @@ MORDOR_UNITTEST(JSON, forwardSlashEscape)
     MORDOR_ASSERT(!parser.error());
     MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(root), "/");
 }
+
+MORDOR_UNITTEST(JSON, emptyStuff)
+{
+    Value root;
+    Parser parser(root);
+    parser.run("{}");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(boost::get<Object>(root).empty());
+
+    parser.run("[]");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(boost::get<Array>(root).empty());
+
+    parser.run("\"\"");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(boost::get<std::string>(root).empty());
+}

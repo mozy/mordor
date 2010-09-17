@@ -164,10 +164,11 @@ std::string unquote(const std::string &string)
         '[' @call_parse_array | 'true' @parse_true | 'false' @parse_false |
         'null' @parse_null;
 
-    object = '{' ws* string ws* ':' ws* value ws* (',' ws* string ws* ':' ws* value ws*)* '}';
-    array = '[' ws* value ws* (',' ws* value ws*)* ']';
+    object = '{' ws* (string ws* ':' ws* value ws* (',' ws* string ws* ':' ws* value ws*)*)? '}';
+    array = '[' ws* (value ws* (',' ws* value ws*)*)? ']';
 
     action new_key
+
     {
         m_stack.push(&boost::get<Object>(*m_stack.top()).insert(std::make_pair(unquote(std::string(mark, fpc - mark)), Value()))->second);
     }
@@ -184,8 +185,8 @@ std::string unquote(const std::string &string)
         fret;
     }
 
-    parse_object := parse_object_lbl: ws* string >mark %new_key ws* ':' ws* value %pop_stack ws* (',' ws* string >mark %new_key ws* ':' ws* value %pop_stack ws*)* '}' @ret;
-    parse_array := parse_array_lbl: ws* value >new_element %pop_stack ws* (',' ws* value >new_element %pop_stack ws*)* ']' @ret;
+    parse_object := parse_object_lbl: ws* (string >mark %new_key ws* ':' ws* value %pop_stack ws* (',' ws* string >mark %new_key ws* ':' ws* value %pop_stack ws*)*)? '}' @ret;
+    parse_array := parse_array_lbl: ws* (value >new_element %pop_stack ws* (',' ws* value >new_element %pop_stack ws*)*)? ']' @ret;
 
     main := ws* value ws*;
     write data;
