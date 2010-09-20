@@ -28,7 +28,6 @@
 
 namespace Mordor {
 
-class EventLoop;
 class IOManager;
 
 #ifdef WINDOWS
@@ -74,15 +73,9 @@ public:
     typedef boost::shared_ptr<Socket> ptr;
 private:
     Socket(IOManager *ioManager, int family, int type, int protocol, int initialize);
-#ifdef WINDOWS
-    Socket(EventLoop *eventLoop, int family, int type, int protocol, int initialize);
-#endif
 public:
     Socket(int family, int type, int protocol = 0);
     Socket(IOManager &ioManager, int family, int type, int protocol = 0);
-#ifdef WINDOWS
-    Socket(EventLoop &eventLoop, int family, int type, int protocol = 0);
-#endif
     ~Socket();
 
     unsigned long long receiveTimeout() { return m_receiveTimeout; }
@@ -149,8 +142,6 @@ private:
     size_t doIO(iovec *buffers, size_t length, int &flags, Address *address = NULL);
 
 #ifdef WINDOWS
-    // For EventLoop
-    void cancelIo(int event, error_t &cancelled, error_t error);
     // For WSAEventSelect
     void cancelIo(error_t &cancelled, error_t error);
 #else
@@ -165,7 +156,6 @@ private:
     error_t m_cancelledSend, m_cancelledReceive;
     boost::shared_ptr<Address> m_localAddress, m_remoteAddress;
 #ifdef WINDOWS
-    EventLoop *m_eventLoop;
     bool m_skipCompletionPortOnSuccess;
     // All this, just so a connect/accept can be cancelled on win2k
     bool m_unregistered;
@@ -209,9 +199,6 @@ public:
 
     Socket::ptr createSocket();
     Socket::ptr createSocket(IOManager &ioManager);
-#ifdef WINDOWS
-    Socket::ptr createSocket(EventLoop &eventLoop);
-#endif
 
     int family() const { return name()->sa_family; }
     int type() const { return m_type; }
