@@ -115,7 +115,7 @@ Scheduler::stop()
     m_stopping = true;
     for (size_t i = 0; i < m_threadCount; ++i)
         tickle();
-    if (m_rootFiber)
+    if (m_rootFiber && (m_threadCount != 0u || Scheduler::getThis() != this))
         tickle();
     // Wait for all work to stop on this thread
     if (exitOnThisFiber) {
@@ -439,7 +439,8 @@ Scheduler::run()
             if (gettid() == m_rootThread)
                 m_callingFiber.reset();
             // Unblock the next thread
-            tickle();
+            if (threadCount() > 1)
+                tickle();
             return;
         }
         MORDOR_LOG_DEBUG(g_log) << this << " idling";

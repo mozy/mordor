@@ -24,11 +24,11 @@ using namespace Mordor::Test;
         IOManager ioManager;                                                    \
         Socket_ ## TestName(ioManager);                                         \
     }                                                                           \
-/*    MORDOR_UNITTEST(Socket, TestName ## EventLoop)                              \
+    MORDOR_UNITTEST(Socket, TestName ## EventLoop)                              \
     {                                                                           \
         EventLoop eventLoop;                                                    \
         Socket_ ## TestName(eventLoop);                                         \
-    }                                                                           */\
+    }                                                                           \
     template <class S> void Socket_ ## TestName(S &scheduler)
 #else
 #define MORDOR_SOCKET_UNITTEST(TestName)                                        \
