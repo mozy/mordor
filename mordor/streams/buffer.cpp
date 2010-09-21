@@ -294,15 +294,21 @@ Buffer::compact()
 }
 
 void
-Buffer::clear()
+Buffer::clear(bool clearWriteAvailableAsWell)
 {
     invariant();
-    m_readAvailable = m_writeAvailable = 0;
-    m_segments.clear();
-    m_writeIt = m_segments.end();
+    if (clearWriteAvailableAsWell) {
+        m_readAvailable = m_writeAvailable = 0;
+        m_segments.clear();
+        m_writeIt = m_segments.end();
+    } else {
+        m_readAvailable = 0;
+        if (m_writeIt != m_segments.end() && m_writeIt->readAvailable())
+            m_writeIt->consume(m_writeIt->readAvailable());
+        m_segments.erase(m_segments.begin(), m_writeIt);
+    }
     invariant();
     MORDOR_ASSERT(m_readAvailable == 0);
-    MORDOR_ASSERT(m_writeAvailable == 0);
 }
 
 void

@@ -81,7 +81,7 @@ public:
     void adopt(void *buffer, size_t length);
     void reserve(size_t length);
     void compact();
-    void clear();
+    void clear(bool clearWriteAvailableAsWell = true);
     void produce(size_t length);
     void consume(size_t length);
     void truncate(size_t length);
