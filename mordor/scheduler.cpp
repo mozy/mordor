@@ -223,11 +223,11 @@ void
 Scheduler::switchTo(tid_t thread)
 {
     MORDOR_ASSERT(Scheduler::getThis() != NULL);
-    MORDOR_LOG_DEBUG(g_log) << this << " switching to thread " << thread;
     if (Scheduler::getThis() == this) {
         if (thread == emptytid() || thread == gettid())
             return;
     }
+    MORDOR_LOG_DEBUG(g_log) << this << " switching to thread " << thread;
     schedule(Fiber::getThis(), thread);
     Scheduler::yieldTo();
 }
