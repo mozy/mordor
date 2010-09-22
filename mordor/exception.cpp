@@ -279,6 +279,9 @@ void throwExceptionFromLastError(error_t error)
         case ERROR_CANT_RESOLVE_FILENAME:
             throw boost::enable_current_exception(UnresolvablePathException())
                 << errinfo_nativeerror(error);
+        case ERROR_DISK_FULL:
+            throw boost::enable_current_exception(OutOfDiskSpaceException())
+            << errinfo_nativeerror(error);
         default:
             throwSocketException(error);
             throw boost::enable_current_exception(NativeException())
@@ -324,6 +327,9 @@ void throwExceptionFromLastError(error_t error)
         case ELOOP:
             throw boost::enable_current_exception(TooManySymbolicLinksException())
                 << errinfo_nativeerror(error);
+        case ENOSPC:
+            throw boost::enable_current_exception(OutOfDiskSpaceException())
+            << errinfo_nativeerror(error);
         default:
             throwSocketException(error);
             throw boost::enable_current_exception(NativeException())
