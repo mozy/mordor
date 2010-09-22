@@ -53,6 +53,19 @@ public:
             }
         }
 
+        bool unlockIfNotUnique()
+        {
+            if (m_locked) {
+                if (m_mutex.unlockIfNotUnique()) {
+                    m_locked = false;
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            return true;
+        }
+
     private:
         FiberMutex &m_mutex;
         bool m_locked;
@@ -71,6 +84,12 @@ public:
     /// @brief Unlocks the mutex
     /// @pre Fiber::getThis() owns this mutex
     void unlock();
+
+    /// Unlocks the mutex if there are other Fibers waiting for the mutex.
+    /// This is useful if there is extra work should be done if there is no one
+    /// else waiting (such as flushing a buffer).
+    /// @return If the mutex was unlocked
+    bool unlockIfNotUnique();
 
 private:
     void unlockNoLock();

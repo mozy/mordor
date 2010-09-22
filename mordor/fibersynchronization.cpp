@@ -51,6 +51,18 @@ FiberMutex::unlock()
     unlockNoLock();
 }
 
+bool
+FiberMutex::unlockIfNotUnique()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    MORDOR_ASSERT(m_owner == Fiber::getThis());
+    if (!m_waiters.empty()) {
+        unlockNoLock();
+        return true;
+    }
+    return false;
+}
+
 void
 FiberMutex::unlockNoLock()
 {
