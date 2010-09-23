@@ -69,6 +69,8 @@ public:
     ZlibStream(Stream::ptr parent, bool own = true);
     ~ZlibStream();
 
+    void reset();
+
     bool supportsSeek() const { return false; }
     bool supportsSize() const { return false; }
     bool supportsTruncate() const { return false; }
@@ -84,6 +86,8 @@ private:
 
 private:
     static const size_t m_bufferSize = 64 * 1024;
+    int m_level, m_windowBits, m_memlevel;
+    Strategy m_strategy;
     Buffer m_inBuffer, m_outBuffer;
     z_stream m_strm;
     bool m_closed;
