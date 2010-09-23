@@ -467,7 +467,8 @@ LIBMORDOROBJECTS := 							\
 	mordor/timer.o							\
 	mordor/workerpool.o						\
 	mordor/uri.o							\
-	mordor/xml/xml_parser.o
+	mordor/xml/xml_parser.o						\
+	mordor/zip.o
 
 $(LIBMORDOROBJECTS): mordor/pch.h.gch
 

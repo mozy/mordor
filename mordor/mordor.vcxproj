@@ -168,6 +168,7 @@
     <ClCompile Include="streams\transfer.cpp" />
     <ClCompile Include="streams\zlib.cpp" />
     <ClCompile Include="workerpool.cpp" />
+    <ClCompile Include="zip.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h" />
@@ -254,6 +255,7 @@
     <ClInclude Include="util.h" />
     <ClInclude Include="version.h" />
     <ClInclude Include="streams\zlib.h" />
+    <ClInclude Include="zip.h" />
   </ItemGroup>
   <ItemGroup>
     <Ragel Include="http\http_parser.rl" />
