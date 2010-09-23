@@ -295,12 +295,14 @@ static void throwException(PGresult *result)
     MORDOR_THROW_EXCEPTION(Exception(message));
 }
 
-Connection::Connection(const std::string &conninfo, IOManager *ioManager, bool connectImmediately)
-: m_conninfo(conninfo),
- m_ioManager(ioManager)
+Connection::Connection(const std::string &conninfo, IOManager *ioManager,
+    Scheduler *scheduler, bool connectImmediately)
+: m_conninfo(conninfo)
 {
 #ifdef WINDOWS
-    MORDOR_VERIFY(!ioManager)
+    m_scheduler = scheduler;
+#else
+    m_scheduler = ioManager;
 #endif
     if (connectImmediately)
         connect();
@@ -317,8 +319,10 @@ Connection::status()
 void
 Connection::connect()
 {
-    if (m_ioManager) {
-#ifndef WINDOWS
+#ifdef WINDOWS
+    SchedulerSwitcher switcher(m_scheduler);
+#else
+    if (m_scheduler) {
         m_conn.reset(PQconnectStart(m_conninfo.c_str()), &PQfinish);
         if (!m_conn)
             MORDOR_THROW_EXCEPTION(std::bad_alloc());
@@ -333,11 +337,11 @@ Connection::connect()
                 << whatToPoll;
             switch (whatToPoll) {
                 case PGRES_POLLING_READING:
-                    m_ioManager->registerEvent(fd, IOManager::READ);
+                    m_scheduler->registerEvent(fd, SchedulerType::READ);
                     Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_WRITING:
-                    m_ioManager->registerEvent(fd, IOManager::WRITE);
+                    m_scheduler->registerEvent(fd, SchedulerType::WRITE);
                     Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_FAILED:
@@ -351,8 +355,9 @@ Connection::connect()
             }
             whatToPoll = PQconnectPoll(m_conn.get());
         }
+    } else
 #endif
-    } else {
+    {
         m_conn.reset(PQconnectdb(m_conninfo.c_str()), &PQfinish);
         if (!m_conn)
             MORDOR_THROW_EXCEPTION(std::bad_alloc());
@@ -365,8 +370,10 @@ Connection::connect()
 void
 Connection::reset()
 {
-    if (m_ioManager) {
-#ifndef WINDOWS
+#ifdef WINDOWS
+    SchedulerSwitcher switcher(m_scheduler);
+#else
+    if (m_scheduler) {
         if (!PQresetStart(m_conn.get()))
             throwException(m_conn.get());
         int fd = PQsocket(m_conn.get());
@@ -376,11 +383,11 @@ Connection::reset()
                 << whatToPoll;
             switch (whatToPoll) {
                 case PGRES_POLLING_READING:
-                    m_ioManager->registerEvent(fd, IOManager::READ);
+                    m_scheduler->registerEvent(fd, SchedulerType::READ);
                     Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_WRITING:
-                    m_ioManager->registerEvent(fd, IOManager::WRITE);
+                    m_scheduler->registerEvent(fd, SchedulerType::WRITE);
                     Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_FAILED:
@@ -393,8 +400,9 @@ Connection::reset()
             }
             whatToPoll = PQresetPoll(m_conn.get());
         }
+    } else
 #endif
-    } else {
+    {
         PQreset(m_conn.get());
         if (status() == CONNECTION_BAD)
             throwException(m_conn.get());
@@ -445,11 +453,9 @@ Connection::escapeBinary(const std::string &blob)
     return PQ::escapeBinary(m_conn.get(), blob);
 }
 
-static void flush(PGconn *conn, IOManager *ioManager)
+#ifndef WINDOWS
+static void flush(PGconn *conn, SchedulerType *scheduler)
 {
-#ifdef WINDOWS
-    MORDOR_NOTREACHED();
-#else
     while (true) {
         int result = PQflush(conn);
         MORDOR_LOG_DEBUG(g_log) << conn << " PQflush(): " << result;
@@ -459,45 +465,44 @@ static void flush(PGconn *conn, IOManager *ioManager)
             case -1:
                 throwException(conn);
             case 1:
-                ioManager->registerEvent(PQsocket(conn), IOManager::WRITE);
+                scheduler->registerEvent(PQsocket(conn), SchedulerType::WRITE);
                 Scheduler::yieldTo();
                 continue;
             default:
                 MORDOR_NOTREACHED();
         }
     }
-#endif
 }
 
-static PGresult *nextResult(PGconn *conn, IOManager *ioManager)
+static PGresult *nextResult(PGconn *conn, SchedulerType *scheduler)
 {
-#ifdef WINDOWS
-    MORDOR_NOTREACHED();
-#else
     while (true) {
         if (!PQconsumeInput(conn))
             throwException(conn);
         if (PQisBusy(conn)) {
             MORDOR_LOG_DEBUG(g_log) << conn << " PQisBusy()";
-            ioManager->registerEvent(PQsocket(conn), IOManager::READ);
+            scheduler->registerEvent(PQsocket(conn), SchedulerType::READ);
             Scheduler::yieldTo();
             continue;
         }
         MORDOR_LOG_DEBUG(g_log) << conn << " PQconsumeInput()";
         return PQgetResult(conn);
     }
-#endif
 }
+#endif
 
 PreparedStatement
 Connection::prepare(const std::string &command, const std::string &name)
 {
     if (!name.empty()) {
-        if (m_ioManager) {
+#ifdef WINDOWS
+        SchedulerSwitcher switcher(m_scheduler);
+#else
+        if (m_scheduler) {
             if (!PQsendPrepare(m_conn.get(), name.c_str(), command.c_str(), 0, NULL))
                 throwException(m_conn.get());
-            flush(m_conn.get(), m_ioManager);
-            boost::shared_ptr<PGresult> result(nextResult(m_conn.get(), m_ioManager),
+            flush(m_conn.get(), m_scheduler);
+            boost::shared_ptr<PGresult> result(nextResult(m_conn.get(), m_scheduler),
                 &PQclear);
             while (result) {
                 ExecStatusType status = PQresultStatus(result.get());
@@ -505,13 +510,15 @@ Connection::prepare(const std::string &command, const std::string &name)
                     << result.get() << "): " << PQresStatus(status);
                 if (status != PGRES_COMMAND_OK)
                     throwException(result.get());
-                result.reset(nextResult(m_conn.get(), m_ioManager),
+                result.reset(nextResult(m_conn.get(), m_scheduler),
                     &PQclear);
             }
             MORDOR_LOG_VERBOSE(g_log) << m_conn.get() << " PQsendPrepare(\""
                 << name << "\", \"" << command << "\")";
-            return PreparedStatement(m_conn, std::string(), name, m_ioManager);
-        } else {
+            return PreparedStatement(m_conn, std::string(), name, m_scheduler);
+        } else
+#endif
+        {
             boost::shared_ptr<PGresult> result(PQprepare(m_conn.get(),
                 name.c_str(), command.c_str(), 0, NULL), &PQclear);
             if (!result)
@@ -523,29 +530,29 @@ Connection::prepare(const std::string &command, const std::string &name)
                 throwException(result.get());
             MORDOR_LOG_VERBOSE(g_log) << m_conn.get() << " PQprepare(\"" << name
                 << "\", \"" << command << "\")";
-            return PreparedStatement(m_conn, std::string(), name, m_ioManager);
+            return PreparedStatement(m_conn, std::string(), name, m_scheduler);
         }
     } else {
-        return PreparedStatement(m_conn, command, name, m_ioManager);
+        return PreparedStatement(m_conn, command, name, m_scheduler);
     }
 }
 
 Connection::CopyInParams
 Connection::copyIn(const std::string &table)
 {
-    return CopyInParams(table, m_conn, m_ioManager);
+    return CopyInParams(table, m_conn, m_scheduler);
 }
 
 Connection::CopyOutParams
 Connection::copyOut(const std::string &table)
 {
-    return CopyOutParams(table, m_conn, m_ioManager);
+    return CopyOutParams(table, m_conn, m_scheduler);
 }
 
 Connection::CopyParams::CopyParams(const std::string &table,
-    boost::shared_ptr<PGconn> conn, IOManager *ioManager)
+    boost::shared_ptr<PGconn> conn, SchedulerType *scheduler)
     : m_table(table),
-      m_ioManager(ioManager),
+      m_scheduler(scheduler),
       m_conn(conn),
       m_binary(false),
       m_csv(false),
@@ -629,9 +636,9 @@ Connection::CopyParams::notNullQuoteColumns(const std::vector<std::string> &colu
 class CopyInStream : public Stream
 {
 public:
-    CopyInStream(boost::shared_ptr<PGconn> conn, IOManager *ioManager)
+    CopyInStream(boost::shared_ptr<PGconn> conn, SchedulerType *scheduler)
         : m_conn(conn),
-          m_ioManager(ioManager)
+          m_scheduler(scheduler)
     {}
 
     ~CopyInStream()
@@ -666,6 +673,9 @@ public:
         PGconn *conn = sharedConn.get();
         int status = 0;
         length = std::min<size_t>(length, 0x7fffffff);
+#ifdef WINDOWS
+        SchedulerSwitcher switcher(m_scheduler);
+#endif
         while (status == 0) {
             status = PQputCopyData(conn, (const char *)buffer, (int)length);
             switch (status) {
@@ -675,9 +685,9 @@ public:
                     throwException(conn);
 #ifndef WINDOWS
                 case 0:
-                    MORDOR_ASSERT(m_ioManager);
-                    m_ioManager->registerEvent(PQsocket(conn),
-                        IOManager::WRITE);
+                    MORDOR_ASSERT(m_scheduler);
+                    m_scheduler->registerEvent(PQsocket(conn),
+                        SchedulerType::WRITE);
                     Scheduler::yieldTo();
                     break;
 #endif
@@ -690,6 +700,9 @@ public:
 
 private:
     void putCopyEnd(PGconn *conn, const char *error) {
+#ifdef WINDOWS
+        SchedulerSwitcher switcher(m_scheduler);
+#endif
         int status = 0;
         while (status == 0) {
             status = PQputCopyEnd(conn, error);
@@ -700,9 +713,9 @@ private:
                     throwException(conn);
 #ifndef WINDOWS
                 case 0:
-                    MORDOR_ASSERT(m_ioManager);
-                    m_ioManager->registerEvent(PQsocket(conn),
-                        IOManager::WRITE);
+                    MORDOR_ASSERT(m_scheduler);
+                    m_scheduler->registerEvent(PQsocket(conn),
+                        SchedulerType::WRITE);
                     Scheduler::yieldTo();
                     break;
 #endif
@@ -710,12 +723,16 @@ private:
                     MORDOR_NOTREACHED();
             }
         }
-        if (m_ioManager)
-            PQ::flush(conn, m_ioManager);
+#ifndef WINDOWS
+        if (m_scheduler)
+            PQ::flush(conn, m_scheduler);
+#endif
         boost::shared_ptr<PGresult> result;
-        if (m_ioManager)
-            result.reset(nextResult(conn, m_ioManager), &PQclear);
+#ifndef WINDOWS
+        if (m_scheduler)
+            result.reset(nextResult(conn, m_scheduler), &PQclear);
         else
+#endif
             result.reset(PQgetResult(conn), &PQclear);
         while (result) {
             ExecStatusType status = PQresultStatus(result.get());
@@ -723,9 +740,11 @@ private:
                 << result.get() << "): " << PQresStatus(status);
             if (status != PGRES_COMMAND_OK)
                 throwException(result.get());
-            if (m_ioManager)
-                result.reset(nextResult(conn, m_ioManager), &PQclear);
+#ifndef WINDOWS
+            if (m_scheduler)
+                result.reset(nextResult(conn, m_scheduler), &PQclear);
             else
+#endif
                 result.reset(PQgetResult(conn), &PQclear);
         }
         MORDOR_LOG_VERBOSE(g_log) << conn << " PQputCopyEnd(\""
@@ -734,15 +753,15 @@ private:
 
 private:
     boost::weak_ptr<PGconn> m_conn;
-    IOManager *m_ioManager;
+    SchedulerType *m_scheduler;
 };
 
 class CopyOutStream : public Stream
 {
 public:
-    CopyOutStream(boost::shared_ptr<PGconn> conn, IOManager *ioManager)
+    CopyOutStream(boost::shared_ptr<PGconn> conn, SchedulerType *scheduler)
         : m_conn(conn),
-          m_ioManager(ioManager)
+          m_scheduler(scheduler)
     {}
 
     bool supportsRead() { return true; }
@@ -759,18 +778,27 @@ public:
         if (!sharedConn)
             return 0;
         PGconn *conn = sharedConn.get();
+#ifndef WINDOWS
+        SchedulerSwitcher switcher(m_scheduler);
+#endif
         int status = 0;
         do {
             char *data = NULL;
-            status = PQgetCopyData(conn, &data, m_ioManager ? 1 : 0);
+            status = PQgetCopyData(conn, &data,
+#ifdef WINDOWS
+                0
+#else
+                m_scheduler ? 1 : 0
+#endif
+                );
             switch (status) {
                 case 0:
 #ifdef WINDOWS
                     MORDOR_NOTREACHED();
 #else
-                    MORDOR_ASSERT(m_ioManager);
-                    m_ioManager->registerEvent(PQsocket(conn),
-                        IOManager::READ);
+                    MORDOR_ASSERT(m_scheduler);
+                    m_scheduler->registerEvent(PQsocket(conn),
+                        SchedulerType::READ);
                     Scheduler::yieldTo();
                     continue;
 #endif
@@ -794,9 +822,11 @@ public:
         if (status == -1) {
             m_conn.reset();
             boost::shared_ptr<PGresult> result;
-            if (m_ioManager)
-                result.reset(nextResult(conn, m_ioManager), &PQclear);
+#ifndef WINDOWS
+            if (m_scheduler)
+                result.reset(nextResult(conn, m_scheduler), &PQclear);
             else
+#endif
                 result.reset(PQgetResult(conn), &PQclear);
             while (result) {
                 ExecStatusType status = PQresultStatus(result.get());
@@ -804,9 +834,11 @@ public:
                     << result.get() << "): " << PQresStatus(status);
                 if (status != PGRES_COMMAND_OK)
                     throwException(result.get());
-                if (m_ioManager)
-                    result.reset(nextResult(conn, m_ioManager), &PQclear);
+#ifndef WINDOWS
+                if (m_scheduler)
+                    result.reset(nextResult(conn, m_scheduler), &PQclear);
                 else
+#endif
                     result.reset(PQgetResult(conn), &PQclear);
             }
         }
@@ -819,7 +851,7 @@ public:
 
 private:
     boost::weak_ptr<PGconn> m_conn;
-    IOManager *m_ioManager;
+    SchedulerType *m_scheduler;
     Buffer m_readBuffer;
 };
 
@@ -874,18 +906,21 @@ Connection::CopyParams::execute(bool out)
 
     boost::shared_ptr<PGresult> result, next;
     const char *api = NULL;
-    if (m_ioManager) {
+#ifdef WINDOWS
+    SchedulerSwitcher switcher(m_scheduler);
+#else
+    if (m_scheduler) {
         api = "PQsendQuery";
         if (!PQsendQuery(conn, os.str().c_str()))
             throwException(conn);
-        flush(conn, m_ioManager);
-        next.reset(nextResult(conn, m_ioManager), &PQclear);
+        flush(conn, m_scheduler);
+        next.reset(nextResult(conn, m_scheduler), &PQclear);
         while (next) {
             result = next;
             if (PQresultStatus(result.get()) ==
                 (out ? PGRES_COPY_OUT : PGRES_COPY_IN))
                 break;
-            next.reset(nextResult(conn, m_ioManager), &PQclear);
+            next.reset(nextResult(conn, m_scheduler), &PQclear);
             if (next) {
                 ExecStatusType status = PQresultStatus(next.get());
                 MORDOR_LOG_VERBOSE(g_log) << conn << "PQresultStatus(" <<
@@ -900,7 +935,9 @@ Connection::CopyParams::execute(bool out)
                 }
             }
         }
-    } else {
+    } else
+#endif
+    {
         api = "PQexec";
         result.reset(PQexec(conn, os.str().c_str()), &PQclear);
     }
@@ -917,10 +954,10 @@ Connection::CopyParams::execute(bool out)
             MORDOR_NOTREACHED();
         case PGRES_COPY_IN:
             MORDOR_ASSERT(!out);
-            return Stream::ptr(new CopyInStream(m_conn, m_ioManager));
+            return Stream::ptr(new CopyInStream(m_conn, m_scheduler));
         case PGRES_COPY_OUT:
             MORDOR_ASSERT(out);
-            return Stream::ptr(new CopyOutStream(m_conn, m_ioManager));
+            return Stream::ptr(new CopyOutStream(m_conn, m_scheduler));
         default:
             throwException(result.get());
             MORDOR_NOTREACHED();
@@ -1103,17 +1140,21 @@ PreparedStatement::execute()
         paramFormats = &m_paramFormats[0];
     }
     const char *api = NULL;
+#ifndef WINDOWS
+    SchedulerSwitcher switcher(m_scheduler);
+#endif
     if (m_name.empty()) {
-        if (m_ioManager) {
+#ifndef WINDOWS
+        if (m_scheduler) {
             api = "PQsendQueryParams";
             if (!PQsendQueryParams(conn, m_command.c_str(),
                 nParams, paramTypes, params, paramLengths, paramFormats, 1))
                 throwException(conn);
-            flush(conn, m_ioManager);
-            next.reset(nextResult(conn, m_ioManager), &PQclear);
+            flush(conn, m_scheduler);
+            next.reset(nextResult(conn, m_scheduler), &PQclear);
             while (next) {
                 result = next;
-                next.reset(nextResult(conn, m_ioManager), &PQclear);
+                next.reset(nextResult(conn, m_scheduler), &PQclear);
                 if (next) {
                     ExecStatusType status = PQresultStatus(next.get());
                     MORDOR_LOG_VERBOSE(g_log) << conn << "PQresultStatus(" <<
@@ -1128,23 +1169,26 @@ PreparedStatement::execute()
                     }
                 }
             }
-        } else {
+        } else
+#endif
+        {
             api = "PQexecParams";
             result.reset(PQexecParams(conn, m_command.c_str(),
                 nParams, paramTypes, params, paramLengths, paramFormats, 1),
                 &PQclear);
         }
     } else {
-        if (m_ioManager) {
+#ifndef WINDOWS
+        if (m_scheduler) {
             api = "PQsendQueryPrepared";
             if (!PQsendQueryPrepared(conn, m_name.c_str(),
                 nParams, params, paramLengths, paramFormats, 1))
                 throwException(conn);
-            flush(conn, m_ioManager);
-            next.reset(nextResult(conn, m_ioManager), &PQclear);
+            flush(conn, m_scheduler);
+            next.reset(nextResult(conn, m_scheduler), &PQclear);
             while (next) {
                 result = next;
-                next.reset(nextResult(conn, m_ioManager), &PQclear);
+                next.reset(nextResult(conn, m_scheduler), &PQclear);
                 if (next) {
                     ExecStatusType status = PQresultStatus(next.get());
                     MORDOR_LOG_VERBOSE(g_log) << conn << "PQresultStatus(" <<
@@ -1159,7 +1203,9 @@ PreparedStatement::execute()
                     }
                 }
             }
-        } else {
+        } else
+#endif
+        {
             api = "PQexecPrepared";
             result.reset(PQexecPrepared(conn, m_name.c_str(),
                 nParams, params, paramLengths, paramFormats, 1),
