@@ -14,6 +14,9 @@ public:
 public:
     LimitedStream(Stream::ptr parent, long long size, bool own = true);
 
+    void reset() { m_pos = 0; }
+    void reset(long long size) { m_pos = 0; m_size = size; }
+
     bool strict() { return m_strict; }
     void strict(bool strict) { m_strict = strict; }
 
