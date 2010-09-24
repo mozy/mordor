@@ -336,7 +336,7 @@ static const unsigned int *selectPrecomputedTable(unsigned int polynomial,
         case CRC32Stream::KOOPMAN:
             return koopmanTable;
         default:
-            return myTable.data();
+            return &myTable[0];
     }
 }
 
