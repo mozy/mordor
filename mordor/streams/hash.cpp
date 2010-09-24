@@ -383,7 +383,7 @@ CRC32Stream::precomputeTable(unsigned int polynomial)
 {
     std::vector<unsigned int> result;
     result.resize(256);
-    for (size_t i = 0; i < 256; ++i) {
+    for (unsigned int i = 0; i < 256; ++i) {
         unsigned int rb = reflect(i);
         for (int j = 0; j < 8; ++j) {
             if (rb & 0x80000000)
