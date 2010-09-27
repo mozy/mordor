@@ -188,7 +188,7 @@ BufferedStream::seek(long long offset, Anchor anchor)
     long long parentPos = parent()->tell();
     long long bufferedPos = parentPos - m_readBuffer.readAvailable()
         + m_writeBuffer.readAvailable();
-    long long parentSize = parent()->supportsSize() ? -1ll : parent()->size();
+    long long parentSize = parent()->supportsSize() ? parent()->size() : -1ll;
     // Check for no change in position
     if ((offset == 0 && anchor == CURRENT) ||
         (offset == bufferedPos && anchor == BEGIN) ||
