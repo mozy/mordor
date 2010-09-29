@@ -23,6 +23,10 @@
 
 namespace Mordor {
 
+#ifdef WINDOWS
+class IOManager;
+#endif
+
 class ConfigVarBase : public boost::noncopyable
 {
 public:
@@ -136,6 +140,33 @@ private:
                 std::string, &getName> >
         >
     > ConfigVarSet;
+
+public:
+#ifdef WINDOWS
+    /// Encapsulates monitoring the registry for ConfigVar changes
+    struct RegistryMonitor
+    {
+        friend class Config;
+    public:
+        typedef boost::shared_ptr<RegistryMonitor> ptr;
+    private:
+        RegistryMonitor(IOManager &iomanager, HKEY hKey,
+            const std::wstring &subKey);
+
+    public:
+        RegistryMonitor(const RegistryMonitor &copy);
+        ~RegistryMonitor();
+
+    private:
+        static void onRegistryChange(boost::weak_ptr<RegistryMonitor> self);
+
+    private:
+        IOManager &m_ioManager;
+        HKEY m_hKey;
+        HANDLE m_hEvent;
+    };
+#endif
+
 public:
     template <class T>
     static typename ConfigVar<T>::ptr lookup(const std::string &name,
@@ -156,6 +187,16 @@ public:
 
     static void loadFromEnvironment();
     static void loadFromJSON(const JSON::Value &json);
+#ifdef WINDOWS
+    static void loadFromRegistry(HKEY key, const std::string &subKey);
+    static void loadFromRegistry(HKEY key, const std::wstring &subKey);
+    /// @see RegistryMonitor
+    static RegistryMonitor::ptr monitorRegistry(IOManager &ioManager, HKEY key,
+        const std::string &subKey);
+    /// @see RegistryMonitor
+    static RegistryMonitor::ptr monitorRegistry(IOManager &ioManager, HKEY key,
+        const std::wstring &subKey);
+#endif
 
 private:
     static ConfigVarSet &vars()

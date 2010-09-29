@@ -80,7 +80,7 @@ IOManager::WaitBlock::unregisterEvent(HANDLE handle)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     if (m_inUseCount == -1)
-        return false;
+        return 0;
     size_t unregistered = 0;
     HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
     while (srcHandle != m_handles + m_inUseCount + 1) {
