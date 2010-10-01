@@ -157,7 +157,7 @@ static void loadFromRegistry(HKEY hKey)
         &valueNameSize, &size, NULL, NULL);
     if (status)
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(status, "RegQueryInfoKeyW");
-    valueName.resize(std::max<DWORD>(valueNameSize, 1u));
+    valueName.resize(std::max<DWORD>(valueNameSize + 1, 1u));
     buffer.resize(std::max<DWORD>(size, 1u));
     while (true) {
         valueNameSize = (DWORD)valueName.size();
