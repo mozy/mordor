@@ -192,6 +192,11 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
             << boost::errinfo_api_function("SSL_CTX_new");
     }
     m_readBio = BIO_new_mem_buf((void *)"", 0);
+    // On OS X for some reason the headers have max and length as int, even
+    // though they should be size_t; re-initialize them for kicks and giggles
+    BUF_MEM *bm;
+    BIO_get_mem_ptr(m_readBio, &bm);
+    bm->max = bm->length = 0;
     m_writeBio = BIO_new(BIO_s_mem());
     if (!m_readBio || !m_writeBio) {
         if (m_readBio) BIO_free(m_readBio);
@@ -668,6 +673,7 @@ SSLStream::wantRead()
 {
     BUF_MEM *bm;
     BIO_get_mem_ptr(m_readBio, &bm);
+    MORDOR_ASSERT(bm->max <= 0x7fffffff);
     MORDOR_ASSERT(bm->length == 0);
     m_readBuffer.consume(bm->max);
     bm->length = bm->max = 0;
@@ -687,6 +693,9 @@ SSLStream::wantRead()
     bm->data = (char *)iov.iov_base;
     bm->length = bm->max =
         (long)std::min<size_t>(0x7fffffff, iov.iov_len);
+    MORDOR_ASSERT(bm->length == bm->max);
+    MORDOR_ASSERT(bm->length);
+    MORDOR_ASSERT(bm->max <= 0x7fffffff);
     MORDOR_LOG_DEBUG(g_log) << this << " wantRead(): " << bm->length;
 }
 
