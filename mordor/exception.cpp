@@ -281,7 +281,10 @@ void throwExceptionFromLastError(error_t error)
                 << errinfo_nativeerror(error);
         case ERROR_DISK_FULL:
             throw boost::enable_current_exception(OutOfDiskSpaceException())
-            << errinfo_nativeerror(error);
+                << errinfo_nativeerror(error);
+        case ERROR_NO_UNICODE_TRANSLATION:
+            throw boost::enable_current_exception(InvalidUnicodeException())
+                << errinfo_nativeerror(error);
         default:
             throwSocketException(error);
             throw boost::enable_current_exception(NativeException())

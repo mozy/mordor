@@ -8,6 +8,7 @@
 #include <openssl/sha.h>
 
 #include "mordor/string.h"
+#include "mordor/util.h"
 
 #include "assert.h"
 #include "exception.h"
@@ -336,7 +337,7 @@ static DWORD g_wcFlags = WC_ERR_INVALID_CHARS;
 static DWORD g_mbFlags = MB_ERR_INVALID_CHARS;
 
 std::string
-toUtf8(const wchar_t *str, size_t len)
+toUtf8(const utf16char *str, size_t len)
 {
     if (len == (size_t)~0)
         len = wcslen(str);
@@ -372,13 +373,13 @@ toUtf8(const std::wstring &str)
     return toUtf8(str.c_str(), str.size());
 }
 
-std::wstring
+utf16string
 toUtf16(const char *str, size_t len)
 {
     if (len == (size_t)~0)
         len = strlen(str);
     MORDOR_ASSERT(len < 0x80000000u);
-    std::wstring result;
+    utf16string result;
     if (len == 0)
         return result;
     int ret = MultiByteToWideChar(CP_UTF8, g_mbFlags, str, (int)len, NULL, 0);
@@ -401,7 +402,7 @@ toUtf16(const char *str, size_t len)
     return result;
 }
 
-std::wstring
+utf16string
 toUtf16(const std::string &str)
 {
     MORDOR_ASSERT(str.size() < 0x80000000u);
@@ -425,16 +426,48 @@ toUtf8(CFStringRef string)
     result.resize(strlen(result.c_str()));
     return result;
 }
+
+utf16string
+toUtf16(const char * str, size_t length)
+{
+    utf16string result;
+    if (length == 0u)
+        return result;
+    ScopedCFRef<CFStringRef> cfUtf8Str = CFStringCreateWithBytesNoCopy(NULL,
+        (const UInt8 *)str, (CFIndex)length, kCFStringEncodingUTF8, false,
+        kCFAllocatorNull);
+    if (!cfUtf8Str)
+        MORDOR_THROW_EXCEPTION(InvalidUnicodeException());
+#if MORDOR_BYTE_ORDER == MORDOR_LITTLE_ENDIAN
+    ScopedCFRef<CFDataRef> cfUtf16Data = CFStringCreateExternalRepresentation(
+        NULL, cfUtf8Str, kCFStringEncodingUTF16LE, 0);
+#elif MORDOR_BYTE_ORDER == MORDOR_BIG_ENDIAN
+    ScopedCFRef<CFDataRef> cfUtf16Data = CFStringCreateExternalRepresentation(
+        NULL, cfUtf8Str, kCFStringEncodingUTF16BE, 0);
+#endif
+    MORDOR_ASSERT(cfUtf16Data);
+    MORDOR_ASSERT(CFDataGetLength(cfUtf16Data) % sizeof(utf16char) == 0);
+    result.resize(CFDataGetLength(cfUtf16Data) / sizeof(utf16char));
+    CFDataGetBytes(cfUtf16Data, CFRangeMake(0,CFDataGetLength(cfUtf16Data)),
+        (UInt8 *)result[0]);
+    return result;
+}
+
+utf16string
+toUtf16(const std::string &str)
+{
+    return toUtf16(str.c_str(), str.size());
+}
 #endif
 
 std::string
-toUtf8(wchar_t character)
+toUtf8(utf16char character)
 {
-    return toUtf8((int)character);
+    return toUtf8((utf32char)character);
 }
 
 std::string
-toUtf8(int character)
+toUtf8(utf32char character)
 {
     MORDOR_ASSERT(character <= 0x10ffff);
     std::string result;
@@ -459,26 +492,26 @@ toUtf8(int character)
     return result;
 }
 
-int
-toUtf32(wchar_t highSurrogate, wchar_t lowSurrogate)
+utf32char
+toUtf32(utf16char highSurrogate, utf16char lowSurrogate)
 {
     MORDOR_ASSERT(isHighSurrogate(highSurrogate));
     MORDOR_ASSERT(isLowSurrogate(lowSurrogate));
-    return ((((int)highSurrogate - 0xd800) << 10) | ((int)lowSurrogate - 0xdc00)) + 0x10000;
+    return ((((utf32char)highSurrogate - 0xd800) << 10) | ((utf32char)lowSurrogate - 0xdc00)) + 0x10000;
 }
 
 std::string
-toUtf8(wchar_t highSurrogate, wchar_t lowSurrogate)
+toUtf8(utf16char highSurrogate, utf16char lowSurrogate)
 {
     return toUtf8(toUtf32(highSurrogate, lowSurrogate));
 }
 
-bool isHighSurrogate(wchar_t character)
+bool isHighSurrogate(utf16char character)
 {
     return character >= 0xd800 && character <= 0xdbff;
 }
 
-bool isLowSurrogate(wchar_t character)
+bool isLowSurrogate(utf16char character)
 {
     return character >= 0xdc00 && character <= 0xdfff;
 }

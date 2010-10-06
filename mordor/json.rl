@@ -20,7 +20,7 @@ std::string unquote(const std::string &string)
     const char *c = string.c_str() + 1;
     const char *end = c + string.size() - 2;
     bool differed = false;
-    wchar_t utf16, priorUtf16 = L'\0';
+    utf16char utf16, priorUtf16 = 0;
     while (c < end)
     {
         if (*c == '\\') {
@@ -35,27 +35,27 @@ std::string unquote(const std::string &string)
                 case '\\':
                 case '/':
                     result.append(1, *c);
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'b':
                     result.append(1, '\b');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'f':
                     result.append(1, '\f');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'n':
                     result.append(1, '\n');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'r':
                     result.append(1, '\r');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 't':
                     result.append(1, '\t');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'u':
                     MORDOR_ASSERT(c + 4 < end);
@@ -77,7 +77,7 @@ std::string unquote(const std::string &string)
                         // Back out the incorrect UTF8 we previously saw
                         result.resize(result.size() - 3);
                         result.append(toUtf8(priorUtf16, utf16));
-                        priorUtf16 = L'\0';
+                        priorUtf16 = 0;
                     } else {
                         result.append(toUtf8(utf16));
                         priorUtf16 = utf16;
@@ -88,7 +88,7 @@ std::string unquote(const std::string &string)
             }
         } else if (differed) {
             result.append(1, *c);
-            priorUtf16 = L'\0';
+            priorUtf16 = 0;
         }
         ++c;
     }
