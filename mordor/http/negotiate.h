@@ -26,8 +26,6 @@ public:
 
     bool authorize(const AuthParams &challenge, AuthParams &authorization,
         const URI &uri);
-    /// @deprecated
-    bool authorize(const Response &challenge, Request &nextRequest);
 
 private:
     std::wstring m_username, m_password, m_domain;
