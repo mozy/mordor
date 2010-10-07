@@ -8,6 +8,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "endian.h"
 #include "exception.h"
 #include "version.h"
 
@@ -235,8 +236,8 @@ public:
     //IPv4Address(const std::string& addr, int type = 0, int protocol = 0);
     //IPv4Address(const std::string& addr, unsigned short port, int type = 0, int protocol = 0);
 
-    unsigned short port() const { return ntohs(sin.sin_port); }
-    void port(unsigned short p) { sin.sin_port = htons(p); }
+    unsigned short port() const { return byteswapOnLittleEndian(sin.sin_port); }
+    void port(unsigned short p) { sin.sin_port = byteswapOnLittleEndian(p); }
 
     const sockaddr *name() const { return (sockaddr*)&sin; }
     sockaddr *name() { return (sockaddr*)&sin; }
@@ -254,8 +255,8 @@ public:
     //IPv6Address(const std::string& addr, int type = 0, int protocol = 0);
     //IPv6Address(const std::string& addr, unsigned short port, int type = 0, int protocol = 0);
 
-    unsigned short port() const { return ntohs(sin.sin6_port); }
-    void port(unsigned short p) { sin.sin6_port = htons(p); }
+    unsigned short port() const { return byteswapOnLittleEndian(sin.sin6_port); }
+    void port(unsigned short p) { sin.sin6_port = byteswapOnLittleEndian(p); }
 
     const sockaddr *name() const { return (sockaddr*)&sin; }
     sockaddr *name() { return (sockaddr*)&sin; }

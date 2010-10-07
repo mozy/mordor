@@ -406,7 +406,7 @@ void
 CRC32Stream::hash(void *result, size_t length) const
 {
     MORDOR_ASSERT(length == 4);
-    *(unsigned int *)result = htonl(~m_crc);
+    *(unsigned int *)result = byteswapOnLittleEndian(~m_crc);
 }
 
 void

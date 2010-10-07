@@ -735,7 +735,7 @@ ZipEntry::close()
     m_size = m_outer.m_uncompressedStream->tell();
     m_compressedSize = m_outer.m_compressedStream->tell();
     m_outer.m_crcStream->hash(&m_crc, sizeof(unsigned int));
-    m_crc = htonl(m_crc);
+    m_crc = byteswapOnLittleEndian(m_crc);
     if (m_flags & 0x0008) {
         if (zip64) {
             DataDescriptor64 dd;

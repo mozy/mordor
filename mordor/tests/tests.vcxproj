@@ -190,6 +190,7 @@
     <ClCompile Include="chunked_stream.cpp" />
     <ClCompile Include="coroutine.cpp" />
     <ClCompile Include="efs_stream.cpp" />
+    <ClCompile Include="endian.cpp" />
     <ClCompile Include="fibers.cpp" />
     <ClCompile Include="fibersync.cpp" />
     <ClCompile Include="fls.cpp" />

@@ -284,6 +284,7 @@ TESTOBJECTS :=								\
 	mordor/tests/buffered_stream.o					\
 	mordor/tests/chunked_stream.o					\
 	mordor/tests/coroutine.o					\
+	mordor/tests/endian.o						\
 	mordor/tests/efs_stream.o					\
 	mordor/tests/fibers.o						\
 	mordor/tests/fibersync.o					\

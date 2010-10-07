@@ -1038,7 +1038,7 @@ PreparedStatement::bind(size_t param, short value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(2);
-    *(short *)&m_paramValues[param - 1][0] = htons(value);
+    *(short *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1050,7 +1050,7 @@ PreparedStatement::bind(size_t param, int value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(4);
-    *(int *)&m_paramValues[param - 1][0] = htonl(value);
+    *(int *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1062,7 +1062,7 @@ PreparedStatement::bind(size_t param, long long value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(8);
-    *(long long *)&m_paramValues[param - 1][0] = htonll(value);
+    *(long long *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1074,7 +1074,7 @@ PreparedStatement::bind(size_t param, float value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(4);
-    *(int *)&m_paramValues[param - 1][0] = htonl(*(int *)&value);
+    *(int *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(*(int *)&value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1086,7 +1086,7 @@ PreparedStatement::bind(size_t param, double value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(8);
-    *(long long *)&m_paramValues[param - 1][0] = htonll(*(long long *)&value);
+    *(long long *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(*(long long *)&value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1105,7 +1105,7 @@ PreparedStatement::bind(size_t param, const boost::posix_time::ptime &value)
     ensure(param);
     m_paramValues[param - 1].resize(8);
     long long ticks = (value - postgres_epoch).total_microseconds();
-    *(long long *)&m_paramValues[param - 1][0] = htonll(*(long long *)&ticks);
+    *(long long *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(*(long long *)&ticks);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1315,13 +1315,13 @@ Result::get<long long>(size_t row, size_t column) const
     switch (getType(column)) {
         case INT8OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
-            return htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
         case INT2OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 2);
-            return htons(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
         case INT4OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
-            return htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
         default:
             MORDOR_NOTREACHED();
     }
@@ -1333,7 +1333,7 @@ Result::get<short>(size_t row, size_t column) const
 {
     MORDOR_ASSERT(getType(column) == INT2OID);
     MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 2);
-    return htons(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
+    return byteswapOnLittleEndian(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
 }
 
 template <>
@@ -1343,10 +1343,10 @@ Result::get<int>(size_t row, size_t column) const
     switch (getType(column)) {
         case INT2OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 2);
-            return htons(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
         case INT4OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
-            return htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
         default:
             MORDOR_NOTREACHED();
     }
@@ -1358,7 +1358,7 @@ Result::get<float>(size_t row, size_t column) const
 {
     MORDOR_ASSERT(getType(column) == FLOAT4OID);
     MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
-    int temp = htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+    int temp = byteswapOnLittleEndian(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
     return *(float *)&temp;
 }
 
@@ -1371,11 +1371,11 @@ Result::get<double>(size_t row, size_t column) const
     switch (getType(column)) {
         case FLOAT4OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
-            templ = htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            templ = byteswapOnLittleEndian(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
             return *(float *)&templ;
         case FLOAT8OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
-            templl = htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            templl = byteswapOnLittleEndian(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
             return *(double *)&templl;
         default:
             MORDOR_NOTREACHED();
@@ -1391,7 +1391,7 @@ Result::get<boost::posix_time::ptime>(size_t row, size_t column) const
     if (PQgetlength(m_result.get(), (int)row, (int)column) == 0)
         return boost::posix_time::ptime();
     MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
-    long long microseconds = htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
+    long long microseconds = byteswapOnLittleEndian(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
     return postgres_epoch +
         boost::posix_time::seconds((long)(microseconds / 1000000)) +
         boost::posix_time::microseconds(microseconds % 1000000);

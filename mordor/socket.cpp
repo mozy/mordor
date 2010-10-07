@@ -1436,14 +1436,14 @@ IPv4Address::IPv4Address(int type, int protocol)
 std::ostream &
 IPv4Address::insert(std::ostream &os) const
 {
-    int addr = htonl(sin.sin_addr.s_addr);
+    int addr = byteswapOnLittleEndian(sin.sin_addr.s_addr);
     os << ((addr >> 24) & 0xff) << '.'
         << ((addr >> 16) & 0xff) << '.'
         << ((addr >> 8) & 0xff) << '.'
         << (addr & 0xff);
     // "on" is 0, so that it's the default
     if (!os.iword(g_iosPortIndex))
-        os << ':' << htons(sin.sin_port);
+        os << ':' << byteswapOnLittleEndian(sin.sin_port);
     return os;
 }
 
@@ -1474,13 +1474,13 @@ IPv6Address::insert(std::ostream &os) const
         }
         if (i != 0)
             os << ':';
-        os << (int)htons(addr[i]);
+        os << (int)byteswapOnLittleEndian(addr[i]);
     }
     if (!usedZeros && addr[7] == 0)
         os << "::";
 
     if (includePort)
-        os << "]:" << std::dec << (int)htons(sin.sin6_port);
+        os << "]:" << std::dec << (int)byteswapOnLittleEndian(sin.sin6_port);
     os.setf(flags, std::ios_base::basefield);
     return os;
 }
