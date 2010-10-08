@@ -858,10 +858,7 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREFIX_HEADER = mordor/pch.h;
 				GCC_VERSION = 4.2;
-				HEADER_SEARCH_PATHS = (
-					/opt/local/include,
-					/usr/local/include,
-				);
+				HEADER_SEARCH_PATHS = /usr/local/include;
 				INSTALL_PATH = /usr/local/lib;
 				OTHER_CFLAGS = "-DDEBUG";
 				PREBINDING = NO;
@@ -879,10 +876,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_PREFIX_HEADER = mordor/pch.h;
 				GCC_VERSION = 4.2;
-				HEADER_SEARCH_PATHS = (
-					/opt/local/include,
-					/usr/local/include,
-				);
+				HEADER_SEARCH_PATHS = /usr/local/include;
 				INSTALL_PATH = /usr/local/lib;
 				PREBINDING = NO;
 				PRODUCT_NAME = mordor;
