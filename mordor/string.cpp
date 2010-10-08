@@ -449,7 +449,7 @@ toUtf16(const char * str, size_t length)
     MORDOR_ASSERT(CFDataGetLength(cfUtf16Data) % sizeof(utf16char) == 0);
     result.resize(CFDataGetLength(cfUtf16Data) / sizeof(utf16char));
     CFDataGetBytes(cfUtf16Data, CFRangeMake(0,CFDataGetLength(cfUtf16Data)),
-        (UInt8 *)result[0]);
+        (UInt8 *)&result[0]);
     return result;
 }
 
