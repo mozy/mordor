@@ -588,7 +588,7 @@ Fiber::flsGet(size_t key)
 #endif
     Fiber::ptr self = Fiber::getThis();
     if (self->m_fls.size() <= key)
-        return NULL;
+        return 0;
     return self->m_fls[key];
 }
 

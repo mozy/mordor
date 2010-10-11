@@ -25,7 +25,7 @@ class Future : boost::noncopyable
     friend size_t waitAny(Iterator start, Iterator end);
 public:
     Future(boost::function<void (const T &)> dg = NULL, Scheduler *scheduler = NULL)
-        : m_fiber(NULL),
+        : m_fiber(0),
           m_scheduler(scheduler),
           m_dg(dg),
           m_t()
@@ -87,7 +87,7 @@ public:
 
     void reset()
     {
-        m_fiber = NULL;
+        m_fiber = 0;
         if (!m_dg)
             m_scheduler = NULL;
     }
@@ -114,7 +114,7 @@ class Future<Void> : boost::noncopyable
     friend size_t waitAny(Iterator start, Iterator end);
 public:
     Future(boost::function<void ()> dg = NULL, Scheduler *scheduler = NULL)
-        : m_fiber(NULL),
+        : m_fiber(0),
           m_scheduler(scheduler),
           m_dg(dg)
     {
@@ -171,7 +171,7 @@ public:
 
     void reset()
     {
-        m_fiber = NULL;
+        m_fiber = 0;
         if (!m_dg)
             m_scheduler = NULL;
     }

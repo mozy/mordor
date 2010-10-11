@@ -47,11 +47,6 @@ static std::ostream &operator <<(std::ostream &os, EPOLL_EVENTS events)
         os << "EPOLLOUT";
         one = true;
     }
-    if (events & EPOLLRDHUP) {
-        if (one) os << " | ";
-        os << "EPOLLRDHUP";
-        one = true;
-    }
     if (events & EPOLLPRI) {
         if (one) os << " | ";
         os << "EPOLLPRI";
@@ -77,7 +72,7 @@ static std::ostream &operator <<(std::ostream &os, EPOLL_EVENTS events)
         os << "EPOLLONESHOT";
         one = true;
     }
-    events = (EPOLL_EVENTS)(events & ~(EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET | EPOLLONESHOT));
+    events = (EPOLL_EVENTS)(events & ~(EPOLLIN | EPOLLOUT | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET | EPOLLONESHOT));
     if (events) {
         if (one) os << " | ";
         os << (uint32_t)events;

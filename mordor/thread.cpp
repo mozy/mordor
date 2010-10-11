@@ -65,7 +65,7 @@ Thread::join()
     int rc = pthread_join(m_thread, NULL);
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(rc, "pthread_join");
-    m_thread = NULL;
+    m_thread = 0;
 #endif
 }
 
