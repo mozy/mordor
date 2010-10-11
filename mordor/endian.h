@@ -68,7 +68,11 @@ byteswap(T value)
     return (T)_OSSwapInt16((uint16_t)value);
 }
 
-#if __BYTE_ORDER == __BIG_ENDIAN
+#if !defined(__BIG_ENDIAN__) && !defined(__LITTLE_ENDIAN__)
+#error Do not know the endianess of this architecture
+#endif
+    
+#ifdef __BIG_ENDIAN__
 #define MORDOR_BYTE_ORDER MORDOR_BIG_ENDIAN
 #else
 #define MORDOR_BYTE_ORDER MORDOR_LITTLE_ENDIAN
