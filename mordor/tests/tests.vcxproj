@@ -217,6 +217,7 @@
     <ClCompile Include="socket.cpp" />
     <ClCompile Include="ssl_stream.cpp" />
     <ClCompile Include="stream.cpp" />
+    <ClCompile Include="string.cpp" />
     <ClCompile Include="temp_stream.cpp" />
     <ClCompile Include="timeout_stream.cpp" />
     <ClCompile Include="timer.cpp" />

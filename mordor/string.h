@@ -34,10 +34,16 @@ std::string sha1sum(const void *data, size_t len);
 std::string hmacMd5(const std::string &text, const std::string &key);
 std::string hmacSha1(const std::string &text, const std::string &key);
 
-// Output must be of size len * 2, and will *not* be null-terminated
+/// Output must be of size len * 2, and will *not* be null-terminated
 void hexstringFromData(const void *data, size_t len, char *output);
 std::string hexstringFromData(const void *data, size_t len);
 std::string hexstringFromData(const std::string &data);
+
+/// Output must be of size length / 2, and will *not* be null-terminated
+/// std::invalid_argument will be thrown if hexstring is not hex
+void dataFromHexstring(const char *hexstring, size_t length, void *output);
+std::string dataFromHexstring(const char *hexstring, size_t length);
+std::string dataFromHexstring(const std::string &data);
 
 void replace(std::string &str, char find, char replaceWith);
 void replace(std::string &str, char find, const std::string &replaceWith);

@@ -305,6 +305,7 @@ TESTOBJECTS :=								\
 	mordor/tests/socket.o						\
 	mordor/tests/ssl_stream.o					\
 	mordor/tests/stream.o						\
+	mordor/tests/string.o						\
 	mordor/tests/temp_stream.o					\
 	mordor/tests/timeout_stream.o					\
 	mordor/tests/timer.o						\

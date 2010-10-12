@@ -247,7 +247,7 @@ std::string
 hexstringFromData(const void *data, size_t len)
 {
     if (len == 0)
-        return "";
+        return std::string();
     std::string result;
     result.resize(len * 2);
     hexstringFromData(data, len, &result[0]);
@@ -258,6 +258,102 @@ std::string
 hexstringFromData(const std::string &data)
 {
     return hexstringFromData(data.c_str(), data.size());
+}
+
+void
+dataFromHexstring(const char *hexstring, size_t length, void *output)
+{
+    unsigned char *buf = (unsigned char *)output;
+    unsigned char byte;
+    if (length % 2 != 0)
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("length"));
+    for (size_t i = 0; i < length; ++i) {
+        switch (hexstring[i]) {
+            case 'a':
+            case 'b':
+            case 'c':
+            case 'd':
+            case 'e':
+            case 'f':
+                byte = (hexstring[i] - 'a' + 10) << 4;
+                break;
+            case 'A':
+            case 'B':
+            case 'C':
+            case 'D':
+            case 'E':
+            case 'F':
+                byte = (hexstring[i] - 'A' + 10) << 4;
+                break;
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                byte = (hexstring[i] - '0') << 4;
+                break;
+            default:
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("hexstring"));
+        }
+        ++i;
+        switch (hexstring[i]) {
+            case 'a':
+            case 'b':
+            case 'c':
+            case 'd':
+            case 'e':
+            case 'f':
+                byte |= hexstring[i] - 'a' + 10;
+                break;
+            case 'A':
+            case 'B':
+            case 'C':
+            case 'D':
+            case 'E':
+            case 'F':
+                byte |= hexstring[i] - 'A' + 10;
+                break;
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                byte |= hexstring[i] - '0';
+                break;
+            default:
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("hexstring"));
+        }
+        *buf++ = byte;
+    }
+}
+
+std::string
+dataFromHexstring(const char *hexstring, size_t length)
+{
+    if (length % 2 != 0)
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("length"));
+    if (length == 0)
+        return std::string();
+    std::string result;
+    result.resize(length / 2);
+    dataFromHexstring(hexstring, length, &result[0]);
+    return result;
+}
+
+std::string
+dataFromHexstring(const std::string &hexstring)
+{
+    return dataFromHexstring(hexstring.c_str(), hexstring.size());
 }
 
 void
