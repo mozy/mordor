@@ -10,6 +10,80 @@
 namespace Mordor {
 namespace JSON {
 
+namespace {
+class BoolVisitor : public boost::static_visitor<>
+{
+public:
+    void operator()(const Array &array)
+    {
+        result = array.empty();
+    }
+
+    void operator()(const Object &object)
+    {
+        result = object.empty();
+    }
+
+    template <class T>
+    void operator()(const T& value)
+    {
+        MORDOR_THROW_EXCEPTION(boost::bad_get());
+    }
+
+    bool result;
+};
+
+class SizeVisitor : public boost::static_visitor<>
+{
+public:
+    void operator()(const Array &array)
+    {
+        result = array.size();
+    }
+
+    void operator()(const Object &object)
+    {
+        result = object.size();
+    }
+
+    template <class T>
+    void operator()(const T& value)
+    {
+        MORDOR_THROW_EXCEPTION(boost::bad_get());
+    }
+
+    size_t result;
+};
+}
+
+bool
+Value::empty() const
+{
+    BoolVisitor visitor;
+    boost::apply_visitor(visitor, *this);
+    return visitor.result;
+}
+
+size_t
+Value::size() const
+{
+    SizeVisitor visitor;
+    boost::apply_visitor(visitor, *this);
+    return visitor.result;
+}
+
+static Value g_blank;
+
+const Value &
+Value::operator[](const std::string &key) const
+{
+    const Object &object = get<const Object>();
+    const_iterator it = object.find(key);
+    if (it == object.end())
+        return g_blank;
+    return it->second;
+}
+
 std::string unquote(const std::string &string)
 {
     MORDOR_ASSERT(string.size() >= 2);
