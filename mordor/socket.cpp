@@ -775,8 +775,13 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
     AsyncEvent &event = isSend ? m_sendEvent : m_receiveEvent;
     OVERLAPPED *overlapped = m_ioManager ? &event.overlapped : NULL;
 
-    if (m_ioManager)
+    if (m_ioManager) {
+        if (cancelled) {
+            MORDOR_SOCKET_LOG(-1, cancelled);
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(cancelled, api);
+        }
         m_ioManager->registerEvent(&event);
+    }
 
     DWORD transferred;
     int result;
@@ -829,12 +834,6 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
         if (m_skipCompletionPortOnSuccess && result == 0) {
             m_ioManager->unregisterEvent(&event);
         } else {
-            if (cancelled) {
-                MORDOR_SOCKET_LOG(-1, cancelled);
-                m_ioManager->cancelEvent((HANDLE)m_sock, &event);
-                Scheduler::yieldTo();
-                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(cancelled, api);
-            }
             Timer::ptr timer;
             if (timeout != ~0ull)
                 timer = m_ioManager->registerTimer(timeout, boost::bind(
@@ -869,12 +868,14 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
         msg.msg_namelen = address->nameLen();
     }
     IOManager::Event event = isSend ? IOManager::WRITE : IOManager::READ;
-    int rc = isSend ? sendmsg(m_sock, &msg, flags) : recvmsg(m_sock, &msg, flags);
-    while (m_ioManager && rc == -1 && errno == EAGAIN) {
+    if (m_ioManager) {
         if (cancelled) {
             MORDOR_SOCKET_LOG(-1, cancelled);
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(cancelled, api);
         }
+    }
+    int rc = isSend ? sendmsg(m_sock, &msg, flags) : recvmsg(m_sock, &msg, flags);
+    while (m_ioManager && rc == -1 && errno == EAGAIN) {
         m_ioManager->registerEvent(m_sock, event);
         Timer::ptr timer;
         if (timeout != ~0ull)
