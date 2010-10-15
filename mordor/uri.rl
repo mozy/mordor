@@ -24,7 +24,7 @@ static const std::string pchar("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
 static const std::string path("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" ":@" "/");
 static const std::string segment_nc("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" "@");
 static const std::string query("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$&'()*+,;=" ":@" "/?");
-static const std::string queryString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$'()*+," ":@" "/?");
+static const std::string queryString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~" "!$'()*," ":@" "/?");
 
 static std::string escape(const std::string& str, const std::string& allowedChars, bool spaceAsPlus = false)
 {
@@ -392,6 +392,7 @@ URI::URI(const Buffer &uri)
 URI&
 URI::operator=(const std::string& uri)
 {
+    reset();
     URIParser parser(*this);
     parser.run(uri);
     if (parser.error() || !parser.final())
@@ -402,6 +403,7 @@ URI::operator=(const std::string& uri)
 URI&
 URI::operator=(const Buffer &uri)
 {
+    reset();
     URIParser parser(*this);
     parser.run(uri);
     if (parser.error() || !parser.final())
@@ -526,10 +528,12 @@ URI::Path::Path(const std::string& path)
 URI::Path&
 URI::Path::operator=(const std::string& path)
 {
+    type = RELATIVE;
+    segments.clear();
     URIPathParser parser(*this);
     parser.run(path);
     if (parser.error() || !parser.final())
-        throw std::invalid_argument("uri");
+        throw std::invalid_argument("path");
     return *this;
 }
 
@@ -709,7 +713,7 @@ operator<<(std::ostream& os, const URI& uri)
     os << uri.path.serialize(!uri.schemeDefined());
 
     if (uri.queryDefined()) {
-        os << "?" << escape(uri.query(), query);
+        os << "?" << uri.m_query;
     }
 
     if (uri.fragmentDefined()) {
@@ -801,17 +805,105 @@ URI::operator==(const URI &rhs) const
     return cmp(rhs) == 0;
 }
 
+%%{
+    machine querystring_parser;
+
+    action mark { mark = fpc; }
+    action saveKey {
+        m_iterator = m_qs.insert(std::make_pair(
+            unescape(std::string(mark, fpc - mark), true), std::string()));
+        mark = NULL;
+    }
+    action saveValue {
+        MORDOR_ASSERT(m_iterator != m_qs.end());
+        if (fpc - mark == 0 && m_iterator->first.empty())
+            m_qs.erase(m_iterator);
+        else
+            m_iterator->second = unescape(std::string(mark, fpc - mark), true);
+        m_iterator = m_qs.end();
+        mark = NULL;
+    }
+    action saveNoValue {
+        if (m_iterator != m_qs.end() && m_iterator->first.empty()) {
+            m_qs.erase(m_iterator);
+            mark = NULL;
+        }
+    }
+
+    sub_delims = "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";";
+    unreserved = alpha | digit | "-" | "." | "_" | "~";
+    pct_encoded = "%" xdigit xdigit;
+    pchar = unreserved | pct_encoded | sub_delims | ":" | "@";
+    querychar = (pchar | "/" | "?") -- '&' -- ';';
+    key = querychar*;
+    value = (querychar | '=')*;
+    keyValue = key >mark %saveKey ('=' value >mark %saveValue)? %saveNoValue;
+    main := keyValue? ( ('&' | ';') keyValue? )*;
+    write data;
+}%%
+
+class QueryStringParser : public RagelParser
+{
+public:
+    QueryStringParser(URI::QueryString &qs)
+    : m_qs(qs),
+      m_iterator(m_qs.end())
+    {}
+
+
+    void init()
+    {
+        RagelParser::init();
+        %% write init;
+    }
+
+    void exec()
+    {
+#ifdef MSVC
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+        %% write exec;
+#ifdef MSVC
+#pragma warning(pop)
+#endif
+    }
+
+    bool complete() const { return false; }
+    bool final() const
+    {
+        return cs >= querystring_parser_first_final;
+    }
+
+    bool error() const
+    {
+        return cs == querystring_parser_error;
+    }
+
+private:
+    URI::QueryString &m_qs;
+    URI::QueryString::iterator m_iterator;
+};
+
 URI::QueryString &
-URI::QueryString::operator =(const std::string &str)
+URI::QueryString::operator =(const std::string &string)
 {
     clear();
-    std::vector<std::string> pairs = split(str, "&;");
-    for (std::vector<std::string>::iterator it = pairs.begin();
-        it != pairs.end();
-        ++it) {
-        std::vector<std::string> keyValue = split(*it, '=', 2);
-        insert(value_type(unescape(keyValue[0], true), keyValue.size() == 2 ? unescape(keyValue[1], true) : ""));
-    }
+    QueryStringParser parser(*this);
+    parser.run(string);
+    if (!parser.final() || parser.error())
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("Invalid QueryString"));
+    return *this;
+}
+
+URI::QueryString &
+URI::QueryString::operator =(Stream &stream)
+{
+    clear();
+    QueryStringParser parser(*this);
+    parser.run(stream);
+    if (!parser.final() || parser.error())
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("Invalid QueryString"));
     return *this;
 }
 

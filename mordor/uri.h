@@ -5,12 +5,17 @@
 #include <string>
 #include <vector>
 
+#include <boost/shared_ptr.hpp>
+
 #include "assert.h"
 #include "mordor/streams/buffer.h"
 #include "mordor/string.h"
+#include "ragel.h"
 #include "predef.h"
 
 namespace Mordor {
+
+class Stream;
 
 namespace HTTP
 {
@@ -23,6 +28,7 @@ struct URI
     friend class URIParser;
     friend class HTTP::RequestParser;
     friend class HTTP::ResponseParser;
+    friend std::ostream& operator<<(std::ostream& os, const Mordor::URI& uri);
 
     enum CharacterClass {
         UNRESERVED,
@@ -138,9 +144,11 @@ struct URI
             *this = str;
         }
 
-        QueryString &operator =(const std::string &str);
-
         std::string toString() const;
+
+        QueryString &operator =(const std::string &string);
+        QueryString &operator =(Stream &stream);
+        QueryString &operator =(boost::shared_ptr<Stream> stream) { return *this = *stream; }
     };
 
     std::string query() const;
