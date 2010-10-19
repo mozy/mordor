@@ -12,6 +12,11 @@
 #error IOManagerEPoll is Linux only
 #endif
 
+// EPOLLRDHUP is missing in the header on etch
+#ifndef EPOLLRDHUP
+#define EPOLLRDHUP 0x2000
+#endif
+
 namespace Mordor {
 
 class Fiber;
@@ -22,13 +27,7 @@ public:
     enum Event {
         READ = EPOLLIN,
         WRITE = EPOLLOUT,
-        // CLOSE and ERROR are for compatibility with legacy apps *only*
-        // If you register for ERROR, and an error happens, no other events
-        // will fire if an ERROR fires
-        // If you register for CLOSE, a WRITE will not fire if a CLOSE
-        // fires
-        CLOSE = EPOLLHUP,
-        ERROR = EPOLLERR
+        CLOSE = EPOLLRDHUP
     };
 
 private:
@@ -36,9 +35,9 @@ private:
     {
         epoll_event event;
 
-        Scheduler *m_schedulerIn, *m_schedulerOut, *m_schedulerClose, *m_schedulerError;
-        boost::shared_ptr<Fiber> m_fiberIn, m_fiberOut, m_fiberClose, m_fiberError;
-        boost::function<void ()> m_dgIn, m_dgOut, m_dgClose, m_dgError;
+        Scheduler *m_schedulerIn, *m_schedulerOut, *m_schedulerClose;
+        boost::shared_ptr<Fiber> m_fiberIn, m_fiberOut, m_fiberClose;
+        boost::function<void ()> m_dgIn, m_dgOut, m_dgClose;
     };
 
 public:
