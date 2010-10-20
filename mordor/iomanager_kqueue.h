@@ -21,8 +21,9 @@ class IOManager : public Scheduler, public TimerManager
 {
 public:
     enum Event {
-        READ = EVFILT_READ,
-        WRITE = EVFILT_WRITE
+        READ,
+        WRITE,
+        CLOSE
     };
 
 private:
@@ -30,9 +31,9 @@ private:
     {
         struct kevent event;
 
-        Scheduler *m_scheduler;
-        boost::shared_ptr<Fiber> m_fiber;
-        boost::function<void ()> m_dg;
+        Scheduler *m_scheduler, *m_schedulerClose;
+        boost::shared_ptr<Fiber> m_fiber, m_fiberClose;
+        boost::function<void ()> m_dg, m_dgClose;
 
         bool operator<(const AsyncEvent &rhs) const
         { if (event.ident < rhs.event.ident) return true; return event.filter < rhs.event.filter; }
@@ -46,6 +47,7 @@ public:
 
     void registerEvent(int fd, Event events, boost::function<void ()> dg = NULL);
     void cancelEvent(int fd, Event events);
+    void unregisterEvent(int fd, Event events);
 
 protected:
     bool stopping(unsigned long long &nextTimeout);
