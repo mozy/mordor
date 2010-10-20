@@ -155,6 +155,7 @@ private:
         FiberMutex::ScopedLock &lock);
     void cleanOutDeadConns(CachedConnectionMap &conns);
     void addSSL(const URI &uri, boost::shared_ptr<Stream> &stream);
+    void dropConnection(const URI &uri, const ClientConnection *connection);
 
 private:
     FiberMutex m_mutex;
