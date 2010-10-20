@@ -380,3 +380,28 @@ MORDOR_UNITTEST(PipeStream, threadStress)
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&threadStress, pipe.first))));
     threadStress(pipe.second);
 }
+
+static void closed(bool &remoteClosed)
+{
+    remoteClosed = true;
+}
+
+MORDOR_UNITTEST(PipeStream, eventOnRemoteClose)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+
+    bool remoteClosed = false;
+    pipe.first->onRemoteClose(boost::bind(&closed, boost::ref(remoteClosed)));
+    pipe.second->close();
+    MORDOR_TEST_ASSERT(remoteClosed);
+}
+
+MORDOR_UNITTEST(PipeStream, eventOnRemoteReset)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+
+    bool remoteClosed = false;
+    pipe.first->onRemoteClose(boost::bind(&closed, boost::ref(remoteClosed)));
+    pipe.second.reset();
+    MORDOR_TEST_ASSERT(remoteClosed);
+}

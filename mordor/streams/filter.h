@@ -55,6 +55,10 @@ public:
     void unread(const Buffer &b, size_t len)
     { return m_parent->unread(b, len); }
 
+    boost::signals2::connection onRemoteClose(
+        const boost::signals2::slot<void ()> &slot)
+    { return m_parent->onRemoteClose(slot); }
+
 private:
     Stream::ptr m_parent;
     bool m_own;

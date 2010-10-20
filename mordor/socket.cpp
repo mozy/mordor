@@ -169,11 +169,13 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
   m_receiveTimeout(~0ull),
   m_sendTimeout(~0ull),
   m_cancelledSend(0),
-  m_cancelledReceive(0)
+  m_cancelledReceive(0),
 #ifdef WINDOWS
-  , m_hEvent(NULL),
-  m_scheduler(NULL)
+  m_hEvent(NULL),
+  m_scheduler(NULL),
 #endif
+  m_isConnected(false),
+  m_isRegisteredForRemoteClose(false)
 {
 #ifdef WINDOWS
     if (pAcceptEx && m_ioManager) {
@@ -192,7 +194,9 @@ Socket::Socket(int family, int type, int protocol)
 : m_sock(-1),
   m_family(family),
   m_protocol(protocol),
-  m_ioManager(NULL)
+  m_ioManager(NULL),
+  m_isConnected(false),
+  m_isRegisteredForRemoteClose(false)
 {
     m_sock = socket(family, type, protocol);
     MORDOR_LOG_DEBUG(g_log) << this << " socket(" << (Family)family << ", "
@@ -217,11 +221,13 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
   m_receiveTimeout(~0ull),
   m_sendTimeout(~0ull),
   m_cancelledSend(0),
-  m_cancelledReceive(0)
+  m_cancelledReceive(0),
 #ifdef WINDOWS
-  , m_hEvent(NULL),
-  m_scheduler(NULL)
+  m_hEvent(NULL),
+  m_scheduler(NULL),
 #endif
+  m_isConnected(false),
+  m_isRegisteredForRemoteClose(false)
 {
     m_sock = socket(family, type, protocol);
     MORDOR_LOG_DEBUG(g_log) << this << " socket(" << (Family)family << ", "
@@ -257,15 +263,23 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
 
 Socket::~Socket()
 {
+#ifdef WINDOWS
+    if (m_ioManager && m_hEvent) {
+        if (m_isRegisteredForRemoteClose) {
+            m_ioManager->unregisterEvent(m_hEvent);
+            WSAEventSelect(m_sock, m_hEvent, 0);
+        }
+        CloseHandle(m_hEvent);
+    }
+#else
+    if (m_isRegisteredForRemoteClose)
+        m_ioManager->unregisterEvent(m_sock, IOManager::CLOSE);
+#endif
     if (m_sock != -1) {
         int rc = ::closesocket(m_sock);
         MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::INFO) << this
             << " close(" << m_sock << "): (" << lastError() << ")";
     }
-#ifdef WINDOWS
-    if (m_ioManager && m_hEvent)
-        CloseHandle(m_hEvent);
-#endif
 }
 
 void
@@ -500,6 +514,9 @@ suckylsp:
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("connect");
         }
 #endif
+        m_isConnected = true;
+        if (!m_onRemoteClose.empty())
+            registerForRemoteClose();
     }
 }
 
@@ -620,6 +637,8 @@ suckylsp:
                 if (!m_hEvent)
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
             }
+            if (!ResetEvent(m_hEvent))
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ResetEvent");
             if (WSAEventSelect(m_sock, m_hEvent, FD_ACCEPT))
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSAEventSelect");
             socket_t newsock = ::accept(m_sock, NULL, NULL);
@@ -721,6 +740,9 @@ suckylsp:
         }
         target.m_sock = newsock;
 #endif
+        target.m_isConnected = true;
+        if (!target.m_onRemoteClose.empty())
+            target.registerForRemoteClose();
     }
 }
 
@@ -732,6 +754,17 @@ Socket::shutdown(int how)
             << how << "): (" << lastError() << ")";
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("shutdown");
     }
+    if (m_isRegisteredForRemoteClose) {
+#ifdef WINDOWS
+        m_ioManager->unregisterEvent(m_hEvent);
+        WSAEventSelect(m_sock, m_hEvent, 0);
+#else
+        if (m_isRegisteredForRemoteClose)
+            m_ioManager->unregisterEvent(m_sock, IOManager::CLOSE);
+#endif
+        m_isRegisteredForRemoteClose = false;
+    }
+    m_isConnected = false;
     MORDOR_LOG_VERBOSE(g_log) << this << " shutdown(" << m_sock << ", "
         << how << ")";
 }
@@ -1157,6 +1190,45 @@ Socket::type()
     return result;
 }
 
+boost::signals2::connection
+Socket::onRemoteClose(const boost::signals2::slot<void ()> &slot)
+{
+    boost::signals2::connection result = m_onRemoteClose.connect(slot);
+    if (m_isConnected && !m_isRegisteredForRemoteClose)
+        registerForRemoteClose();
+    return result;
+}
+
+void
+Socket::callOnRemoteClose(weak_ptr self)
+{
+    ptr strongSelf = self.lock();
+    if (strongSelf)
+        strongSelf->m_onRemoteClose();
+}
+
+void
+Socket::registerForRemoteClose()
+{
+#ifdef WINDOWS
+    // listen for the close event
+    if (!m_hEvent) {
+        m_hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+        if (!m_hEvent)
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
+    }
+    if (!ResetEvent(m_hEvent))
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ResetEvent");
+    if (WSAEventSelect(m_sock, m_hEvent, FD_CLOSE))
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSAEventSelect");
+    m_ioManager->registerEvent(m_hEvent, boost::bind(&Socket::callOnRemoteClose,
+        weak_ptr(shared_from_this())));
+#else
+    m_ioManager->registerEvent(m_sock, IOManager::CLOSE,
+        boost::bind(&Socket::callOnRemoteClose, weak_ptr(shared_from_this())));
+#endif
+    m_isRegisteredForRemoteClose = true;
+}
 
 Address::Address(int type, int protocol)
 : m_type(type),

@@ -6,6 +6,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/signals2/signal.hpp>
 
 #include "mordor/predef.h"
 
@@ -231,6 +232,17 @@ public:
     /// @pre @c buffer.readAvailable() >= @c length
     /// @pre supportsUnread()
     virtual void unread(const Buffer &buffer, size_t length);
+
+    /// Event triggered when the remote end of the connection closes the
+    /// virtual circuit
+    ///
+    /// This event is triggered out-of-band of any read operation (i.e. there
+    /// may still be data to be read after this event has been received)
+    /// @note This event is optional, and will return a disconnected connection
+    /// if it is not supported.
+    virtual boost::signals2::connection onRemoteClose(
+        const boost::signals2::slot<void ()> &slot)
+    { return boost::signals2::connection(); }
 
 protected:
     size_t read(Buffer &buffer, size_t length, bool coalesce);

@@ -7,6 +7,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/signals2/signal.hpp>
 
 #include "endian.h"
 #include "exception.h"
@@ -72,6 +73,7 @@ class Socket : public boost::enable_shared_from_this<Socket>, boost::noncopyable
 {
 public:
     typedef boost::shared_ptr<Socket> ptr;
+    typedef boost::weak_ptr<Socket> weak_ptr;
 private:
     Socket(IOManager *ioManager, int family, int type, int protocol, int initialize);
 public:
@@ -138,9 +140,20 @@ public:
     int type();
     int protocol() { return m_protocol; }
 
+    /// Event triggered when the remote end of the connection closes the
+    /// virtual circuit
+    ///
+    /// Only triggered for connected stream sockets.  This event is trigerred
+    /// out-of-band of any receive operations (i.e. there may still be data on
+    /// the socket to be read after this event has been received)
+    boost::signals2::connection onRemoteClose(
+        const boost::signals2::slot<void ()> &slot);
+
 private:
     template <bool isSend>
     size_t doIO(iovec *buffers, size_t length, int &flags, Address *address = NULL);
+    static void callOnRemoteClose(weak_ptr self);
+    void registerForRemoteClose();
 
 #ifdef WINDOWS
     // For WSAEventSelect
@@ -166,6 +179,8 @@ private:
 
     AsyncEvent m_sendEvent, m_receiveEvent;
 #endif
+    bool m_isConnected, m_isRegisteredForRemoteClose;
+    boost::signals2::signal<void ()> m_onRemoteClose;
 };
 
 #ifdef WINDOWS

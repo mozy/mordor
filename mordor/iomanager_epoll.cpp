@@ -72,7 +72,12 @@ static std::ostream &operator <<(std::ostream &os, EPOLL_EVENTS events)
         os << "EPOLLONESHOT";
         one = true;
     }
-    events = (EPOLL_EVENTS)(events & ~(EPOLLIN | EPOLLOUT | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET | EPOLLONESHOT));
+    if (events & EPOLLRDHUP) {
+        if (one) os << " | ";
+        os << "EPOLLRDHUP";
+        one = true;
+    }
+    events = (EPOLL_EVENTS)(events & ~(EPOLLIN | EPOLLOUT | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET | EPOLLONESHOT | EPOLLRDHUP));
     if (events) {
         if (one) os << " | ";
         os << (uint32_t)events;
@@ -145,7 +150,7 @@ IOManager::registerEvent(int fd, Event events, boost::function<void ()> dg)
     MORDOR_ASSERT(Scheduler::getThis());
     MORDOR_ASSERT(Fiber::getThis());
 
-    int epollevents = ((int)events & (EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLERR)) | EPOLLET;
+    int epollevents = ((int)events & (EPOLLIN | EPOLLOUT | EPOLLRDHUP)) | EPOLLET;
     MORDOR_ASSERT(epollevents != 0);
     boost::mutex::scoped_lock lock(m_mutex);
     int op;
@@ -184,7 +189,7 @@ IOManager::registerEvent(int fd, Event events, boost::function<void ()> dg)
             event->m_fiberOut = Fiber::getThis();
         }
     }
-    if (epollevents & EPOLLHUP) {
+    if (epollevents & EPOLLRDHUP) {
         event->m_schedulerClose = Scheduler::getThis();
         if (dg) {
             event->m_dgClose = dg;
@@ -192,16 +197,6 @@ IOManager::registerEvent(int fd, Event events, boost::function<void ()> dg)
         } else {
             event->m_dgClose = NULL;
             event->m_fiberClose = Fiber::getThis();
-        }
-    }
-    if (epollevents & EPOLLERR) {
-        event->m_schedulerError = Scheduler::getThis();
-        if (dg) {
-            event->m_dgError = dg;
-            event->m_fiberError.reset();
-        } else {
-            event->m_dgError = NULL;
-            event->m_fiberError = Fiber::getThis();
         }
     }
     int rc = epoll_ctl(m_epfd, op, event->event.data.fd, &event->event);
@@ -235,18 +230,14 @@ IOManager::unregisterEvent(int fd, Event events)
         e.m_fiberOut.reset();
         result = true;
     }
-    if ((events & EPOLLHUP) && (e.event.events & EPOLLHUP)) {
+    if ((events & EPOLLRDHUP) && (e.event.events & EPOLLRDHUP)) {
         e.m_dgClose = NULL;
         e.m_fiberClose.reset();
         result = true;
     }
-    if ((events & EPOLLERR) && (e.event.events & EPOLLERR)) {
-        e.m_dgError = NULL;
-        e.m_fiberError.reset();
-        result = true;
-    }
     e.event.events &= ~events;
-    int op = e.event.events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
+    int op = e.event.events == (unsigned int)EPOLLET ?
+        EPOLL_CTL_MOD : EPOLL_CTL_DEL;
     int rc = epoll_ctl(m_epfd, op, fd, &e.event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", " << fd
@@ -282,21 +273,13 @@ IOManager::cancelEvent(int fd, Event events)
         e.m_dgOut = NULL;
         e.m_fiberOut.reset();
     }
-    if ((events & EPOLLHUP) && (e.event.events & EPOLLHUP)) {
+    if ((events & EPOLLRDHUP) && (e.event.events & EPOLLRDHUP)) {
         if (e.m_dgClose)
             e.m_schedulerClose->schedule(e.m_dgClose);
         else
             e.m_schedulerClose->schedule(e.m_fiberClose);
         e.m_dgClose = NULL;
         e.m_fiberClose.reset();
-    }
-    if ((events & EPOLLERR) && (e.event.events & EPOLLERR)) {
-        if (e.m_dgError)
-            e.m_schedulerError->schedule(e.m_dgError);
-        else
-            e.m_schedulerError->schedule(e.m_fiberError);
-        e.m_dgError = NULL;
-        e.m_fiberError.reset();
     }
     e.event.events &= ~events;
     int op = e.event.events == (unsigned int)EPOLLET ? EPOLL_CTL_DEL : EPOLL_CTL_MOD;
@@ -370,34 +353,14 @@ m_pendingEvents.find(event.data.fd);
             MORDOR_LOG_TRACE(g_log) << " epoll_event {"
                 << (EPOLL_EVENTS)event.events << ", " << event.data.fd
                 << "}, registered for " << (EPOLL_EVENTS)e.event.events;
-            if ((event.events & EPOLLERR) && (e.event.events & EPOLLERR)) {
-                if (e.m_dgError)
-                    e.m_schedulerError->schedule(e.m_dgError);
-                else
-                    e.m_schedulerError->schedule(e.m_fiberError);
-                // Block other events from firing
-                e.m_dgError = NULL;
-                e.m_fiberError.reset();
-                e.m_dgIn = NULL;
-                e.m_fiberIn.reset();
-                e.m_dgOut = NULL;
-                e.m_fiberOut.reset();
-                event.events = 0;
-                e.event.events = 0;
-            }
-            if ((event.events & EPOLLHUP) && (e.event.events & EPOLLHUP)) {
+
+            if ((event.events & EPOLLRDHUP) && (e.event.events & EPOLLRDHUP)) {
                 if (e.m_dgClose)
-                    e.m_schedulerError->schedule(e.m_dgClose);
+                    e.m_schedulerClose->schedule(e.m_dgClose);
                 else
-                    e.m_schedulerError->schedule(e.m_fiberClose);
-                // Block write event from firing
-                e.m_dgOut = NULL;
-                e.m_fiberOut.reset();
+                    e.m_schedulerClose->schedule(e.m_fiberClose);
                 e.m_dgClose = NULL;
                 e.m_fiberClose.reset();
-                event.events &= EPOLLOUT;
-                e.event.events &= EPOLLOUT;
-                err = false;
             }
 
             if (((event.events & EPOLLIN) ||

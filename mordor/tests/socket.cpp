@@ -443,3 +443,38 @@ MORDOR_UNITTEST(Socket, sendReceiveForceAsync)
     ioManager.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 20);
 }
+
+static void closed(bool &remoteClosed)
+{
+    remoteClosed = true;
+}
+
+MORDOR_UNITTEST(Socket, eventOnRemoteShutdown)
+{
+    IOManager ioManager;
+    Connection conns = establishConn(ioManager);
+    ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
+    conns.connect->connect(conns.address);
+    ioManager.dispatch();
+    
+    bool remoteClosed = false;
+    conns.accept->onRemoteClose(boost::bind(&closed, boost::ref(remoteClosed)));
+    conns.connect->shutdown();
+    ioManager.dispatch();
+    MORDOR_TEST_ASSERT(remoteClosed);
+}
+
+MORDOR_UNITTEST(Socket, eventOnRemoteReset)
+{
+    IOManager ioManager;
+    Connection conns = establishConn(ioManager);
+    ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
+    conns.connect->connect(conns.address);
+    ioManager.dispatch();
+    
+    bool remoteClosed = false;
+    conns.accept->onRemoteClose(boost::bind(&closed, boost::ref(remoteClosed)));
+    conns.connect.reset();
+    ioManager.dispatch();
+    MORDOR_TEST_ASSERT(remoteClosed);
+}

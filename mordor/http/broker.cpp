@@ -42,6 +42,7 @@ createRequestBroker(const RequestBrokerOptions &options)
         timerManager));
     connectionCache->httpReadTimeout(options.httpReadTimeout);
     connectionCache->httpWriteTimeout(options.httpWriteTimeout);
+    connectionCache->idleTimeout(options.idleTimeout);
     connectionCache->sslReadTimeout(options.sslConnectReadTimeout);
     connectionCache->sslWriteTimeout(options.sslConnectWriteTimeout);
     connectionCache->sslCtx(options.sslCtx);
@@ -355,10 +356,16 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
             new ClientConnection(stream, m_timerManager)), proxied);
         MORDOR_LOG_TRACE(g_cacheLog) << this << " connection " << result.first
             << " to " << endpoint << " established";
+        stream->onRemoteClose(boost::bind(&ConnectionCache::dropConnection,
+            this, endpoint, result.first.get()));
         if (m_httpReadTimeout != ~0ull)
             result.first->readTimeout(m_httpReadTimeout);
         if (m_httpWriteTimeout != ~0ull)
             result.first->writeTimeout(m_httpWriteTimeout);
+        if (m_idleTimeout != ~0ull)
+            result.first->idleTimeout(m_idleTimeout,
+            boost::bind(&ConnectionCache::dropConnection, this, endpoint,
+                result.first.get()));
         // Assign this connection to the first blank connection for this
         // schemeAndAuthority
         // it should still be valid, even if the map changed
@@ -439,8 +446,7 @@ ConnectionCache::abortConnections()
     FiberMutex::ScopedLock lock(m_mutex);
     MORDOR_LOG_DEBUG(g_cacheLog) << " aborting all connections";
     m_closed = true;
-    std::map<URI, std::pair<ConnectionList,
-        boost::shared_ptr<FiberCondition> > >::iterator it;
+    CachedConnectionMap::iterator it;
     for (it = m_conns.begin(); it != m_conns.end(); ++it) {
         it->second.second->broadcast();
         for (ConnectionList::iterator it2 = it->second.first.begin();
@@ -513,6 +519,41 @@ ConnectionCache::addSSL(const URI &uri, Stream::ptr &stream)
         bufferedStream->flushMultiplesOfBuffer(true);
         bufferedStream->allowPartialReads(true);
         stream = bufferedStream;
+    }
+}
+
+namespace {
+struct CompareConn
+{
+    CompareConn(const ClientConnection *conn)
+        : m_conn(conn)
+    {}
+
+    bool operator()(const ClientConnection::ptr &lhs) const
+    {
+        return lhs.get() == m_conn;
+    }
+
+    const ClientConnection *m_conn;
+};
+}
+
+void
+ConnectionCache::dropConnection(const URI &uri,
+    const ClientConnection *connection)
+{
+    FiberMutex::ScopedLock lock(m_mutex);
+    CachedConnectionMap::iterator it = m_conns.find(uri);
+    if (it == m_conns.end())
+        return;
+    ConnectionList::iterator it2 = std::find_if(it->second.first.begin(),
+        it->second.first.end(), CompareConn(connection));
+    if (it2 != it->second.first.end()) {
+        MORDOR_LOG_TRACE(g_cacheLog) << this << " dropping connection "
+            << connection << " to " << uri;
+        it->second.first.erase(it2);
+        if (it->second.first.empty())
+            m_conns.erase(it);
     }
 }
 
