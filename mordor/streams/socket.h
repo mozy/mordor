@@ -30,6 +30,9 @@ public:
     size_t write(const void *buffer, size_t length);
     void cancelWrite();
 
+    boost::signals2::connection onRemoteClose(
+        const boost::signals2::slot<void ()> &slot);
+
     boost::shared_ptr<Socket> socket() { return m_socket; }
 
 private:
