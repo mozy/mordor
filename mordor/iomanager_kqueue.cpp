@@ -165,7 +165,6 @@ IOManager::cancelEvent(int fd, Event events)
     } else {
         MORDOR_NOTREACHED();
     }
-    MORDOR_ASSERT(e.event.filter == (short)eventsKey);
     e.event.flags = EV_DELETE;
     int rc = kevent(m_kqfd, &e.event, 1, NULL, 0, NULL);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
