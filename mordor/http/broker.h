@@ -116,6 +116,7 @@ public:
           m_timerManager(timerManager),
           m_httpReadTimeout(~0ull),
           m_httpWriteTimeout(~0ull),
+          m_idleTimeout(~0ull),
           m_sslReadTimeout(~0ull),
           m_sslWriteTimeout(~0ull),
           m_sslCtx(NULL)
@@ -124,6 +125,7 @@ public:
     void connectionsPerHost(size_t connections) { m_connectionsPerHost = connections; }
     void httpReadTimeout(unsigned long long timeout) { m_httpReadTimeout = timeout; }
     void httpWriteTimeout(unsigned long long timeout) { m_httpWriteTimeout = timeout; }
+    void idleTimeout(unsigned long long timeout) { m_idleTimeout = timeout; }
     void sslReadTimeout(unsigned long long timeout) { m_sslReadTimeout = timeout; }
     void sslWriteTimeout(unsigned long long timeout) { m_sslWriteTimeout = timeout; }
     void sslCtx(SSL_CTX *ctx) { m_sslCtx = ctx; }
@@ -165,8 +167,8 @@ private:
     CachedConnectionMap m_conns;
     bool m_closed, m_verifySslCertificate, m_verifySslCertificateHost;
     TimerManager *m_timerManager;
-    unsigned long long m_httpReadTimeout, m_httpWriteTimeout, m_sslReadTimeout,
-        m_sslWriteTimeout;
+    unsigned long long m_httpReadTimeout, m_httpWriteTimeout, m_idleTimeout,
+        m_sslReadTimeout, m_sslWriteTimeout;
     SSL_CTX *m_sslCtx;
     boost::function<std::vector<URI> (const URI &)> m_proxyForURIDg;
     boost::shared_ptr<RequestBroker> m_proxyBroker;
@@ -361,6 +363,7 @@ struct RequestBrokerOptions
         sslConnectWriteTimeout(~0ull),
         httpReadTimeout(~0ull),
         httpWriteTimeout(~0ull),
+        idleTimeout(~0ull),
         sslCtx(NULL),
         verifySslCertificate(false),
         verifySslCertificateHost(true)
@@ -376,6 +379,7 @@ struct RequestBrokerOptions
     unsigned long long sslConnectWriteTimeout;
     unsigned long long httpReadTimeout;
     unsigned long long httpWriteTimeout;
+    unsigned long long idleTimeout;
     boost::function<std::vector<URI> (const URI &)> proxyForURIDg;
     /// Required to enable https proxy support
     RequestBroker::ptr proxyRequestBroker;

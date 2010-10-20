@@ -42,6 +42,7 @@ createRequestBroker(const RequestBrokerOptions &options)
         timerManager));
     connectionCache->httpReadTimeout(options.httpReadTimeout);
     connectionCache->httpWriteTimeout(options.httpWriteTimeout);
+    connectionCache->idleTimeout(options.idleTimeout);
     connectionCache->sslReadTimeout(options.sslConnectReadTimeout);
     connectionCache->sslWriteTimeout(options.sslConnectWriteTimeout);
     connectionCache->sslCtx(options.sslCtx);
@@ -361,6 +362,10 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
             result.first->readTimeout(m_httpReadTimeout);
         if (m_httpWriteTimeout != ~0ull)
             result.first->writeTimeout(m_httpWriteTimeout);
+        if (m_idleTimeout != ~0ull)
+            result.first->idleTimeout(m_idleTimeout,
+            boost::bind(&ConnectionCache::dropConnection, this, endpoint,
+                result.first.get()));
         // Assign this connection to the first blank connection for this
         // schemeAndAuthority
         // it should still be valid, even if the map changed
