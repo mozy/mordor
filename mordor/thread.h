@@ -30,7 +30,7 @@ tid_t gettid();
 class Thread : boost::noncopyable
 {
 public:
-    Thread(boost::function<void ()> dg);
+    Thread(boost::function<void ()> dg, const char *name = NULL);
     ~Thread();
 
     tid_t tid() const { return m_tid; }
@@ -44,7 +44,7 @@ private:
 #else
     void *
 #endif
-    run(void *self);
+    run(void *arg);
 
 private:
     tid_t m_tid;
@@ -57,6 +57,7 @@ private:
 #ifdef LINUX
     boost::function<void ()> m_dg;
     Semaphore m_semaphore;
+    const char *m_name;
 #endif
 };
 

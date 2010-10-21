@@ -3,6 +3,7 @@
 #include "thread.h"
 
 #ifdef LINUX
+#include <sys/prctl.h>
 #include <syscall.h>
 #endif
 #ifdef WINDOWS
@@ -25,6 +26,49 @@ tid_t gettid()
     return pthread_self();
 #endif
 }
+
+#ifdef WINDOWS
+//
+// Usage: SetThreadName (-1, "MainThread");
+//
+#define MS_VC_EXCEPTION 0x406D1388
+
+namespace {
+typedef struct tagTHREADNAME_INFO
+{
+   DWORD dwType; // Must be 0x1000.
+   LPCSTR szName; // Pointer to name (in user addr space).
+   DWORD dwThreadID; // Thread ID (-1=caller thread).
+   DWORD dwFlags; // Reserved for future use, must be zero.
+} THREADNAME_INFO;
+}
+
+static void SetThreadName( DWORD dwThreadID, LPCSTR szThreadName)
+{
+   THREADNAME_INFO info;
+   info.dwType = 0x1000;
+   info.szName = szThreadName;
+   info.dwThreadID = dwThreadID;
+   info.dwFlags = 0;
+
+   __try
+   {
+      RaiseException( MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(DWORD), (DWORD*)&info );
+   }
+   __except(EXCEPTION_CONTINUE_EXECUTION)
+   {
+   }
+}
+#endif
+
+#ifndef LINUX
+namespace {
+struct Context {
+    boost::function<void ()> dg;
+    const char *name;
+};
+}
+#endif
 
 // The object of this function is to start a new thread running dg, and store
 // that thread's id in m_tid.  Each platform is a little bit different, but
@@ -61,28 +105,32 @@ tid_t gettid()
 //   started, so simply pass a pointer to this to the thread, which will
 //   set the tid in the object, copy the dg that is a member field onto the
 //   stack, signal the constructor that it's ready to go, and then call dg
-Thread::Thread(boost::function<void ()> dg)
+Thread::Thread(boost::function<void ()> dg, const char *name)
 {
 #ifdef LINUX
     m_dg = dg;
     void *arg = this;
+    m_name = name;
 #else
-    boost::function<void ()> *pDg = new boost::function<void ()>();
-    pDg->swap(dg);
-    void *arg = pDg;
+    Context *pContext = new Context;
+    pContext->dg.swap(dg);
+    pContext->name = name;
+    void *arg = pContext;
 #endif
 #ifdef WINDOWS
     m_hThread = (HANDLE)_beginthreadex(NULL, 0, &Thread::run, arg, 0,
         (unsigned *)&m_tid);
     if (!m_hThread) {
-        delete pDg;
+        delete pContext;
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateThread");
     }
+    if (name)
+        SetThreadName(m_tid, name);
 #else
     int rc = pthread_create(&m_thread, NULL, &Thread::run, arg);
     if (rc) {
 #ifndef LINUX
-        delete pDg;
+        delete pContext;
 #endif
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(rc, "pthread_create");
     }
@@ -128,21 +176,26 @@ unsigned WINAPI
 #else
 void *
 #endif
-Thread::run(void *self)
+Thread::run(void *arg)
 {
-    boost::function<void ()> dg;
-#if defined(WINDOWS) || defined (OSX)
-    boost::function<void ()> *pDg;
-    pDg = (boost::function<void ()> *)self;
-    dg.swap(*pDg);
-    delete pDg;
-#else
-   Thread *me = (Thread *)self;
-    me->m_tid = gettid();
+   boost::function<void ()> dg;
+#ifdef LINUX
+   Thread *self = (Thread *)arg;
+    self->m_tid = gettid();
     // Dg might disappear after notifying the caller that the thread is started
     // so copy it on to the stack
-    dg.swap(me->m_dg);
-    me->m_semaphore.notify();
+    dg.swap(self->m_dg);
+    if (self->m_name)
+        prctl(PR_SET_NAME, self->m_name, 0, 0, 0);
+    self->m_semaphore.notify();
+#else
+    Context *pContext = (Context *)arg;
+    dg.swap(pContext->dg);
+#ifdef OSX
+    if (pContext->name)
+        pthread_setname_np(pContext->name);
+#endif
+    delete pContext;
 #endif
     dg();
     return 0;
