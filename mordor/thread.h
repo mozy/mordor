@@ -16,8 +16,12 @@ namespace Mordor {
 
 #ifdef WINDOWS
 typedef DWORD tid_t;
-#else
+#elif defined(LINUX)
 typedef pid_t tid_t;
+#elif defined(OSX)
+typedef mach_port_t tid_t;
+#else
+typedef pthread_t tid_t;
 #endif
 
 inline tid_t emptytid() { return (tid_t)-1; }
@@ -48,6 +52,9 @@ private:
     HANDLE m_hThread;
 #else
     pthread_t m_thread;
+#endif
+
+#ifdef LINUX
     boost::function<void ()> m_dg;
     Semaphore m_semaphore;
 #endif

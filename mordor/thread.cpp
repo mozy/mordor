@@ -19,26 +19,80 @@ tid_t gettid()
     return GetCurrentThreadId();
 #elif defined(LINUX)
     return syscall(__NR_gettid);
+#elif defined(OSX)
+    return mach_thread_self();
 #else
-    return getpid();
+    return pthread_self();
 #endif
 }
 
+// The object of this function is to start a new thread running dg, and store
+// that thread's id in m_tid.  Each platform is a little bit different, but
+// there are similarities in different areas.  The areas are:
+//
+// * How to start a thread
+//   Windows - _beginthreadex (essentially CreateThread, but keeps the CRT
+//             happy)
+//   Everything else - pthread_create
+//
+// * How to get the native thread id (we like the native thread id because it
+//   makes it much easier to correlate with a debugger or performance tool,
+//   instead of some random artificial thread id)
+//   Linux - there is no documented way to query a pthread for its tid, so we
+//           have to have the thread itself call gettid(), and report it back
+//           to the constructor.  This means that a) the constructor will not
+//           return until the thread is actually running; and b) the thread
+//           neads a pointer back to the Thread object to store the tid
+//   Windows - happily returns the thread id as part of _beginthreadex
+//   OS X - Has a documented, non-portable function to query the
+//          mach_thread_port from the pthread
+//   Everything else - dunno, it's not special cased, so just use the pthread_t
+//                     as the thread id
+//
+//   In all cases except for Linux, the thread itself doesn't need to know
+//   about the Thread object, just which dg to execute.  Because we just fire
+//   off the thread and return immediately, it's perfectly possible for the
+//   constructor and destructor to run before the thread even starts, so move
+//   dg onto the heap in newly allocated memory, and pass the thread start
+//   function the pointer to the dg.  It will move the dg onto it's local
+//   stack, deallocate the memory on the heap, and then call dg.
+//   For Linux, because we need to have the thread tell us its own id, we
+//   instead know that the constructor cannot return until the thread has
+//   started, so simply pass a pointer to this to the thread, which will
+//   set the tid in the object, copy the dg that is a member field onto the
+//   stack, signal the constructor that it's ready to go, and then call dg
 Thread::Thread(boost::function<void ()> dg)
 {
-#ifdef WINDOWS
+#ifdef LINUX
+    m_dg = dg;
+    void *arg = this;
+#else
     boost::function<void ()> *pDg = new boost::function<void ()>();
     pDg->swap(dg);
-    m_hThread = (HANDLE)_beginthreadex(NULL, 0, &Thread::run, pDg, 0,
+    void *arg = pDg;
+#endif
+#ifdef WINDOWS
+    m_hThread = (HANDLE)_beginthreadex(NULL, 0, &Thread::run, arg, 0,
         (unsigned *)&m_tid);
-    if (!m_hThread)
+    if (!m_hThread) {
+        delete pDg;
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateThread");
+    }
 #else
-    m_dg = dg;
-    int rc = pthread_create(&m_thread, NULL, &Thread::run, this);
-    if (rc)
+    int rc = pthread_create(&m_thread, NULL, &Thread::run, arg);
+    if (rc) {
+#ifndef LINUX
+        delete pDg;
+#endif
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(rc, "pthread_create");
+    }
+#ifdef OSX
+    m_tid = pthread_mach_thread_np(m_thread);
+#elif defined(LINUX)
     m_semaphore.wait();
+#else
+    m_tid = m_thread;
+#endif
 #endif
 }
 
@@ -77,7 +131,7 @@ void *
 Thread::run(void *self)
 {
     boost::function<void ()> dg;
-#ifdef WINDOWS
+#if defined(WINDOWS) || defined (OSX)
     boost::function<void ()> *pDg;
     pDg = (boost::function<void ()> *)self;
     dg.swap(*pDg);

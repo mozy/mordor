@@ -219,6 +219,7 @@
     <ClCompile Include="stream.cpp" />
     <ClCompile Include="string.cpp" />
     <ClCompile Include="temp_stream.cpp" />
+    <ClCompile Include="thread.cpp" />
     <ClCompile Include="timeout_stream.cpp" />
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="transfer_stream.cpp" />

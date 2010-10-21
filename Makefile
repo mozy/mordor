@@ -311,6 +311,7 @@ TESTOBJECTS :=								\
 	mordor/tests/stream.o						\
 	mordor/tests/string.o						\
 	mordor/tests/temp_stream.o					\
+	mordor/tests/thread.o						\
 	mordor/tests/timeout_stream.o					\
 	mordor/tests/timer.o						\
 	mordor/tests/transfer_stream.o					\
