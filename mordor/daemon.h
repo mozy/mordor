@@ -1,6 +1,6 @@
 #ifndef __MORDOR_SERVICE_H__
 #define __MORDOR_SERVICE_H__
-// Copyright (c) 2010 - Mozy, Inc.
+// Copyright (c) 2010 - Decho Corporation
 
 #include <vector>
 #include <string>

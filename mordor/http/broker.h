@@ -1,6 +1,6 @@
 #ifndef __HTTP_BROKER_H__
 #define __HTTP_BROKER_H__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include <openssl/ssl.h>
 

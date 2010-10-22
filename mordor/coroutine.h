@@ -1,6 +1,6 @@
 #ifndef __MORDOR_COROUTINE_H__
 #define __MORDOR_COROUTINE_H__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>

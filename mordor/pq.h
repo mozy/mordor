@@ -1,6 +1,6 @@
 #ifndef __MORDOR_PQ_H__
 #define __MORDOR_PQ_H__
-// Copyright (c) 2010 Mozy, Inc.
+// Copyright (c) 2010 Decho Corporation
 
 #include "mordor/predef.h"
 

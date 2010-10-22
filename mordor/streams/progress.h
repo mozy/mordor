@@ -1,6 +1,6 @@
 #ifndef __MORDOR_PROGRESS_STREAM_H__
 #define __MORDOR_PROGRESS_STREAM_H__
-// Copyright (c) 2010 - Mozy, Inc.
+// Copyright (c) 2010 - Decho Corporation
 
 #include <boost/function.hpp>
 

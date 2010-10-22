@@ -1,6 +1,6 @@
 #ifndef __MORDOR_TIMEOUT_STREAM__
 #define __MORDOR_TIMEOUT_STREAM__
-// Copyright (c) 2010 - Mozy, Inc.
+// Copyright (c) 2010 - Decho Corporation
 
 #include "filter.h"
 #include "mordor/fibersynchronization.h"

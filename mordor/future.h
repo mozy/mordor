@@ -1,6 +1,6 @@
 #ifndef __MORDOR_FUTURE_H__
 #define __MORDOR_FUTURE_H__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include <bitset>
 

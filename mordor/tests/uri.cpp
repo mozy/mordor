@@ -1,4 +1,4 @@
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include "mordor/uri.h"
 #include "mordor/streams/buffer.h"

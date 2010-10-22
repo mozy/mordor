@@ -1,6 +1,6 @@
 #ifndef __MORDOR_EFS_STREAM__
 #define __MORDOR_EFS_STREAM__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include "stream.h"
 

@@ -1,6 +1,6 @@
 #ifndef __MORDOR_SOCKS_H__
 #define __MORDOR_SOCKS_H__
-// Copyright (c) 2010 - Mozy, Inc.
+// Copyright (c) 2010 - Decho Corporation
 
 #include <boost/shared_ptr.hpp>
 

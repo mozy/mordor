@@ -1,4 +1,4 @@
-// Copyright (c) 2010 - Mozy, Inc.
+// Copyright (c) 2010 - Decho Corporation
 
 #include "mordor/xml/parser.h"
 #include "mordor/test/test.h"

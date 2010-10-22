@@ -1,6 +1,6 @@
 #ifndef __MORDOR_THREAD_LOCAL_STORAGE_H__
 #define __MORDOR_THREAD_LOCAL_STORAGE_H__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include "predef.h"
 

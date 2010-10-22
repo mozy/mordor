@@ -1,6 +1,6 @@
 #ifndef __MORDOR_WORKERPOOL_H__
 #define __MORDOR_WORKERPOOL_H__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include "scheduler.h"
 #include "semaphore.h"

@@ -1,6 +1,6 @@
 #ifndef __MORDOR_ASSERT_H__
 #define __MORDOR_ASSERT_H__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include "exception.h"
 #include "log.h"

@@ -1,4 +1,4 @@
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include "mordor/http/oauth.h"
 #include "mordor/test/test.h"

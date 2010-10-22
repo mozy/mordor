@@ -1,6 +1,6 @@
 #ifndef __MORDOR_THREAD_H__
 #define __MORDOR_THREAD_H__
-// Copyright (c) 2010 - Mozy, Inc.
+// Copyright (c) 2010 - Decho Corporation
 
 #include <iosfwd>
 

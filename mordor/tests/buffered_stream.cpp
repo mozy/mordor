@@ -1,4 +1,4 @@
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include "mordor/streams/memory.h"
 #include "mordor/streams/buffered.h"

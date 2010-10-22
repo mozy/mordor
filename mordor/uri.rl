@@ -1,4 +1,4 @@
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 /* To compile to .cpp:
    ragel uri.rl -G2 -o uri.cpp
 */

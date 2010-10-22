@@ -1,6 +1,6 @@
 #ifndef __MORDOR_FD_STREAM_H__
 #define __MORDOR_FD_STREAM_H__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include "mordor/iomanager.h"
 #include "stream.h"

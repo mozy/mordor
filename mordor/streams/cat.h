@@ -1,6 +1,6 @@
 #ifndef __MORDOR_CAT_STREAM__
 #define __MORDOR_CAT_STREAM__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include <vector>
 

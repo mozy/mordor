@@ -1,6 +1,6 @@
 #ifndef __MORDOR_IOMANAGER_EPOLL_H__
 #define __MORDOR_IOMANAGER_EPOLL_H__
-// Copyright (c) 2009 - Mozy, Inc.
+// Copyright (c) 2009 - Decho Corporation
 
 #include <sys/types.h>
 #include <sys/event.h>

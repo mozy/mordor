@@ -1,4 +1,4 @@
-// Copyright (c) 2010 - Mozy, Inc.
+// Copyright (c) 2010 - Decho Corporation
 
 #include "thread.h"
 
