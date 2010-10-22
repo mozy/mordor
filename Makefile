@@ -168,7 +168,7 @@ ifeq ($(PLATFORM), Darwin)
    LIBS += -framework SystemConfiguration -framework CoreFoundation -framework CoreServices -framework Security
 endif
 
-ifeq ($(PLATFORM), Linux)
+ifeq ($(shell uname), Linux)
     LIBS += -lrt
 endif
 
