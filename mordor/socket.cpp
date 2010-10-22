@@ -703,8 +703,13 @@ suckylsp:
                     FILE_SKIP_SET_EVENT_ON_HANDLE);
         }
 #else
-        int newsock = ::accept(m_sock, NULL, NULL);
-        while (newsock == -1 && errno == EAGAIN) {
+        int newsock;
+        error_t error;
+        do {
+            newsock = ::accept(m_sock, NULL, NULL);
+            error = errno;
+        } while (newsock == -1 && error == EINTR);
+        while (newsock == -1 && error == EAGAIN) {
             m_ioManager->registerEvent(m_sock, IOManager::READ);
             if (m_cancelledReceive) {
                 MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
@@ -726,14 +731,16 @@ suckylsp:
                     << "): (" << m_cancelledReceive << ")";
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "accept");
             }
-            newsock = ::accept(m_sock, NULL, NULL);
+            do {
+                newsock = ::accept(m_sock, NULL, NULL);
+                error = errno;
+            } while (newsock == -1 && error == EINTR);
         }
         MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::INFO)
             << this << " accept(" << m_sock << "): " << newsock
-            << " (" << lastError() << ")";
-        if (newsock == -1) {
+            << " (" << error << ")";
+        if (newsock == -1)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("accept");
-        }
         if (fcntl(newsock, F_SETFL, O_NONBLOCK) == -1) {
             ::close(newsock);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
@@ -907,8 +914,13 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(cancelled, api);
         }
     }
-    int rc = isSend ? sendmsg(m_sock, &msg, flags) : recvmsg(m_sock, &msg, flags);
-    while (m_ioManager && rc == -1 && errno == EAGAIN) {
+    int rc;
+    error_t error;
+    do {
+        rc = isSend ? sendmsg(m_sock, &msg, flags) : recvmsg(m_sock, &msg, flags);
+        error = errno;
+    } while (rc == -1 && error == EINTR);
+    while (m_ioManager && rc == -1 && error == EAGAIN) {
         m_ioManager->registerEvent(m_sock, event);
         Timer::ptr timer;
         if (timeout != ~0ull)
@@ -922,9 +934,12 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
             MORDOR_SOCKET_LOG(-1, cancelled);
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(cancelled, api);
         }
-        rc = isSend ? sendmsg(m_sock, &msg, flags) : recvmsg(m_sock, &msg, flags);
+        do {
+            rc = isSend ? sendmsg(m_sock, &msg, flags) : recvmsg(m_sock, &msg, flags);
+            error = errno;
+        } while (rc == -1 && error == EINTR);
     }
-    MORDOR_SOCKET_LOG(rc, lastError());
+    MORDOR_SOCKET_LOG(rc, error);
     if (rc == -1)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API(api);
     if (!isSend)
