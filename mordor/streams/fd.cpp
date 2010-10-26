@@ -10,6 +10,7 @@
 
 #include "buffer.h"
 #include "mordor/assert.h"
+#include "mordor/iomanager.h"
 
 namespace Mordor {
 

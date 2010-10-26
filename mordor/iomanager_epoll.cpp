@@ -6,8 +6,16 @@
 
 #include "iomanager_epoll.h"
 
+#include <sys/epoll.h>
+
 #include "assert.h"
+#include "atomic.h"
 #include "fiber.h"
+
+// EPOLLRDHUP is missing in the header on etch
+#ifndef EPOLLRDHUP
+#define EPOLLRDHUP 0x2000
+#endif
 
 namespace Mordor {
 
@@ -85,8 +93,53 @@ static std::ostream &operator <<(std::ostream &os, EPOLL_EVENTS events)
     return os;
 }
 
+IOManager::AsyncState::AsyncState()
+    : m_fd(0),
+      m_events(NONE)
+{}
+
+IOManager::AsyncState::~AsyncState()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    MORDOR_ASSERT(!m_events);
+}
+
+IOManager::AsyncState::EventContext &
+IOManager::AsyncState::contextForEvent(Event event)
+{
+    switch (event) {
+        case READ:
+            return m_in;
+        case WRITE:
+            return m_out;
+        case CLOSE:
+            return m_close;
+        default:
+            MORDOR_NOTREACHED();
+    }
+}
+
+bool
+IOManager::AsyncState::triggerEvent(Event event, size_t &pendingEventCount)
+{
+    if (!(m_events & event))
+        return false;
+    m_events = (Event)(m_events & ~event);
+    atomicDecrement(pendingEventCount);
+    EventContext &context = contextForEvent(event);
+    if (context.dg)
+        context.scheduler->schedule(context.dg);
+    else
+        context.scheduler->schedule(context.fiber);
+    context.scheduler = NULL;
+    context.fiber.reset();
+    context.dg = NULL;
+    return true;
+}
+
 IOManager::IOManager(size_t threads, bool useCaller)
-    : Scheduler(threads, useCaller)
+    : Scheduler(threads, useCaller),
+      m_pendingEventCount(0)
 {
     m_epfd = epoll_create(5000);
     MORDOR_LOG_LEVEL(g_log, m_epfd <= 0 ? Log::ERROR : Log::TRACE) << this
@@ -134,6 +187,12 @@ IOManager::~IOManager()
     close(m_tickleFds[0]);
     MORDOR_LOG_VERBOSE(g_log) << this << " close(" << m_tickleFds[0] << ")";
     close(m_tickleFds[1]);
+    // Yes, it would be more C++-esque to store a boost::shared_ptr in the
+    // vector, but that requires an extra allocation per fd for the counter
+    for (size_t i = 0; i < m_pendingEvents.size(); ++i) {
+        if (m_pendingEvents[i])
+            delete m_pendingEvents[i];
+    }
 }
 
 bool
@@ -144,167 +203,135 @@ IOManager::stopping()
 }
 
 void
-IOManager::registerEvent(int fd, Event events, boost::function<void ()> dg)
+IOManager::registerEvent(int fd, Event event, boost::function<void ()> dg)
 {
     MORDOR_ASSERT(fd > 0);
     MORDOR_ASSERT(Scheduler::getThis());
-    MORDOR_ASSERT(Fiber::getThis());
+    MORDOR_ASSERT(dg || Fiber::getThis());
+    MORDOR_ASSERT(event == READ || event == WRITE || event == CLOSE);
 
-    int epollevents = ((int)events & (EPOLLIN | EPOLLOUT | EPOLLRDHUP)) | EPOLLET;
-    MORDOR_ASSERT(epollevents != 0);
+    // Look up our state in the global map, expanding it if necessary
     boost::mutex::scoped_lock lock(m_mutex);
-    int op;
-    std::map<int, AsyncEvent>::iterator it = m_pendingEvents.find(fd);
-    AsyncEvent *event;
-    if (it == m_pendingEvents.end()) {
-        op = EPOLL_CTL_ADD;
-        event = &m_pendingEvents[fd];
-        event->event.data.fd = fd;
-        event->event.events = epollevents;
-    } else {
-        op = EPOLL_CTL_MOD;
-        event = &it->second;
-        // OR == XOR means that none of the same bits were set
-        MORDOR_ASSERT((event->event.events | (epollevents & ~EPOLLET))
-            == (event->event.events ^ (epollevents & ~EPOLLET)));
-        event->event.events |= epollevents;
+    if (m_pendingEvents.size() < (size_t)fd)
+        m_pendingEvents.resize(fd * 3 / 2);
+    if (!m_pendingEvents[fd - 1]) {
+        m_pendingEvents[fd - 1] = new AsyncState();
+        m_pendingEvents[fd - 1]->m_fd = fd;
     }
-    if (epollevents & EPOLLIN) {
-        event->m_schedulerIn = Scheduler::getThis();
-        if (dg) {
-            event->m_dgIn = dg;
-            event->m_fiberIn.reset();
-        } else {
-            event->m_dgIn = NULL;
-            event->m_fiberIn = Fiber::getThis();
-        }
-    }
-    if (epollevents & EPOLLOUT) {
-        event->m_schedulerOut = Scheduler::getThis();
-        if (dg) {
-            event->m_dgOut = dg;
-            event->m_fiberOut.reset();
-        } else {
-            event->m_dgOut = NULL;
-            event->m_fiberOut = Fiber::getThis();
-        }
-    }
-    if (epollevents & EPOLLRDHUP) {
-        event->m_schedulerClose = Scheduler::getThis();
-        if (dg) {
-            event->m_dgClose = dg;
-            event->m_fiberClose.reset();
-        } else {
-            event->m_dgClose = NULL;
-            event->m_fiberClose = Fiber::getThis();
-        }
-    }
-    int rc = epoll_ctl(m_epfd, op, event->event.data.fd, &event->event);
+    AsyncState &state = *m_pendingEvents[fd - 1];
+    MORDOR_ASSERT(fd == state.m_fd);
+    lock.unlock();
+
+    boost::mutex::scoped_lock lock2(state.m_mutex);
+
+    MORDOR_ASSERT(!(state.m_events & event));
+    int op = state.m_events ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
+    epoll_event epevent;
+    epevent.events = EPOLLET | state.m_events | event;
+    epevent.data.ptr = &state;
+    int rc = epoll_ctl(m_epfd, op, fd, &epevent);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
-        << event->event.data.fd << ", " << (EPOLL_EVENTS)event->event.events << "): " << rc
+        << fd << ", " << (EPOLL_EVENTS)epevent.events << "): " << rc
         << " (" << errno << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+    atomicIncrement(m_pendingEventCount);
+    state.m_events = (Event)(state.m_events | event);
+    AsyncState::EventContext &context = state.contextForEvent(event);
+    MORDOR_ASSERT(!context.scheduler);
+    MORDOR_ASSERT(!context.fiber);
+    MORDOR_ASSERT(!context.dg);
+    context.scheduler = Scheduler::getThis();
+    if (!dg)
+        context.fiber = Fiber::getThis();
+    context.dg.swap(dg);
 }
 
 bool
-IOManager::unregisterEvent(int fd, Event events)
+IOManager::unregisterEvent(int fd, Event event)
 {
+    MORDOR_ASSERT(fd > 0);
+    MORDOR_ASSERT(event == READ || event == WRITE || event == CLOSE);
+
     boost::mutex::scoped_lock lock(m_mutex);
-    std::map<int, AsyncEvent>::iterator it = m_pendingEvents.find(fd);
-    if (it == m_pendingEvents.end())
+    if (m_pendingEvents.size() < (size_t)fd)
         return false;
-    // Nothing matching
-    if (!(events & it->second.event.events))
+    if (!m_pendingEvents[fd - 1])
         return false;
-    bool result = false;
-    AsyncEvent &e = it->second;
-    if ((events & EPOLLIN) && (e.event.events & EPOLLIN)) {
-        e.m_dgIn = NULL;
-        e.m_fiberIn.reset();
-        result = true;
-    }
-    if ((events & EPOLLOUT) && (e.event.events & EPOLLOUT)) {
-        e.m_dgOut = NULL;
-        e.m_fiberOut.reset();
-        result = true;
-    }
-    if ((events & EPOLLRDHUP) && (e.event.events & EPOLLRDHUP)) {
-        e.m_dgClose = NULL;
-        e.m_fiberClose.reset();
-        result = true;
-    }
-    e.event.events &= ~events;
-    int op = e.event.events == (unsigned int)EPOLLET ?
-        EPOLL_CTL_MOD : EPOLL_CTL_DEL;
-    int rc = epoll_ctl(m_epfd, op, fd, &e.event);
+    AsyncState &state = *m_pendingEvents[fd - 1];
+    MORDOR_ASSERT(fd == state.m_fd);
+    lock.unlock();
+
+    boost::mutex::scoped_lock lock2(state.m_mutex);
+    if (!(state.m_events & event))
+        return false;
+
+    MORDOR_ASSERT(fd == state.m_fd);
+    Event newEvents = (Event)(state.m_events &~event);
+    int op = newEvents ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
+    epoll_event epevent;
+    epevent.events = EPOLLET | newEvents;
+    epevent.data.fd = fd;
+    int rc = epoll_ctl(m_epfd, op, fd, &epevent);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
-        << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", " << fd
-        << ", " << (EPOLL_EVENTS)e.event.events << "): " << rc << " (" << errno << ")";
-    if (op == EPOLL_CTL_DEL)
-        m_pendingEvents.erase(it);
+        << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
+        << fd << ", " << (EPOLL_EVENTS)epevent.events << "): " << rc
+        << " (" << errno << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-    return result;
+    atomicDecrement(m_pendingEventCount);
+    state.m_events = newEvents;
+    AsyncState::EventContext &context = state.contextForEvent(event);
+    context.scheduler = NULL;
+    context.fiber.reset();
+    context.dg = NULL;
+
+    return true;
 }
 
-void
-IOManager::cancelEvent(int fd, Event events)
+bool
+IOManager::cancelEvent(int fd, Event event)
 {
+    MORDOR_ASSERT(fd > 0);
+    MORDOR_ASSERT(event == READ || event == WRITE || event == CLOSE);
+
     boost::mutex::scoped_lock lock(m_mutex);
-    std::map<int, AsyncEvent>::iterator it = m_pendingEvents.find(fd);
-    if (it == m_pendingEvents.end())
-        return;
-    AsyncEvent &e = it->second;
-    if ((events & EPOLLIN) && (e.event.events & EPOLLIN)) {
-        if (e.m_dgIn)
-            e.m_schedulerIn->schedule(e.m_dgIn);
-        else
-            e.m_schedulerIn->schedule(e.m_fiberIn);
-        e.m_dgIn = NULL;
-        e.m_fiberIn.reset();
-    }
-    if ((events & EPOLLOUT) && (e.event.events & EPOLLOUT)) {
-        if (e.m_dgOut)
-            e.m_schedulerOut->schedule(e.m_dgOut);
-        else
-            e.m_schedulerOut->schedule(e.m_fiberOut);
-        e.m_dgOut = NULL;
-        e.m_fiberOut.reset();
-    }
-    if ((events & EPOLLRDHUP) && (e.event.events & EPOLLRDHUP)) {
-        if (e.m_dgClose)
-            e.m_schedulerClose->schedule(e.m_dgClose);
-        else
-            e.m_schedulerClose->schedule(e.m_fiberClose);
-        e.m_dgClose = NULL;
-        e.m_fiberClose.reset();
-    }
-    e.event.events &= ~events;
-    int op = e.event.events == (unsigned int)EPOLLET ? EPOLL_CTL_DEL : EPOLL_CTL_MOD;
-    int rc = epoll_ctl(m_epfd, op, fd, &e.event);
+    if (m_pendingEvents.size() < (size_t)fd)
+        return false;
+    if (!m_pendingEvents[fd - 1])
+        return false;
+    AsyncState &state = *m_pendingEvents[fd - 1];
+    MORDOR_ASSERT(fd == state.m_fd);
+    lock.unlock();
+
+    boost::mutex::scoped_lock lock2(state.m_mutex);
+    if (!(state.m_events & event))
+        return false;
+
+    MORDOR_ASSERT(fd == state.m_fd);
+    Event newEvents = (Event)(state.m_events &~event);
+    int op = newEvents ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
+    epoll_event epevent;
+    epevent.events = EPOLLET | newEvents;
+    epevent.data.fd = fd;
+    int rc = epoll_ctl(m_epfd, op, fd, &epevent);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
-        << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", " << fd
-        << ", " << (EPOLL_EVENTS)e.event.events << "): " << rc << " ("
-        << errno << ")";
-    if (op == EPOLL_CTL_DEL)
-        m_pendingEvents.erase(it);
+        << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
+        << fd << ", " << (EPOLL_EVENTS)epevent.events << "): " << rc
+        << " (" << errno << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+    state.triggerEvent(event, m_pendingEventCount);
+    return true;
 }
 
 bool
 IOManager::stopping(unsigned long long &nextTimeout)
 {
     nextTimeout = nextTimer();
-    if (nextTimeout == ~0ull && Scheduler::stopping()) {
-        boost::mutex::scoped_lock lock(m_mutex);
-        if (m_pendingEvents.empty()) {
-            return true;
-        }
-    }
-    return false;
+    return nextTimeout == ~0ull && Scheduler::stopping() &&
+        m_pendingEventCount == 0;
 }
 
 void
@@ -343,59 +370,42 @@ IOManager::idle()
                 MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
                 continue;
             }
-            bool err = event.events & (EPOLLERR | EPOLLHUP);
-            boost::mutex::scoped_lock lock(m_mutex);
-            std::map<int, AsyncEvent>::iterator it =
-m_pendingEvents.find(event.data.fd);
-            if (it == m_pendingEvents.end())
-                continue;
-            AsyncEvent &e = it->second;
+
+            AsyncState &state = *(AsyncState *)event.data.ptr;
+
+            boost::mutex::scoped_lock lock2(state.m_mutex);
             MORDOR_LOG_TRACE(g_log) << " epoll_event {"
-                << (EPOLL_EVENTS)event.events << ", " << event.data.fd
-                << "}, registered for " << (EPOLL_EVENTS)e.event.events;
+                << (EPOLL_EVENTS)event.events << ", " << state.m_fd
+                << "}, registered for " << (EPOLL_EVENTS)state.m_events;
 
-            if ((event.events & EPOLLRDHUP) && (e.event.events & EPOLLRDHUP)) {
-                if (e.m_dgClose)
-                    e.m_schedulerClose->schedule(e.m_dgClose);
-                else
-                    e.m_schedulerClose->schedule(e.m_fiberClose);
-                e.m_dgClose = NULL;
-                e.m_fiberClose.reset();
-            }
+            if (event.events & (EPOLLERR | EPOLLHUP))
+                event.events |= EPOLLIN | EPOLLOUT;
 
-            if (((event.events & EPOLLIN) ||
-                err) && (e.event.events & EPOLLIN)) {
-                if (e.m_dgIn)
-                    e.m_schedulerIn->schedule(e.m_dgIn);
-                else
-                    e.m_schedulerIn->schedule(e.m_fiberIn);
-                e.m_dgIn = NULL;
-                e.m_fiberIn.reset();
-                event.events |= EPOLLIN;
-            }
-            if (((event.events & EPOLLOUT) ||
-                err) && (e.event.events & EPOLLOUT)) {
-                if (e.m_dgOut)
-                    e.m_schedulerOut->schedule(e.m_dgOut);
-                else
-                    e.m_schedulerOut->schedule(e.m_fiberOut);
-                e.m_dgOut = NULL;
-                e.m_fiberOut.reset();
-                event.events |= EPOLLOUT;
-            }
-            e.event.events &= ~event.events;
+            bool triggered = false;
+            if (event.events & EPOLLIN)
+                triggered = state.triggerEvent(READ, m_pendingEventCount);
+            if (event.events & EPOLLOUT)
+                triggered = triggered ||
+                    state.triggerEvent(WRITE, m_pendingEventCount);
+            if (event.events & EPOLLRDHUP)
+                triggered = triggered ||
+                    state.triggerEvent(CLOSE, m_pendingEventCount);
 
-            int op = e.event.events == (unsigned int)EPOLLET ? EPOLL_CTL_DEL : EPOLL_CTL_MOD;
-            int rc2 = epoll_ctl(m_epfd, op, event.data.fd,
-                &e.event);
+            // Nothing was triggered, probably because a prior cancelEvent call
+            // (probably on a different thread) already triggered it, so no
+            // need to tell epoll anything
+            if (!triggered)
+                continue;
+
+            int op = state.m_events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
+            event.events = EPOLLET | state.m_events;
+            int rc2 = epoll_ctl(m_epfd, op, state.m_fd, &event);
             MORDOR_LOG_LEVEL(g_log, rc2 ? Log::ERROR : Log::VERBOSE) << this
                 << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
-                << event.data.fd << ", " << (EPOLL_EVENTS)e.event.events << "): " << rc2
+                << state.m_fd << ", " << (EPOLL_EVENTS)event.events << "): " << rc2
                 << " (" << errno << ")";
             if (rc2)
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-            if (op == EPOLL_CTL_DEL)
-                m_pendingEvents.erase(it);
         }
         try {
             Fiber::yield();

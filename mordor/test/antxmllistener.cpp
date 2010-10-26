@@ -12,6 +12,7 @@
 #include "mordor/log.h"
 #include "mordor/streams/file.h"
 #include "mordor/string.h"
+#include "mordor/timer.h"
 
 namespace Mordor {
 namespace Test {

@@ -2,10 +2,12 @@
 #define __MORDOR_FD_STREAM_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/iomanager.h"
 #include "stream.h"
 
 namespace Mordor {
+
+class IOManager;
+class Scheduler;
 
 class FDStream : public Stream
 {
