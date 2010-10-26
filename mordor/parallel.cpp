@@ -7,6 +7,8 @@
 
 namespace Mordor {
 
+static Logger::ptr g_log = Log::lookup("mordor:parallel");
+
 static
 void
 parallel_do_impl(boost::function<void ()> dg, size_t &completed,
@@ -97,4 +99,11 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs,
     }
 }
 
+namespace Detail {
+
+Logger::ptr getLogger()
+{
+    return g_log;
 }
+
+}}

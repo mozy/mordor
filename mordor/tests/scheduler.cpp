@@ -236,11 +236,10 @@ MORDOR_UNITTEST(Scheduler, parallelDoException)
     MORDOR_TEST_ASSERT_EXCEPTION(parallel_do(dgs), OperationAbortedException);
 }
 
-static bool checkEqual(int x, int &sequence)
+static void checkEqual(int x, int &sequence)
 {
     MORDOR_TEST_ASSERT_EQUAL(x, sequence);
     ++sequence;
-    return true;
 }
 
 MORDOR_UNITTEST(Scheduler, parallelForEach)
@@ -265,11 +264,11 @@ MORDOR_UNITTEST(Scheduler, parallelForEachLessThanParallelism)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
 }
 
-static bool checkEqualStop5(int x, int &sequence)
+static void checkEqualStop5(int x, int &sequence)
 {
     MORDOR_TEST_ASSERT_EQUAL(x, sequence);
-    ++sequence;
-    return sequence <= 5;
+    if (++sequence >= 5)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
 }
 
 MORDOR_UNITTEST(Scheduler, parallelForEachStopShort)
@@ -278,35 +277,32 @@ MORDOR_UNITTEST(Scheduler, parallelForEachStopShort)
     WorkerPool pool;
 
     int sequence = 1;
+    MORDOR_TEST_ASSERT_EXCEPTION(
     parallel_foreach(&values[0], &values[10], boost::bind(
-        &checkEqualStop5, _1, boost::ref(sequence)), 4);
-    // 5 was told to stop, 6, 7, and 8 were already scheduled
-    MORDOR_TEST_ASSERT_EQUAL(sequence, 9);
+        &checkEqualStop5, _1, boost::ref(sequence)), 4),
+        OperationAbortedException);
+    // 5 <= sequence < 10 (we told it to stop at five, it's undefined how many
+    // more got executed, because of other threads (on a single thread it's
+    // deterministically 5))
+    MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(sequence, 5);
+    MORDOR_TEST_ASSERT_LESS_THAN(sequence, 10);
 }
 
-static bool checkEqualExceptionOn5(int x, int &sequence)
-{
-    MORDOR_TEST_ASSERT_EQUAL(x, sequence);
-    ++sequence;
-    if (sequence == 6)
-        MORDOR_THROW_EXCEPTION(OperationAbortedException());
-    return true;
-}
-
-MORDOR_UNITTEST(Scheduler, parallelForEachException)
+MORDOR_UNITTEST(Scheduler, parallelForEachStopShortParallel)
 {
     const int values[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    WorkerPool pool;
+    WorkerPool pool(2);
 
     int sequence = 1;
-    try {
-        parallel_foreach(&values[0], &values[10], boost::bind(
-            &checkEqualExceptionOn5, _1, boost::ref(sequence)), 4);
-        MORDOR_TEST_ASSERT(false);
-    } catch (OperationAbortedException)
-    {}
-    // 5 was told to stop (exception), 6, 7, and 8 were already scheduled
-    MORDOR_TEST_ASSERT_EQUAL(sequence, 9);
+    MORDOR_TEST_ASSERT_EXCEPTION(
+    parallel_foreach(&values[0], &values[10], boost::bind(
+        &checkEqualStop5, _1, boost::ref(sequence)), 4),
+        OperationAbortedException);
+    // 5 <= sequence < 10 (we told it to stop at five, it's undefined how many
+    // more got executed, because of other threads (on a single thread it's
+    // deterministically 5))
+    MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(sequence, 5);
+    MORDOR_TEST_ASSERT_LESS_THAN(sequence, 10);
 }
 
 #ifdef DEBUG

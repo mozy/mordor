@@ -7,7 +7,9 @@
 #include <boost/noncopyable.hpp>
 #include <boost/function.hpp>
 
+#include "atomic.h"
 #include "fiber.h"
+#include "log.h"
 #include "scheduler.h"
 
 namespace Mordor {
@@ -38,24 +40,45 @@ void
 parallel_do(const std::vector<boost::function<void ()> > &dgs,
             std::vector<Fiber::ptr> &fibers);
 
+namespace Detail {
+
 template<class Iterator, class Functor>
 static
 void
-parallel_foreach_impl(Functor &functor, Iterator &it,
-                      int &result, boost::exception_ptr &exception,
-                      Scheduler *scheduler, Fiber::ptr caller)
+parallel_foreach_impl(Iterator &begin, Iterator &end, Functor &functor,
+                      boost::mutex &mutex, boost::exception_ptr &exception,
+                      Scheduler *scheduler, Fiber::ptr caller, int &count)
 {
-    try {
-        result = functor(*it) ? 1 : 0;
-    } catch (boost::exception &ex) {
-        result = 0;
-        removeTopFrames(ex);
-        exception = boost::current_exception();
-    } catch (...) {
-        result = 0;
-        exception = boost::current_exception();
+    while (true) {
+        try {
+            Iterator it;
+            {
+                boost::mutex::scoped_lock lock(mutex);
+                if (begin == end || exception)
+                    break;
+                it = begin++;
+            }
+            functor(*it);
+        } catch (boost::exception &ex) {
+            removeTopFrames(ex);
+            boost::mutex::scoped_lock lock(mutex);
+            exception = boost::current_exception();
+            break;
+        } catch (...) {
+            boost::mutex::scoped_lock lock(mutex);
+            exception = boost::current_exception();
+            break;
+        }
     }
-    scheduler->schedule(caller);
+    // Don't want to own the mutex here, because another thread could pick up
+    // caller immediately, and return from parallel_for before this thread has
+    // a chance to unlock it
+    if (atomicDecrement(count) == 0)
+        scheduler->schedule(caller);
+}
+
+Logger::ptr getLogger();
+
 }
 
 /// Execute a functor for multiple objects in parallel
@@ -73,98 +96,38 @@ parallel_foreach_impl(Functor &functor, Iterator &it,
 /// @param dg The functor to be passed each object in the collection
 /// @param parallelism How many objects to Schedule in parallel
 template<class Iterator, class Functor>
-bool
+void
 parallel_foreach(Iterator begin, Iterator end, Functor functor,
     int parallelism = -1)
 {
     if (parallelism == -1)
         parallelism = 4;
     Scheduler *scheduler = Scheduler::getThis();
-    Fiber::ptr caller = Fiber::getThis();
-    Iterator it = begin;
 
     if (parallelism == 1 || !scheduler) {
-        while (it != end) {
-            if (!functor(*it))
-                return false;
-            ++it;
-        }
-        return true;
+        MORDOR_LOG_DEBUG(Detail::getLogger())
+            << " running parallel_for sequentially";
+        while (begin != end)
+            functor(*begin++);
+        return;
     }
 
-    std::vector<Fiber::ptr> fibers;
-    std::vector<Iterator> current;
-    // Not bool, because that's specialized, and it doesn't return just a
-    // bool &, but instead some reference wrapper that the compiler hates
-    std::vector<int> result;
-    std::vector<boost::exception_ptr> exceptions;
-    fibers.resize(parallelism);
-    current.resize(parallelism);
-    result.resize(parallelism);
-    exceptions.resize(parallelism);
+    boost::mutex mutex;
+    boost::exception_ptr exception;
+    MORDOR_LOG_DEBUG(Detail::getLogger()) << " running parallel_for with "
+        << parallelism << " fibers";
+    int count = parallelism;
     for (int i = 0; i < parallelism; ++i) {
-        fibers[i] = Fiber::ptr(new Fiber(boost::bind(
-            &parallel_foreach_impl<Iterator, Functor>,
-            boost::ref(functor), boost::ref(current[i]), boost::ref(result[i]),
-            boost::ref(exceptions[i]), scheduler, caller)));
+        scheduler->schedule(boost::bind(
+            &Detail::parallel_foreach_impl<Iterator, Functor>,
+            boost::ref(begin), boost::ref(end), boost::ref(functor),
+            boost::ref(mutex), boost::ref(exception), scheduler,
+            Fiber::getThis(), boost::ref(count)));
     }
+    Scheduler::yieldTo();
 
-    int curFiber = 0;
-    while (it != end && curFiber < parallelism) {
-        current[curFiber] = it;
-        result[curFiber] = -1;
-        scheduler->schedule(fibers[curFiber]);
-        ++curFiber;
-        ++it;
-    }
-    if (curFiber < parallelism) {
-        parallelism = curFiber;
-        fibers.resize(parallelism);
-        current.resize(parallelism);
-        result.resize(parallelism);
-    }
-
-    while (it != end) {
-        Scheduler::yieldTo();
-        // Figure out who just finished and scheduled us
-        for (int i = 0; i < parallelism; ++i) {
-            if (result[i] != -1) {
-                curFiber = i;
-                break;
-            }
-        }
-        if (!result[curFiber]) {
-            --parallelism;
-            break;
-        }
-        current[curFiber] = it;
-        result[curFiber] = -1;
-        fibers[curFiber]->reset();
-        scheduler->schedule(fibers[curFiber]);
-        ++it;
-    }
-
-    // Wait for everyone to finish
-    while (parallelism > 0) {
-        Scheduler::yieldTo();
-        --parallelism;
-    }
-
-    // Pass the first exception along
-    // TODO: group exceptions?
-    for(std::vector<boost::exception_ptr>::iterator it2 = exceptions.begin();
-        it2 != exceptions.end();
-        ++it2) {
-        if (*it2)
-            Mordor::rethrow_exception(*it2);
-    }
-    for(std::vector<int>::iterator it2 = result.begin();
-        it2 != result.end();
-        ++it2) {
-        if (!*it2)
-            return false;
-    }
-    return true;
+    if (exception)
+        Mordor::rethrow_exception(exception);
 }
 
 }
