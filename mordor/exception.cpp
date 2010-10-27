@@ -189,6 +189,9 @@ static void throwSocketException(error_t error)
     switch (error) {
         case WSA(EADDRINUSE):
 #ifdef WINDOWS
+        // WSAEACESS is returned from bind when you set SO_REUSEADDR, and
+        // another socket has set SO_EXCLUSIVEADDRUSE
+        case WSAEACCES:
         case ERROR_ADDRESS_ALREADY_ASSOCIATED:
 #endif
             throw boost::enable_current_exception(AddressInUseException())
