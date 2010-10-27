@@ -4,6 +4,7 @@
 
 #include <vector>
 
+#include <boost/bind.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/function.hpp>
 
