@@ -279,7 +279,7 @@ int
 SyslogLogSink::facilityFromString(const char *string)
 {
     CODE *facilities = facilitynames;
-    while (*facilities->c_name) {
+    while (facilities->c_name && *facilities->c_name) {
         if (strcmp(facilities->c_name, string) == 0)
             return facilities->c_val;
         ++facilities;
@@ -291,7 +291,7 @@ const char *
 SyslogLogSink::facilityToString(int facility)
 {
     CODE *facilities = facilitynames;
-    while (*facilities->c_name) {
+    while (facilities->c_name && *facilities->c_name) {
         if (facilities->c_val == facility)
             return facilities->c_name;
         ++facilities;
