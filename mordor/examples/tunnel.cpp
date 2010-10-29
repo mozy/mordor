@@ -201,8 +201,9 @@ MORDOR_MAIN(int argc, char *argv[])
             }
             ioManager.yieldTo();
         }
-    } catch (std::exception &ex) {
-        std::cerr << typeid(ex).name() << ": " << ex.what( ) << std::endl;
+    } catch (...) {
+        std::cerr << boost::current_exception_diagnostic_information()
+            << std::endl;
         return 1;
     }
     return 0;
