@@ -8,14 +8,16 @@
 
 #include "mordor/config.h"
 #include "mordor/fiber.h"
+#include "mordor/main.h"
 #include "mordor/scheduler.h"
 #include "mordor/streams/file.h"
 #include "mordor/streams/std.h"
 #include "mordor/streams/transfer.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 
-int main(int argc, const char *argv[])
+MORDOR_MAIN(int argc, const char * const argv[])
 {
     Config::loadFromEnvironment();
     StdoutStream stdoutStream;
@@ -23,7 +25,7 @@ int main(int argc, const char *argv[])
     try {
         if (argc == 1) {
             argc = 2;
-            const char *hyphen[] = { "", "-" };
+            const char * const hyphen[] = { "", "-" };
             argv = hyphen;
         }
         for (int i = 1; i < argc; ++i) {

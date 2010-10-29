@@ -1,8 +1,14 @@
 // Copyright (c) 2010 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "assert.h"
+
+#include "version.h"
+
+#ifdef LINUX
+#include <fcntl.h>
+#elif defined(OSX)
+#include <sys/sysctl.h>
+#endif
 
 namespace Mordor {
 

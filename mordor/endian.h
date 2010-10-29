@@ -2,75 +2,169 @@
 #define __MORDOR_ENDIAN_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
+#include <boost/utility/enable_if.hpp>
+
 #include "version.h"
+
+#define MORDOR_LITTLE_ENDIAN 1
+#define MORDOR_BIG_ENDIAN 2
+
+#ifdef WINDOWS
+#include <stdlib.h>
+#elif defined(OSX)
+#include <stdint.h>
+#include <sys/_endian.h>
+#elif defined(FREEBSD)
+#include <stdint.h>
+#include <sys/endian.h>
+#else
+#include <byteswap.h>
+#include <stdint.h>
+#endif
 
 namespace Mordor {
 
-#ifndef ntohll
-
 #ifdef WINDOWS
 
-#include <stdlib.h>
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(unsigned __int64), T>::type
+byteswap(T value)
+{
+    return (T)_byteswap_uint64((unsigned __int64)value);
+}
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(unsigned long), T>::type
+byteswap(T value)
+{
+    return (T)_byteswap_ulong((unsigned long)value);
+}
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(unsigned short), T>::type
+byteswap(T value)
+{
+    return (T)_byteswap_ushort((unsigned short)value);
+}
 
-inline unsigned __int64 ntohll(unsigned __int64 val)
-{ return _byteswap_uint64(val); }
-inline unsigned __int64 htonll(unsigned __int64 val)
-{ return _byteswap_uint64(val); }
+#define MORDOR_BYTE_ORDER MORDOR_LITTLE_ENDIAN
 
 #elif defined(OSX)
 
-#include <stdint.h>
-#include <sys/_endian.h>
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(uint64_t), T>::type
+byteswap(T value)
+{
+    return (T)_OSSwapInt64((uint64_t)value);
+}
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(uint32_t), T>::type
+byteswap(T value)
+{
+    return (T)_OSSwapInt32((uint32_t)value);
+}
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(uint16_t), T>::type
+byteswap(T value)
+{
+    return (T)_OSSwapInt16((uint16_t)value);
+}
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-
-inline uint64_t ntohll(uint64_t val)
-{ return _OSSwapInt64(val); }
-inline uint64_t htonll(uint64_t val)
-{ return _OSSwapInt64(val); }
+#if !defined(__BIG_ENDIAN__) && !defined(__LITTLE_ENDIAN__)
+#error Do not know the endianess of this architecture
+#endif
+    
+#ifdef __BIG_ENDIAN__
+#define MORDOR_BYTE_ORDER MORDOR_BIG_ENDIAN
 #else
-inline uint64_t ntohll(uint64_t val)
-{ return val; }
-inline uint64_t htonll(uint64_t val)
-{ return val; }
+#define MORDOR_BYTE_ORDER MORDOR_LITTLE_ENDIAN
 #endif
 
 #elif defined(FREEBSD)
 
-#include <stdint.h>
-#include <sys/endian.h>
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(uint64_t), T>::type
+byteswap(T value)
+{
+    return (T)bswap64((uint64_t)value);
+}
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(uint32_t), T>::type
+byteswap(T value)
+{
+    return (T)bswap32((uint32_t)value);
+}
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(uint16_t), T>::type
+byteswap(T value)
+{
+    return (T)bswap16((uint16_t)value);
+}
 
-#if _BYTE_ORDER == _LITTLE_ENDIAN
-inline uint64_t ntohll(uint64_t val)
-{ return bswap64(val); }
-inline uint64_t htonll(uint64_t val)
-{ return bswap64(val); }
+#if _BYTE_ORDER == _BIG_ENDIAN
+#define MORDOR_BYTE_ORDER MORDOR_BIG_ENDIAN
 #else
-inline uint64_t ntohll(uint64_t val)
-{ return val; }
-inline uint64_t htonll(uint64_t val)
-{ return val; }
+#define MORDOR_BYTE_ORDER MORDOR_LITTLE_ENDIAN
 #endif
 
 #else
 
-#include <byteswap.h>
-#include <stdint.h>
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(uint64_t), T>::type
+byteswap(T value)
+{
+    return (T)bswap_64((uint64_t)value);
+}
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(uint32_t), T>::type
+byteswap(T value)
+{
+    return (T)bswap_32((uint32_t)value);
+}
+template <class T>
+typename boost::enable_if_c<sizeof(T) == sizeof(uint16_t), T>::type
+byteswap(T value)
+{
+    return (T)bswap_16((uint16_t)value);
+}
 
-#if BYTE_ORDER == LITTLE_ENDIAN
-inline uint64_t ntohll(uint64_t val)
-{ return bswap_64(val); }
-inline uint64_t htonll(uint64_t val)
-{ return bswap_64(val); }
+#if BYTE_ORDER == BIG_ENDIAN
+#define MORDOR_BYTE_ORDER MORDOR_BIG_ENDIAN
 #else
-inline uint64_t ntohll(uint64_t val)
-{ return val; }
-inline uint64_t htonll(uint64_t val)
-{ return val; }
+#define MORDOR_BYTE_ORDER MORDOR_LITTLE_ENDIAN
 #endif
 
 #endif
 
+#if MORDOR_BYTE_ORDER == MORDOR_BIG_ENDIAN
+template <class T>
+T byteswapOnLittleEndian(T t)
+{
+    return t;
+}
+
+template <class T>
+T byteswapOnBigEndian(T t)
+{
+    return byteswap(t);
+}
+#else
+/// byteswap only when running on a little endian platform
+///
+/// On big endian platforms, it's a no op.  This is the equivalent of
+/// htonX/ntohX
+template <class T>
+T byteswapOnLittleEndian(T t)
+{
+    return byteswap(t);
+}
+
+/// byteswap only when running on a big endian platform
+///
+/// On little endian platforms, it's a no op.
+template <class T>
+T byteswapOnBigEndian(T t)
+{
+    return t;
+}
 #endif
 
 }

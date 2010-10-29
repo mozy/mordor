@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/json.h"
 #include "mordor/test/test.h"
 
@@ -109,6 +107,24 @@ MORDOR_UNITTEST(JSON, example1)
     MORDOR_TEST_ASSERT_EQUAL(boost::get<long long>(*it2++), 943);
     MORDOR_TEST_ASSERT_EQUAL(boost::get<long long>(*it2++), 234);
     MORDOR_TEST_ASSERT_EQUAL(boost::get<long long>(*it2++), 38793);
+
+    // Now verify again, using the convenience syntax
+    MORDOR_TEST_ASSERT(!root.empty());
+    MORDOR_TEST_ASSERT(!root.isBlank());
+    MORDOR_TEST_ASSERT_EQUAL(root.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(root.begin()->first, "Image");
+    MORDOR_TEST_ASSERT(root["Garbage"].isBlank());
+    MORDOR_TEST_ASSERT_EQUAL(root["Image"].size(), 5u);
+    MORDOR_TEST_ASSERT_EQUAL(root["Image"]["Width"].get<long long>(), 800);
+    MORDOR_TEST_ASSERT_EQUAL(root["Image"]["Title"].get<std::string>(), "View from 15th Floor");
+    MORDOR_TEST_ASSERT_EQUAL(root["Image"]["IDs"].size(), 4u);
+    MORDOR_TEST_ASSERT_EQUAL(root["Image"]["IDs"][0].get<long long>(), 116);
+
+    MORDOR_TEST_ASSERT_EXCEPTION(root.get<long long>(), boost::bad_get);
+    MORDOR_TEST_ASSERT_EXCEPTION(root[0], boost::bad_get);
+    MORDOR_TEST_ASSERT_EXCEPTION(root["Image"]["IDs"]["Garbage"], boost::bad_get);
+    MORDOR_TEST_ASSERT_EXCEPTION(root["Image"]["Width"].empty(), boost::bad_get);
+    MORDOR_TEST_ASSERT_EXCEPTION(root["Image"]["Width"].size(), boost::bad_get);
 
     std::ostringstream os;
     os << root;
@@ -267,4 +283,34 @@ MORDOR_UNITTEST(JSON, unicodeEscape)
     MORDOR_ASSERT(parser.final());
     MORDOR_ASSERT(!parser.error());
     MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(root), "\xe2\x80\xa8(2).docx");
+}
+
+MORDOR_UNITTEST(JSON, forwardSlashEscape)
+{
+    Value root;
+    Parser parser(root);
+    parser.run("\"\\/\"");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT_EQUAL(boost::get<std::string>(root), "/");
+}
+
+MORDOR_UNITTEST(JSON, emptyStuff)
+{
+    Value root;
+    Parser parser(root);
+    parser.run("{}");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(boost::get<Object>(root).empty());
+
+    parser.run("[]");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(boost::get<Array>(root).empty());
+
+    parser.run("\"\"");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(boost::get<std::string>(root).empty());
 }

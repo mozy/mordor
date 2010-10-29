@@ -73,10 +73,14 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <MinimalRebuild>true</MinimalRebuild>
+      <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <DebugInformationFormat Condition="'$(Platform)'=='Win32'">EditAndContinue</DebugInformationFormat>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">mordor/pch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</MultiProcessorCompilation>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MultiProcessorCompilation>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
@@ -85,13 +89,23 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">mordor/pch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</MultiProcessorCompilation>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</MultiProcessorCompilation>
+      <MinimalRebuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</MinimalRebuild>
+      <MinimalRebuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</MinimalRebuild>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="assert.cpp" />
+    <ClCompile Include="fibersynchronization.cpp" />
     <ClCompile Include="http\auth.cpp" />
     <ClCompile Include="http\basic.cpp" />
     <ClCompile Include="http\broker.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="daemon.cpp" />
+    <ClCompile Include="parallel.cpp" />
     <ClCompile Include="socks.cpp" />
     <ClCompile Include="streams\buffer.cpp" />
     <ClCompile Include="streams\buffered.cpp" />
@@ -107,6 +121,7 @@
     <ClCompile Include="exception.cpp" />
     <ClCompile Include="fiber.cpp" />
     <ClCompile Include="streams\file.cpp" />
+    <ClCompile Include="streams\filter.cpp" />
     <ClCompile Include="streams\handle.cpp" />
     <ClCompile Include="streams\hash.cpp" />
     <ClCompile Include="streams\http.cpp">
@@ -134,6 +149,7 @@
     <ClCompile Include="semaphore.cpp" />
     <ClCompile Include="http\server.cpp" />
     <ClCompile Include="sleep.cpp" />
+    <ClCompile Include="streams\singleplex.cpp" />
     <ClCompile Include="streams\socket.cpp">
       <ObjectFileName>$(IntDir)socket_stream.obj</ObjectFileName>
     </ClCompile>
@@ -147,17 +163,24 @@
     <ClCompile Include="streams\test.cpp" />
     <ClCompile Include="streams\throttle.cpp" />
     <ClCompile Include="streams\timeout.cpp" />
+    <ClCompile Include="thread.cpp" />
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="streams\transfer.cpp" />
     <ClCompile Include="streams\zlib.cpp" />
+    <ClCompile Include="workerpool.cpp" />
+    <ClCompile Include="zip.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h" />
     <ClInclude Include="assert.h" />
     <ClInclude Include="atomic.h" />
+    <ClInclude Include="fibersynchronization.h" />
     <ClInclude Include="http\auth.h" />
     <ClInclude Include="http\basic.h" />
     <ClInclude Include="http\broker.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="daemon.h" />
+    <ClInclude Include="parallel.h" />
     <ClInclude Include="socks.h" />
     <ClInclude Include="streams\buffer.h" />
     <ClInclude Include="streams\buffered.h" />
@@ -197,6 +220,8 @@
     <ClInclude Include="streams\null.h" />
     <ClInclude Include="http\oauth.h" />
     <ClInclude Include="http\parser.h" />
+    <ClInclude Include="thread.h" />
+    <ClInclude Include="workerpool.h" />
     <ClInclude Include="xml\parser.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="streams\pipe.h" />
@@ -230,6 +255,7 @@
     <ClInclude Include="util.h" />
     <ClInclude Include="version.h" />
     <ClInclude Include="streams\zlib.h" />
+    <ClInclude Include="zip.h" />
   </ItemGroup>
   <ItemGroup>
     <Ragel Include="http\http_parser.rl" />

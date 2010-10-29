@@ -31,7 +31,7 @@ protected:
     unsigned long long *m_ulong;
     ETag *m_eTag;
     Product m_product;
-    ETagSet *m_eTagSet;
+    std::set<ETag> *m_eTagSet;
     ProductAndCommentList *m_productAndCommentList;
     boost::posix_time::ptime *m_date;
 
@@ -55,7 +55,8 @@ private:
     Request *m_request;
     Version *m_ver;
     URI *m_uri;
-    URI::Path *m_path;
+    std::vector<std::string> *m_segments;
+    URI::Authority *m_authority;
     GeneralHeaders *m_general;
     EntityHeaders *m_entity;
 };
@@ -74,7 +75,8 @@ private:
     Response *m_response;
     Version *m_ver;
     URI *m_uri;
-    URI::Path *m_path;
+    std::vector<std::string> *m_segments;
+    URI::Authority *m_authority;
     GeneralHeaders *m_general;
     EntityHeaders *m_entity;
 };

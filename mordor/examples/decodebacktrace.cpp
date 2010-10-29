@@ -7,12 +7,13 @@
 #include <DbgHelp.h>
 
 #include "mordor/config.h"
+#include "mordor/main.h"
 #include "mordor/streams/buffered.h"
 #include "mordor/streams/std.h"
 
 using namespace Mordor;
 
-int main(int argc, const char *argv[])
+MORDOR_MAIN(int argc, char *argv[])
 {
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " <symbolpath> <binary>..." << std::endl

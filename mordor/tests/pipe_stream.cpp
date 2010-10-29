@@ -1,13 +1,15 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include <boost/bind.hpp>
 
 #include "mordor/exception.h"
 #include "mordor/fiber.h"
+#include "mordor/scheduler.h"
+#include "mordor/streams/buffer.h"
+#include "mordor/streams/stream.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/test/test.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 using namespace Mordor::Test;
@@ -377,4 +379,29 @@ MORDOR_UNITTEST(PipeStream, threadStress)
 
     pool.schedule(Fiber::ptr(new Fiber(boost::bind(&threadStress, pipe.first))));
     threadStress(pipe.second);
+}
+
+static void closed(bool &remoteClosed)
+{
+    remoteClosed = true;
+}
+
+MORDOR_UNITTEST(PipeStream, eventOnRemoteClose)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+
+    bool remoteClosed = false;
+    pipe.first->onRemoteClose(boost::bind(&closed, boost::ref(remoteClosed)));
+    pipe.second->close();
+    MORDOR_TEST_ASSERT(remoteClosed);
+}
+
+MORDOR_UNITTEST(PipeStream, eventOnRemoteReset)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+
+    bool remoteClosed = false;
+    pipe.first->onRemoteClose(boost::bind(&closed, boost::ref(remoteClosed)));
+    pipe.second.reset();
+    MORDOR_TEST_ASSERT(remoteClosed);
 }

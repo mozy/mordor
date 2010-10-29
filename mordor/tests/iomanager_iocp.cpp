@@ -1,11 +1,8 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #ifdef WINDOWS
 
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
 
 #include "mordor/iomanager.h"
 #include "mordor/test/test.h"
@@ -40,7 +37,7 @@ MORDOR_UNITTEST(IOManager, eventPreventsStop)
         IOManager ioManager;
         ioManager.registerEvent(hEvent, boost::bind(&handleEvent,
             boost::ref(fired)));
-        boost::thread thread(boost::bind(&signalEvent, hEvent, 500));
+        Thread thread(boost::bind(&signalEvent, hEvent, 500));
     } catch (...) {
         CloseHandle(hEvent);
     }
@@ -64,7 +61,7 @@ MORDOR_UNITTEST(IOManager, waitBlockUnregisterAndFire)
     IOManager ioManager;
     ioManager.registerEvent(hEvent, boost::bind(&handleEvent,
         boost::ref(fired)));
-    boost::thread thread(boost::bind(&signalEvent, hEvent, 0));
+    Thread thread(boost::bind(&signalEvent, hEvent, 0));
     ioManager.unregisterEvent(hEvent);
     ioManager.dispatch();
     CloseHandle(hEvent);

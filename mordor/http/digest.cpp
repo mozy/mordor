@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "digest.h"
 
 #include "mordor/string.h"
@@ -13,7 +11,7 @@ namespace HTTP {
 namespace DigestAuth {
 
 void authorize(const AuthParams &challenge, AuthParams &authorization,
-    const URI &uri, Method method, const std::string &username,
+    const URI &uri, const std::string &method, const std::string &username,
     const std::string &password)
 {
     std::string realm, qop, nonce, opaque, algorithm;

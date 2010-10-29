@@ -8,6 +8,7 @@
 
 #include <openssl/ssl.h>
 
+#include "buffer.h"
 #include "mordor/scheduler.h"
 
 namespace Mordor {
@@ -62,6 +63,8 @@ public:
 
     void accept();
     void connect();
+
+    void serverNameIndication(const std::string &hostname);
 
     void verifyPeerCertificate();
     void verifyPeerCertificate(const std::string &hostname);

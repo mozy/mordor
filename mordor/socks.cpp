@@ -1,7 +1,5 @@
 // Copyright (c) 2010 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "socks.h"
 
 #include "mordor/http/broker.h"
@@ -48,13 +46,13 @@ Stream::ptr tunnel(HTTP::StreamBroker::ptr streamBroker, const URI &proxy,
     size_t size;
     if (version == 4) {
         if (targetIP)
-            *(unsigned short *)&buffer[2] = htons(targetIP->port());
+            *(unsigned short *)&buffer[2] = byteswapOnLittleEndian(targetIP->port());
         else
-            *(unsigned short *)&buffer[2] = htons(targetPort);
+            *(unsigned short *)&buffer[2] = byteswapOnLittleEndian(targetPort);
         if (targetIP)
-            *(unsigned int *)&buffer[4] = htonl((unsigned int)(((sockaddr_in *)targetIP->name())->sin_addr.s_addr));
+            *(unsigned int *)&buffer[4] = byteswapOnLittleEndian((unsigned int)(((sockaddr_in *)targetIP->name())->sin_addr.s_addr));
         else
-            *(unsigned int *)&buffer[4] = htonl(0x00000001);
+            *(unsigned int *)&buffer[4] = byteswapOnLittleEndian(0x00000001);
         buffer[8] = 0;
         if (!targetIP) {
             memcpy(&buffer[9], targetDomain.c_str(), targetDomain.size());
@@ -66,7 +64,7 @@ Stream::ptr tunnel(HTTP::StreamBroker::ptr streamBroker, const URI &proxy,
         if (targetIP) {
             if (targetIP->family() == AF_INET) {
                 buffer[3] = 1;
-                *(unsigned int *)&buffer[4] = htonl((unsigned int)(((sockaddr_in *)targetIP->name())->sin_addr.s_addr));
+                *(unsigned int *)&buffer[4] = byteswapOnLittleEndian((unsigned int)(((sockaddr_in *)targetIP->name())->sin_addr.s_addr));
                 size = 7;
             } else {
                 buffer[3] = 4;
@@ -80,9 +78,9 @@ Stream::ptr tunnel(HTTP::StreamBroker::ptr streamBroker, const URI &proxy,
             size = 5 + targetDomain.size();
         }
         if (targetIP)
-            *(unsigned short *)&buffer[size] = htons(targetIP->port());
+            *(unsigned short *)&buffer[size] = byteswapOnLittleEndian(targetIP->port());
         else
-            *(unsigned short *)&buffer[size] = htons(targetPort);
+            *(unsigned short *)&buffer[size] = byteswapOnLittleEndian(targetPort);
         size += 2;
     }
     size_t written = 0;

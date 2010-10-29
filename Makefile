@@ -65,8 +65,6 @@ ifeq ($(PLATFORM), Darwin)
     BOOST_EXT := 
     BOOST_LIB_FLAGS := -L/opt/local/lib
     PQ_LIB_FLAGS := -L/opt/local/lib/postgresql83
-    IOMANAGER := kqueue
-    UNDERSCORE := _underscore
     GCC_ARCH := $(shell file -L `which gcc` | grep x86_64 -o | uniq)
     ifndef GCC_ARCH
         GCC_ARCH := $(shell file -L `which gcc` | grep ppc -o | uniq)
@@ -96,13 +94,6 @@ ifeq ($(PLATFORM), Darwin)
         endif
     endif
 endif
-ifeq ($(PLATFORM), FreeBSD)
-    IOMANAGER := kqueue
-endif
-ifeq ($(shell uname), Linux)
-    IOMANAGER := epoll
-endif
-
 
 # set optimization level (disable for gcov builds)
 # example: 'make OPT=2' will add -O2 to the compilation options
@@ -142,6 +133,7 @@ endif
 
 # add current dir to include dir
 INC_FLAGS := -I$(SRCDIR)
+PCH_FLAGS := -include mordor/pch.h
 
 ifeq ($(PLATFORM), Darwin)
     INC_FLAGS := $(INC_FLAGS) -I/opt/local/include
@@ -158,8 +150,8 @@ endif
 BIT64FLAGS = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 
 # Compiler options for c++ go here
-CXXFLAGS += -Wall -Werror -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET) -fPIC
-CFLAGS += -Wall -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET) -fPIC
+CXXFLAGS += -Wall -Werror -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET) -fno-strict-aliasing -fPIC
+CFLAGS += -Wall -MD $(OPT_FLAGS) $(DBG_FLAGS) $(INC_FLAGS) $(BIT64FLAGS) $(GCOV_FLAGS) $(MACH_TARGET) -fno-strict-aliasing -fPIC
 
 RLCODEGEN	:= $(shell which rlcodegen rlgen-cd 2>/dev/null)
 RAGEL   	:= ragel
@@ -170,10 +162,14 @@ ifeq ($(RAGEL_MAJOR), 6)
     RLCODEGEN :=
 endif
 
-LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_program_options $(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl
+LIBS := $(BOOST_LIB_FLAGS) $(PQ_LIB_FLAGS) -lboost_thread$(BOOST_EXT) -lboost_program_options $(BOOST_EXT) -lboost_regex$(BOOST_EXT) -lboost_date_time$(BOOST_EXT) -lssl -lcrypto -lz -ldl -lstdc++ -lpthread
 
 ifeq ($(PLATFORM), Darwin)
    LIBS += -framework SystemConfiguration -framework CoreFoundation -framework CoreServices -framework Security
+endif
+
+ifeq ($(shell uname), Linux)
+    LIBS += -lrt
 endif
 
 ifeq ($(PLATFORM), FreeBSD)
@@ -203,7 +199,7 @@ ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(PCH_FLAGS) -c -o $@ $<
 
 %.o: %.c
 ifeq ($(Q),@)
@@ -228,7 +224,7 @@ ifeq ($(Q),@)
 	@echo c++ $<
 endif
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -x c++-header $< -o $@
 
 #
 # Include the dependency information generated during the previous compile
@@ -266,7 +262,7 @@ all: $(ALLBINS)
 
 .PHONY: check
 check: all
-	$(Q)mordor/tests/run_tests
+	$(Q)cd mordor/tests && ./run_tests
 
 .PHONY: lcov
 lcov:
@@ -292,6 +288,7 @@ TESTOBJECTS :=								\
 	mordor/tests/buffered_stream.o					\
 	mordor/tests/chunked_stream.o					\
 	mordor/tests/coroutine.o					\
+	mordor/tests/endian.o						\
 	mordor/tests/efs_stream.o					\
 	mordor/tests/fibers.o						\
 	mordor/tests/fibersync.o					\
@@ -299,7 +296,9 @@ TESTOBJECTS :=								\
 	mordor/tests/fls.o						\
 	mordor/tests/future.o						\
 	mordor/tests/hmac.o						\
-	mordor/tests/http.o						\
+	mordor/tests/http_client.o					\
+	mordor/tests/http_parser.o					\
+	mordor/tests/http_server.o					\
 	mordor/tests/iomanager.o					\
 	mordor/tests/json.o						\
 	mordor/tests/log.o						\
@@ -310,7 +309,9 @@ TESTOBJECTS :=								\
 	mordor/tests/socket.o						\
 	mordor/tests/ssl_stream.o					\
 	mordor/tests/stream.o						\
+	mordor/tests/string.o						\
 	mordor/tests/temp_stream.o					\
+	mordor/tests/thread.o						\
 	mordor/tests/timeout_stream.o					\
 	mordor/tests/timer.o						\
 	mordor/tests/transfer_stream.o					\
@@ -338,6 +339,7 @@ EXAMPLEOBJECTS :=							\
 	mordor/examples/cat.o						\
 	mordor/examples/echoserver.o					\
 	mordor/examples/iombench.o					\
+	mordor/examples/netbench.o					\
 	mordor/examples/simpleclient.o					\
 	mordor/examples/tunnel.o					\
 	mordor/examples/udpstats.o					\
@@ -391,9 +393,9 @@ endif
 mordor/examples/wget: mordor/examples/wget.o				\
 	mordor/libmordor.a
 ifeq ($(Q),@)
-	@echo ld $@ -lboost_program_options$(BOOST_EXT)
+	@echo ld $@
 endif
-	$(COMPLINK) -lboost_program_options$(BOOST_EXT)
+	$(COMPLINK)
 
 mordor/streams/socket_stream.o: mordor/streams/socket.cpp
 ifeq ($(Q),@)
@@ -413,9 +415,11 @@ endif
 LIBMORDOROBJECTS := 							\
 	mordor/assert.o							\
 	mordor/config.o							\
+	mordor/daemon.o							\
 	mordor/date_time.o						\
 	mordor/exception.o						\
 	mordor/fiber.o							\
+	mordor/fibersynchronization.o					\
 	mordor/http/auth.o						\
 	mordor/http/basic.o						\
 	mordor/http/broker.o						\
@@ -429,9 +433,11 @@ LIBMORDOROBJECTS := 							\
 	mordor/http/http_parser.o					\
 	mordor/http/proxy.o						\
 	mordor/http/server.o						\
-	mordor/iomanager_$(IOMANAGER).o					\
+	mordor/iomanager_epoll.o					\
+	mordor/iomanager_kqueue.o					\
 	mordor/json.o							\
 	mordor/log.o							\
+	mordor/parallel.o						\
 	mordor/ragel.o							\
 	mordor/scheduler.o						\
 	mordor/semaphore.o						\
@@ -444,6 +450,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/cat.o						\
 	mordor/streams/fd.o						\
 	mordor/streams/file.o						\
+	mordor/streams/filter.o						\
 	mordor/streams/hash.o						\
 	mordor/streams/http_stream.o					\
 	mordor/streams/limited.o					\
@@ -451,6 +458,7 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/null.o						\
 	mordor/streams/pipe.o						\
 	mordor/streams/random.o						\
+	mordor/streams/singleplex.o					\
 	mordor/streams/socket_stream.o					\
 	mordor/streams/ssl.o						\
 	mordor/streams/std.o						\
@@ -462,9 +470,12 @@ LIBMORDOROBJECTS := 							\
 	mordor/streams/transfer.o					\
 	mordor/streams/zlib.o						\
 	mordor/string.o							\
+	mordor/thread.o							\
 	mordor/timer.o							\
+	mordor/workerpool.o						\
 	mordor/uri.o							\
-	mordor/xml/xml_parser.o
+	mordor/xml/xml_parser.o						\
+	mordor/zip.o
 
 $(LIBMORDOROBJECTS): mordor/pch.h.gch
 

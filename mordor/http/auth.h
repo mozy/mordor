@@ -12,30 +12,6 @@
 namespace Mordor {
 namespace HTTP {
 
-/// @deprecated Please use AuthRequestBroker
-class ClientAuthBroker : public boost::noncopyable
-{
-public:
-    ClientAuthBroker(boost::function<boost::shared_ptr<ClientConnection> ()> dg,
-        const std::string &username, const std::string &password,
-        const std::string &proxyUsername, const std::string &proxyPassword)
-        : m_dg(dg),
-          m_username(username),
-          m_password(password),
-          m_proxyUsername(proxyUsername),
-          m_proxyPassword(proxyPassword)
-    {}
-
-    // optional dg is to provide the request body if necessary
-    boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
-        boost::function< void (boost::shared_ptr<ClientRequest>)> dg = NULL);
-
-private:
-    boost::function<boost::shared_ptr<ClientConnection> ()> m_dg;
-    std::string m_username, m_password, m_proxyUsername, m_proxyPassword;
-    boost::shared_ptr<ClientConnection> m_conn;
-};
-
 class AuthRequestBroker : public RequestBrokerFilter
 {
 public:

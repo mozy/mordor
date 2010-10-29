@@ -42,6 +42,7 @@ struct URI
     URI(const std::string& uri);
     URI(const char *uri);
     URI(const Buffer &uri);
+    URI(const URI &uri);
 
     URI& operator=(const std::string& uri);
     URI& operator=(const char *uri) { return *this = std::string(uri); }
@@ -57,6 +58,11 @@ struct URI
     struct Authority
     {
         Authority();
+        Authority(const char *path);
+        Authority(const std::string& path);
+
+        Authority& operator=(const std::string& authority);
+        Authority& operator=(const char *authority) { return *this = std::string(authority); }
 
         std::string userinfo() const { MORDOR_ASSERT(m_userinfoDefined); return m_userinfo; }
         void userinfo(const std::string& ui) { m_userinfoDefined = true; m_hostDefined = true; m_userinfo = ui; }
@@ -90,29 +96,60 @@ struct URI
     };
     Authority authority;
 
+    /// Represents segments in the path
+    ///
+    /// A single, empty segment is invalid.  A leading empty segment indicates
+    /// an absolute path; a trailing empty segment indicates a trailing slash.
     struct Path
     {
-        enum Type {
-            ABSOLUTE,
-            RELATIVE
-        };
-
+        friend struct URI;
+    private:
+        Path(const URI &uri);
+        Path(const URI &uri, const Path &path);
+    public:
         Path();
         Path(const char *path);
         Path(const std::string& path);
+        Path(const Path &path);
 
-        Path& operator=(const std::string& path);
-        Path& operator=(const char *path) { return *this = std::string(path); }
+        Path &operator=(const std::string &path);
+        Path &operator=(const char *path) { return *this = std::string(path); }
+        Path &operator=(const Path &path);
 
-        Type type;
+        bool isEmpty() const
+        {
+            return segments.empty() ||
+                (segments.size() == 1 && segments.front().empty());
+        }
+        bool isAbsolute() const
+        {
+            return segments.size() > 1 && segments.front().empty();
+        }
+        bool isRelative() const
+        {
+            return !isAbsolute();
+        }
 
-        bool isEmpty() const { return type == RELATIVE && segments.empty(); }
+        void makeAbsolute();
+        void makeRelative();
 
+        /// Append a single segment
+        ///
+        /// This will remove a trailing empty segment before appending, if
+        /// necessary
+        /// I.e., Path("/hi/").append("bob") would result in "/hi/bob" instead
+        /// of "/hi//bob"
+        /// Also, if this path is part of a URI, and the URI has an authority
+        /// defined, and the path is empty, append will ensure the path becomes
+        /// absolute.
+        /// I.e., URI("http://localhost").path.append("bob") would result in
+        /// "http://localhost/bob"
+        void append(const std::string &segment);
         void removeDotComponents();
         void normalize(bool emptyPathValid = false);
 
-        // Concatenate rhs to this object, dropping least significant component
-        // of this object first
+        /// Concatenate rhs to this object, dropping least significant
+        /// component of this object first
         void merge(const Path& rhs);
 
         std::vector<std::string> segments;
@@ -130,6 +167,9 @@ struct URI
         bool operator==(const Path &rhs) const;
         bool operator!=(const Path &rhs) const
         { return !(*this == rhs); }
+
+    private:
+        const URI *m_uri;
     };
     Path path;
 

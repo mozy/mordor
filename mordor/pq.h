@@ -2,20 +2,30 @@
 #define __MORDOR_PQ_H__
 // Copyright (c) 2010 Mozy, Inc.
 
+#include "mordor/predef.h"
+
 #include <boost/noncopyable.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 
-#include <postgresql/libpq-fe.h>
+#include <libpq-fe.h>
 
 #include "mordor/exception.h"
-#include "mordor/iomanager.h"
 
 namespace Mordor {
 
+class IOManager;
+class Scheduler;
 class Stream;
 
 namespace PQ {
+
+#ifdef WINDOWS
+typedef Scheduler SchedulerType;
+#else
+typedef IOManager SchedulerType;
+#endif
 
 struct Exception : virtual ::Mordor::Exception
 {
@@ -194,11 +204,11 @@ class PreparedStatement
 private:
     PreparedStatement(boost::shared_ptr<PGconn> conn,
         const std::string &command, const std::string &name,
-        IOManager *ioManager)
+        SchedulerType *scheduler)
         : m_conn(conn),
           m_command(command),
           m_name(name),
-          m_ioManager(ioManager)
+          m_scheduler(scheduler)
     {}
 
 public:
@@ -318,7 +328,7 @@ private:
     boost::weak_ptr<PGconn> m_conn;
     std::string m_command;
     std::string m_name;
-    IOManager *m_ioManager;
+    SchedulerType *m_scheduler;
     std::vector<Oid> m_paramTypes;
     std::vector<std::string> m_paramValues;
     std::vector<const char *> m_params;
@@ -329,6 +339,7 @@ class Connection : boost::noncopyable
 {
 public:
     Connection(const std::string &conninfo, IOManager *ioManager = NULL,
+        Scheduler *scheduler = NULL,
         bool connectImmediately = true);
 
     ConnStatusType status();
@@ -388,7 +399,7 @@ public:
     {
     protected:
         CopyParams(const std::string &table, boost::shared_ptr<PGconn> conn,
-            IOManager *ioManager);
+            SchedulerType *scheduler);
 
     public:
         /// Execute
@@ -411,7 +422,7 @@ public:
 
     private:
         std::string m_table;
-        IOManager *m_ioManager;
+        SchedulerType *m_scheduler;
         boost::shared_ptr<PGconn> m_conn;
         std::vector<std::string> m_columns, m_notNullQuoteColumns;
         bool m_binary, m_csv, m_header;
@@ -424,8 +435,8 @@ public:
     private:
         friend class Connection;
         CopyInParams(const std::string &table, boost::shared_ptr<PGconn> conn,
-            IOManager *ioManager)
-            : CopyParams(table, conn, ioManager)
+            SchedulerType *scheduler)
+            : CopyParams(table, conn, scheduler)
         {}
 
     public:
@@ -438,8 +449,8 @@ public:
     private:
         friend class Connection;
         CopyOutParams(const std::string &table, boost::shared_ptr<PGconn> conn,
-            IOManager *ioManager)
-            : CopyParams(table, conn, ioManager)
+            SchedulerType *scheduler)
+            : CopyParams(table, conn, scheduler)
         {}
 
     public:
@@ -456,7 +467,7 @@ public:
 
 private:
     const std::string &m_conninfo;
-    IOManager *m_ioManager;
+    SchedulerType *m_scheduler;
     boost::shared_ptr<PGconn> m_conn;
 };
 

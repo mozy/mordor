@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/http/chunked.h"
 #include "mordor/streams/memory.h"
 #include "mordor/test/test.h"

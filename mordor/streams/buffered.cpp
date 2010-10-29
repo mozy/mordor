@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "buffered.h"
 
 #include "mordor/config.h"
@@ -153,10 +151,10 @@ BufferedStream::flushWrite(size_t length)
             if (m_flushMultiplesOfBuffer)
                 toWrite = toWrite / m_bufferSize * m_bufferSize;
             MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
-                << m_writeBuffer.readAvailable() << ")";
+                << toWrite << ")";
             result = parent()->write(m_writeBuffer, toWrite);
             MORDOR_LOG_DEBUG(g_log) << this << " parent()->write("
-                << m_writeBuffer.readAvailable() << "): " << result;
+                << toWrite << "): " << result;
             m_writeBuffer.consume(result);
         } catch (...) {
             // If this entire write is still in our buffer,
@@ -190,7 +188,7 @@ BufferedStream::seek(long long offset, Anchor anchor)
     long long parentPos = parent()->tell();
     long long bufferedPos = parentPos - m_readBuffer.readAvailable()
         + m_writeBuffer.readAvailable();
-    long long parentSize = parent()->supportsSize() ? -1ll : parent()->size();
+    long long parentSize = parent()->supportsSize() ? parent()->size() : -1ll;
     // Check for no change in position
     if ((offset == 0 && anchor == CURRENT) ||
         (offset == bufferedPos && anchor == BEGIN) ||

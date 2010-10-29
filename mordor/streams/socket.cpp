@@ -1,19 +1,18 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "socket.h"
 
+#include "buffer.h"
 #include "mordor/assert.h"
 #include "mordor/socket.h"
 
 namespace Mordor {
 
-SocketStream::SocketStream(boost::shared_ptr<Socket> s, bool own)
-: m_socket(s),
+SocketStream::SocketStream(Socket::ptr socket, bool own)
+: m_socket(socket),
   m_own(own)
 {
-    MORDOR_ASSERT(s);
+    MORDOR_ASSERT(socket);
 }
 
 void
@@ -76,6 +75,13 @@ void
 SocketStream::cancelWrite()
 {
     m_socket->cancelSend();
+}
+
+boost::signals2::connection
+SocketStream::onRemoteClose(
+    const boost::signals2::slot<void ()> &slot)
+{
+    return m_socket->onRemoteClose(slot);
 }
 
 }

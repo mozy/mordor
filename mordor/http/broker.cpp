@@ -1,13 +1,14 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "broker.h"
 
 #include "auth.h"
 #include "client.h"
 #include "mordor/atomic.h"
+#include "mordor/fiber.h"
 #include "mordor/future.h"
+#include "mordor/iomanager.h"
+#include "mordor/log.h"
 #include "mordor/socks.h"
 #include "mordor/streams/buffered.h"
 #include "mordor/streams/pipe.h"
@@ -41,6 +42,7 @@ createRequestBroker(const RequestBrokerOptions &options)
         timerManager));
     connectionCache->httpReadTimeout(options.httpReadTimeout);
     connectionCache->httpWriteTimeout(options.httpWriteTimeout);
+    connectionCache->idleTimeout(options.idleTimeout);
     connectionCache->sslReadTimeout(options.sslConnectReadTimeout);
     connectionCache->sslWriteTimeout(options.sslConnectWriteTimeout);
     connectionCache->sslCtx(options.sslCtx);
@@ -171,6 +173,8 @@ static bool least(const ClientConnection::ptr &lhs,
     MORDOR_NOTREACHED();
 }
 
+static Logger::ptr g_cacheLog = Log::lookup("mordor:http:connectioncache");
+
 std::pair<ClientConnection::ptr, bool>
 ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
 {
@@ -197,6 +201,22 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
     std::pair<ClientConnection::ptr, bool> result;
 
     FiberMutex::ScopedLock lock(m_mutex);
+
+    if (g_cacheLog->enabled(Log::DEBUG)) {
+        std::ostringstream os;
+        os << this << " getting connection for " << schemeAndAuthority
+        << ", proxies: {";
+        for (std::vector<URI>::iterator it(proxies.begin());
+             it != proxies.end();
+             ++it) {
+            if (it != proxies.begin())
+                os << ", ";
+            os << *it;
+        }
+        os << "}";
+        MORDOR_LOG_DEBUG(g_cacheLog) << os.str();
+    }
+
     if (m_closed)
         MORDOR_THROW_EXCEPTION(OperationAbortedException());
     // Clean out any dead conns
@@ -255,12 +275,20 @@ ConnectionCache::getConnectionViaProxyFromCache(const URI &uri, const URI &proxy
                 connsForThisUri.end(), &least);
             // No connection has completed yet (but it's in progress)
             if (!*it2) {
+                MORDOR_LOG_TRACE(g_cacheLog) << this << " waiting for connection to "
+                    << endpoint;
                 // Wait for somebody to let us try again
-                it->second.second->wait();
+                // Have to copy the shared ptr to this stack, because the element may be
+                // removed while we're waiting for it; the wait will then crash because
+                // the object gets deleted out from under it
+                boost::shared_ptr<FiberCondition> condition = it->second.second;
+                condition->wait();
                 // We let go of the mutex, and the last connection may have
                 // disappeared
                 it = m_conns.find(endpoint);
             } else {
+                MORDOR_LOG_TRACE(g_cacheLog) << this << " returning cached connection "
+                    << *it2 << " to " << endpoint;
                 // Return the existing, completed connection
                 return std::make_pair(*it2, proxied);
             }
@@ -292,6 +320,7 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
     // Add a placeholder for the new connection
     it->second.first.push_back(ClientConnection::ptr());
 
+    MORDOR_LOG_TRACE(g_cacheLog) << this << " establishing connection to " << endpoint;
     lock.unlock();
 
     ConnectionList::iterator it2;
@@ -325,10 +354,18 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
             MORDOR_THROW_EXCEPTION(OperationAbortedException());
         result = std::make_pair(ClientConnection::ptr(
             new ClientConnection(stream, m_timerManager)), proxied);
+        MORDOR_LOG_TRACE(g_cacheLog) << this << " connection " << result.first
+            << " to " << endpoint << " established";
+        stream->onRemoteClose(boost::bind(&ConnectionCache::dropConnection,
+            this, endpoint, result.first.get()));
         if (m_httpReadTimeout != ~0ull)
             result.first->readTimeout(m_httpReadTimeout);
         if (m_httpWriteTimeout != ~0ull)
             result.first->writeTimeout(m_httpWriteTimeout);
+        if (m_idleTimeout != ~0ull)
+            result.first->idleTimeout(m_idleTimeout,
+            boost::bind(&ConnectionCache::dropConnection, this, endpoint,
+                result.first.get()));
         // Assign this connection to the first blank connection for this
         // schemeAndAuthority
         // it should still be valid, even if the map changed
@@ -344,6 +381,8 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
         it->second.second->broadcast();
     } catch (...) {
         lock.lock();
+        MORDOR_LOG_TRACE(g_cacheLog) << this << " connection to " << endpoint
+            << " failed: " << boost::current_exception_diagnostic_information();
         // Somebody called abortConnections while we were unlocked; no need to
         // clean up the temporary spot for this connection, since it's gone;
         // pass the original exception on, though
@@ -373,6 +412,7 @@ void
 ConnectionCache::closeIdleConnections()
 {
     FiberMutex::ScopedLock lock(m_mutex);
+    MORDOR_LOG_DEBUG(g_cacheLog) << " dropping idle connections";
     // We don't just clear the list, because there may be a connection in
     // in progress that has an iterator into it
     std::map<URI, std::pair<ConnectionList,
@@ -404,9 +444,9 @@ void
 ConnectionCache::abortConnections()
 {
     FiberMutex::ScopedLock lock(m_mutex);
+    MORDOR_LOG_DEBUG(g_cacheLog) << " aborting all connections";
     m_closed = true;
-    std::map<URI, std::pair<ConnectionList,
-        boost::shared_ptr<FiberCondition> > >::iterator it;
+    CachedConnectionMap::iterator it;
     for (it = m_conns.begin(); it != m_conns.end(); ++it) {
         it->second.second->broadcast();
         for (ConnectionList::iterator it2 = it->second.first.begin();
@@ -463,6 +503,7 @@ ConnectionCache::addSSL(const URI &uri, Stream::ptr &stream)
         BufferedStream::ptr bufferedStream(new BufferedStream(stream));
         bufferedStream->allowPartialReads(true);
         SSLStream::ptr sslStream(new SSLStream(bufferedStream, true, true, m_sslCtx));
+        sslStream->serverNameIndication(uri.authority.host());
         sslStream->connect();
         if (m_verifySslCertificate)
             sslStream->verifyPeerCertificate();
@@ -481,6 +522,41 @@ ConnectionCache::addSSL(const URI &uri, Stream::ptr &stream)
     }
 }
 
+namespace {
+struct CompareConn
+{
+    CompareConn(const ClientConnection *conn)
+        : m_conn(conn)
+    {}
+
+    bool operator()(const ClientConnection::ptr &lhs) const
+    {
+        return lhs.get() == m_conn;
+    }
+
+    const ClientConnection *m_conn;
+};
+}
+
+void
+ConnectionCache::dropConnection(const URI &uri,
+    const ClientConnection *connection)
+{
+    FiberMutex::ScopedLock lock(m_mutex);
+    CachedConnectionMap::iterator it = m_conns.find(uri);
+    if (it == m_conns.end())
+        return;
+    ConnectionList::iterator it2 = std::find_if(it->second.first.begin(),
+        it->second.first.end(), CompareConn(connection));
+    if (it2 != it->second.first.end()) {
+        MORDOR_LOG_TRACE(g_cacheLog) << this << " dropping connection "
+            << connection << " to " << uri;
+        it->second.first.erase(it2);
+        if (it->second.first.empty())
+            m_conns.erase(it);
+    }
+}
+
 std::pair<ClientConnection::ptr, bool>
 MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
 {
@@ -489,7 +565,7 @@ MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
     schemeAndAuthority.queryDefined(false);
     schemeAndAuthority.fragmentDefined(false);
     ConnectionCache::iterator it = m_conns.find(schemeAndAuthority);
-    if (it != m_conns.end() && !it->second.first->newRequestsAllowed()) {
+    if (it != m_conns.end() && !it->second->newRequestsAllowed()) {
         m_conns.erase(it);
         it = m_conns.end();
     }
@@ -506,10 +582,10 @@ MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
                 schemeAndAuthority, _1)));
         Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(
             &ServerConnection::processRequests, server))));
-        m_conns[schemeAndAuthority] = std::make_pair(client, server);
+        m_conns[schemeAndAuthority] = client;
         return std::make_pair(client, false);
     }
-    return std::make_pair(it->second.first, false);
+    return std::make_pair(it->second, false);
 }
 
 RequestBroker::ptr
@@ -555,14 +631,14 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     URI &currentUri = requestHeaders.requestLine.uri;
     URI originalUri = currentUri;
     bool connect = requestHeaders.requestLine.method == CONNECT;
-    MORDOR_ASSERT(connect || originalUri.authority.hostDefined());
-    MORDOR_ASSERT(!connect || !requestHeaders.request.host.empty());
+    MORDOR_ASSERT(originalUri.authority.hostDefined());
     if (!connect) {
         requestHeaders.request.host = originalUri.authority.host();
     } else {
         MORDOR_ASSERT(originalUri.scheme() == "http");
-        MORDOR_ASSERT(originalUri.path.segments.size() == 1);
-        currentUri = originalUri.path.segments[0];
+        MORDOR_ASSERT(originalUri.path.segments.size() == 2);
+        currentUri = URI();
+        currentUri.authority = originalUri.path.segments[1];
     }
     ConnectionBroker::ptr connectionBroker = m_connectionBroker;
     if (!connectionBroker)
@@ -579,19 +655,17 @@ BaseRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
         currentUri = originalUri;
         throw;
     }
+    // We use an absolute URI if we're talking to a proxy, or if the path
+    // starts with "//" (path_absolute does not allow an empty first segment;
+    // path_abempty as part of absolute_URI does); otherwise use only the path
+    // (and query)
+    if (!connect && !conn.second && !(originalUri.path.isAbsolute() &&
+        originalUri.path.segments.size() > 2 &&
+        originalUri.path.segments[1].empty())) {
+        currentUri.schemeDefined(false);
+        currentUri.authority.hostDefined(false);
+    }
     try {
-        // Fix up our URI for use with/without proxies
-        if (!connect) {
-            if (conn.second && !currentUri.authority.hostDefined()) {
-                currentUri.authority = originalUri.authority;
-                if (originalUri.schemeDefined())
-                    currentUri.scheme(originalUri.scheme());
-            } else if (!conn.second && currentUri.authority.hostDefined()) {
-                currentUri.schemeDefined(false);
-                currentUri.authority.hostDefined(false);
-            }
-        }
-
         ClientRequest::ptr request;
         try {
             request = conn.first->request(requestHeaders);

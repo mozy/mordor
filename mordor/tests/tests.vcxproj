@@ -72,7 +72,6 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -81,6 +80,8 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -100,7 +101,6 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -109,6 +109,8 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -134,6 +136,8 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -164,6 +168,8 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -184,12 +190,15 @@
     <ClCompile Include="chunked_stream.cpp" />
     <ClCompile Include="coroutine.cpp" />
     <ClCompile Include="efs_stream.cpp" />
+    <ClCompile Include="endian.cpp" />
     <ClCompile Include="fibers.cpp" />
     <ClCompile Include="fibersync.cpp" />
     <ClCompile Include="fls.cpp" />
     <ClCompile Include="future.cpp" />
     <ClCompile Include="hmac.cpp" />
-    <ClCompile Include="http.cpp" />
+    <ClCompile Include="http_parser.cpp" />
+    <ClCompile Include="http_client.cpp" />
+    <ClCompile Include="http_server.cpp" />
     <ClCompile Include="iomanager.cpp" />
     <ClCompile Include="iomanager_iocp.cpp" />
     <ClCompile Include="json.cpp" />
@@ -208,7 +217,9 @@
     <ClCompile Include="socket.cpp" />
     <ClCompile Include="ssl_stream.cpp" />
     <ClCompile Include="stream.cpp" />
+    <ClCompile Include="string.cpp" />
     <ClCompile Include="temp_stream.cpp" />
+    <ClCompile Include="thread.cpp" />
     <ClCompile Include="timeout_stream.cpp" />
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="transfer_stream.cpp" />

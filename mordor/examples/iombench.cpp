@@ -14,8 +14,10 @@
 
 #include "mordor/atomic.h"
 #include "mordor/config.h"
-#include "mordor/log.h"
+#include "mordor/fibersynchronization.h"
 #include "mordor/iomanager.h"
+#include "mordor/log.h"
+#include "mordor/main.h"
 #include "mordor/socket.h"
 
 using namespace Mordor;
@@ -299,8 +301,7 @@ private:
     bool m_stop;
 };
 
-int
-main(int argc, char *argv[])
+MORDOR_MAIN(int argc, char *argv[])
 {
     try {
         NetBench bench(argc, argv);
@@ -313,6 +314,7 @@ main(int argc, char *argv[])
 
         bench.run(&server, &client);
         iom.stop();
+        return 0;
     } catch (...) {
         std::cerr << "caught: "
                   << boost::current_exception_diagnostic_information() << "\n";

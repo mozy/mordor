@@ -13,13 +13,6 @@ namespace Mordor {
 /// Scheduler that processes UI events
 class EventLoop : public Scheduler, public TimerManager
 {
-public:
-    enum Event {
-        READ = FD_READ,
-        WRITE = FD_WRITE,
-        ACCEPT = FD_ACCEPT,
-        CONNECT = FD_CONNECT
-    };
 private:
     struct Initializer
     {
@@ -27,28 +20,11 @@ private:
         ~Initializer();
     };
 
-    struct AsyncEvent
-    {
-        Event m_events;
-
-        Scheduler *m_schedulerRead, *m_schedulerWrite;
-        Fiber::ptr m_fiberRead, m_fiberWrite;
-    };
-
 public:
     EventLoop();
     ~EventLoop();
 
     bool stopping();
-
-    void registerEvent(SOCKET socket, Event events);
-    /// Will not cause the event to fire
-    /// @return If the event was successfully unregistered before firing normally
-    bool unregisterEvent(SOCKET socket, Event events);
-    /// Will cause the event to fire
-    void cancelEvent(SOCKET socket, Event events);
-    /// Unregisters all events for the SOCKET; for use by Socket::accept
-    void clearEvents(SOCKET socket);
 
 protected:
     void idle();
@@ -65,8 +41,6 @@ private:
 
     HWND m_messageWindow;
     HHOOK m_idleHook;
-    std::map<SOCKET, AsyncEvent> m_pendingEvents;
-    boost::mutex m_mutex;
 };
 
 }

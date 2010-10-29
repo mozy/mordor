@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include <algorithm>
 
 #include <string.h>
@@ -10,6 +8,7 @@
 #include <openssl/sha.h>
 
 #include "mordor/string.h"
+#include "mordor/util.h"
 
 #include "assert.h"
 #include "exception.h"
@@ -248,7 +247,7 @@ std::string
 hexstringFromData(const void *data, size_t len)
 {
     if (len == 0)
-        return "";
+        return std::string();
     std::string result;
     result.resize(len * 2);
     hexstringFromData(data, len, &result[0]);
@@ -259,6 +258,102 @@ std::string
 hexstringFromData(const std::string &data)
 {
     return hexstringFromData(data.c_str(), data.size());
+}
+
+void
+dataFromHexstring(const char *hexstring, size_t length, void *output)
+{
+    unsigned char *buf = (unsigned char *)output;
+    unsigned char byte;
+    if (length % 2 != 0)
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("length"));
+    for (size_t i = 0; i < length; ++i) {
+        switch (hexstring[i]) {
+            case 'a':
+            case 'b':
+            case 'c':
+            case 'd':
+            case 'e':
+            case 'f':
+                byte = (hexstring[i] - 'a' + 10) << 4;
+                break;
+            case 'A':
+            case 'B':
+            case 'C':
+            case 'D':
+            case 'E':
+            case 'F':
+                byte = (hexstring[i] - 'A' + 10) << 4;
+                break;
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                byte = (hexstring[i] - '0') << 4;
+                break;
+            default:
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("hexstring"));
+        }
+        ++i;
+        switch (hexstring[i]) {
+            case 'a':
+            case 'b':
+            case 'c':
+            case 'd':
+            case 'e':
+            case 'f':
+                byte |= hexstring[i] - 'a' + 10;
+                break;
+            case 'A':
+            case 'B':
+            case 'C':
+            case 'D':
+            case 'E':
+            case 'F':
+                byte |= hexstring[i] - 'A' + 10;
+                break;
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                byte |= hexstring[i] - '0';
+                break;
+            default:
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("hexstring"));
+        }
+        *buf++ = byte;
+    }
+}
+
+std::string
+dataFromHexstring(const char *hexstring, size_t length)
+{
+    if (length % 2 != 0)
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("length"));
+    if (length == 0)
+        return std::string();
+    std::string result;
+    result.resize(length / 2);
+    dataFromHexstring(hexstring, length, &result[0]);
+    return result;
+}
+
+std::string
+dataFromHexstring(const std::string &hexstring)
+{
+    return dataFromHexstring(hexstring.c_str(), hexstring.size());
 }
 
 void
@@ -338,7 +433,7 @@ static DWORD g_wcFlags = WC_ERR_INVALID_CHARS;
 static DWORD g_mbFlags = MB_ERR_INVALID_CHARS;
 
 std::string
-toUtf8(const wchar_t *str, size_t len)
+toUtf8(const utf16char *str, size_t len)
 {
     if (len == (size_t)~0)
         len = wcslen(str);
@@ -374,13 +469,13 @@ toUtf8(const std::wstring &str)
     return toUtf8(str.c_str(), str.size());
 }
 
-std::wstring
+utf16string
 toUtf16(const char *str, size_t len)
 {
     if (len == (size_t)~0)
         len = strlen(str);
     MORDOR_ASSERT(len < 0x80000000u);
-    std::wstring result;
+    utf16string result;
     if (len == 0)
         return result;
     int ret = MultiByteToWideChar(CP_UTF8, g_mbFlags, str, (int)len, NULL, 0);
@@ -403,7 +498,7 @@ toUtf16(const char *str, size_t len)
     return result;
 }
 
-std::wstring
+utf16string
 toUtf16(const std::string &str)
 {
     MORDOR_ASSERT(str.size() < 0x80000000u);
@@ -427,16 +522,48 @@ toUtf8(CFStringRef string)
     result.resize(strlen(result.c_str()));
     return result;
 }
+
+utf16string
+toUtf16(const char * str, size_t length)
+{
+    utf16string result;
+    if (length == 0u)
+        return result;
+    ScopedCFRef<CFStringRef> cfUtf8Str = CFStringCreateWithBytesNoCopy(NULL,
+        (const UInt8 *)str, (CFIndex)length, kCFStringEncodingUTF8, false,
+        kCFAllocatorNull);
+    if (!cfUtf8Str)
+        MORDOR_THROW_EXCEPTION(InvalidUnicodeException());
+#if MORDOR_BYTE_ORDER == MORDOR_LITTLE_ENDIAN
+    ScopedCFRef<CFDataRef> cfUtf16Data = CFStringCreateExternalRepresentation(
+        NULL, cfUtf8Str, kCFStringEncodingUTF16LE, 0);
+#elif MORDOR_BYTE_ORDER == MORDOR_BIG_ENDIAN
+    ScopedCFRef<CFDataRef> cfUtf16Data = CFStringCreateExternalRepresentation(
+        NULL, cfUtf8Str, kCFStringEncodingUTF16BE, 0);
+#endif
+    MORDOR_ASSERT(cfUtf16Data);
+    MORDOR_ASSERT(CFDataGetLength(cfUtf16Data) % sizeof(utf16char) == 0);
+    result.resize(CFDataGetLength(cfUtf16Data) / sizeof(utf16char));
+    CFDataGetBytes(cfUtf16Data, CFRangeMake(0,CFDataGetLength(cfUtf16Data)),
+        (UInt8 *)&result[0]);
+    return result;
+}
+
+utf16string
+toUtf16(const std::string &str)
+{
+    return toUtf16(str.c_str(), str.size());
+}
 #endif
 
 std::string
-toUtf8(wchar_t character)
+toUtf8(utf16char character)
 {
-    return toUtf8((int)character);
+    return toUtf8((utf32char)character);
 }
 
 std::string
-toUtf8(int character)
+toUtf8(utf32char character)
 {
     MORDOR_ASSERT(character <= 0x10ffff);
     std::string result;
@@ -461,26 +588,26 @@ toUtf8(int character)
     return result;
 }
 
-int
-toUtf32(wchar_t highSurrogate, wchar_t lowSurrogate)
+utf32char
+toUtf32(utf16char highSurrogate, utf16char lowSurrogate)
 {
     MORDOR_ASSERT(isHighSurrogate(highSurrogate));
     MORDOR_ASSERT(isLowSurrogate(lowSurrogate));
-    return ((((int)highSurrogate - 0xd800) << 10) | ((int)lowSurrogate - 0xdc00)) + 0x10000;
+    return ((((utf32char)highSurrogate - 0xd800) << 10) | ((utf32char)lowSurrogate - 0xdc00)) + 0x10000;
 }
 
 std::string
-toUtf8(wchar_t highSurrogate, wchar_t lowSurrogate)
+toUtf8(utf16char highSurrogate, utf16char lowSurrogate)
 {
     return toUtf8(toUtf32(highSurrogate, lowSurrogate));
 }
 
-bool isHighSurrogate(wchar_t character)
+bool isHighSurrogate(utf16char character)
 {
     return character >= 0xd800 && character <= 0xdbff;
 }
 
-bool isLowSurrogate(wchar_t character)
+bool isLowSurrogate(utf16char character)
 {
     return character >= 0xdc00 && character <= 0xdfff;
 }

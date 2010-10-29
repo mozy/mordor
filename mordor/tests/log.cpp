@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/log.h"
 #include "mordor/test/test.h"
 
@@ -113,4 +111,24 @@ MORDOR_UNITTEST(Log, multi_children){
     vec.push_back(p);
     vec.push_back(c2);
     testLogger(vec);
+}
+
+MORDOR_UNITTEST(Log, levelPropagate)
+{
+    Logger::ptr l = Log::lookup("app:logger");
+    Logger::ptr l2 = Log::lookup("app");
+
+    MORDOR_TEST_ASSERT_NOT_EQUAL(l->level(), Log::DEBUG);
+    l2->level(Log::DEBUG);
+    MORDOR_TEST_ASSERT_EQUAL(l->level(), Log::DEBUG);
+}
+
+MORDOR_UNITTEST(Log, levelNoPropagate)
+{
+    Logger::ptr l = Log::lookup("app2:logger");
+    Logger::ptr l2 = Log::lookup("app2");
+
+    MORDOR_TEST_ASSERT_NOT_EQUAL(l->level(), Log::DEBUG);
+    l2->level(Log::DEBUG, false);
+    MORDOR_TEST_ASSERT_NOT_EQUAL(l->level(), Log::DEBUG);
 }

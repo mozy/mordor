@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "client.h"
 
 #include <algorithm>
@@ -18,6 +16,7 @@
 #include "mordor/streams/null.h"
 #include "mordor/streams/timeout.h"
 #include "mordor/streams/transfer.h"
+#include "mordor/timer.h"
 #include "mordor/util.h"
 #include "mordor/atomic.h"
 #include "multipart.h"
@@ -484,8 +483,10 @@ ClientRequest::hasRequestBody() const
 Stream::ptr
 ClientRequest::requestStream()
 {
-    if (m_requestStream)
+    if (m_requestStream) {
+        MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
         return m_requestStream;
+    }
     doRequest();
     MORDOR_ASSERT(!m_requestMultipart);
     MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
@@ -556,7 +557,9 @@ ClientRequest::responseStream()
 {
     Stream::ptr result = m_responseStream.lock();
     if (result || m_hasResponseBody) {
-        MORDOR_ASSERT(result);
+        MORDOR_ASSERT(result &&
+            "responseStream() can only be accessed once without caching it");
+        MORDOR_ASSERT(m_response.entity.contentType.type != "multipart");
         return result;
     }
     ensureResponse();
@@ -980,7 +983,11 @@ ClientRequest::ensureResponse()
         #ifdef DEBUG
                 bool inserted =
         #endif
-                m_conn->m_waitingResponses.insert(this).second;
+                m_conn->m_waitingResponses.insert(this)
+#ifdef DEBUG
+                .second
+#endif
+                ;
                 MORDOR_ASSERT(inserted);
                 wait = true;
                 m_responseState = WAITING;

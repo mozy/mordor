@@ -25,7 +25,8 @@ private:
 
 #define MORDOR_VERIFY(x)                                                        \
     if (!(x)) {                                                                 \
-        MORDOR_LOG_FATAL(::Mordor::Log::root()) << "ASSERTION: " # x;           \
+        MORDOR_LOG_FATAL(::Mordor::Log::root()) << "ASSERTION: " # x            \
+            << "\nbacktrace:\n" << ::Mordor::to_string(::Mordor::backtrace());  \
         if (::Mordor::Assertion::throwOnAssertion)                              \
             MORDOR_THROW_EXCEPTION(::Mordor::Assertion(# x));                   \
         if (::Mordor::isDebuggerAttached())                                     \
@@ -35,7 +36,8 @@ private:
 
 #define MORDOR_NOTREACHED()                                                     \
 {                                                                               \
-    MORDOR_LOG_FATAL(::Mordor::Log::root()) << "NOT REACHED";                   \
+    MORDOR_LOG_FATAL(::Mordor::Log::root()) << "NOT REACHED"                    \
+        << "\nbacktrace:\n" << ::Mordor::to_string(::Mordor::backtrace());      \
     if (::Mordor::Assertion::throwOnAssertion)                                  \
         MORDOR_THROW_EXCEPTION(::Mordor::Assertion("Not Reached"));             \
     if (::Mordor::isDebuggerAttached())                                         \

@@ -14,6 +14,9 @@ public:
 public:
     LimitedStream(Stream::ptr parent, long long size, bool own = true);
 
+    void reset() { m_pos = 0; }
+    void reset(long long size) { m_pos = 0; m_size = size; }
+
     bool strict() { return m_strict; }
     void strict(bool strict) { m_strict = strict; }
 
@@ -26,7 +29,7 @@ public:
     size_t write(const Buffer &b, size_t len);
     long long seek(long long offset, Anchor anchor = BEGIN);
     long long size();
-    void truncate(long long size) { MORDOR_NOTREACHED(); }
+    void truncate(long long size);
     void unread(const Buffer &b, size_t len);
 
 private:

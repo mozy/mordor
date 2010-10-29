@@ -27,18 +27,6 @@ parseVersion(const char *str)
     return ver;
 }
 
-static
-Method
-parseMethod(const char *str, const char *end)
-{
-    for(size_t i = 0; i < 8; ++i) {
-        if (strnicmp(str, methods[i], end - str) == 0) {
-            return (Method)i;
-        }
-    }
-    throw std::invalid_argument("Unrecognized method");
-}
-
 static boost::posix_time::time_input_facet rfc1123Facet_in("%a, %d %b %Y %H:%M:%S GMT",
         1 /* starting refcount, so this never gets deleted */);
 static boost::posix_time::time_input_facet rfc850Facet_in("%A, %d-%b-%y %H:%M:%S GMT",
@@ -264,7 +252,7 @@ unquote(const std::string &str)
         m_eTagSet->insert(m_tempETag);
     }
 
-    weak = "W/" %save_weak;
+    weak = "W" "/" >save_weak;
     opaque_tag = quoted_string >mark %save_etag;
     entity_tag = ((weak)? opaque_tag) >start_etag;
 
@@ -480,14 +468,15 @@ unquote(const std::string &str)
     include http_parser;
     include uri_parser "../uri.rl";
 
-    action parse_Method {
-        m_request->requestLine.method = parseMethod(mark, fpc);
+    action save_Method {
+        m_request->requestLine.method = std::string(mark, fpc - mark);
         mark = NULL;
     }
 
     action set_request_uri {
         m_uri = &m_request->requestLine.uri;
-        m_path = &m_uri->path;
+        m_segments = &m_uri->path.segments;
+        m_authority = &m_uri->authority;
     }
 
     action save_accept_list_element {
@@ -579,9 +568,15 @@ unquote(const std::string &str)
         m_eTagSet = &m_request->request.ifNoneMatch;
     }
 
+    action clear_if_range_entity_tag {
+        m_eTag = NULL;
+    }
+
     action set_if_range_entity_tag {
-        m_request->request.ifRange = ETag();
-        m_eTag = boost::get<ETag>(&m_request->request.ifRange);
+        if (!m_eTag) {
+            m_request->request.ifRange = ETag();
+            m_eTag = boost::get<ETag>(&m_request->request.ifRange);
+        }
     }
 
     action set_if_range_http_date {
@@ -617,7 +612,8 @@ unquote(const std::string &str)
 
     action set_referer {
         m_uri = &m_request->request.referer;
-        m_path = &m_uri->path;
+        m_segments = &m_uri->path.segments;
+        m_authority = &m_uri->authority;
     }
 
     action save_accept_attribute {
@@ -657,7 +653,11 @@ unquote(const std::string &str)
     If_Match = 'If-Match:'i @set_if_match etag_list;
     If_Modified_Since = 'If-Modified-Since:'i @set_if_modified_since LWS* HTTP_date LWS*;
     If_None_Match = 'If-None-Match:'i @set_if_none_match etag_list;
-    If_Range = 'If-Range:'i LWS* (entity_tag >set_if_range_entity_tag | HTTP_date >set_if_range_http_date)  LWS*;
+
+    weak_for_if_range = "W" "/" >set_if_range_entity_tag >save_weak;
+    entity_tag_for_if_range = ((weak_for_if_range)? opaque_tag >set_if_range_entity_tag) >clear_if_range_entity_tag;
+
+    If_Range = 'If-Range:'i LWS* (entity_tag_for_if_range | HTTP_date >set_if_range_http_date) LWS*;
     If_Unmodified_Since = 'If-Unmodified-Since:'i @set_if_unmodified_since LWS* HTTP_date LWS*;
 
     Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization credentials;
@@ -680,12 +680,17 @@ unquote(const std::string &str)
 
     request_header = Accept_Charset | Accept_Encoding | Authorization | Expect | Host | If_Match | If_Modified_Since | If_None_Match | If_Range | If_Unmodified_Since | Proxy_Authorization | Range | Referer | TE | User_Agent;
 
-    Method = token >mark %parse_Method;
+    Method = token >mark %save_Method;
+
     # we explicitly add query to path_absolute, because the URI spec changed from RFC 2396 to RFC 3986
     # with the query not being part of hier_part
-    Request_URI = ( "*" | absolute_URI | (path_absolute ( "?" query )?) | authority);
-    Request_Line = Method SP Request_URI >set_request_uri SP HTTP_Version CRLF;
-    Request = Request_Line (((general_header | request_header | entity_header) %clearmark2 | message_header) CRLF)* CRLF @done;
+    Request_URI = ( "*" | absolute_URI | (path_absolute ( "?" query )?));
+    # HTTP specifies that a Request_URI may be an authority, but only for the
+    # CONNECT method; enforce that, and by so doing remove the ambiguity that
+    # an authority might be a scheme
+    Connect_Line = 'CONNECT' %save_Method SP authority >set_request_uri SP HTTP_Version CRLF;
+    Request_Line = (Method - 'CONNECT') SP Request_URI >set_request_uri SP HTTP_Version CRLF;
+    Request = (Request_Line | Connect_Line) (((general_header | request_header | entity_header) %clearmark2 | message_header) CRLF)* CRLF @done;
 
     main := Request;
     write data;
@@ -733,7 +738,8 @@ Parser::adjustPointers(ptrdiff_t offset)
 RequestParser::RequestParser(Request& request)
 : m_request(&request),
   m_ver(&request.requestLine.ver),
-  m_path(&request.requestLine.uri.path),
+  m_segments(&request.requestLine.uri.path.segments),
+  m_authority(&request.requestLine.uri.authority),
   m_general(&request.general),
   m_entity(&request.entity)
 {}
@@ -837,7 +843,8 @@ ResponseParser::ResponseParser(Response& response)
 : m_response(&response),
   m_ver(&response.status.ver),
   m_uri(&response.response.location),
-  m_path(&response.response.location.path),
+  m_segments(&response.response.location.path.segments),
+  m_authority(&response.response.location.authority),
   m_general(&response.general),
   m_entity(&response.entity)
 {}

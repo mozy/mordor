@@ -1,9 +1,9 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
-#include "mordor/scheduler.h"
+#include "mordor/fiber.h"
+#include "mordor/fibersynchronization.h"
 #include "mordor/test/test.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 
@@ -180,4 +180,22 @@ MORDOR_UNITTEST(FiberEvent, manualResetMultiple)
     // reset
     event.wait();
     event.wait();
+}
+
+static void lockIt(FiberMutex &mutex)
+{
+    FiberMutex::ScopedLock lock(mutex);
+}
+
+MORDOR_UNITTEST(FiberMutex, unlockUnique)
+{
+    WorkerPool pool;
+    FiberMutex mutex;
+
+    FiberMutex::ScopedLock lock(mutex);
+    MORDOR_TEST_ASSERT(!lock.unlockIfNotUnique());
+    pool.schedule(boost::bind(&lockIt, boost::ref(mutex)));
+    Scheduler::yield();
+    MORDOR_TEST_ASSERT(lock.unlockIfNotUnique());
+    pool.dispatch();
 }

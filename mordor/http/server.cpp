@@ -1,13 +1,12 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "server.h"
 
 #include <boost/bind.hpp>
 
-#include "mordor/exception.h"
-#include "mordor/log.h"
+#include "mordor/fiber.h"
+#include "mordor/scheduler.h"
+#include "mordor/socket.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/transfer.h"
 #include "multipart.h"
@@ -18,13 +17,13 @@ namespace HTTP {
 
 static Logger::ptr g_log = Log::lookup("mordor:http:server");
 
-ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg, size_t maxPipelineDepth)
+ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg)
 : Connection(stream),
   m_dg(dg),
-  m_priorRequestFailed(false),
-  m_priorRequestClosed(false),
-  m_priorResponseClosed(false),
-  m_maxPipelineDepth(maxPipelineDepth)
+  m_requestCount(0),
+  m_priorRequestFailed(~0ull),
+  m_priorRequestClosed(~0ull),
+  m_priorResponseClosed(~0ull)
 {
     MORDOR_ASSERT(m_dg);
 }
@@ -34,7 +33,7 @@ ServerConnection::processRequests()
 {
     boost::mutex::scoped_lock lock(m_mutex);
     invariant();
-    scheduleSingleRequest();
+    scheduleNextRequest(NULL);
 }
 
 std::vector<ServerRequest::const_ptr>
@@ -52,21 +51,26 @@ ServerConnection::requests()
 }
 
 void
-ServerConnection::scheduleSingleRequest()
+ServerConnection::scheduleNextRequest(ServerRequest *request)
 {
-    if ((m_pendingRequests.empty() ||
-        (m_pendingRequests.back()->m_requestDone &&
-        m_pendingRequests.size() < m_maxPipelineDepth)) &&
-        !m_priorRequestFailed && !m_priorRequestClosed && !m_priorResponseClosed) {
-        ServerRequest::ptr requestPtr(new ServerRequest(shared_from_this()));
-        m_pendingRequests.push_back(requestPtr.get());
-        MORDOR_LOG_TRACE(g_log) << this << " " << requestPtr.get() << " scheduling request";
-        Scheduler::getThis()->schedule(boost::bind(&ServerRequest::doRequest, requestPtr));
+    // MORDOR_ASSERT(m_mutex.locked());
+    MORDOR_ASSERT(request || m_requestCount == 0);
+    if (m_requestCount == 0 ||
+        (request && request->m_requestNumber == m_requestCount &&
+        request->m_requestState == ServerRequest::COMPLETE &&
+        m_priorRequestFailed == ~0ull && m_priorRequestClosed == ~0ull &&
+        m_priorResponseClosed == ~0ull)) {
+        ServerRequest::ptr nextRequest(new ServerRequest(shared_from_this()));
+        m_pendingRequests.push_back(nextRequest.get());
+        MORDOR_LOG_TRACE(g_log) << this << "-" << nextRequest->m_requestNumber
+            << " scheduling request";
+        Scheduler::getThis()->schedule(boost::bind(&ServerRequest::doRequest,
+            nextRequest));
     }
 }
 
 void
-ServerConnection::scheduleNextRequest(ServerRequest *request)
+ServerConnection::requestComplete(ServerRequest *request)
 {
     MORDOR_ASSERT(request);
     bool close = false;
@@ -75,18 +79,21 @@ ServerConnection::scheduleNextRequest(ServerRequest *request)
         invariant();
         MORDOR_ASSERT(!m_pendingRequests.empty());
         MORDOR_ASSERT(request == m_pendingRequests.back());
-        MORDOR_ASSERT(!request->m_requestDone);
-        MORDOR_LOG_TRACE(g_log) << this << " " << request << " request complete";
-        request->m_requestDone = true;
-        if (request->m_responseDone) {
+        MORDOR_ASSERT(request->m_requestState == ServerRequest::HEADERS ||
+            request->m_requestState == ServerRequest::BODY);
+        MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
+            << " request complete";
+        request->m_requestState = ServerRequest::COMPLETE;
+        if (request->m_responseState >= ServerRequest::COMPLETE) {
             MORDOR_ASSERT(request == m_pendingRequests.front());
             m_pendingRequests.pop_front();
         }
         close = request->m_willClose;
         if (!close) {
-            scheduleSingleRequest();
+            if (request->m_pipeline)
+                scheduleNextRequest(request);
         } else {
-            m_priorRequestClosed = true;
+            m_priorRequestClosed = request->m_requestNumber;
             MORDOR_LOG_TRACE(g_log) << this << " closing";
         }
     }
@@ -95,50 +102,48 @@ ServerConnection::scheduleNextRequest(ServerRequest *request)
 }
 
 void
-ServerConnection::scheduleNextResponse(ServerRequest *request)
+ServerConnection::responseComplete(ServerRequest *request)
 {
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
-        MORDOR_ASSERT(!request->m_responseDone);
-        MORDOR_ASSERT(request->m_responseInFlight);
+        MORDOR_ASSERT(request->m_responseState == ServerRequest::HEADERS ||
+            ServerRequest::BODY);
         MORDOR_ASSERT(!m_pendingRequests.empty());
-        MORDOR_LOG_TRACE(g_log) << this << " " << request << " response complete";
+        MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
+            << " response complete";
         std::list<ServerRequest *>::iterator it = m_pendingRequests.begin();
-        if (request != *it) {
-            it = std::find(it, m_pendingRequests.end(), request);
-            MORDOR_ASSERT(it != m_pendingRequests.end());
-            request->m_responseInFlight = false;
-            request->m_responseDone = true;
-            m_pendingRequests.erase(it);
-            scheduleSingleRequest();
-            return;
-        }
+        MORDOR_ASSERT(request == *it);
         ++it;
         if (it != m_pendingRequests.end()) {
             std::set<ServerRequest *>::iterator waitIt(m_waitingResponses.find(*it));
             if (waitIt != m_waitingResponses.end()) {
-                request->m_responseInFlight = false;
-                request->m_responseDone = true;
-                if (request->m_requestDone) {
+                request->m_responseState = ServerRequest::COMPLETE;
+                if (request->m_requestState >= ServerRequest::COMPLETE) {
                     m_pendingRequests.pop_front();
-                    scheduleSingleRequest();
+                    scheduleNextRequest(request);
                 }
-                m_waitingResponses.erase(waitIt);
                 request = *it;
-                request->m_responseInFlight = true;
-                MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling response";
+                request->m_responseState = ServerRequest::HEADERS;
+                m_waitingResponses.erase(waitIt);
+                MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
+                    << " scheduling response";
                 request->m_scheduler->schedule(request->m_fiber);
                 return;
             }
+        } else {
+            // Do not remove from m_pendingRequests until we finish flushing
+            // The next request can start before the flush completes, though
+            if (request->m_requestState >= ServerRequest::COMPLETE)
+                scheduleNextRequest(request);
         }
-        MORDOR_LOG_TRACE(g_log) << this << " flushing";
         if (request->m_willClose) {
-            m_priorResponseClosed = true;
+            m_priorResponseClosed = request->m_requestNumber;
             MORDOR_LOG_TRACE(g_log) << this << " closing";
+        } else {
+            MORDOR_LOG_TRACE(g_log) << this << " flushing";
         }
     }
-    m_stream->flush();
     if (request->m_willClose) {
         try {
             m_stream->close();
@@ -146,14 +151,15 @@ ServerConnection::scheduleNextResponse(ServerRequest *request)
             request->cancel();
             throw;
         }
+    } else {
+        m_stream->flush();
     }
     boost::mutex::scoped_lock lock(m_mutex);
     invariant();
     MORDOR_ASSERT(!m_pendingRequests.empty());
     MORDOR_ASSERT(request == m_pendingRequests.front());
-    request->m_responseInFlight = false;
-    request->m_responseDone = true;
-    if (request->m_requestDone)
+    request->m_responseState = ServerRequest::COMPLETE;
+    if (request->m_requestState >= ServerRequest::COMPLETE)
         m_pendingRequests.pop_front();
 
     // Someone else may have queued up while we were flushing
@@ -162,8 +168,9 @@ ServerConnection::scheduleNextResponse(ServerRequest *request)
         std::set<ServerRequest *>::iterator waitIt(m_waitingResponses.find(request));
         if (waitIt != m_waitingResponses.end()) {
             m_waitingResponses.erase(waitIt);
-            request->m_responseInFlight = true;
-            MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling response";
+            request->m_responseState = ServerRequest::HEADERS;
+            MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
+                << " scheduling response";
             request->m_scheduler->schedule(request->m_fiber);
             return;
         }
@@ -173,17 +180,22 @@ ServerConnection::scheduleNextResponse(ServerRequest *request)
 void
 ServerConnection::scheduleAllWaitingResponses()
 {
-    MORDOR_ASSERT(m_priorRequestFailed || m_priorResponseClosed);
+    MORDOR_ASSERT(m_priorRequestFailed != ~0ull || m_priorResponseClosed != ~0ull);
     // MORDOR_ASSERT(m_mutex.locked());
     MORDOR_LOG_TRACE(g_log) << this << " scheduling all responses";
 
+    unsigned long long firstFailedRequest = std::min(m_priorRequestFailed,
+        m_priorResponseClosed);
     for (std::list<ServerRequest *>::iterator it(m_pendingRequests.begin());
         it != m_pendingRequests.end();
         ++it) {
         ServerRequest *request = *it;
+        if (request->m_requestNumber < firstFailedRequest)
+            continue;
         std::set<ServerRequest *>::iterator waiting = m_waitingResponses.find(request);
         if (waiting != m_waitingResponses.end()) {
-            MORDOR_LOG_TRACE(g_log) << this << " " << request << " scheduling response";
+            MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
+                << " scheduling response";
             request->m_scheduler->schedule(request->m_fiber);
             it = m_pendingRequests.erase(it);
             --it;
@@ -201,13 +213,15 @@ ServerConnection::invariant() const
         it != m_pendingRequests.end();
         ++it) {
         ServerRequest *request = *it;
-        MORDOR_ASSERT(!(request->m_requestDone && request->m_responseDone));
+        MORDOR_ASSERT(request->m_requestState < ServerRequest::COMPLETE ||
+            request->m_responseState < ServerRequest::COMPLETE);
         if (seenResponseNotDone) {
-            MORDOR_ASSERT(!request->m_responseDone);
+            MORDOR_ASSERT(request->m_responseState < ServerRequest::COMPLETE);
         } else {
-            seenResponseNotDone = !request->m_responseDone;
+            seenResponseNotDone = request->m_responseState
+                < ServerRequest::COMPLETE;
         }
-        if (!request->m_requestDone) {
+        if (request->m_requestState < ServerRequest::COMPLETE) {
             ++it;
             MORDOR_ASSERT(it == m_pendingRequests.end());
             break;
@@ -216,21 +230,19 @@ ServerConnection::invariant() const
     for (std::set<ServerRequest *>::const_iterator it(m_waitingResponses.begin());
         it != m_waitingResponses.end();
         ++it) {
-        MORDOR_ASSERT(!(*it)->m_responseDone);
-        MORDOR_ASSERT(!(*it)->m_responseInFlight);
+        MORDOR_ASSERT((*it)->m_responseState == ServerRequest::WAITING);
     }
 }
 
 
 ServerRequest::ServerRequest(ServerConnection::ptr conn)
 : m_conn(conn),
+  m_requestNumber(++conn->m_requestCount),
   m_scheduler(NULL),
-  m_requestDone(false),
-  m_committed(false),
-  m_responseDone(false),
-  m_responseInFlight(false),
-  m_aborted(false),
-  m_willClose(false)
+  m_requestState(HEADERS),
+  m_responseState(PENDING),
+  m_willClose(false),
+  m_pipeline(false)
 {}
 
 ServerRequest::~ServerRequest()
@@ -261,10 +273,10 @@ ServerRequest::hasRequestBody() const
 Stream::ptr
 ServerRequest::requestStream()
 {
-    if (m_requestStream)
-        return m_requestStream;
     MORDOR_ASSERT(!m_requestMultipart);
     MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
+    if (m_requestStream)
+        return m_requestStream;
     return m_requestStream = m_conn->getStream(m_request.general, m_request.entity,
         m_request.requestLine.method, INVALID,
         boost::bind(&ServerRequest::requestDone, this),
@@ -297,7 +309,7 @@ ServerRequest::requestTrailer() const
     // If transferEncoding is not empty, it must include chunked,
     // and it must include chunked in order to have a trailer
     MORDOR_ASSERT(!m_request.general.transferEncoding.empty());
-    MORDOR_ASSERT(m_requestDone);
+    MORDOR_ASSERT(m_requestState == COMPLETE);
     return m_requestTrailer;
 }
 
@@ -316,10 +328,10 @@ ServerRequest::hasResponseBody() const
 Stream::ptr
 ServerRequest::responseStream()
 {
-    if (m_responseStream)
-        return m_responseStream;
     MORDOR_ASSERT(!m_responseMultipart);
     MORDOR_ASSERT(m_response.entity.contentType.type != "multipart");
+    if (m_responseStream)
+        return m_responseStream;
     commit();
     return m_responseStream = m_conn->getStream(m_response.general, m_response.entity,
         m_request.requestLine.method, m_response.status.status,
@@ -356,17 +368,30 @@ ServerRequest::responseTrailer()
 }
 
 void
+ServerRequest::processNextRequest()
+{
+    boost::mutex::scoped_lock lock(m_conn->m_mutex);
+    m_pipeline = true;
+    m_conn->invariant();
+    m_conn->scheduleNextRequest(this);
+}
+
+void
 ServerRequest::cancel()
 {
-    if (m_requestDone && m_responseDone)
+    if (m_requestState >= COMPLETE && m_responseState >= COMPLETE)
         return;
-    if (m_aborted)
-        return;
-    MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " aborting";
-    m_aborted = true;
+    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " aborting";
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
     m_conn->invariant();
-    m_conn->m_priorRequestFailed = true;
+    if (m_requestState < COMPLETE)
+        m_requestState = ERROR;
+    if (m_responseState < COMPLETE)
+        m_responseState = ERROR;
+    m_conn->m_stream->cancelRead();
+    m_conn->m_stream->cancelWrite();
+    m_conn->m_priorRequestFailed = std::min(m_conn->m_priorRequestFailed,
+        m_requestNumber);
     std::list<ServerRequest *>::iterator it =
         std::find(m_conn->m_pendingRequests.begin(),
             m_conn->m_pendingRequests.end(), this);
@@ -378,27 +403,25 @@ ServerRequest::cancel()
 void
 ServerRequest::finish()
 {
-    if (m_responseDone)
-        return;
-    if (committed() && hasResponseBody()) {
-        cancel();
-        return;
+    if (m_responseState < COMPLETE) {
+        if (committed() && hasResponseBody()) {
+            cancel();
+            return;
+        }
+        commit();
+        if (hasResponseBody()) {
+            cancel();
+            return;
+        }
     }
-    commit();
-    if (hasResponseBody()) {
-        cancel();
-        return;
-    }
-    if (!m_requestDone && hasRequestBody() && !m_willClose) {
+    if (m_requestState == BODY && !m_willClose) {
         if (m_request.entity.contentType.type == "multipart") {
-            if (!m_requestMultipart) {
+            if (!m_requestMultipart)
                 m_requestMultipart = requestMultipart();
-            }
             while(m_requestMultipart->nextPart());
         } else {
-            if (!m_requestStream) {
+            if (!m_requestStream)
                 m_requestStream = requestStream();
-            }
             MORDOR_ASSERT(m_requestStream);
             transferStream(m_requestStream, NullStream::get());
         }
@@ -408,7 +431,7 @@ ServerRequest::finish()
 void
 ServerRequest::doRequest()
 {
-    MORDOR_ASSERT(!m_requestDone);
+    MORDOR_ASSERT(m_requestState == HEADERS);
 
     try {
         // Read and parse headers
@@ -421,8 +444,8 @@ ServerRequest::doRequest()
                 return;
             }
             if (parser.error() || !parser.complete()) {
-                m_requestDone = true;
-                m_conn->m_priorRequestClosed = true;
+                m_requestState = ERROR;
+                m_conn->m_priorRequestClosed = m_requestNumber;
                 respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
                 return;
             }
@@ -446,17 +469,19 @@ ServerRequest::doRequest()
                 proxyAuth = m_request.request.proxyAuthorization.base64;
                 m_request.request.proxyAuthorization.base64 = "<hidden>";
             }
-            MORDOR_LOG_DEBUG(g_log) << m_conn << " " << this << " " << m_request;
+            MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " "
+                << m_request;
             if (!webAuth.empty())
                 m_request.request.authorization.base64 = webAuth;
             if (!proxyAuth.empty())
                 m_request.request.proxyAuthorization.base64 = proxyAuth;
         } else {
-            MORDOR_LOG_VERBOSE(g_log) << m_conn << " " << this << " " << m_request.requestLine;
+            MORDOR_LOG_VERBOSE(g_log) << m_conn << "-" << m_requestNumber
+                << " " << m_request.requestLine;
         }
 
         if (m_request.requestLine.ver.major != 1) {
-            m_requestDone = true;
+            m_requestState = ERROR;
             respondError(shared_from_this(), HTTP_VERSION_NOT_SUPPORTED, "", true);
             return;
         }
@@ -469,7 +494,7 @@ ServerRequest::doRequest()
 
         // Host header required with HTTP/1.1
         if (m_request.requestLine.ver >= Version(1, 1) && m_request.request.host.empty()) {
-            m_requestDone = true;
+            m_requestState = ERROR;
             respondError(shared_from_this(), BAD_REQUEST, "Host header is required with HTTP/1.1", true);
             return;
         }
@@ -486,12 +511,12 @@ ServerRequest::doRequest()
         }
         if (!transferEncoding.empty()) {
             if (stricmp(transferEncoding.back().value.c_str(), "chunked") != 0) {
-                m_requestDone = true;
+                m_requestState = ERROR;
                 respondError(shared_from_this(), BAD_REQUEST, "The last transfer-coding is not chunked.", true);
                 return;
             }
             if (!transferEncoding.back().parameters.empty()) {
-                m_requestDone = true;
+                m_requestState = ERROR;
                 respondError(shared_from_this(), NOT_IMPLEMENTED, "Unknown parameter to chunked transfer-coding.", true);
                 return;
             }
@@ -499,7 +524,7 @@ ServerRequest::doRequest()
                 it + 1 != transferEncoding.end();
                 ++it) {
                 if (stricmp(it->value.c_str(), "chunked") == 0) {
-                    m_requestDone = true;
+                    m_requestState = ERROR;
                     respondError(shared_from_this(), BAD_REQUEST, "chunked transfer-coding applied multiple times.", true);
                     return;
                 } else if (stricmp(it->value.c_str(), "deflate") == 0 ||
@@ -508,11 +533,11 @@ ServerRequest::doRequest()
                     // Supported transfer-codings
                 } else if (stricmp(it->value.c_str(), "compress") == 0 ||
                     stricmp(it->value.c_str(), "x-compress") == 0) {
-                    m_requestDone = true;
+                    m_requestState = ERROR;
                     respondError(shared_from_this(), NOT_IMPLEMENTED, "compress transfer-coding is not supported", false);
                     return;
                 } else {
-                    m_requestDone = true;
+                    m_requestState = ERROR;
                     respondError(shared_from_this(), NOT_IMPLEMENTED, "Unrecognized transfer-coding: " + it->value, false);
                     return;
                 }
@@ -526,12 +551,12 @@ ServerRequest::doRequest()
             ++it) {
             if (stricmp(it->key.c_str(), "100-continue") == 0) {
                 if (!it->value.empty() || !it->parameters.empty()) {
-                    m_requestDone = true;
+                    m_requestState = ERROR;
                     respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized parameters to 100-continue expectation", false);
                     return;
                 }
             } else {
-                m_requestDone = true;
+                m_requestState = ERROR;
                 respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized expectation: " + it->key, false);
                 return;
             }
@@ -543,8 +568,11 @@ ServerRequest::doRequest()
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity,
             m_request.requestLine.method, INVALID, false)) {
-            MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " no request body";
-            m_conn->scheduleNextRequest(this);
+            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+                << " no request body";
+            m_conn->requestComplete(this);
+        } else {
+            m_requestState = BODY;
         }
         m_conn->m_dg(shared_from_this());
         finish();
@@ -553,11 +581,12 @@ ServerRequest::doRequest()
     } catch (Assertion &) {
         throw;
     } catch (...) {
-        if (m_aborted)
+        if (m_requestState == ERROR || m_responseState == ERROR)
             return;
-        MORDOR_LOG_ERROR(g_log) << this << " Unexpected exception: "
+        MORDOR_LOG_ERROR(g_log) << m_conn << "-" << m_requestNumber
+            << " Unexpected exception: "
             << boost::current_exception_diagnostic_information();
-        if (!m_responseDone) {
+        if (m_responseState < COMPLETE) {
             try {
                 if (!committed())
                     respondError(shared_from_this(), INTERNAL_SERVER_ERROR);
@@ -565,10 +594,6 @@ ServerRequest::doRequest()
             } catch(...) {
                 // Swallow any exceptions that happen while trying to report the error
             }
-            boost::mutex::scoped_lock lock(m_conn->m_mutex);
-            m_conn->invariant();
-            m_conn->m_priorRequestFailed = true;
-            m_conn->scheduleAllWaitingResponses();
         }
     }
 }
@@ -577,9 +602,8 @@ ServerRequest::doRequest()
 void
 ServerRequest::commit()
 {
-    if (m_committed)
+    if (m_responseState != PENDING)
         return;
-    m_committed = true;
 
     if (m_response.general.connection.find("close") != m_response.general.connection.end())
         m_willClose = true;
@@ -591,6 +615,18 @@ ServerRequest::commit()
     }
     MORDOR_ASSERT(m_response.status.ver == Version(1, 0) ||
            m_response.status.ver == Version(1, 1));
+
+    // Use chunked encoding for undelimited bodies on 1.1, or force the
+    // connection to close on 1.0
+    if (m_response.entity.contentLength == ~0ull &&
+        m_response.general.transferEncoding.empty() &&
+        m_response.entity.contentType.type != "multipart") {
+        if (m_response.status.ver == Version(1, 1) && isAcceptable(m_request.request.te,
+            AcceptValueWithParameters("chunked"), true))
+            m_response.general.transferEncoding.push_back("chunked");
+        else
+            m_willClose = true;
+    }
 
     if (m_willClose)
         m_response.general.connection.insert("close");
@@ -606,6 +642,7 @@ ServerRequest::commit()
 
     // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
     if (!transferEncoding.empty()) {
+        MORDOR_ASSERT(m_response.status.ver == Version(1, 1));
         MORDOR_ASSERT(transferEncoding.back().value == "chunked");
         for (ParameterizedList::const_iterator it(transferEncoding.begin());
             it + 1 != transferEncoding.end();
@@ -640,13 +677,14 @@ ServerRequest::commit()
     {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        if (m_conn->m_priorRequestFailed || m_conn->m_priorResponseClosed) {
+        if (m_conn->m_priorRequestFailed < m_requestNumber ||
+            m_conn->m_priorResponseClosed < m_requestNumber) {
             std::list<ServerRequest *>::iterator it;
             it = std::find(m_conn->m_pendingRequests.begin(), m_conn->m_pendingRequests.end(),
                 this);
             MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
             m_conn->m_pendingRequests.erase(it);
-            if (m_conn->m_priorRequestFailed)
+            if (m_conn->m_priorRequestFailed < m_requestNumber)
                 MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
             else
                 MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
@@ -654,18 +692,25 @@ ServerRequest::commit()
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
         ServerRequest *request = m_conn->m_pendingRequests.front();
         if (request != this) {
+            m_responseState = WAITING;
 #ifdef DEBUG
             bool inserted =
 #endif
-            m_conn->m_waitingResponses.insert(this).second;
+            m_conn->m_waitingResponses.insert(this)
+#ifdef DEBUG
+            .second
+#endif
+            ;
             MORDOR_ASSERT(inserted);
             wait = true;
-            MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " waiting to respond";
+            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+                << " waiting to respond";
         } else {
-            m_responseInFlight = true;
-            MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " responding";
+            m_responseState = HEADERS;
+            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+                << " responding";
             if (m_willClose) {
-                m_conn->m_priorResponseClosed = true;
+                m_conn->m_priorResponseClosed = m_requestNumber;
                 m_conn->scheduleAllWaitingResponses();
             }
         }
@@ -678,21 +723,22 @@ ServerRequest::commit()
         Scheduler::yieldTo();
         m_scheduler = NULL;
         m_fiber.reset();
-        MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " responding";
+        MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+            << " responding";
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
         MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
-        if (m_conn->m_priorRequestFailed)
+        if (m_conn->m_priorRequestFailed <= m_requestNumber)
             MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
-        else if (m_conn->m_priorResponseClosed)
+        else if (m_conn->m_priorResponseClosed <= m_requestNumber)
             MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
         if (m_willClose) {
-            m_conn->m_priorResponseClosed = true;
+            m_conn->m_priorResponseClosed = m_requestNumber;
             m_conn->scheduleAllWaitingResponses();
         }
-        m_responseInFlight = true;
+        m_responseState = HEADERS;
     }
 
     try {
@@ -701,20 +747,27 @@ ServerRequest::commit()
         os << m_response;
         std::string str = os.str();
         if (g_log->enabled(Log::DEBUG)) {
-            MORDOR_LOG_DEBUG(g_log) << m_conn << " " << this << " " << str;
+            MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " "
+                << str;
         } else {
-            MORDOR_LOG_VERBOSE(g_log) << m_conn << " " << this << " " << m_response.status;
+            MORDOR_LOG_VERBOSE(g_log) << m_conn << "-" << m_requestNumber
+                << " " << m_response.status;
         }
         m_conn->m_stream->write(str.c_str(), str.size());
 
-        if (!Connection::hasMessageBody(m_response.general, m_response.entity, m_request.requestLine.method, m_response.status.status, false)) {
-            MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " " << " no response body";
+        if (!Connection::hasMessageBody(m_response.general, m_response.entity,
+            m_request.requestLine.method, m_response.status.status, false)) {
+            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+                << " no response body";
             responseDone();
+        } else {
+            m_responseState = BODY;
         }
     } catch(...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        m_conn->m_priorRequestFailed = true;
+        m_conn->m_priorRequestFailed = std::min(m_conn->m_priorRequestFailed,
+            m_requestNumber);
         m_conn->scheduleAllWaitingResponses();
         throw;
     }
@@ -724,7 +777,8 @@ ServerRequest::commit()
 void
 ServerRequest::requestDone()
 {
-    MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " request complete";
+    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+        << " request complete";
     m_requestStream.reset();
     if (!m_request.general.transferEncoding.empty()) {
         // Read and parse the trailer
@@ -735,9 +789,10 @@ ServerRequest::requestDone()
             throw std::runtime_error("Error parsing trailer");
         }
         MORDOR_ASSERT(parser.complete());
-        MORDOR_LOG_DEBUG(g_log) << m_conn << " " << this << " " << m_requestTrailer;
+        MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " "
+            << m_requestTrailer;
     }
-    m_conn->scheduleNextRequest(this);
+    m_conn->requestComplete(this);
 }
 
 void
@@ -750,38 +805,40 @@ ServerRequest::responseMultipartDone()
 void
 ServerRequest::responseDone()
 {
-    MORDOR_LOG_TRACE(g_log) << m_conn << " " << this << " response complete";
+    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
+        << " response complete";
     if (m_responseStream && m_responseStream->supportsSize() && m_responseStream->supportsTell())
         MORDOR_ASSERT(m_responseStream->size() == m_responseStream->tell());
     m_responseStream.reset();
-    if (!m_response.general.transferEncoding.empty()) {
+    if (!m_response.general.transferEncoding.empty() &&
+        m_request.requestLine.method != HEAD) {
         std::ostringstream os;
         os << m_responseTrailer << "\r\n";
         std::string str = os.str();
-        MORDOR_LOG_DEBUG(g_log) << m_conn << " " << this << " " << str;
+        MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " "
+            << str;
         m_conn->m_stream->write(str.c_str(), str.size());
     }
-    MORDOR_LOG_INFO(g_log) << m_conn << " " << this << " " << m_request.requestLine << " " << m_response.status.status;
-    m_conn->scheduleNextResponse(this);
-    if (!m_requestDone && hasRequestBody() && !m_willClose) {
-        if (!m_requestStream)
-            m_requestStream = requestStream();
-        MORDOR_ASSERT(m_requestStream);
-        transferStream(m_requestStream, NullStream::get());
-    }
+    MORDOR_LOG_INFO(g_log) << m_conn << "-" << m_requestNumber << " "
+        << m_request.requestLine << " " << m_response.status.status;
+    m_conn->responseComplete(this);
 }
 
 
 void
-respondError(ServerRequest::ptr request, Status status, const std::string &message, bool closeConnection)
+respondError(ServerRequest::ptr request, Status status,
+    const std::string &message, bool closeConnection, bool clearETag)
 {
     MORDOR_ASSERT(!request->committed());
     request->response().status.status = status;
     if (closeConnection)
         request->response().general.connection.insert("close");
     request->response().general.transferEncoding.clear();
+    request->response().general.trailer.clear();
     request->response().entity.contentLength = message.size();
     request->response().entity.contentType.type.clear();
+    if (clearETag)
+        request->response().response.eTag = ETag();
     if (!message.empty()) {
         request->response().entity.contentType.type = "text";
         request->response().entity.contentType.subtype = "plain";
@@ -798,19 +855,49 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
 {
     MORDOR_ASSERT(!request->committed());
     unsigned long long size = ~0ull;
-    request->response().response.acceptRanges.insert("bytes");
-    if (response->supportsSize()) {
+    if (response->supportsSize())
         size = response->size();
-    }
-    request->response().general.transferEncoding.clear();
+    bool trailers = (size == ~0ull &&
+        isAcceptable(request->request().request.te, "trailers"));
+    // Only advertise byte range request if it would be possible on the current
+    // request
+    if (trailers || size != ~0ull)
+        request->response().response.acceptRanges.insert("bytes");
+    ParameterizedList &transferEncoding =
+        request->response().general.transferEncoding;
+    transferEncoding.clear();
     const RangeSet &range = request->request().request.range;
     bool fullEntity = range.empty();
     // Validate range request
+    // If we don't know the size, and we don't support trailers, have to send
+    // the whole thing
+    if (size == ~0ull && !trailers)
+        fullEntity = true;
+    // If we're using trailers, it only works for a single range
+    if (trailers && range.size() > 1)
+        fullEntity = true;
+    const ETag *ifRange =
+        boost::get<ETag>(&request->request().request.ifRange);
+    if (!fullEntity && ifRange && !ifRange->unspecified &&
+        !ifRange->strongCompare(request->response().response.eTag))
+        fullEntity = true;
+    // Timestamps with If-Range is not supported (at this level we can't know
+    // if it was possible for the entity to have changed multiple times in a
+    // single second; see
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.3.3)
+    const boost::posix_time::ptime *httpDate =
+        boost::get<boost::posix_time::ptime>(
+            &request->request().request.ifRange);
+    if (httpDate && !httpDate->is_not_a_date_time())
+        fullEntity = true;
+
     // TODO: sort and merge overlapping ranges
     unsigned long long previousLast = 0;
     for (RangeSet::const_iterator it(range.begin());
         it != range.end();
         ++it) {
+        if (fullEntity)
+            break;
         // Invalid; first is after last
         if (it->first > it->second && it->first != ~0ull) {
             fullEntity = true;
@@ -848,13 +935,18 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
         else
             previousLast = it->second;
     }
+    // We can satisfy the range request
     if (!fullEntity) {
+        // Multiple ranges; must use multipart; we don't support chunked
+        // encoding (does it make sense?), so don't advertise or worry about
+        // trailers or transfer encodings
         if (range.size() > 1) {
             MediaType contentType = request->response().entity.contentType;
             request->response().entity.contentLength = ~0;
             request->response().entity.contentType.type = "multipart";
             request->response().entity.contentType.subtype = "byteranges";
-            request->response().entity.contentType.parameters["boundary"] = Multipart::randomBoundary();
+            request->response().entity.contentType.parameters["boundary"] =
+                Multipart::randomBoundary();
             unsigned long long currentPos = 0;
 
             if (request->request().requestLine.method != HEAD) {
@@ -875,11 +967,10 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                         cr.first = it->first;
                         cr.last = std::min(it->second, size - 1);
                     }
-                    if (response->supportsSeek()) {
-                        response->seek(cr.first, Stream::BEGIN);
-                    } else {
+                    if (response->supportsSeek())
+                        response->seek(cr.first);
+                    else
                         transferStream(response, NullStream::get(), cr.first - currentPos);
-                    }
                     transferStream(response, part->stream(), cr.last - cr.first + 1);
                     part->stream()->close();
                     currentPos = cr.last + 1;
@@ -887,43 +978,113 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                 multipart->finish();
             }
         } else {
-            ContentRange &cr = request->response().entity.contentRange;
-            cr.instance = size;
-
-            if (range.front().first == ~0ull) {
-                if (range.front().second > size)
-                    cr.first = 0;
-                else
-                    cr.first = size - range.front().second;
-                cr.last = size - 1;
-            } else {
-                cr.first = range.front().first;
-                cr.last = std::min(range.front().second, size - 1);
+            // Single range; we'll support compression (advertise it, and use
+            // it if requested) and trailers (if necessary)
+            request->response().status.status = PARTIAL_CONTENT;
+            if (request->request().requestLine.ver >= Version(1, 1)) {
+                AcceptListWithParameters available;
+                available.push_back(AcceptValueWithParameters("deflate", 1000));
+                available.push_back(AcceptValueWithParameters("gzip", 500));
+                available.push_back(AcceptValueWithParameters("x-gzip", 500));
+                const AcceptValueWithParameters *preferredEncoding =
+                    preferred(request->request().request.te, available);
+                if (preferredEncoding) {
+                    transferEncoding.push_back(preferredEncoding->value);
+                    transferEncoding.push_back("chunked");
+                }
             }
-            request->response().entity.contentLength = cr.last - cr.first + 1;
+            // Set up headers (for trailers, or not for trailers)
+            ContentRange *cr;
+            if (trailers) {
+                request->response().general.trailer.insert("Content-Range");
+                if (transferEncoding.empty())
+                    transferEncoding.push_back("chunked");
+                cr = &request->responseTrailer().contentRange;
+                cr->first = range.front().first;
+                cr->last = range.front().second;
+                MORDOR_ASSERT(cr->first != ~0ull);
+            } else {
+                cr = &request->response().entity.contentRange;
+                cr->instance = size;
+                if (range.front().first == ~0ull) {
+                    if (range.front().second > size)
+                        cr->first = 0;
+                    else
+                        cr->first = size - range.front().second;
+                    cr->last = size - 1;
+                } else {
+                    cr->first = range.front().first;
+                    cr->last = std::min(range.front().second, size - 1);
+                }
+                request->response().entity.contentLength = cr->last - cr->first + 1;
+            }
 
-            if (response->supportsSeek()) {
-                try {
-                   response->seek(cr.first, Stream::BEGIN);
-                } catch (UnexpectedEofException) {
-                    respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
-                    return;
+            bool isHead = (request->request().requestLine.method == HEAD);
+            
+            // Seek to the correct position            
+            // Skip the seek if it's a HEAD, and we don't need to check for
+            // out-of-range because we already know the size
+            if (!isHead || trailers) {
+                if (response->supportsSeek()) {
+                    response->seek(cr->first, Stream::BEGIN);
+                } else {
+                    // Can't seek, have to do this the old fashioned way
+                    unsigned long long transferred = transferStream(
+                        response, NullStream::get(), cr->first, UNTILEOF);
+                    // Make sure we're not out-of-range
+                    if (transferred != cr->first) {
+                        respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
+                        return;
+                    }
+                }
+            }
+            if (isHead) {
+                // On a head, when we don't know the size of the stream, we
+                // just need to verify that the Range isn't beyond the end of
+                // the stream (by reading a single byte)
+                if (trailers) {
+                    char byte;
+                    if (response->read(&byte, 1) == 0) {
+                        respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
+                        return;
+                    }
                 }
             } else {
-                try {
-                    transferStream(response, NullStream::get(), cr.first);
-                } catch (UnexpectedEofException) {
-                    respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
-                    return;
+                unsigned long long transferred = 0;
+                // There's an edge case where either the stream is seekable,
+                // but not sizable, or just not sizeable, and so we're pointing
+                // exactly at eof (or beyond), and don't know it; need to read
+                // a byte without committing to see if we can actually satisfy
+                // the request
+                if (trailers) {
+                    char byte;
+                    transferred = response->read(&byte, 1);
+                    if (transferred == 0) {
+                        respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
+                        return;
+                    }
+                    request->responseStream()->write(&byte, 1);
                 }
-                if (request->request().requestLine.method != HEAD) {
-                    transferStream(response, request->responseStream(), cr.last - cr.first + 1);
-                    request->responseStream()->close();
+                // Actually transfer the requested range
+                transferred += transferStream(response,
+                    request->responseStream(),
+                    cr->last - cr->first + 1 - transferred,
+                    trailers ? UNTILEOF : EXACT);
+                if (trailers) {
+                    // Set how much was actually transferred
+                    cr->last = cr->first + transferred - 1;
+                    // And discard the rest of the stream to get the size
+                    cr->instance = cr->last + transferStream(response,
+                        NullStream::get()) + 1;
+                } else if (transferred != cr->last - cr->first + 1) {
+                    // The stream LIED about its size!
+                    MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
+                request->responseStream()->close();
             }
         }
-    }
-    if (fullEntity) {
+    } else {
+        // User only asked for, or it's only possible to send the full entity
         request->response().entity.contentLength = size;
         if (request->request().requestLine.ver >= Version(1, 1)) {
             AcceptListWithParameters available;
@@ -933,22 +1094,9 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
             const AcceptValueWithParameters *preferredEncoding =
                 preferred(request->request().request.te, available);
             if (preferredEncoding) {
-                ValueWithParameters vp;
-                vp.value = preferredEncoding->value;
-                request->response().general.transferEncoding.push_back(vp);
+                transferEncoding.push_back(preferredEncoding->value);
+                transferEncoding.push_back("chunked");
             }
-
-            if ((size == ~0ull && isAcceptable(request->request().request.te,
-                AcceptValueWithParameters("chunked"), true)) ||
-                !request->response().general.transferEncoding.empty()) {
-                ValueWithParameters vp;
-                vp.value = "chunked";
-                request->response().general.transferEncoding.push_back(vp);
-            } else if (size == ~0ull) {
-                request->response().general.connection.insert("close");
-            }
-        } else if (size == ~0ull) {
-            request->response().general.connection.insert("close");
         }
         if (request->request().requestLine.method != HEAD) {
             transferStream(response, request->responseStream());
@@ -957,6 +1105,70 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
     }
     if (request->request().requestLine.method == HEAD)
         request->finish();
+}
+
+bool ifMatch(ServerRequest::ptr request, const ETag &eTag)
+{
+    const std::set<ETag> &ifMatch = request->request().request.ifMatch;
+
+    // Special case *; if it's there, and there's no ETag, fail
+    if (ifMatch.size() == 1 && ifMatch.begin()->unspecified) {
+        if (eTag.unspecified) {
+            respondError(request, PRECONDITION_FAILED);
+            return false;
+        }
+    } else if (!ifMatch.empty()) {
+        bool matched = false;
+        for (std::set<ETag>::const_iterator it(ifMatch.begin());
+            it != ifMatch.end();
+            ++it) {
+            if (it->strongCompare(eTag)) {
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            respondError(request, PRECONDITION_FAILED);
+            return false;
+        }
+    }
+
+    const std::string &method = request->request().requestLine.method;
+    bool getOrHead = (method == GET || method == HEAD);
+    const std::set<ETag> &ifNoneMatch = request->request().request.ifNoneMatch;
+    // Special case *; if it's there, and there is an entity, fail
+    if (ifNoneMatch.size() == 1 && ifNoneMatch.begin()->unspecified) {
+        if (!eTag.unspecified) {
+            if (getOrHead)
+                request->response().response.eTag = eTag;
+            respondError(request, getOrHead ? NOT_MODIFIED : PRECONDITION_FAILED,
+                std::string(), false, !getOrHead);
+            return false;
+        }
+    } else {
+        bool matched = false;
+        for (std::set<ETag>::const_iterator it(ifNoneMatch.begin());
+            it != ifNoneMatch.end();
+            ++it) {
+            if (getOrHead && it->weakCompare(eTag)) {
+                matched = true;
+                break;
+            } else if (!getOrHead && it->strongCompare(eTag)) {
+                matched = true;
+                break;
+            }
+        }
+        if (matched) {
+            if (getOrHead)
+                request->response().response.eTag = eTag;
+            respondError(request,
+                getOrHead ? NOT_MODIFIED : PRECONDITION_FAILED, std::string(),
+                false, !getOrHead);
+            return false;
+        }
+    }
+
+    return true;
 }
 
 }}

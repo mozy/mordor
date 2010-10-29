@@ -1,10 +1,15 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "log.h"
 
 #include <iostream>
+
+#include <boost/date_time/posix_time/posix_time_io.hpp>
+
+#ifndef WINDOWS
+#define SYSLOG_NAMES
+#include <syslog.h>
+#endif
 
 #include <boost/bind.hpp>
 #include <boost/regex.hpp>
@@ -23,6 +28,8 @@ static void enableStdoutLogging();
 static void enableFileLogging();
 #ifdef WINDOWS
 static void enableDebugLogging();
+#else
+static void enableSyslogLogging();
 #endif
 
 static ConfigVar<std::string>::ptr g_logError =
@@ -40,12 +47,15 @@ static ConfigVar<std::string>::ptr g_logTrace =
 
 static ConfigVar<bool>::ptr g_logStdout =
     Config::lookup("log.stdout", false, "Log to stdout");
+static ConfigVar<std::string>::ptr g_logFile =
+    Config::lookup("log.file", std::string(), "Log to file");
 #ifdef WINDOWS
 static ConfigVar<bool>::ptr g_logDebugWindow =
     Config::lookup("log.debug", false, "Log to Debug Window");
+#else
+static ConfigVar<std::string>::ptr g_logSyslogFacility =
+    Config::lookup("log.syslogfacility", std::string(), "Log to syslog using facility");
 #endif
-static ConfigVar<std::string>::ptr g_logFile =
-    Config::lookup("log.file", std::string(""), "Log to file");
 
 static FiberLocalStorage<bool> f_logDisabled;
 
@@ -70,6 +80,8 @@ static struct LogInitializer
         g_logStdout->monitor(&enableStdoutLogging);
 #ifdef WINDOWS
         g_logDebugWindow->monitor(&enableDebugLogging);
+#else
+        g_logSyslogFacility->monitor(&enableSyslogLogging);
 #endif
     }
 } g_init;
@@ -130,11 +142,11 @@ static void enableStdoutLogging()
     static LogSink::ptr stdoutSink;
     bool log = g_logStdout->val();
     if (stdoutSink.get() && !log) {
-        Log::removeSink(stdoutSink);
+        Log::root()->removeSink(stdoutSink);
         stdoutSink.reset();
     } else if (!stdoutSink.get() && log) {
         stdoutSink.reset(new StdoutLogSink());
-        Log::addSink(stdoutSink);
+        Log::root()->addSink(stdoutSink);
     }
 }
 
@@ -144,11 +156,32 @@ static void enableDebugLogging()
     static LogSink::ptr debugSink;
     bool log = g_logDebugWindow->val();
     if (debugSink.get() && !log) {
-        Log::removeSink(debugSink);
+        Log::root()->removeSink(debugSink);
         debugSink.reset();
     } else if (!debugSink.get() && log) {
         debugSink.reset(new DebugLogSink());
-        Log::addSink(debugSink);
+        Log::root()->addSink(debugSink);
+    }
+}
+#else
+static void enableSyslogLogging()
+{
+    static LogSink::ptr syslogSink;
+    int facility = SyslogLogSink::facilityFromString(
+        g_logSyslogFacility->val().c_str());
+    if (syslogSink.get() && facility == -1) {
+        Log::root()->removeSink(syslogSink);
+        syslogSink.reset();
+    } else if (facility != -1) {
+        if (syslogSink.get()) {
+            if (static_cast<SyslogLogSink*>(syslogSink.get())->facility() ==
+                facility)
+                return;
+            Log::root()->removeSink(syslogSink);
+            syslogSink.reset();
+        }
+        syslogSink.reset(new SyslogLogSink(facility));
+        Log::root()->addSink(syslogSink);
     }
 }
 #endif
@@ -158,17 +191,17 @@ static void enableFileLogging()
     static LogSink::ptr fileSink;
     std::string file = g_logFile->val();
     if (fileSink.get() && file.empty()) {
-        Log::removeSink(fileSink);
+        Log::root()->removeSink(fileSink);
         fileSink.reset();
     } else if (!file.empty()) {
         if (fileSink.get()) {
             if (static_cast<FileLogSink*>(fileSink.get())->file() == file)
                 return;
-            Log::removeSink(fileSink);
+            Log::root()->removeSink(fileSink);
             fileSink.reset();
         }
         fileSink.reset(new FileLogSink(file));
-        Log::addSink(fileSink);
+        Log::root()->addSink(fileSink);
     }
 }
 
@@ -200,6 +233,70 @@ DebugLogSink::log(const std::string &logger,
         << fiber << " " << toUtf16(logger) << " " << toUtf16(file)
         << ":" << line << " " << toUtf16(str) << std::endl;
     OutputDebugStringW(os.str().c_str());
+}
+#else
+SyslogLogSink::SyslogLogSink(int facility)
+ : m_facility(facility)
+{}
+
+void
+SyslogLogSink::log(const std::string &logger,
+        boost::posix_time::ptime now, unsigned long long elapsed,
+        tid_t thread, void *fiber,
+        Log::Level level, const std::string &string,
+        const char *file, int line)
+{
+    int syslogLevel = LOG_NOTICE;
+    switch (level) {
+        case Log::FATAL:
+            syslogLevel = LOG_CRIT;
+            break;
+        case Log::ERROR:
+            syslogLevel = LOG_ERR;
+            break;
+        case Log::WARNING:
+            syslogLevel = LOG_WARNING;
+            break;
+        case Log::INFO:
+            syslogLevel = LOG_NOTICE;
+            break;
+        case Log::VERBOSE:
+            syslogLevel = LOG_INFO;
+            break;
+        default:
+            syslogLevel = LOG_DEBUG;
+            break;
+    }
+    std::ostringstream os;
+    os << now << " " << elapsed << " " << level << " " << thread << " "
+        << fiber << " " << logger << " " << file << ":" << line << " "
+        << string << std::endl;
+    std::string str = os.str();
+    syslog(syslogLevel | m_facility, "%.*s", (int)str.size(), str.c_str());
+}
+
+int
+SyslogLogSink::facilityFromString(const char *string)
+{
+    CODE *facilities = facilitynames;
+    while (facilities->c_name && *facilities->c_name) {
+        if (strcmp(facilities->c_name, string) == 0)
+            return facilities->c_val;
+        ++facilities;
+    }
+    return -1;
+}
+
+const char *
+SyslogLogSink::facilityToString(int facility)
+{
+    CODE *facilities = facilitynames;
+    while (facilities->c_name && *facilities->c_name) {
+        if (facilities->c_val == facility)
+            return facilities->c_name;
+        ++facilities;
+    }
+    return NULL;
 }
 #endif
 
@@ -294,24 +391,6 @@ Log::visit(boost::function<void (boost::shared_ptr<Logger>)> dg)
     }
 }
 
-void
-Log::addSink(LogSink::ptr sink)
-{
-    root()->addSink(sink);
-}
-
-void
-Log::removeSink(LogSink::ptr sink)
-{
-    root()->removeSink(sink);
-}
-
-void
-Log::clearSinks()
-{
-    root()->clearSinks();
-}
-
 LogDisabler::LogDisabler()
 {
     m_disabled = !f_logDisabled;
@@ -383,13 +462,7 @@ Logger::log(Log::Level level, const std::string &str,
     unsigned long long elapsed = TimerManager::now() - g_start;
     boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
     Logger::ptr _this = shared_from_this();
-#ifdef WINDOWS
-    DWORD thread = GetCurrentThreadId();
-#elif defined(LINUX)
-    pid_t thread = syscall(__NR_gettid);
-#else
-    pid_t thread = getpid();
-#endif
+    tid_t thread = gettid();
     void *fiber = Fiber::getThis().get();
     bool somethingLogged = false;
     while (_this) {

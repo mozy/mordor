@@ -1,10 +1,10 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "memory.h"
 
 #include <stdexcept>
+
+#include "mordor/assert.h"
 
 namespace Mordor {
 

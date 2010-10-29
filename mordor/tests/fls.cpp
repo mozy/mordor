@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/fiber.h"
 #include "mordor/scheduler.h"
 #include "mordor/test/test.h"
@@ -46,7 +44,7 @@ MORDOR_UNITTEST(FLS, basic)
     fiber->call();
     MORDOR_TEST_ASSERT_EQUAL(fls.get(), 1);
 
-    boost::thread thread1(boost::bind(&thread, boost::ref(fls), fiber));
+    Thread thread1(boost::bind(&thread, boost::ref(fls), fiber));
     thread1.join();
     MORDOR_TEST_ASSERT_EQUAL(fls.get(), 1);
     fiber->call();

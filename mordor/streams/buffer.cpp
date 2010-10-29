@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "buffer.h"
 
 #include <string.h>
@@ -296,15 +294,21 @@ Buffer::compact()
 }
 
 void
-Buffer::clear()
+Buffer::clear(bool clearWriteAvailableAsWell)
 {
     invariant();
-    m_readAvailable = m_writeAvailable = 0;
-    m_segments.clear();
-    m_writeIt = m_segments.end();
+    if (clearWriteAvailableAsWell) {
+        m_readAvailable = m_writeAvailable = 0;
+        m_segments.clear();
+        m_writeIt = m_segments.end();
+    } else {
+        m_readAvailable = 0;
+        if (m_writeIt != m_segments.end() && m_writeIt->readAvailable())
+            m_writeIt->consume(m_writeIt->readAvailable());
+        m_segments.erase(m_segments.begin(), m_writeIt);
+    }
     invariant();
     MORDOR_ASSERT(m_readAvailable == 0);
-    MORDOR_ASSERT(m_writeAvailable == 0);
 }
 
 void
@@ -524,7 +528,7 @@ Buffer::writeBuffer(size_t length, bool coalesce)
         return result;
     }
     // Can use an existing write segment
-    if (writeAvailable() >= 0 && m_writeIt->writeAvailable() >= length) {
+    if (writeAvailable() > 0 && m_writeIt->writeAvailable() >= length) {
         SegmentData data = m_writeIt->writeBuffer().slice(0, length);
         result.iov_base = data.start();
         result.iov_len = iovLength(data.length());
@@ -731,6 +735,46 @@ Buffer::find(const std::string &string, size_t length) const
     if (foundSoFar == string.size())
         return totalLength;
     return -1;
+}
+
+std::string
+Buffer::getDelimited(char delimiter, bool eofIsDelimiter, bool includeDelimiter)
+{
+    ptrdiff_t offset = find(delimiter, ~0);
+    MORDOR_ASSERT(offset >= -1);
+    if (offset == -1 && !eofIsDelimiter)
+        MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+    eofIsDelimiter = offset == -1;
+    if (offset == -1)
+        offset = readAvailable();;
+    std::string result;
+    result.resize(offset + (eofIsDelimiter ? 0 : (includeDelimiter ? 1 : 0)));
+    copyOut(&result[0], result.size());
+    consume(result.size());
+    if (!eofIsDelimiter && !includeDelimiter)
+        consume(1u);
+    return result;
+}
+
+std::string
+Buffer::getDelimited(const std::string &delimiter, bool eofIsDelimiter,
+    bool includeDelimiter)
+{
+    ptrdiff_t offset = find(delimiter, ~0);
+    MORDOR_ASSERT(offset >= -1);
+    if (offset == -1 && !eofIsDelimiter)
+        MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+    eofIsDelimiter = offset == -1;
+    if (offset == -1)
+        offset = readAvailable();;
+    std::string result;
+    result.resize(offset + (eofIsDelimiter ? 0 :
+        (includeDelimiter ? delimiter.size() : 0)));
+    copyOut(&result[0], result.size());
+    consume(result.size());
+    if (!eofIsDelimiter && !includeDelimiter)
+        consume(delimiter.size());
+    return result;
 }
 
 void

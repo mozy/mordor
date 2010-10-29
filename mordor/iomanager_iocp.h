@@ -7,7 +7,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "fiber.h"
 #include "scheduler.h"
 #include "timer.h"
 #include "version.h"
@@ -18,18 +17,20 @@
 
 namespace Mordor {
 
-struct AsyncEventIOCP
+class Fiber;
+
+struct AsyncEvent
 {
-    AsyncEventIOCP();
+    AsyncEvent();
 
     OVERLAPPED overlapped;
 
     Scheduler  *m_scheduler;
-    boost::thread::id m_thread;
-    Fiber::ptr  m_fiber;
+    tid_t m_thread;
+    boost::shared_ptr<Fiber> m_fiber;
 };
 
-class IOManagerIOCP : public Scheduler, public TimerManager
+class IOManager : public Scheduler, public TimerManager
 {
     friend class WaitBlock;
 private:
@@ -38,7 +39,7 @@ private:
     public:
         typedef boost::shared_ptr<WaitBlock> ptr;
     public:
-        WaitBlock(IOManagerIOCP &outer);
+        WaitBlock(IOManager &outer);
         ~WaitBlock();
 
         bool registerEvent(HANDLE handle, boost::function<void ()> dg,
@@ -51,32 +52,32 @@ private:
 
     private:
         boost::mutex m_mutex;
-        IOManagerIOCP &m_outer;
+        IOManager &m_outer;
         HANDLE m_reconfigured;
         HANDLE m_handles[MAXIMUM_WAIT_OBJECTS];
         Scheduler *m_schedulers[MAXIMUM_WAIT_OBJECTS];
-        Fiber::ptr m_fibers[MAXIMUM_WAIT_OBJECTS];
+        boost::shared_ptr<Fiber> m_fibers[MAXIMUM_WAIT_OBJECTS];
         boost::function<void ()> m_dgs[MAXIMUM_WAIT_OBJECTS];
         bool m_recurring[MAXIMUM_WAIT_OBJECTS];
         int m_inUseCount;
     };
 
 public:
-    IOManagerIOCP(int threads = 1, bool useCaller = true);
-    ~IOManagerIOCP();
+    IOManager(size_t threads = 1, bool useCaller = true);
+    ~IOManager();
 
     bool stopping();
 
     void registerFile(HANDLE handle);
-    void registerEvent(AsyncEventIOCP *e);
+    void registerEvent(AsyncEvent *e);
     // Only use if the async call failed, not for cancelling it
-    void unregisterEvent(AsyncEventIOCP *e);
+    void unregisterEvent(AsyncEvent *e);
     void registerEvent(HANDLE handle, boost::function<void ()> dg,
         bool recurring = false);
     void registerEvent(HANDLE handle, bool recurring = false)
     { registerEvent(handle, NULL, recurring); }
     size_t unregisterEvent(HANDLE handle);
-    void cancelEvent(HANDLE hFile, AsyncEventIOCP *e);
+    void cancelEvent(HANDLE hFile, AsyncEvent *e);
 
 protected:
     bool stopping(unsigned long long &nextTimeout);
@@ -88,7 +89,7 @@ protected:
 private:
     HANDLE m_hCompletionPort;
 #ifdef DEBUG
-    std::map<OVERLAPPED *, AsyncEventIOCP*> m_pendingEvents;
+    std::map<OVERLAPPED *, AsyncEvent*> m_pendingEvents;
 #endif
     size_t m_pendingEventCount;
     boost::mutex m_mutex;

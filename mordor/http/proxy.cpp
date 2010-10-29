@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "proxy.h"
 
 #include "mordor/config.h"
@@ -111,7 +109,6 @@ std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
                 proxyUri.scheme(uri.scheme());
         }
         proxyUri.path.segments.clear();
-        proxyUri.path.type = URI::Path::RELATIVE;
         proxyUri.authority.userinfoDefined(false);
         proxyUri.queryDefined(false);
         proxyUri.fragmentDefined(false);
@@ -429,7 +426,7 @@ tunnel(RequestBroker::ptr requestBroker, const URI &proxy, const URI &target)
     URI &requestUri = requestHeaders.requestLine.uri;
     requestUri.scheme("http");
     requestUri.authority = proxy.authority;
-    requestUri.path.type = URI::Path::ABSOLUTE;
+    requestUri.path.segments.push_back(std::string());
     requestUri.path.segments.push_back(os.str());
     requestHeaders.request.host = os.str();
     requestHeaders.general.connection.insert("Proxy-Connection");

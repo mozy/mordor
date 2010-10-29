@@ -3,6 +3,7 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
 #include <set>
+#include <vector>
 
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>

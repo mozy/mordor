@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "zlib.h"
 
 #include "mordor/assert.h"
@@ -19,7 +17,7 @@ static Logger::ptr g_log = Log::lookup("mordor:streams:zlib");
 ZlibStream::ZlibStream(Stream::ptr parent, bool own, Type type, int level,
     int windowBits, int memlevel, Strategy strategy)
     : MutatingFilterStream(parent, own),
-      m_closed(false)
+      m_closed(true)
 {
    init(type, level, windowBits, memlevel, strategy);
 }
@@ -44,15 +42,37 @@ ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy st
         default:
             MORDOR_ASSERT(false);
     }
+    m_windowBits = windowBits;
+    m_level = level;
+    m_memlevel = memlevel;
+    m_strategy = strategy;
+    reset();
+}
+
+void
+ZlibStream::reset()
+{
+    m_inBuffer.clear();
+    m_outBuffer.clear(false);
+    if (!m_closed) {
+        if (supportsRead()) {
+            inflateEnd(&m_strm);
+        } else {
+            deflateEnd(&m_strm);
+        }
+        m_closed = true;
+    }
     int rc;
     memset(&m_strm, 0, sizeof(z_stream));
     if (supportsRead()) {
-        rc = inflateInit2(&m_strm, windowBits);
+        rc = inflateInit2(&m_strm, m_windowBits);
     } else {
-        rc = deflateInit2(&m_strm, level, Z_DEFLATED, windowBits, memlevel, (int)strategy);
+        rc = deflateInit2(&m_strm, m_level, Z_DEFLATED, m_windowBits, m_memlevel,
+            (int)m_strategy);
     }
     switch (rc) {
         case Z_OK:
+            m_closed = false;
             break;
         case Z_MEM_ERROR:
             throw std::bad_alloc();
@@ -74,14 +94,14 @@ ZlibStream::init(Type type, int level, int windowBits, int memlevel, Strategy st
 ZlibStream::ZlibStream(Stream::ptr parent, int level, int windowBits, int memlevel, Strategy strategy,
     bool own)
     : MutatingFilterStream(parent, own),
-      m_closed(false)
+      m_closed(true)
 {
     init(ZLIB, level, windowBits, memlevel, strategy);
 }
 
 ZlibStream::ZlibStream(Stream::ptr parent, bool own)
     : MutatingFilterStream(parent, own),
-      m_closed(false)
+      m_closed(true)
 {
     init(ZLIB);
 }

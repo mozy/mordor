@@ -1,10 +1,9 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include <iostream>
 
 #include "mordor/config.h"
+#include "mordor/main.h"
 #include "mordor/version.h"
 #include "mordor/statistics.h"
 #include "mordor/test/antxmllistener.h"
@@ -13,24 +12,12 @@
 using namespace Mordor;
 using namespace Mordor::Test;
 
-#ifdef WINDOWS
-#include <direct.h>
-#define chdir _chdir
-#endif
-
 static ConfigVar<std::string>::ptr g_xmlDirectory = Config::lookup<std::string>(
     "test.antxml.directory", std::string(), "Location to put XML files");
 
-int main(int argc, const char **argv)
+MORDOR_MAIN(int argc, char *argv[])
 {
     Config::loadFromEnvironment();
-    std::string newDirectory = argv[0];
-#ifdef WINDOWS
-    newDirectory = newDirectory.substr(0, newDirectory.rfind('\\'));
-#else
-    newDirectory = newDirectory.substr(0, newDirectory.rfind('/'));
-#endif
-    chdir(newDirectory.c_str());
 
     boost::shared_ptr<TestListener> listener;
     std::string xmlDirectory = g_xmlDirectory->val();

@@ -50,18 +50,14 @@ public:
     {}
 };
 
-enum Method
-{
-    GET,
-    HEAD,
-    POST,
-    PUT,
-    DELETE,
-    CONNECT,
-    OPTIONS,
-    TRACE
-};
-extern const char *methods[];
+extern const std::string GET;
+extern const std::string HEAD;
+extern const std::string POST;
+extern const std::string PUT;
+extern const std::string DELETE;
+extern const std::string CONNECT;
+extern const std::string OPTIONS;
+extern const std::string TRACE;
 
 enum Status
 {
@@ -121,6 +117,8 @@ public:
     Redirect(Status status, const URI &uri)
         : m_status(status), m_uri(uri)
     {}
+
+    ~Redirect() throw() {}
 
     Status status() const { return m_status; }
     const URI &uri() const { return m_uri; }
@@ -196,6 +194,26 @@ struct ETag
         return value < rhs.value;
     }
 
+    /// Compare two Entity Tags according to the weak comparison function
+    ///
+    /// @return if *this and rhs have the same value, ignoring weakness
+    bool weakCompare(const ETag &rhs) const
+    {
+        return unspecified == rhs.unspecified && value == rhs.value;
+    }
+
+    /// Compare two Entity Tags according to the strong comparison function
+    ///
+    /// @return if *this and rhs are both strong, and have the same value
+    bool strongCompare(const ETag &rhs) const
+    {
+        return !weak && !rhs.weak && unspecified == rhs.unspecified &&
+            value == rhs.value;
+    }
+
+    /// Compare two Entity Tags for exact equality
+    ///
+    /// @return if *this and rhs are identical (weakness and value)
     bool operator== (const ETag &rhs) const
     {
         return weak == rhs.weak && unspecified == rhs.unspecified &&
@@ -208,8 +226,6 @@ struct ETag
             value != rhs.value;
     }
 };
-
-typedef std::set<ETag> ETagSet;
 
 struct Product
 {
@@ -278,11 +294,27 @@ struct MediaType
 typedef std::vector<std::pair<unsigned long long, unsigned long long> > RangeSet;
 struct ContentRange
 {
-    ContentRange() : first(~0ULL), last(~0ULL), instance(~0ULL) {}
+    ContentRange(unsigned long long first_ = ~0ull,
+        unsigned long long last_ = ~0ull,
+        unsigned long long instance_ = ~0ull)
+        : first(first_),
+          last(last_),
+          instance(instance_)
+    {}
 
     unsigned long long first;
     unsigned long long last;
     unsigned long long instance;
+
+    bool operator==(const ContentRange &rhs) const
+    {
+        return first == rhs.first && last == rhs.last &&
+            instance == rhs.instance;
+    }
+    bool operator!=(const ContentRange &rhs) const
+    {
+        return !(*this == rhs);
+    }
 };
 
 struct AcceptValue
@@ -327,7 +359,7 @@ struct RequestLine
 {
     RequestLine() : method(GET) {}
 
-    Method method;
+    std::string method;
     URI uri;
     Version ver;
 };
@@ -358,9 +390,9 @@ struct RequestHeaders
     AuthParams authorization;
     ParameterizedKeyValueList expect;
     std::string host;
-    ETagSet ifMatch;
+    std::set<ETag> ifMatch;
     boost::posix_time::ptime ifModifiedSince;
-    ETagSet ifNoneMatch;
+    std::set<ETag> ifNoneMatch;
     boost::variant<ETag, boost::posix_time::ptime> ifRange;
     boost::posix_time::ptime ifUnmodifiedSince;
     AuthParams proxyAuthorization;
@@ -421,11 +453,10 @@ bool isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithPar
 bool isPreferred(const AcceptListWithParameters &list, const AcceptValueWithParameters &lhs, const AcceptValueWithParameters &rhs);
 const AcceptValueWithParameters *preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters &available);
 
-std::ostream& operator<<(std::ostream& os, Method m);
 std::ostream& operator<<(std::ostream& os, Status s);
 std::ostream& operator<<(std::ostream& os, Version v);
 std::ostream& operator<<(std::ostream& os, const ETag &e);
-std::ostream& operator<<(std::ostream& os, const ETagSet &v);
+std::ostream& operator<<(std::ostream& os, const std::set<ETag> &v);
 std::ostream& operator<<(std::ostream& os, const Product &p);
 std::ostream& operator<<(std::ostream& os, const ProductList &l);
 std::ostream& operator<<(std::ostream& os, const ProductAndCommentList &l);

@@ -6,6 +6,11 @@
 #include <string>
 #include <vector>
 
+#ifndef BOOST_TYPEOF_SILENT
+#define BOOST_TYPEOF_SILENT
+#endif
+#include <boost/typeof/typeof.hpp>
+
 #include "version.h"
 
 #ifdef OSX
@@ -29,10 +34,16 @@ std::string sha1sum(const void *data, size_t len);
 std::string hmacMd5(const std::string &text, const std::string &key);
 std::string hmacSha1(const std::string &text, const std::string &key);
 
-// Output must be of size len * 2, and will *not* be null-terminated
+/// Output must be of size len * 2, and will *not* be null-terminated
 void hexstringFromData(const void *data, size_t len, char *output);
 std::string hexstringFromData(const void *data, size_t len);
 std::string hexstringFromData(const std::string &data);
+
+/// Output must be of size length / 2, and will *not* be null-terminated
+/// std::invalid_argument will be thrown if hexstring is not hex
+void dataFromHexstring(const char *hexstring, size_t length, void *output);
+std::string dataFromHexstring(const char *hexstring, size_t length);
+std::string dataFromHexstring(const std::string &data);
 
 void replace(std::string &str, char find, char replaceWith);
 void replace(std::string &str, char find, const std::string &replaceWith);
@@ -41,20 +52,40 @@ void replace(std::string &str, const std::string &find, const std::string &repla
 std::vector<std::string> split(const std::string &str, char delim, size_t max = ~0);
 std::vector<std::string> split(const std::string &str, const char *delims, size_t max = ~0);
 
+namespace detail
+{
+    template <class T>
+    typename boost::enable_if_c<sizeof(T) == 2, wchar_t>::type utf16func();
+    template <class T>
+    typename boost::disable_if_c<sizeof(T) == 2, unsigned short>::type utf16func();
+    template <class T>
+    typename boost::enable_if_c<sizeof(T) == 4, wchar_t>::type utf32func();
+    template <class T>
+    typename boost::disable_if_c<sizeof(T) == 4, unsigned int>::type utf32func();
+};
+
+typedef BOOST_TYPEOF(detail::utf16func<wchar_t>()) utf16char;
+typedef BOOST_TYPEOF(detail::utf32func<wchar_t>()) utf32char;
+
+typedef std::basic_string<utf16char> utf16string;
+typedef std::basic_string<utf32char> utf32string;
+
 #ifdef WINDOWS
-std::string toUtf8(const wchar_t *str, size_t len = ~0);
-std::string toUtf8(const std::wstring &str);
-std::wstring toUtf16(const char *str, size_t len = ~0);
-std::wstring toUtf16(const std::string &str);
+std::string toUtf8(const utf16char *str, size_t len = ~0);
+std::string toUtf8(const utf16string &str);
+utf16string toUtf16(const char *str, size_t len = ~0);
+utf16string toUtf16(const std::string &str);
 #elif defined (OSX)
 std::string toUtf8(CFStringRef string);
+utf16string toUtf16(const char *str, size_t len = ~0);
+utf16string toUtf16(const std::string &str);
 #endif
-std::string toUtf8(wchar_t character);
-std::string toUtf8(int character);
-int toUtf32(wchar_t highSurrogate, wchar_t lowSurrogate);
-std::string toUtf8(wchar_t highSurrogate, wchar_t lowSurrogate);
-bool isHighSurrogate(wchar_t character);
-bool isLowSurrogate(wchar_t character);
+std::string toUtf8(utf16char character);
+std::string toUtf8(utf32char character);
+utf32char toUtf32(utf16char highSurrogate, utf16char lowSurrogate);
+std::string toUtf8(utf16char highSurrogate, utf16char lowSurrogate);
+bool isHighSurrogate(utf16char character);
+bool isLowSurrogate(utf16char character);
 
 struct caseinsensitiveless
 {

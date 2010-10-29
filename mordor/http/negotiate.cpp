@@ -1,16 +1,17 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "negotiate.h"
 
 #include "http.h"
+#include "mordor/log.h"
 #include "mordor/string.h"
 
 #pragma comment(lib, "secur32.lib")
 
 namespace Mordor {
 namespace HTTP {
+
+static Logger::ptr g_log = Log::lookup("mordor:http:negotiate");
 
 NegotiateAuth::NegotiateAuth(const std::string &username,
                              const std::string &password)
@@ -82,6 +83,9 @@ NegotiateAuth::authorize(const AuthParams &challenge, AuthParams &authorization,
             NULL,
             &m_creds,
             &lifetime);
+        MORDOR_LOG_TRACE(g_log) << "AcquireCredentialsHandleW("
+            << challenge.scheme << ", " << toUtf8(m_username) << "): ("
+            << status << ")";
         if (!SUCCEEDED(status))
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(status, "AcquireCredentialsHandleW");
 
@@ -98,6 +102,9 @@ NegotiateAuth::authorize(const AuthParams &challenge, AuthParams &authorization,
             &outboundBufferDesc,
             &contextAttributes,
             &lifetime);
+        MORDOR_LOG_TRACE(g_log) << "InitializeSecurityContextW("
+            << uri << ", {0}):  {" << outboundSecBuffer.cbBuffer << "} ("
+            << status << ")";
     } else {
         // Prepare the response from the server
         std::string inboundBuffer = base64decode(param);
@@ -124,11 +131,16 @@ NegotiateAuth::authorize(const AuthParams &challenge, AuthParams &authorization,
             &outboundBufferDesc,
             &contextAttributes,
             &lifetime);
+        MORDOR_LOG_TRACE(g_log) << "InitializeSecurityContextW("
+            << uri << ", {" << inboundSecBuffer.cbBuffer << "}):  {"
+            << outboundSecBuffer.cbBuffer << "} (" << status << ")";
     }
 
     if (status == SEC_I_COMPLETE_NEEDED ||
         status == SEC_I_COMPLETE_AND_CONTINUE) {
         status = CompleteAuthToken(&m_secCtx, &outboundBufferDesc);
+        MORDOR_LOG_TRACE(g_log) << "CompleteAuthToken(): {"
+            << outboundSecBuffer.cbBuffer << "} (" << status << ")";
     }
 
     if (!SUCCEEDED(status))
@@ -139,35 +151,6 @@ NegotiateAuth::authorize(const AuthParams &challenge, AuthParams &authorization,
     authorization.base64 = base64encode(outboundBuffer);
     authorization.parameters.clear();
     return true;
-}
-
-bool
-NegotiateAuth::authorize(const Response &challenge, Request &nextRequest)
-{
-    MORDOR_ASSERT(challenge.status.status == UNAUTHORIZED ||
-        challenge.status.status == PROXY_AUTHENTICATION_REQUIRED);
-    bool proxy = challenge.status.status == PROXY_AUTHENTICATION_REQUIRED;
-    const ChallengeList &authenticate = proxy ?
-        challenge.response.proxyAuthenticate :
-        challenge.response.wwwAuthenticate;
-    AuthParams &authorization = proxy ?
-        nextRequest.request.proxyAuthorization :
-        nextRequest.request.authorization;
-    const AuthParams *auth;
-    for (ChallengeList::const_iterator it = authenticate.begin();
-        it != authenticate.end();
-        ++it) {
-        if (stricmp(it->scheme.c_str(), "Negotiate") == 0) {
-            auth = &*it;
-            break;
-        }
-        if (stricmp(it->scheme.c_str(), "NTLM") == 0) {
-            auth = &*it;
-            // Don't break; keep looking for Negotiate; it's preferred
-        }
-    }
-    MORDOR_ASSERT(auth);
-    return authorize(*auth, authorization, nextRequest.requestLine.uri);
 }
 
 }}

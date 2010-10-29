@@ -10,6 +10,80 @@
 namespace Mordor {
 namespace JSON {
 
+namespace {
+class BoolVisitor : public boost::static_visitor<>
+{
+public:
+    void operator()(const Array &array)
+    {
+        result = array.empty();
+    }
+
+    void operator()(const Object &object)
+    {
+        result = object.empty();
+    }
+
+    template <class T>
+    void operator()(const T& value)
+    {
+        MORDOR_THROW_EXCEPTION(boost::bad_get());
+    }
+
+    bool result;
+};
+
+class SizeVisitor : public boost::static_visitor<>
+{
+public:
+    void operator()(const Array &array)
+    {
+        result = array.size();
+    }
+
+    void operator()(const Object &object)
+    {
+        result = object.size();
+    }
+
+    template <class T>
+    void operator()(const T& value)
+    {
+        MORDOR_THROW_EXCEPTION(boost::bad_get());
+    }
+
+    size_t result;
+};
+}
+
+bool
+Value::empty() const
+{
+    BoolVisitor visitor;
+    boost::apply_visitor(visitor, *this);
+    return visitor.result;
+}
+
+size_t
+Value::size() const
+{
+    SizeVisitor visitor;
+    boost::apply_visitor(visitor, *this);
+    return visitor.result;
+}
+
+static Value g_blank;
+
+const Value &
+Value::operator[](const std::string &key) const
+{
+    const Object &object = get<const Object>();
+    const_iterator it = object.find(key);
+    if (it == object.end())
+        return g_blank;
+    return it->second;
+}
+
 std::string unquote(const std::string &string)
 {
     MORDOR_ASSERT(string.size() >= 2);
@@ -20,7 +94,7 @@ std::string unquote(const std::string &string)
     const char *c = string.c_str() + 1;
     const char *end = c + string.size() - 2;
     bool differed = false;
-    wchar_t utf16, priorUtf16 = L'\0';
+    utf16char utf16, priorUtf16 = 0;
     while (c < end)
     {
         if (*c == '\\') {
@@ -35,27 +109,27 @@ std::string unquote(const std::string &string)
                 case '\\':
                 case '/':
                     result.append(1, *c);
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'b':
                     result.append(1, '\b');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'f':
                     result.append(1, '\f');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'n':
                     result.append(1, '\n');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'r':
                     result.append(1, '\r');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 't':
                     result.append(1, '\t');
-                    priorUtf16 = L'\0';
+                    priorUtf16 = 0;
                     break;
                 case 'u':
                     MORDOR_ASSERT(c + 4 < end);
@@ -77,7 +151,7 @@ std::string unquote(const std::string &string)
                         // Back out the incorrect UTF8 we previously saw
                         result.resize(result.size() - 3);
                         result.append(toUtf8(priorUtf16, utf16));
-                        priorUtf16 = L'\0';
+                        priorUtf16 = 0;
                     } else {
                         result.append(toUtf8(utf16));
                         priorUtf16 = utf16;
@@ -88,7 +162,7 @@ std::string unquote(const std::string &string)
             }
         } else if (differed) {
             result.append(1, *c);
-            priorUtf16 = L'\0';
+            priorUtf16 = 0;
         }
         ++c;
     }
@@ -109,7 +183,7 @@ std::string unquote(const std::string &string)
     ws = ' ' | '\t' | '\r' | '\n';
 
     unescaped = (any - ('"' | '\\') - cntrl);
-    char = unescaped | ('\\' ('"' | '\\' | 'b' | 'f' | 'n' | 'r' | 't' | ('u' [0-9A-Za-z]{4})));
+    char = unescaped | ('\\' ('"' | '\\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' | ('u' [0-9A-Za-z]{4})));
     string = '"' char* '"';
 
     action begin_number
@@ -164,10 +238,11 @@ std::string unquote(const std::string &string)
         '[' @call_parse_array | 'true' @parse_true | 'false' @parse_false |
         'null' @parse_null;
 
-    object = '{' ws* string ws* ':' ws* value ws* (',' ws* string ws* ':' ws* value ws*)* '}';
-    array = '[' ws* value ws* (',' ws* value ws*)* ']';
+    object = '{' ws* (string ws* ':' ws* value ws* (',' ws* string ws* ':' ws* value ws*)*)? '}';
+    array = '[' ws* (value ws* (',' ws* value ws*)*)? ']';
 
     action new_key
+
     {
         m_stack.push(&boost::get<Object>(*m_stack.top()).insert(std::make_pair(unquote(std::string(mark, fpc - mark)), Value()))->second);
     }
@@ -184,8 +259,8 @@ std::string unquote(const std::string &string)
         fret;
     }
 
-    parse_object := parse_object_lbl: ws* string >mark %new_key ws* ':' ws* value %pop_stack ws* (',' ws* string >mark %new_key ws* ':' ws* value %pop_stack ws*)* '}' @ret;
-    parse_array := parse_array_lbl: ws* value >new_element %pop_stack ws* (',' ws* value >new_element %pop_stack ws*)* ']' @ret;
+    parse_object := parse_object_lbl: ws* (string >mark %new_key ws* ':' ws* value %pop_stack ws* (',' ws* string >mark %new_key ws* ':' ws* value %pop_stack ws*)*)? '}' @ret;
+    parse_array := parse_array_lbl: ws* (value >new_element %pop_stack ws* (',' ws* value >new_element %pop_stack ws*)*)? ']' @ret;
 
     main := ws* value ws*;
     write data;

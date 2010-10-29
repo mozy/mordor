@@ -1,9 +1,8 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/future.h"
 #include "mordor/test/test.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 

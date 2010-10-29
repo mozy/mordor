@@ -1,13 +1,14 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include <boost/bind.hpp>
 
-#include <boost/exception/all.hpp>
-#include "mordor/exception.h"
-#include "mordor/scheduler.h"
+#include "mordor/atomic.h"
+#include "mordor/fiber.h"
+#include "mordor/iomanager.h"
+#include "mordor/parallel.h"
+#include "mordor/sleep.h"
 #include "mordor/test/test.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 using namespace Mordor::Test;
@@ -41,6 +42,28 @@ MORDOR_UNITTEST(Scheduler, idempotentStopSpawn)
     WorkerPool pool(1, false);
     pool.stop();
     pool.stop();
+}
+
+// Start can be called multiple times without consequence
+MORDOR_UNITTEST(Scheduler, idempotentStartHijack)
+{
+    WorkerPool pool;
+    pool.start();
+    pool.start();
+}
+
+MORDOR_UNITTEST(Scheduler, idempotentStartHybrid)
+{
+    WorkerPool pool(2);
+    pool.start();
+    pool.start();
+}
+
+MORDOR_UNITTEST(Scheduler, idempotentStartSpawn)
+{
+    WorkerPool pool(1, false);
+    pool.start();
+    pool.start();
 }
 
 // When hijacking the calling thread, you can stop() from anywhere within
@@ -213,11 +236,10 @@ MORDOR_UNITTEST(Scheduler, parallelDoException)
     MORDOR_TEST_ASSERT_EXCEPTION(parallel_do(dgs), OperationAbortedException);
 }
 
-static bool checkEqual(int x, int &sequence)
+static void checkEqual(int x, int &sequence)
 {
     MORDOR_TEST_ASSERT_EQUAL(x, sequence);
     ++sequence;
-    return true;
 }
 
 MORDOR_UNITTEST(Scheduler, parallelForEach)
@@ -226,7 +248,7 @@ MORDOR_UNITTEST(Scheduler, parallelForEach)
     WorkerPool pool;
 
     int sequence = 1;
-    parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
+    parallel_foreach(&values[0], &values[10], boost::bind(
         &checkEqual, _1, boost::ref(sequence)), 4);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 11);
 }
@@ -237,16 +259,16 @@ MORDOR_UNITTEST(Scheduler, parallelForEachLessThanParallelism)
     WorkerPool pool;
 
     int sequence = 1;
-    parallel_foreach<const int *, const int>(&values[0], &values[2], boost::bind(
+    parallel_foreach(&values[0], &values[2], boost::bind(
         &checkEqual, _1, boost::ref(sequence)), 4);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
 }
 
-static bool checkEqualStop5(int x, int &sequence)
+static void checkEqualStop5(int x, int &sequence)
 {
     MORDOR_TEST_ASSERT_EQUAL(x, sequence);
-    ++sequence;
-    return sequence <= 5;
+    if (++sequence >= 5)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
 }
 
 MORDOR_UNITTEST(Scheduler, parallelForEachStopShort)
@@ -255,35 +277,32 @@ MORDOR_UNITTEST(Scheduler, parallelForEachStopShort)
     WorkerPool pool;
 
     int sequence = 1;
-    parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
-        &checkEqualStop5, _1, boost::ref(sequence)), 4);
-    // 5 was told to stop, 6, 7, and 8 were already scheduled
-    MORDOR_TEST_ASSERT_EQUAL(sequence, 9);
+    MORDOR_TEST_ASSERT_EXCEPTION(
+    parallel_foreach(&values[0], &values[10], boost::bind(
+        &checkEqualStop5, _1, boost::ref(sequence)), 4),
+        OperationAbortedException);
+    // 5 <= sequence < 10 (we told it to stop at five, it's undefined how many
+    // more got executed, because of other threads (on a single thread it's
+    // deterministically 5))
+    MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(sequence, 5);
+    MORDOR_TEST_ASSERT_LESS_THAN(sequence, 10);
 }
 
-static bool checkEqualExceptionOn5(int x, int &sequence)
-{
-    MORDOR_TEST_ASSERT_EQUAL(x, sequence);
-    ++sequence;
-    if (sequence == 6)
-        MORDOR_THROW_EXCEPTION(OperationAbortedException());
-    return true;
-}
-
-MORDOR_UNITTEST(Scheduler, parallelForEachException)
+MORDOR_UNITTEST(Scheduler, parallelForEachStopShortParallel)
 {
     const int values[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    WorkerPool pool;
+    WorkerPool pool(2);
 
     int sequence = 1;
-    try {
-        parallel_foreach<const int *, const int>(&values[0], &values[10], boost::bind(
-            &checkEqualExceptionOn5, _1, boost::ref(sequence)), 4);
-        MORDOR_TEST_ASSERT(false);
-    } catch (OperationAbortedException)
-    {}
-    // 5 was told to stop (exception), 6, 7, and 8 were already scheduled
-    MORDOR_TEST_ASSERT_EQUAL(sequence, 9);
+    MORDOR_TEST_ASSERT_EXCEPTION(
+    parallel_foreach(&values[0], &values[10], boost::bind(
+        &checkEqualStop5, _1, boost::ref(sequence)), 4),
+        OperationAbortedException);
+    // 5 <= sequence < 10 (we told it to stop at five, it's undefined how many
+    // more got executed, because of other threads (on a single thread it's
+    // deterministically 5))
+    MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(sequence, 5);
+    MORDOR_TEST_ASSERT_LESS_THAN(sequence, 10);
 }
 
 #ifdef DEBUG
@@ -291,7 +310,92 @@ MORDOR_UNITTEST(Scheduler, scheduleForThreadNotOnScheduler)
 {
     Fiber::ptr doNothingFiber(new Fiber(&doNothing));
     WorkerPool pool(1, false);
-    MORDOR_TEST_ASSERT_ASSERTED(pool.schedule(doNothingFiber, boost::this_thread::get_id()));
+    MORDOR_TEST_ASSERT_ASSERTED(pool.schedule(doNothingFiber, gettid()));
     pool.stop();
 }
 #endif
+
+static void sleepForABit(std::set<tid_t> &threads,
+    boost::mutex &mutex, Fiber::ptr scheduleMe, int *count)
+{
+    {
+        boost::mutex::scoped_lock lock(mutex);
+        threads.insert(gettid());
+    }
+    Mordor::sleep(10000);
+    if (count && atomicDecrement(*count) == 0)
+        Scheduler::getThis()->schedule(scheduleMe);
+}
+
+MORDOR_UNITTEST(Scheduler, spreadTheLoad)
+{
+    std::set<tid_t> threads;
+    {
+        boost::mutex mutex;
+        WorkerPool pool(4);
+        // Wait for the other threads to get to idle first
+        Mordor::sleep(100000);
+        int count = 8;
+        for (size_t i = 0; i < 8; ++i)
+            pool.schedule(boost::bind(&sleepForABit, boost::ref(threads),
+                boost::ref(mutex), Fiber::getThis(), &count));
+        // We have to have one of these fibers reschedule us, because if we
+        // let the pool destruct, it will call stop which will wake up all
+        // the threads
+        Scheduler::yieldTo();
+    }
+    // Make sure we hit every thread
+    MORDOR_TEST_ASSERT_EQUAL(threads.size(), 4u);
+}
+
+static void fail()
+{
+    MORDOR_NOTREACHED();
+}
+
+static void cancelTheTimer(Timer::ptr timer)
+{
+    // Wait for the other threads to get to idle first
+    Mordor::sleep(100000);
+    timer->cancel();
+}
+
+MORDOR_UNITTEST(Scheduler, stopIdleMultithreaded)
+{
+    IOManager ioManager(4);
+    unsigned long long start = TimerManager::now();
+    Timer::ptr timer = ioManager.registerTimer(10000000ull, &fail);
+    // Wait for the other threads to get to idle first
+    Mordor::sleep(100000);
+    ioManager.schedule(boost::bind(&cancelTheTimer, timer));
+    ioManager.stop();
+    // This should have taken less than a second, since we cancelled the timer
+    MORDOR_TEST_ASSERT_LESS_THAN(TimerManager::now() - start, 1000000ull);
+}
+
+static void startTheFibers(std::set<tid_t> &threads,
+    boost::mutex &mutex)
+{
+    Mordor::sleep(100000);
+    for (size_t i = 0; i < 8; ++i)
+        Scheduler::getThis()->schedule(boost::bind(&sleepForABit,
+            boost::ref(threads), boost::ref(mutex), Fiber::ptr(),
+            (int *)NULL));
+}
+
+MORDOR_UNITTEST(Scheduler, spreadTheLoadWhileStopping)
+{
+    std::set<tid_t> threads;
+    {
+        boost::mutex mutex;
+        WorkerPool pool(4);
+        // Wait for the other threads to get to idle first
+        Mordor::sleep(100000);
+
+        pool.schedule(boost::bind(&startTheFibers, boost::ref(threads),
+            boost::ref(mutex)));
+        pool.stop();
+    }
+    // Make sure we hit every thread
+    MORDOR_TEST_ASSERT_EQUAL(threads.size(), 4u);
+}

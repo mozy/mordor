@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "connection.h"
 
 #include "chunked.h"
@@ -30,10 +28,8 @@ Connection::Connection(Stream::ptr stream)
 
 bool
 Connection::hasMessageBody(const GeneralHeaders &general,
-                                 const EntityHeaders &entity,
-                                 Method method,
-                                 Status status,
-                                 bool includeEmpty)
+    const EntityHeaders &entity, const std::string &method, Status status,
+    bool includeEmpty)
 {
     // Connect escapes HTTP
     if (method == CONNECT && (status == OK || status == INVALID))
@@ -82,12 +78,9 @@ Connection::hasMessageBody(const GeneralHeaders &general,
 
 Stream::ptr
 Connection::getStream(const GeneralHeaders &general,
-                            const EntityHeaders &entity,
-                            Method method,
-                            Status status,
-                            boost::function<void()> notifyOnEof,
-                            boost::function<void()> notifyOnException,
-                            bool forRead)
+    const EntityHeaders &entity, const std::string &method, Status status,
+    boost::function<void()> notifyOnEof,
+    boost::function<void()> notifyOnException, bool forRead)
 {
     MORDOR_ASSERT(hasMessageBody(general, entity, method, status));
     Stream::ptr stream;

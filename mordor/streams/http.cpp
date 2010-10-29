@@ -1,10 +1,9 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "http.h"
 
 #include "mordor/http/client.h"
+#include "mordor/socket.h"
 #include "null.h"
 #include "transfer.h"
 

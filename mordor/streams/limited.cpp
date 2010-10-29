@@ -1,10 +1,10 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "limited.h"
 
 #include <stdexcept>
+
+#include "mordor/assert.h"
 
 namespace Mordor {
 
@@ -74,6 +74,11 @@ LimitedStream::size()
     }
 }
 
+void
+LimitedStream::truncate(long long size)
+{
+    MORDOR_NOTREACHED();
+}
 
 void
 LimitedStream::unread(const Buffer &b, size_t len)

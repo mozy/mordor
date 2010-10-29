@@ -1,13 +1,17 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "pq.h"
 
 #include "assert.h"
 #include "endian.h"
+#include "iomanager.h"
 #include "log.h"
+#include "streams/buffer.h"
 #include "streams/stream.h"
+
+#ifdef MSVC
+#pragma comment(lib, "libpq")
+#endif
 
 #define BOOLOID 16
 #define CHAROID 18
@@ -291,10 +295,15 @@ static void throwException(PGresult *result)
     MORDOR_THROW_EXCEPTION(Exception(message));
 }
 
-Connection::Connection(const std::string &conninfo, IOManager *ioManager, bool connectImmediately)
-: m_conninfo(conninfo),
-  m_ioManager(ioManager)
+Connection::Connection(const std::string &conninfo, IOManager *ioManager,
+    Scheduler *scheduler, bool connectImmediately)
+: m_conninfo(conninfo)
 {
+#ifdef WINDOWS
+    m_scheduler = scheduler;
+#else
+    m_scheduler = ioManager;
+#endif
     if (connectImmediately)
         connect();
 }
@@ -310,7 +319,10 @@ Connection::status()
 void
 Connection::connect()
 {
-    if (m_ioManager) {
+#ifdef WINDOWS
+    SchedulerSwitcher switcher(m_scheduler);
+#else
+    if (m_scheduler) {
         m_conn.reset(PQconnectStart(m_conninfo.c_str()), &PQfinish);
         if (!m_conn)
             MORDOR_THROW_EXCEPTION(std::bad_alloc());
@@ -325,11 +337,11 @@ Connection::connect()
                 << whatToPoll;
             switch (whatToPoll) {
                 case PGRES_POLLING_READING:
-                    m_ioManager->registerEvent(fd, IOManager::READ);
+                    m_scheduler->registerEvent(fd, SchedulerType::READ);
                     Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_WRITING:
-                    m_ioManager->registerEvent(fd, IOManager::WRITE);
+                    m_scheduler->registerEvent(fd, SchedulerType::WRITE);
                     Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_FAILED:
@@ -343,7 +355,9 @@ Connection::connect()
             }
             whatToPoll = PQconnectPoll(m_conn.get());
         }
-    } else {
+    } else
+#endif
+    {
         m_conn.reset(PQconnectdb(m_conninfo.c_str()), &PQfinish);
         if (!m_conn)
             MORDOR_THROW_EXCEPTION(std::bad_alloc());
@@ -356,7 +370,10 @@ Connection::connect()
 void
 Connection::reset()
 {
-    if (m_ioManager) {
+#ifdef WINDOWS
+    SchedulerSwitcher switcher(m_scheduler);
+#else
+    if (m_scheduler) {
         if (!PQresetStart(m_conn.get()))
             throwException(m_conn.get());
         int fd = PQsocket(m_conn.get());
@@ -366,11 +383,11 @@ Connection::reset()
                 << whatToPoll;
             switch (whatToPoll) {
                 case PGRES_POLLING_READING:
-                    m_ioManager->registerEvent(fd, IOManager::READ);
+                    m_scheduler->registerEvent(fd, SchedulerType::READ);
                     Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_WRITING:
-                    m_ioManager->registerEvent(fd, IOManager::WRITE);
+                    m_scheduler->registerEvent(fd, SchedulerType::WRITE);
                     Scheduler::yieldTo();
                     break;
                 case PGRES_POLLING_FAILED:
@@ -383,7 +400,9 @@ Connection::reset()
             }
             whatToPoll = PQresetPoll(m_conn.get());
         }
-    } else {
+    } else
+#endif
+    {
         PQreset(m_conn.get());
         if (status() == CONNECTION_BAD)
             throwException(m_conn.get());
@@ -434,7 +453,8 @@ Connection::escapeBinary(const std::string &blob)
     return PQ::escapeBinary(m_conn.get(), blob);
 }
 
-static void flush(PGconn *conn, IOManager *ioManager)
+#ifndef WINDOWS
+static void flush(PGconn *conn, SchedulerType *scheduler)
 {
     while (true) {
         int result = PQflush(conn);
@@ -445,7 +465,7 @@ static void flush(PGconn *conn, IOManager *ioManager)
             case -1:
                 throwException(conn);
             case 1:
-                ioManager->registerEvent(PQsocket(conn), IOManager::WRITE);
+                scheduler->registerEvent(PQsocket(conn), SchedulerType::WRITE);
                 Scheduler::yieldTo();
                 continue;
             default:
@@ -454,14 +474,14 @@ static void flush(PGconn *conn, IOManager *ioManager)
     }
 }
 
-static PGresult *nextResult(PGconn *conn, IOManager *ioManager)
+static PGresult *nextResult(PGconn *conn, SchedulerType *scheduler)
 {
     while (true) {
         if (!PQconsumeInput(conn))
             throwException(conn);
         if (PQisBusy(conn)) {
             MORDOR_LOG_DEBUG(g_log) << conn << " PQisBusy()";
-            ioManager->registerEvent(PQsocket(conn), IOManager::READ);
+            scheduler->registerEvent(PQsocket(conn), SchedulerType::READ);
             Scheduler::yieldTo();
             continue;
         }
@@ -469,16 +489,20 @@ static PGresult *nextResult(PGconn *conn, IOManager *ioManager)
         return PQgetResult(conn);
     }
 }
+#endif
 
 PreparedStatement
 Connection::prepare(const std::string &command, const std::string &name)
 {
     if (!name.empty()) {
-        if (m_ioManager) {
+#ifdef WINDOWS
+        SchedulerSwitcher switcher(m_scheduler);
+#else
+        if (m_scheduler) {
             if (!PQsendPrepare(m_conn.get(), name.c_str(), command.c_str(), 0, NULL))
                 throwException(m_conn.get());
-            flush(m_conn.get(), m_ioManager);
-            boost::shared_ptr<PGresult> result(nextResult(m_conn.get(), m_ioManager),
+            flush(m_conn.get(), m_scheduler);
+            boost::shared_ptr<PGresult> result(nextResult(m_conn.get(), m_scheduler),
                 &PQclear);
             while (result) {
                 ExecStatusType status = PQresultStatus(result.get());
@@ -486,13 +510,15 @@ Connection::prepare(const std::string &command, const std::string &name)
                     << result.get() << "): " << PQresStatus(status);
                 if (status != PGRES_COMMAND_OK)
                     throwException(result.get());
-                result.reset(nextResult(m_conn.get(), m_ioManager),
+                result.reset(nextResult(m_conn.get(), m_scheduler),
                     &PQclear);
             }
             MORDOR_LOG_VERBOSE(g_log) << m_conn.get() << " PQsendPrepare(\""
                 << name << "\", \"" << command << "\")";
-            return PreparedStatement(m_conn, std::string(), name, m_ioManager);
-        } else {
+            return PreparedStatement(m_conn, std::string(), name, m_scheduler);
+        } else
+#endif
+        {
             boost::shared_ptr<PGresult> result(PQprepare(m_conn.get(),
                 name.c_str(), command.c_str(), 0, NULL), &PQclear);
             if (!result)
@@ -504,29 +530,29 @@ Connection::prepare(const std::string &command, const std::string &name)
                 throwException(result.get());
             MORDOR_LOG_VERBOSE(g_log) << m_conn.get() << " PQprepare(\"" << name
                 << "\", \"" << command << "\")";
-            return PreparedStatement(m_conn, std::string(), name, m_ioManager);
+            return PreparedStatement(m_conn, std::string(), name, m_scheduler);
         }
     } else {
-        return PreparedStatement(m_conn, command, name, m_ioManager);
+        return PreparedStatement(m_conn, command, name, m_scheduler);
     }
 }
 
 Connection::CopyInParams
 Connection::copyIn(const std::string &table)
 {
-    return CopyInParams(table, m_conn, m_ioManager);
+    return CopyInParams(table, m_conn, m_scheduler);
 }
 
 Connection::CopyOutParams
 Connection::copyOut(const std::string &table)
 {
-    return CopyOutParams(table, m_conn, m_ioManager);
+    return CopyOutParams(table, m_conn, m_scheduler);
 }
 
 Connection::CopyParams::CopyParams(const std::string &table,
-    boost::shared_ptr<PGconn> conn, IOManager *ioManager)
+    boost::shared_ptr<PGconn> conn, SchedulerType *scheduler)
     : m_table(table),
-      m_ioManager(ioManager),
+      m_scheduler(scheduler),
       m_conn(conn),
       m_binary(false),
       m_csv(false),
@@ -610,9 +636,9 @@ Connection::CopyParams::notNullQuoteColumns(const std::vector<std::string> &colu
 class CopyInStream : public Stream
 {
 public:
-    CopyInStream(boost::shared_ptr<PGconn> conn, IOManager *ioManager)
+    CopyInStream(boost::shared_ptr<PGconn> conn, SchedulerType *scheduler)
         : m_conn(conn),
-          m_ioManager(ioManager)
+          m_scheduler(scheduler)
     {}
 
     ~CopyInStream()
@@ -647,19 +673,24 @@ public:
         PGconn *conn = sharedConn.get();
         int status = 0;
         length = std::min<size_t>(length, 0x7fffffff);
+#ifdef WINDOWS
+        SchedulerSwitcher switcher(m_scheduler);
+#endif
         while (status == 0) {
             status = PQputCopyData(conn, (const char *)buffer, (int)length);
             switch (status) {
                 case 1:
                     return length;
-                case 0:
-                    MORDOR_ASSERT(m_ioManager);
-                    m_ioManager->registerEvent(PQsocket(conn),
-                        IOManager::WRITE);
-                    Scheduler::yieldTo();
-                    break;
                 case -1:
                     throwException(conn);
+#ifndef WINDOWS
+                case 0:
+                    MORDOR_ASSERT(m_scheduler);
+                    m_scheduler->registerEvent(PQsocket(conn),
+                        SchedulerType::WRITE);
+                    Scheduler::yieldTo();
+                    break;
+#endif
                 default:
                     MORDOR_NOTREACHED();
             }
@@ -669,30 +700,39 @@ public:
 
 private:
     void putCopyEnd(PGconn *conn, const char *error) {
+#ifdef WINDOWS
+        SchedulerSwitcher switcher(m_scheduler);
+#endif
         int status = 0;
         while (status == 0) {
             status = PQputCopyEnd(conn, error);
             switch (status) {
                 case 1:
                     break;
-                case 0:
-                    MORDOR_ASSERT(m_ioManager);
-                    m_ioManager->registerEvent(PQsocket(conn),
-                        IOManager::WRITE);
-                    Scheduler::yieldTo();
-                    break;
                 case -1:
                     throwException(conn);
+#ifndef WINDOWS
+                case 0:
+                    MORDOR_ASSERT(m_scheduler);
+                    m_scheduler->registerEvent(PQsocket(conn),
+                        SchedulerType::WRITE);
+                    Scheduler::yieldTo();
+                    break;
+#endif
                 default:
                     MORDOR_NOTREACHED();
             }
         }
-        if (m_ioManager)
-            PQ::flush(conn, m_ioManager);
+#ifndef WINDOWS
+        if (m_scheduler)
+            PQ::flush(conn, m_scheduler);
+#endif
         boost::shared_ptr<PGresult> result;
-        if (m_ioManager)
-            result.reset(nextResult(conn, m_ioManager), &PQclear);
+#ifndef WINDOWS
+        if (m_scheduler)
+            result.reset(nextResult(conn, m_scheduler), &PQclear);
         else
+#endif
             result.reset(PQgetResult(conn), &PQclear);
         while (result) {
             ExecStatusType status = PQresultStatus(result.get());
@@ -700,9 +740,11 @@ private:
                 << result.get() << "): " << PQresStatus(status);
             if (status != PGRES_COMMAND_OK)
                 throwException(result.get());
-            if (m_ioManager)
-                result.reset(nextResult(conn, m_ioManager), &PQclear);
+#ifndef WINDOWS
+            if (m_scheduler)
+                result.reset(nextResult(conn, m_scheduler), &PQclear);
             else
+#endif
                 result.reset(PQgetResult(conn), &PQclear);
         }
         MORDOR_LOG_VERBOSE(g_log) << conn << " PQputCopyEnd(\""
@@ -711,15 +753,15 @@ private:
 
 private:
     boost::weak_ptr<PGconn> m_conn;
-    IOManager *m_ioManager;
+    SchedulerType *m_scheduler;
 };
 
 class CopyOutStream : public Stream
 {
 public:
-    CopyOutStream(boost::shared_ptr<PGconn> conn, IOManager *ioManager)
+    CopyOutStream(boost::shared_ptr<PGconn> conn, SchedulerType *scheduler)
         : m_conn(conn),
-          m_ioManager(ioManager)
+          m_scheduler(scheduler)
     {}
 
     bool supportsRead() { return true; }
@@ -736,17 +778,30 @@ public:
         if (!sharedConn)
             return 0;
         PGconn *conn = sharedConn.get();
+#ifndef WINDOWS
+        SchedulerSwitcher switcher(m_scheduler);
+#endif
         int status = 0;
         do {
             char *data = NULL;
-            status = PQgetCopyData(conn, &data, m_ioManager ? 1 : 0);
+            status = PQgetCopyData(conn, &data,
+#ifdef WINDOWS
+                0
+#else
+                m_scheduler ? 1 : 0
+#endif
+                );
             switch (status) {
                 case 0:
-                    MORDOR_ASSERT(m_ioManager);
-                    m_ioManager->registerEvent(PQsocket(conn),
-                        IOManager::READ);
+#ifdef WINDOWS
+                    MORDOR_NOTREACHED();
+#else
+                    MORDOR_ASSERT(m_scheduler);
+                    m_scheduler->registerEvent(PQsocket(conn),
+                        SchedulerType::READ);
                     Scheduler::yieldTo();
                     continue;
+#endif
                 case -1:
                     break;
                 case -2:
@@ -767,9 +822,11 @@ public:
         if (status == -1) {
             m_conn.reset();
             boost::shared_ptr<PGresult> result;
-            if (m_ioManager)
-                result.reset(nextResult(conn, m_ioManager), &PQclear);
+#ifndef WINDOWS
+            if (m_scheduler)
+                result.reset(nextResult(conn, m_scheduler), &PQclear);
             else
+#endif
                 result.reset(PQgetResult(conn), &PQclear);
             while (result) {
                 ExecStatusType status = PQresultStatus(result.get());
@@ -777,9 +834,11 @@ public:
                     << result.get() << "): " << PQresStatus(status);
                 if (status != PGRES_COMMAND_OK)
                     throwException(result.get());
-                if (m_ioManager)
-                    result.reset(nextResult(conn, m_ioManager), &PQclear);
+#ifndef WINDOWS
+                if (m_scheduler)
+                    result.reset(nextResult(conn, m_scheduler), &PQclear);
                 else
+#endif
                     result.reset(PQgetResult(conn), &PQclear);
             }
         }
@@ -792,7 +851,7 @@ public:
 
 private:
     boost::weak_ptr<PGconn> m_conn;
-    IOManager *m_ioManager;
+    SchedulerType *m_scheduler;
     Buffer m_readBuffer;
 };
 
@@ -847,18 +906,21 @@ Connection::CopyParams::execute(bool out)
 
     boost::shared_ptr<PGresult> result, next;
     const char *api = NULL;
-    if (m_ioManager) {
+#ifdef WINDOWS
+    SchedulerSwitcher switcher(m_scheduler);
+#else
+    if (m_scheduler) {
         api = "PQsendQuery";
         if (!PQsendQuery(conn, os.str().c_str()))
             throwException(conn);
-        flush(conn, m_ioManager);
-        next.reset(nextResult(conn, m_ioManager), &PQclear);
+        flush(conn, m_scheduler);
+        next.reset(nextResult(conn, m_scheduler), &PQclear);
         while (next) {
             result = next;
             if (PQresultStatus(result.get()) ==
                 (out ? PGRES_COPY_OUT : PGRES_COPY_IN))
                 break;
-            next.reset(nextResult(conn, m_ioManager), &PQclear);
+            next.reset(nextResult(conn, m_scheduler), &PQclear);
             if (next) {
                 ExecStatusType status = PQresultStatus(next.get());
                 MORDOR_LOG_VERBOSE(g_log) << conn << "PQresultStatus(" <<
@@ -873,7 +935,9 @@ Connection::CopyParams::execute(bool out)
                 }
             }
         }
-    } else {
+    } else
+#endif
+    {
         api = "PQexec";
         result.reset(PQexec(conn, os.str().c_str()), &PQclear);
     }
@@ -890,10 +954,10 @@ Connection::CopyParams::execute(bool out)
             MORDOR_NOTREACHED();
         case PGRES_COPY_IN:
             MORDOR_ASSERT(!out);
-            return Stream::ptr(new CopyInStream(m_conn, m_ioManager));
+            return Stream::ptr(new CopyInStream(m_conn, m_scheduler));
         case PGRES_COPY_OUT:
             MORDOR_ASSERT(out);
-            return Stream::ptr(new CopyOutStream(m_conn, m_ioManager));
+            return Stream::ptr(new CopyOutStream(m_conn, m_scheduler));
         default:
             throwException(result.get());
             MORDOR_NOTREACHED();
@@ -974,7 +1038,7 @@ PreparedStatement::bind(size_t param, short value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(2);
-    *(short *)&m_paramValues[param - 1][0] = htons(value);
+    *(short *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -986,7 +1050,7 @@ PreparedStatement::bind(size_t param, int value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(4);
-    *(int *)&m_paramValues[param - 1][0] = htonl(value);
+    *(int *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -998,7 +1062,7 @@ PreparedStatement::bind(size_t param, long long value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(8);
-    *(long long *)&m_paramValues[param - 1][0] = htonll(value);
+    *(long long *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1010,7 +1074,7 @@ PreparedStatement::bind(size_t param, float value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(4);
-    *(int *)&m_paramValues[param - 1][0] = htonl(*(int *)&value);
+    *(int *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(*(int *)&value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1022,7 +1086,7 @@ PreparedStatement::bind(size_t param, double value)
 {
     ensure(param);
     m_paramValues[param - 1].resize(8);
-    *(long long *)&m_paramValues[param - 1][0] = htonll(*(long long *)&value);
+    *(long long *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(*(long long *)&value);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1041,7 +1105,7 @@ PreparedStatement::bind(size_t param, const boost::posix_time::ptime &value)
     ensure(param);
     m_paramValues[param - 1].resize(8);
     long long ticks = (value - postgres_epoch).total_microseconds();
-    *(long long *)&m_paramValues[param - 1][0] = htonll(*(long long *)&ticks);
+    *(long long *)&m_paramValues[param - 1][0] = byteswapOnLittleEndian(*(long long *)&ticks);
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
@@ -1069,23 +1133,28 @@ PreparedStatement::execute()
     int *paramLengths = NULL, *paramFormats = NULL;
     const char **params = NULL;
     if (nParams) {
-        paramTypes = &m_paramTypes[0];
+        if (m_name.empty())
+            paramTypes = &m_paramTypes[0];
         params = &m_params[0];
         paramLengths = &m_paramLengths[0];
         paramFormats = &m_paramFormats[0];
     }
     const char *api = NULL;
+#ifndef WINDOWS
+    SchedulerSwitcher switcher(m_scheduler);
+#endif
     if (m_name.empty()) {
-        if (m_ioManager) {
+#ifndef WINDOWS
+        if (m_scheduler) {
             api = "PQsendQueryParams";
             if (!PQsendQueryParams(conn, m_command.c_str(),
                 nParams, paramTypes, params, paramLengths, paramFormats, 1))
                 throwException(conn);
-            flush(conn, m_ioManager);
-            next.reset(nextResult(conn, m_ioManager), &PQclear);
+            flush(conn, m_scheduler);
+            next.reset(nextResult(conn, m_scheduler), &PQclear);
             while (next) {
                 result = next;
-                next.reset(nextResult(conn, m_ioManager), &PQclear);
+                next.reset(nextResult(conn, m_scheduler), &PQclear);
                 if (next) {
                     ExecStatusType status = PQresultStatus(next.get());
                     MORDOR_LOG_VERBOSE(g_log) << conn << "PQresultStatus(" <<
@@ -1100,23 +1169,26 @@ PreparedStatement::execute()
                     }
                 }
             }
-        } else {
+        } else
+#endif
+        {
             api = "PQexecParams";
             result.reset(PQexecParams(conn, m_command.c_str(),
                 nParams, paramTypes, params, paramLengths, paramFormats, 1),
                 &PQclear);
         }
     } else {
-        if (m_ioManager) {
+#ifndef WINDOWS
+        if (m_scheduler) {
             api = "PQsendQueryPrepared";
             if (!PQsendQueryPrepared(conn, m_name.c_str(),
                 nParams, params, paramLengths, paramFormats, 1))
                 throwException(conn);
-            flush(conn, m_ioManager);
-            next.reset(nextResult(conn, m_ioManager), &PQclear);
+            flush(conn, m_scheduler);
+            next.reset(nextResult(conn, m_scheduler), &PQclear);
             while (next) {
                 result = next;
-                next.reset(nextResult(conn, m_ioManager), &PQclear);
+                next.reset(nextResult(conn, m_scheduler), &PQclear);
                 if (next) {
                     ExecStatusType status = PQresultStatus(next.get());
                     MORDOR_LOG_VERBOSE(g_log) << conn << "PQresultStatus(" <<
@@ -1131,7 +1203,9 @@ PreparedStatement::execute()
                     }
                 }
             }
-        } else {
+        } else
+#endif
+        {
             api = "PQexecPrepared";
             result.reset(PQexecPrepared(conn, m_name.c_str(),
                 nParams, params, paramLengths, paramFormats, 1),
@@ -1241,13 +1315,13 @@ Result::get<long long>(size_t row, size_t column) const
     switch (getType(column)) {
         case INT8OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
-            return htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
         case INT2OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 2);
-            return htons(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
         case INT4OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
-            return htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
         default:
             MORDOR_NOTREACHED();
     }
@@ -1259,7 +1333,7 @@ Result::get<short>(size_t row, size_t column) const
 {
     MORDOR_ASSERT(getType(column) == INT2OID);
     MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 2);
-    return htons(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
+    return byteswapOnLittleEndian(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
 }
 
 template <>
@@ -1269,10 +1343,10 @@ Result::get<int>(size_t row, size_t column) const
     switch (getType(column)) {
         case INT2OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 2);
-            return htons(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(short *)PQgetvalue(m_result.get(), (int)row, (int)column));
         case INT4OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
-            return htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            return byteswapOnLittleEndian(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
         default:
             MORDOR_NOTREACHED();
     }
@@ -1284,7 +1358,7 @@ Result::get<float>(size_t row, size_t column) const
 {
     MORDOR_ASSERT(getType(column) == FLOAT4OID);
     MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
-    int temp = htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+    int temp = byteswapOnLittleEndian(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
     return *(float *)&temp;
 }
 
@@ -1297,11 +1371,11 @@ Result::get<double>(size_t row, size_t column) const
     switch (getType(column)) {
         case FLOAT4OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 4);
-            templ = htonl(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            templ = byteswapOnLittleEndian(*(int *)PQgetvalue(m_result.get(), (int)row, (int)column));
             return *(float *)&templ;
         case FLOAT8OID:
             MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
-            templl = htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
+            templl = byteswapOnLittleEndian(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
             return *(double *)&templl;
         default:
             MORDOR_NOTREACHED();
@@ -1317,9 +1391,9 @@ Result::get<boost::posix_time::ptime>(size_t row, size_t column) const
     if (PQgetlength(m_result.get(), (int)row, (int)column) == 0)
         return boost::posix_time::ptime();
     MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
-    long long microseconds = htonll(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
+    long long microseconds = byteswapOnLittleEndian(*(long long *)PQgetvalue(m_result.get(), (int)row, (int)column));
     return postgres_epoch +
-        boost::posix_time::seconds(microseconds / 1000000) +
+        boost::posix_time::seconds((long)(microseconds / 1000000)) +
         boost::posix_time::microseconds(microseconds % 1000000);
 }
 

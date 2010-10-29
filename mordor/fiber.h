@@ -2,11 +2,6 @@
 #define __MORDOR_FIBER_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
-#ifdef WIN32
-#else
-#include <stddef.h>
-#endif
-
 #include <list>
 
 #include <boost/enable_shared_from_this.hpp>
@@ -45,7 +40,11 @@
 #endif
 
 #ifdef UCONTEXT_FIBERS
-#include <ucontext.h>
+#   ifdef __APPLE__
+#       include <sys/ucontext.h>
+#   else
+#       include <ucontext.h>
+#   endif
 #endif
 #ifdef SETJMP_FIBERS
 #include <setjmp.h>
@@ -160,11 +159,10 @@ public:
     std::vector<void *> backtrace();
 
 private:
-    void call(bool destructor);
     Fiber::ptr yieldTo(bool yieldToCallerOnTerminate, State targetState);
     static void setThis(Fiber *f);
     static void entryPoint();
-    static void exitPoint(Fiber::ptr &cur, Fiber *curp, State targetState);
+    static void exitPoint(Fiber::ptr &cur, State targetState);
 
     void allocStack();
     void freeStack();
@@ -200,8 +198,6 @@ private:
 
     std::vector<intptr_t> m_fls;
 };
-
-void fiberBacktrace(Fiber *fiber);
 
 template <class T>
 class FiberLocalStorageBase : boost::noncopyable
@@ -244,14 +240,14 @@ template <class T>
 class FiberLocalStorage : public FiberLocalStorageBase<T>
 {
 public:
-    T operator =(T t) { set(t); return t; }
+    T operator =(T t) { FiberLocalStorageBase<T>::set(t); return t; }
 };
 
 template <class T>
 class FiberLocalStorage<T *> : public FiberLocalStorageBase<T *>
 {
 public:
-    T * operator =(T *const t) { set(t); return t; }
+    T * operator =(T *const t) { FiberLocalStorageBase<T *>::set(t); return t; }
     T & operator*() { return *FiberLocalStorageBase<T *>::get(); }
     T * operator->() { return FiberLocalStorageBase<T *>::get(); }
 };

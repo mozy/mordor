@@ -8,6 +8,7 @@
 #include "mordor/http/multipart.h"
 #include "mordor/http/server.h"
 #include "mordor/iomanager.h"
+#include "mordor/main.h"
 #include "mordor/socket.h"
 #ifdef WINDOWS
 #include "mordor/streams/namedpipe.h"
@@ -46,58 +47,54 @@ void startSocketServer(IOManager &ioManager)
         ++it) {
         Socket::ptr s = (*it)->createSocket(ioManager);
         s->bind(*it);
-        Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&socketServer, s))));
+        Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
     }
 
 #ifndef WINDOWS
     UnixAddress echoaddress("/tmp/echo", SOCK_STREAM);
     Socket::ptr s = echoaddress.createSocket(ioManager);
     s->bind(echoaddress);
-    Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&socketServer, s))));
+    Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
 #endif
 }
 
 void httpRequest(HTTP::ServerRequest::ptr request)
 {
-    switch (request->request().requestLine.method) {
-        case HTTP::GET:
-        case HTTP::HEAD:
-        case HTTP::PUT:
-        case HTTP::POST:
-            request->response().entity.contentLength = request->request().entity.contentLength;
-            request->response().entity.contentType = request->request().entity.contentType;
-            request->response().general.transferEncoding = request->request().general.transferEncoding;
-            request->response().status.status = HTTP::OK;
-            request->response().entity.extension = request->request().entity.extension;
-            if (request->hasRequestBody()) {
-                if (request->request().requestLine.method != HTTP::HEAD) {
-                    if (request->request().entity.contentType.type == "multipart") {
-                        Multipart::ptr requestMultipart = request->requestMultipart();
-                        Multipart::ptr responseMultipart = request->responseMultipart();
-                        for (BodyPart::ptr requestPart = requestMultipart->nextPart();
-                            requestPart;
-                            requestPart = requestMultipart->nextPart()) {
-                            BodyPart::ptr responsePart = responseMultipart->nextPart();
-                            responsePart->headers() = requestPart->headers();
-                            transferStream(requestPart->stream(), responsePart->stream());
-                            responsePart->stream()->close();
-                        }
-                        responseMultipart->finish();
-                    } else {
-                        respondStream(request, request->requestStream());
-                        return;
+    const std::string &method = request->request().requestLine.method;
+    if (method == HTTP::GET || method == HTTP::HEAD || method == HTTP::PUT ||
+        method == HTTP::POST) {
+        request->response().entity.contentLength = request->request().entity.contentLength;
+        request->response().entity.contentType = request->request().entity.contentType;
+        request->response().general.transferEncoding = request->request().general.transferEncoding;
+        request->response().status.status = HTTP::OK;
+        request->response().entity.extension = request->request().entity.extension;
+        if (request->hasRequestBody()) {
+            if (request->request().requestLine.method != HTTP::HEAD) {
+                if (request->request().entity.contentType.type == "multipart") {
+                    Multipart::ptr requestMultipart = request->requestMultipart();
+                    Multipart::ptr responseMultipart = request->responseMultipart();
+                    for (BodyPart::ptr requestPart = requestMultipart->nextPart();
+                        requestPart;
+                        requestPart = requestMultipart->nextPart()) {
+                        BodyPart::ptr responsePart = responseMultipart->nextPart();
+                        responsePart->headers() = requestPart->headers();
+                        transferStream(requestPart->stream(), responsePart->stream());
+                        responsePart->stream()->close();
                     }
+                    responseMultipart->finish();
                 } else {
-                    request->finish();
+                    respondStream(request, request->requestStream());
+                    return;
                 }
             } else {
-                request->response().entity.contentLength = 0;
                 request->finish();
             }
-            break;
-        default:
-            respondError(request, HTTP::METHOD_NOT_ALLOWED);
-            break;
+        } else {
+            request->response().entity.contentLength = 0;
+            request->finish();
+        }
+    } else {
+        respondError(request, HTTP::METHOD_NOT_ALLOWED);
     }
 }
 
@@ -109,7 +106,7 @@ void httpServer(Socket::ptr listen)
         Socket::ptr socket = listen->accept();
         Stream::ptr stream(new SocketStream(socket));
         HTTP::ServerConnection::ptr conn(new HTTP::ServerConnection(stream, &httpRequest));
-        Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&HTTP::ServerConnection::processRequests, conn))));
+        Scheduler::getThis()->schedule(boost::bind(&HTTP::ServerConnection::processRequests, conn));
     }
 }
 
@@ -122,7 +119,7 @@ void startHttpServer(IOManager &ioManager)
         ++it) {
         Socket::ptr s = (*it)->createSocket(ioManager);
         s->bind(*it);
-        Scheduler::getThis()->schedule(Fiber::ptr(new Fiber(boost::bind(&httpServer, s))));
+        Scheduler::getThis()->schedule(boost::bind(&httpServer, s));
     }
 }
 
@@ -137,7 +134,7 @@ void namedPipeServer(IOManager &ioManager)
 }
 #endif
 
-int main(int argc, const char *argv[])
+MORDOR_MAIN(int argc, char *argv[])
 {
     try {
         Config::loadFromEnvironment();

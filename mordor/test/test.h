@@ -82,8 +82,8 @@ void registerTest(const std::string &suite, const std::string &testName,
 void registerSuiteInvariant(const std::string &suite, TestDg invariant);
 
 // Public functions
-const TestSuites &allTests();
-TestSuites testsForArguments(int argc, const char **argv);
+TestSuites &allTests();
+TestSuites testsForArguments(int argc, char **argv);
 bool runTests();
 bool runTests(const TestSuites &suites);
 bool runTests(TestListener &listener);
@@ -174,6 +174,14 @@ MORDOR_NO_SERIALIZE_BARE(std::vector<T>)
     } catch (exception &) {                                                     \
     }
 
+#define MORDOR_TEST_ASSERT_ANY_EXCEPTION(code)                                  \
+    try {                                                                       \
+        code;                                                                   \
+        ::Mordor::Test::assertion(__FILE__, __LINE__, BOOST_CURRENT_FUNCTION,   \
+            "Expected an exception from " #code);                               \
+    } catch (...) {                                                             \
+    }
+
 #define MORDOR_TEST_ASSERT_ASSERTED(code)                                       \
     {                                                                           \
         bool __selfAsserted = false;                                            \
@@ -187,6 +195,16 @@ MORDOR_NO_SERIALIZE_BARE(std::vector<T>)
                 throw;                                                          \
         }                                                                       \
     }
+
+/// Asserts on destruction if it was alive for longer than us microseconds
+struct TimeConstraint
+{
+    TimeConstraint(unsigned long long us);
+    ~TimeConstraint();
+
+private:
+    unsigned long long m_us, m_start;
+};
 
 // Assertion internal functions
 void assertion(const char *file, int line, const char *function,

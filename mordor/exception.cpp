@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "exception.h"
 
 #ifdef WINDOWS
@@ -13,6 +11,7 @@
 #else
 #include <errno.h>
 #include <execinfo.h>
+#include <netdb.h>
 #include <string.h>
 #endif
 
@@ -190,6 +189,9 @@ static void throwSocketException(error_t error)
     switch (error) {
         case WSA(EADDRINUSE):
 #ifdef WINDOWS
+        // WSAEACESS is returned from bind when you set SO_REUSEADDR, and
+        // another socket has set SO_EXCLUSIVEADDRUSE
+        case WSAEACCES:
         case ERROR_ADDRESS_ALREADY_ASSOCIATED:
 #endif
             throw boost::enable_current_exception(AddressInUseException())
@@ -280,6 +282,12 @@ void throwExceptionFromLastError(error_t error)
         case ERROR_CANT_RESOLVE_FILENAME:
             throw boost::enable_current_exception(UnresolvablePathException())
                 << errinfo_nativeerror(error);
+        case ERROR_DISK_FULL:
+            throw boost::enable_current_exception(OutOfDiskSpaceException())
+                << errinfo_nativeerror(error);
+        case ERROR_NO_UNICODE_TRANSLATION:
+            throw boost::enable_current_exception(InvalidUnicodeException())
+                << errinfo_nativeerror(error);
         default:
             throwSocketException(error);
             throw boost::enable_current_exception(NativeException())
@@ -325,6 +333,9 @@ void throwExceptionFromLastError(error_t error)
         case ELOOP:
             throw boost::enable_current_exception(TooManySymbolicLinksException())
                 << errinfo_nativeerror(error);
+        case ENOSPC:
+            throw boost::enable_current_exception(OutOfDiskSpaceException())
+            << errinfo_nativeerror(error);
         default:
             throwSocketException(error);
             throw boost::enable_current_exception(NativeException())

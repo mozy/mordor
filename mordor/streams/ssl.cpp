@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "ssl.h"
 
 #include <sstream>
@@ -9,6 +7,7 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
+#include "mordor/assert.h"
 #include "mordor/log.h"
 #include "mordor/util.h"
 
@@ -28,6 +27,12 @@ static struct SSLInitializer {
     {
         SSL_library_init();
         SSL_load_error_strings();
+    }
+    ~SSLInitializer()
+    {
+        ERR_free_strings();
+        CRYPTO_cleanup_all_ex_data();
+        EVP_cleanup();
     }
 } g_init;
 
@@ -565,6 +570,23 @@ SSLStream::connect()
 }
 
 void
+SSLStream::serverNameIndication(const std::string &hostname)
+{
+    // Older versions of OpenSSL don't support this (I'm looking at you,
+    // Leopard); just ignore it then
+#ifdef SSL_set_tlsext_host_name
+    if (!SSL_set_tlsext_host_name(m_ssl.get(), hostname.c_str())) {
+        if (!hasOpenSSLError()) return;
+        std::string message = getOpenSSLErrorMessage();
+        MORDOR_LOG_ERROR(g_log) << this << " SSL_set_tlsext_host_name("
+            << m_ssl.get() << ", " << hostname.c_str() << "): " << message;
+        MORDOR_THROW_EXCEPTION(OpenSSLException(message))
+            << boost::errinfo_api_function("SSL_set_tlsext_host_name");
+    }
+#endif
+}
+
+void
 SSLStream::verifyPeerCertificate()
 {
     long verifyResult = SSL_get_verify_result(m_ssl.get());
@@ -646,6 +668,7 @@ SSLStream::wantRead()
 {
     BUF_MEM *bm;
     BIO_get_mem_ptr(m_readBio, &bm);
+    MORDOR_ASSERT(bm->max <= 0x7fffffff);
     MORDOR_ASSERT(bm->length == 0);
     m_readBuffer.consume(bm->max);
     bm->length = bm->max = 0;
@@ -665,6 +688,9 @@ SSLStream::wantRead()
     bm->data = (char *)iov.iov_base;
     bm->length = bm->max =
         (long)std::min<size_t>(0x7fffffff, iov.iov_len);
+    MORDOR_ASSERT(bm->length == bm->max);
+    MORDOR_ASSERT(bm->length);
+    MORDOR_ASSERT(bm->max <= 0x7fffffff);
     MORDOR_LOG_DEBUG(g_log) << this << " wantRead(): " << bm->length;
 }
 

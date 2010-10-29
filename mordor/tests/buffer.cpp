@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include <boost/bind.hpp>
 
 #include "mordor/streams/buffer.h"
@@ -748,4 +746,27 @@ MORDOR_UNITTEST(Buffer, writeBuffer0)
     iovec iov = b.writeBuffer(0, true);
     MORDOR_TEST_ASSERT_EQUAL(iov.iov_len, 0u);
     MORDOR_TEST_ASSERT_EQUAL(b.segments(), 0u);
+}
+
+MORDOR_UNITTEST(Buffer, clearReadPortionOnly)
+{
+    Buffer b;
+    MORDOR_TEST_ASSERT_EQUAL(b.readAvailable(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b.writeAvailable(), 0u);
+    b.clear(false);
+    MORDOR_TEST_ASSERT_EQUAL(b.readAvailable(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b.writeAvailable(), 0u);
+    b.copyIn("hello");
+    b.clear(false);
+    MORDOR_TEST_ASSERT_EQUAL(b.readAvailable(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b.writeAvailable(), 0u);
+    b.copyIn("hello");
+    b.reserve(10);
+    b.clear(false);
+    MORDOR_TEST_ASSERT_EQUAL(b.readAvailable(), 0u);
+    MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(b.writeAvailable(), 10u);
+    b.copyIn("world");
+    b.clear(false);
+    MORDOR_TEST_ASSERT_EQUAL(b.readAvailable(), 0u);
+    MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(b.writeAvailable(), 5u);
 }

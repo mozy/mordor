@@ -2,6 +2,7 @@
 #define __MORDOR_BUFFERED_STREAM_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
+#include "buffer.h"
 #include "filter.h"
 
 namespace Mordor {

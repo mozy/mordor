@@ -179,6 +179,33 @@
     <ClCompile Include="socks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="daemon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="streams\filter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="streams\singleplex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="fibersynchronization.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="parallel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="workerpool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="thread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="zip.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h">
@@ -413,6 +440,27 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="socks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="daemon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="workerpool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="parallel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fibersynchronization.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="thread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="zip.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -59,6 +59,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="4"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -127,6 +128,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="3"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -195,6 +197,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="3"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -264,6 +267,7 @@
 				WarnAsError="true"
 				DebugInformationFormat="3"
 				DisableSpecificWarnings="4345"
+				ForcedIncludeFiles="mordor/pch.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -347,6 +351,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\daemon.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\date_time.cpp"
 				>
 			</File>
@@ -371,7 +379,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\fibersynchronization.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\file.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\filter.cpp"
 				>
 			</File>
 			<File
@@ -443,6 +459,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\main.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\memory.cpp"
 				>
 			</File>
@@ -464,6 +484,10 @@
 			</File>
 			<File
 				RelativePath=".\http\oauth.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\parallel.cpp"
 				>
 			</File>
 			<File
@@ -535,11 +559,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\sleep.cpp"
+				RelativePath=".\streams\singleplex.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
+				RelativePath=".\sleep.cpp"
 				>
 			</File>
 			<File
@@ -579,6 +603,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\socks.cpp"
 				>
 			</File>
@@ -611,6 +639,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\thread.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\throttle.cpp"
 				>
 			</File>
@@ -628,6 +660,10 @@
 			</File>
 			<File
 				RelativePath=".\uri.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\workerpool.cpp"
 				>
 			</File>
 			<File
@@ -701,6 +737,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\daemon.h"
+				>
+			</File>
+			<File
 				RelativePath=".\date_time.h"
 				>
 			</File>
@@ -734,6 +774,10 @@
 			</File>
 			<File
 				RelativePath=".\fiber.h"
+				>
+			</File>
+			<File
+				RelativePath=".\fibersynchronization.h"
 				>
 			</File>
 			<File
@@ -789,6 +833,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\main.h"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\memory.h"
 				>
 			</File>
@@ -814,6 +862,10 @@
 			</File>
 			<File
 				RelativePath=".\http\oauth.h"
+				>
+			</File>
+			<File
+				RelativePath=".\parallel.h"
 				>
 			</File>
 			<File
@@ -857,11 +909,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\scheduler.h"
+				RelativePath=".\streams\scheduler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\scheduler.h"
+				RelativePath=".\scheduler.h"
 				>
 			</File>
 			<File
@@ -921,6 +973,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\thread.h"
+				>
+			</File>
+			<File
 				RelativePath=".\thread_local_storage.h"
 				>
 			</File>
@@ -954,6 +1010,10 @@
 			</File>
 			<File
 				RelativePath=".\version.h"
+				>
+			</File>
+			<File
+				RelativePath=".\workerpool.h"
 				>
 			</File>
 			<File

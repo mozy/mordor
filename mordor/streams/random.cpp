@@ -1,13 +1,12 @@
-
-#include "mordor/pch.h"
 #include "random.h"
-
-#include "mordor/endian.h"
 
 #ifndef WINDOWS
 #include <openssl/rand.h>
 #include "ssl.h"
 #endif
+
+#include "mordor/endian.h"
+#include "mordor/exception.h"
 
 namespace Mordor {
 

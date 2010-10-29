@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "http.h"
 
 #include <boost/bind.hpp>
@@ -173,16 +171,14 @@ static std::ostream& operator<<(std::ostream& os, const serializeStringMapWithOp
     return os;
 }
 
-const char *methods[] = {
-    "GET",
-    "HEAD",
-    "POST",
-    "PUT",
-    "DELETE",
-    "CONNECT",
-    "OPTIONS",
-    "TRACE"
-};
+const std::string GET("GET");
+const std::string HEAD("HEAD");
+const std::string POST("POST");
+const std::string PUT("PUT");
+const std::string DELETE("DELETE");
+const std::string CONNECT("CONNECT");
+const std::string OPTIONS("OPTIONS");
+const std::string TRACE("TRACE");
 
 const char *reason(Status s)
 {
@@ -396,13 +392,6 @@ preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters
     return NULL;
 }
 
-std::ostream& operator<<(std::ostream& os, Method m)
-{
-    if (m < GET || m > TRACE)
-        return os << "INVALID";
-    return os << methods[(size_t)m];
-}
-
 std::ostream& operator<<(std::ostream& os, Status s)
 {
     return os << (int)s;
@@ -424,10 +413,10 @@ std::ostream& operator<<(std::ostream& os, const ETag &e)
     return os << quote(e.value, true);
 }
 
-std::ostream& operator<<(std::ostream& os, const ETagSet &v)
+std::ostream& operator<<(std::ostream& os, const std::set<ETag> &v)
 {
     MORDOR_ASSERT(!v.empty());
-    for (ETagSet::const_iterator it = v.begin();
+    for (std::set<ETag>::const_iterator it = v.begin();
         it != v.end();
         ++it) {
         if (it != v.begin())
@@ -649,10 +638,29 @@ std::ostream& operator<<(std::ostream& os, const AcceptListWithParameters &l)
 
 std::ostream& operator<<(std::ostream& os, const RequestLine &r)
 {
-    if (!r.uri.isDefined())
-        return os << r.method << " * " << r.ver;
-    else
-        return os << r.method << " " << r.uri << " " << r.ver;
+    // CONNECT is special cased to only do the authority
+    if (r.method == CONNECT) {
+        MORDOR_ASSERT(r.uri.authority.hostDefined());
+        MORDOR_ASSERT(!r.uri.schemeDefined());
+        MORDOR_ASSERT(r.uri.path.isEmpty());
+        MORDOR_ASSERT(!r.uri.queryDefined());
+        MORDOR_ASSERT(!r.uri.fragmentDefined());
+        return os << r.method << ' ' << r.uri.authority << ' ' << r.ver;
+    } else {
+        if (!r.uri.isDefined()) {
+            return os << r.method << " * " << r.ver;
+        } else {
+            MORDOR_ASSERT(!r.uri.fragmentDefined());
+#ifdef DEBUG
+            // Must be a absolute_URI or a path_absolute (with query allowed)
+            if (!r.uri.schemeDefined()) {
+                MORDOR_ASSERT(!r.uri.authority.hostDefined());
+                MORDOR_ASSERT(r.uri.path.isAbsolute());
+            }
+#endif
+            return os << r.method << " " << r.uri << " " << r.ver;
+        }
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const StatusLine &s)

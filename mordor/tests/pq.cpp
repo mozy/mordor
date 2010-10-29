@@ -1,15 +1,19 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
+#include "mordor/predef.h"
 
 #include <iostream>
 
+#include <boost/date_time/posix_time/posix_time_io.hpp>
+
 #include "mordor/config.h"
+#include "mordor/main.h"
 #include "mordor/pq.h"
 #include "mordor/version.h"
 #include "mordor/statistics.h"
 #include "mordor/streams/memory.h"
 #include "mordor/streams/transfer.h"
+#include "mordor/test/antxmllistener.h"
 #include "mordor/test/test.h"
 #include "mordor/test/stdoutlistener.h"
 
@@ -17,15 +21,13 @@ using namespace Mordor;
 using namespace Mordor::PQ;
 using namespace Mordor::Test;
 
-#ifdef WINDOWS
-#include <direct.h>
-#define chdir _chdir
-#endif
+static ConfigVar<std::string>::ptr g_xmlDirectory = Config::lookup<std::string>(
+    "test.antxml.directory", std::string(), "Location to put XML files");
 
 std::string g_goodConnString;
 std::string g_badConnString;
 
-int main(int argc, const char **argv)
+MORDOR_MAIN(int argc, char **argv)
 {
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0]
@@ -34,27 +36,54 @@ int main(int argc, const char **argv)
         return 1;
     }
     g_goodConnString = argv[1];
+    --argc;
+    ++argv;
     Config::loadFromEnvironment();
-    std::string newDirectory = argv[0];
-#ifdef WINDOWS
-    newDirectory = newDirectory.substr(0, newDirectory.rfind('\\'));
-#else
-    newDirectory = newDirectory.substr(0, newDirectory.rfind('/'));
-#endif
-    chdir(newDirectory.c_str());
 
-    StdoutListener listener;
-    bool result;
-    if (argc > 2) {
-        result = runTests(testsForArguments(argc - 2, argv + 2), listener);
+    boost::shared_ptr<TestListener> listener;
+    std::string xmlDirectory = g_xmlDirectory->val();
+    if (!xmlDirectory.empty()) {
+        if (xmlDirectory == ".")
+            xmlDirectory.clear();
+        listener.reset(new AntXMLListener(xmlDirectory));
     } else {
-        result = runTests(listener);
+        listener.reset(new StdoutListener());
+    }
+    bool result;
+    if (argc > 1) {
+        result = runTests(testsForArguments(argc - 1, argv + 1), *listener);
+    } else {
+        result = runTests(*listener);
     }
     std::cout << Statistics::dump();
     return result ? 0 : 1;
 }
 
-void constantQuery(const std::string &queryName = std::string(), IOManager *ioManager = NULL)
+#ifdef WINDOWS
+#define MORDOR_PQ_UNITTEST(TestName)                                            \
+    static void PQ_ ## TestName(IOManager *ioManager);                          \
+    MORDOR_UNITTEST(PQ, TestName)                                               \
+    {                                                                           \
+        PQ_ ## TestName(NULL);                                                  \
+    }                                                                           \
+    static void PQ_ ## TestName(IOManager *ioManager)
+#else
+#define MORDOR_PQ_UNITTEST(TestName)                                            \
+    static void PQ_ ## TestName(IOManager *ioManager);                          \
+    MORDOR_UNITTEST(PQ, TestName ## Blocking)                                   \
+    {                                                                           \
+        PQ_ ## TestName(NULL);                                                  \
+    }                                                                           \
+    MORDOR_UNITTEST(PQ, TestName ## Async)                                      \
+    {                                                                           \
+                                                           \
+        PQ_ ## TestName(&ioManager);                                            \
+    }                                                                           \
+    static void PQ_ ## TestName(IOManager *ioManager)
+#endif
+
+void constantQuery(const std::string &queryName = std::string(),
+    IOManager *ioManager = NULL)
 {
     Connection conn(g_goodConnString, ioManager);
     PreparedStatement stmt = conn.prepare("SELECT 1, 'mordor'", queryName);
@@ -67,60 +96,41 @@ void constantQuery(const std::string &queryName = std::string(), IOManager *ioMa
     MORDOR_TEST_ASSERT_EQUAL(result.get<std::string>(0, 1), "mordor");
 }
 
-MORDOR_UNITTEST(PQ, constantQueryBlocking)
-{ constantQuery(); }
-MORDOR_UNITTEST(PQ, constantQueryAsync)
-{ IOManager ioManager; constantQuery(std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, constantQueryPreparedBlocking)
-{ constantQuery("constant"); }
-MORDOR_UNITTEST(PQ, constantQueryPreparedAsync)
-{ IOManager ioManager; constantQuery("constant", &ioManager); }
+MORDOR_PQ_UNITTEST(constantQuery)
+{ constantQuery(std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(constantQueryPrepared)
+{ constantQuery("constant", ioManager); }
 
-MORDOR_UNITTEST(PQ, invalidConnStringBlocking)
+MORDOR_PQ_UNITTEST(invalidConnString)
 {
-    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage"), ConnectionException);
-}
-MORDOR_UNITTEST(PQ, invalidConnStringAsync)
-{
-    IOManager ioManager;
-    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage", &ioManager), ConnectionException);
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage", ioManager),
+        ConnectionException);
 }
 
-MORDOR_UNITTEST(PQ, invalidConnString2Blocking)
+MORDOR_PQ_UNITTEST(invalidConnString2)
 {
-    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage="), ConnectionException);
-}
-MORDOR_UNITTEST(PQ, invalidConnString2Async)
-{
-    IOManager ioManager;
-    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage=", &ioManager), ConnectionException);
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("garbage=", ioManager), ConnectionException);
 }
 
-MORDOR_UNITTEST(PQ, invalidConnString3Blocking)
+MORDOR_PQ_UNITTEST(invalidConnString3)
 {
-    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("host=garbage"), ConnectionException);
-}
-MORDOR_UNITTEST(PQ, invalidConnString3Async)
-{
-    IOManager ioManager;
-    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("host=garbage", &ioManager), ConnectionException);
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn("host=garbage", ioManager), ConnectionException);
 }
 
-MORDOR_UNITTEST(PQ, badConnStringBlocking)
+MORDOR_PQ_UNITTEST(badConnString)
 {
-    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn(g_badConnString), ConnectionException);
+    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn(g_badConnString, ioManager), ConnectionException);
 }
-MORDOR_UNITTEST(PQ, badConnStringAsync)
-{
-    IOManager ioManager;
-    MORDOR_TEST_ASSERT_EXCEPTION(Connection conn(g_badConnString, &ioManager), ConnectionException);
-}
+
+#ifndef WINDOWS
+#define closesocket close
+#endif
 
 void queryAfterDisconnect(IOManager *ioManager = NULL)
 {
     Connection conn(g_goodConnString, ioManager);
 
-    close(PQsocket(conn.conn()));
+    closesocket(PQsocket(conn.conn()));
     MORDOR_TEST_ASSERT_EXCEPTION(conn.execute("SELECT 1"), ConnectionException);
     conn.reset();
     Result result = conn.execute("SELECT 1");
@@ -129,10 +139,8 @@ void queryAfterDisconnect(IOManager *ioManager = NULL)
     MORDOR_TEST_ASSERT_EQUAL(result.get<int>(0, 0), 1);
 }
 
-MORDOR_UNITTEST(PQ, queryAfterDisconnectBlocking)
-{ queryAfterDisconnect(); }
-MORDOR_UNITTEST(PQ, queryAfterDisconnectAsync)
-{ IOManager ioManager; queryAfterDisconnect(&ioManager); }
+MORDOR_PQ_UNITTEST(queryAfterDisconnect)
+{ queryAfterDisconnect(ioManager); }
 
 void fillUsers(Connection &conn)
 {
@@ -155,68 +163,40 @@ void queryForParam(const std::string &query, ParamType param, size_t expectedCou
     MORDOR_TEST_ASSERT_EQUAL(result.get<ExpectedType>(0, 0), expected);
 }
 
-MORDOR_UNITTEST(PQ, queryForIntBlocking)
-{ queryForParam("SELECT name FROM users WHERE id=$1", 2, 1u, "brian"); }
-MORDOR_UNITTEST(PQ, queryForIntAsync)
-{ IOManager ioManager; queryForParam("SELECT name FROM users WHERE id=$1", 2, 1u, "brian", std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForIntPreparedBlocking)
-{ queryForParam("SELECT name FROM users WHERE id=$1::integer", 2, 1u, "brian", "constant"); }
-MORDOR_UNITTEST(PQ, queryForIntPreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT name FROM users WHERE id=$1::integer", 2, 1u, "brian", "constant", &ioManager); }
+MORDOR_PQ_UNITTEST(queryForInt)
+{ queryForParam("SELECT name FROM users WHERE id=$1", 2, 1u, "brian", std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForIntPrepared)
+{ queryForParam("SELECT name FROM users WHERE id=$1::integer", 2, 1u, "brian", "constant", ioManager); }
 
-MORDOR_UNITTEST(PQ, queryForStringBlocking)
-{ queryForParam("SELECT id FROM users WHERE name=$1", "brian", 1u, 2); }
-MORDOR_UNITTEST(PQ, queryForStringAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE name=$1", "brian", 1u, 2, std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForStringPreparedBlocking)
-{ queryForParam("SELECT id FROM users WHERE name=$1::text", "brian", 1u, 2, "constant"); }
-MORDOR_UNITTEST(PQ, queryForStringPreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE name=$1::text", "brian", 1u, 2, "constant", &ioManager); }
+MORDOR_PQ_UNITTEST(queryForString)
+{ queryForParam("SELECT id FROM users WHERE name=$1", "brian", 1u, 2, std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForStringPrepared)
+{ queryForParam("SELECT id FROM users WHERE name=$1::text", "brian", 1u, 2, "constant", ioManager); }
 
-MORDOR_UNITTEST(PQ, queryForSmallIntBlocking)
-{ queryForParam("SELECT id FROM users WHERE height=$1", (short)70, 1u, 2); }
-MORDOR_UNITTEST(PQ, queryForSmallIntAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE height=$1", (short)70, 1u, 2, std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForSmallIntPreparedBlocking)
-{ queryForParam("SELECT id FROM users WHERE height=$1::smallint", (short)70, 1u, 2, "constant"); }
-MORDOR_UNITTEST(PQ, queryForSmallIntPreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE height=$1::smallint", (short)70, 1u, 2, "constant", &ioManager); }
+MORDOR_PQ_UNITTEST(queryForSmallInt)
+{ queryForParam("SELECT id FROM users WHERE height=$1", (short)70, 1u, 2, std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForSmallIntPrepared)
+{ queryForParam("SELECT id FROM users WHERE height=$1::smallint", (short)70, 1u, 2, "constant", ioManager); }
 
-MORDOR_UNITTEST(PQ, queryForBooleanBlocking)
-{ queryForParam("SELECT id FROM users WHERE awesome=$1", false, 1u, 2); }
-MORDOR_UNITTEST(PQ, queryForBooleanAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE awesome=$1", false, 1u, 2, std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForBooleanPreparedBlocking)
-{ queryForParam("SELECT id FROM users WHERE awesome=$1::boolean", false, 1u, 2, "constant"); }
-MORDOR_UNITTEST(PQ, queryForBooleanPreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE awesome=$1::boolean", false, 1u, 2, "constant", &ioManager); }
+MORDOR_PQ_UNITTEST(queryForBoolean)
+{ queryForParam("SELECT id FROM users WHERE awesome=$1", false, 1u, 2, std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForBooleanPrepared)
+{ queryForParam("SELECT id FROM users WHERE awesome=$1::boolean", false, 1u, 2, "constant", ioManager); }
 
-MORDOR_UNITTEST(PQ, queryForCharBlocking)
-{ queryForParam("SELECT id FROM users WHERE gender=$1", 'M', 2u, 1); }
-MORDOR_UNITTEST(PQ, queryForCharAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE gender=$1", 'M', 2u, 1, std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForCharPreparedBlocking)
-{ queryForParam("SELECT id FROM users WHERE gender=$1::CHAR", 'M', 2u, 1, "constant"); }
-MORDOR_UNITTEST(PQ, queryForCharPreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT id FROM users WHERE gender=$1::CHAR", 'M', 2u, 1, "constant", &ioManager); }
+MORDOR_PQ_UNITTEST(queryForChar)
+{ queryForParam("SELECT id FROM users WHERE gender=$1", 'M', 2u, 1, std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForCharPrepared)
+{ queryForParam("SELECT id FROM users WHERE gender=$1::CHAR", 'M', 2u, 1, "constant", ioManager); }
 
-MORDOR_UNITTEST(PQ, queryForFloatBlocking)
-{ queryForParam("SELECT efficiency FROM users WHERE efficiency=$1", .9f, 2u, .9f); }
-MORDOR_UNITTEST(PQ, queryForFloatAsync)
-{ IOManager ioManager; queryForParam("SELECT efficiency FROM users WHERE efficiency=$1", .9f, 2u, .9f, std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForFloatPreparedBlocking)
-{ queryForParam("SELECT efficiency FROM users WHERE efficiency=$1::REAL", .9f, 2u, .9f, "constant"); }
-MORDOR_UNITTEST(PQ, queryForFloatPreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT efficiency FROM users WHERE efficiency=$1::REAL", .9f, 2u, .9f, "constant", &ioManager); }
+MORDOR_PQ_UNITTEST(queryForFloat)
+{ queryForParam("SELECT efficiency FROM users WHERE efficiency=$1", .9f, 2u, .9f, std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForFloatPrepared)
+{ queryForParam("SELECT efficiency FROM users WHERE efficiency=$1::REAL", .9f, 2u, .9f, "constant", ioManager); }
 
-MORDOR_UNITTEST(PQ, queryForDoubleBlocking)
-{ queryForParam("SELECT crazy FROM users WHERE crazy=$1", .75, 1u, .75); }
-MORDOR_UNITTEST(PQ, queryForDoubleAsync)
-{ IOManager ioManager; queryForParam("SELECT crazy FROM users WHERE crazy=$1", .75, 1u, .75, std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForDoublePreparedBlocking)
-{ queryForParam("SELECT crazy FROM users WHERE crazy=$1::DOUBLE PRECISION", .75, 1u, .75, "constant"); }
-MORDOR_UNITTEST(PQ, queryForDoublePreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT crazy FROM users WHERE crazy=$1::DOUBLE PRECISION", .75, 1u, .75, "constant", &ioManager); }
+MORDOR_PQ_UNITTEST(queryForDouble)
+{ queryForParam("SELECT crazy FROM users WHERE crazy=$1", .75, 1u, .75, std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForDoublePrepared)
+{ queryForParam("SELECT crazy FROM users WHERE crazy=$1::DOUBLE PRECISION", .75, 1u, .75, "constant", ioManager); }
 
 static const boost::posix_time::ptime thetime(
     boost::gregorian::date(2009, 05, 19),
@@ -225,22 +205,14 @@ static const boost::posix_time::ptime thetime(
 
 static const boost::posix_time::ptime nulltime;
 
-MORDOR_UNITTEST(PQ, queryForTimestampBlocking)
-{ queryForParam("SELECT sometime FROM users WHERE sometime=$1", thetime, 1u, thetime); }
-MORDOR_UNITTEST(PQ, queryForTimestampAsync)
-{ IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime=$1", thetime, 1u, thetime, std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForTimestampPreparedBlocking)
-{ queryForParam("SELECT sometime FROM users WHERE sometime=$1::TIMESTAMP", thetime, 1u, thetime, "constant"); }
-MORDOR_UNITTEST(PQ, queryForTimestampPreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime=$1::TIMESTAMP", thetime, 1u, thetime, "constant", &ioManager); }
-MORDOR_UNITTEST(PQ, queryForNullTimestampBlocking)
-{ queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime); }
-MORDOR_UNITTEST(PQ, queryForNullTimestampAsync)
-{ IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, std::string(), &ioManager); }
-MORDOR_UNITTEST(PQ, queryForNullTimestampPreparedBlocking)
-{ queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, "constant"); }
-MORDOR_UNITTEST(PQ, queryForNullTimestampPreparedAsync)
-{ IOManager ioManager; queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, "constant", &ioManager); }
+MORDOR_PQ_UNITTEST(queryForTimestamp)
+{ queryForParam("SELECT sometime FROM users WHERE sometime=$1", thetime, 1u, thetime, std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForTimestampPrepared)
+{ queryForParam("SELECT sometime FROM users WHERE sometime=$1::TIMESTAMP", thetime, 1u, thetime, "constant", ioManager); }
+MORDOR_PQ_UNITTEST(queryForNullTimestamp)
+{ queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForNullTimestampPrepared)
+{ queryForParam("SELECT sometime FROM users WHERE sometime IS NULL OR sometime=$1", nulltime, 1u, nulltime, "constant", ioManager); }
 
 MORDOR_UNITTEST(PQ, transactionCommits)
 {
@@ -308,11 +280,8 @@ static void copyIn(IOManager *ioManager = NULL)
     MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, 0), 55);
 }
 
-MORDOR_UNITTEST(PQ, copyInBlocking)
-{ copyIn(); }
-
-MORDOR_UNITTEST(PQ, copyInAsync)
-{ IOManager ioManager; copyIn(&ioManager); }
+MORDOR_PQ_UNITTEST(copyIn)
+{ copyIn(ioManager); }
 
 static void copyOut(IOManager *ioManager = NULL)
 {
@@ -338,8 +307,5 @@ static void copyOut(IOManager *ioManager = NULL)
         "ZW|ZIMBABWE\n");
 }
 
-MORDOR_UNITTEST(PQ, copyOutBlocking)
-{ copyOut(); }
-
-MORDOR_UNITTEST(PQ, copyOutAsync)
-{ IOManager ioManager; copyOut(&ioManager); }
+MORDOR_PQ_UNITTEST(copyOut)
+{ copyOut(ioManager); }

@@ -1,15 +1,12 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "iomanager_iocp.h"
 
 #include <boost/bind.hpp>
 
 #include "assert.h"
 #include "atomic.h"
-#include "exception.h"
-#include "log.h"
+#include "fiber.h"
 #include "runtime_linking.h"
 
 namespace Mordor {
@@ -17,12 +14,12 @@ namespace Mordor {
 static Logger::ptr g_log = Log::lookup("mordor:iomanager");
 static Logger::ptr g_logWaitBlock = Log::lookup("mordor:iomanager:waitblock");
 
-AsyncEventIOCP::AsyncEventIOCP()
+AsyncEvent::AsyncEvent()
 {
-    memset(this, 0, sizeof(AsyncEventIOCP));
+    memset(this, 0, sizeof(AsyncEvent));
 }
 
-IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
+IOManager::WaitBlock::WaitBlock(IOManager &outer)
 : m_outer(outer),
   m_inUseCount(0)
 {
@@ -40,7 +37,7 @@ IOManagerIOCP::WaitBlock::WaitBlock(IOManagerIOCP &outer)
     }
 }
 
-IOManagerIOCP::WaitBlock::~WaitBlock()
+IOManager::WaitBlock::~WaitBlock()
 {
     MORDOR_ASSERT(m_inUseCount <= 0);
     BOOL bRet = CloseHandle(m_handles[0]);
@@ -52,7 +49,7 @@ IOManagerIOCP::WaitBlock::~WaitBlock()
 }
 
 bool
-IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
+IOManager::WaitBlock::registerEvent(HANDLE hEvent,
                                         boost::function <void ()> dg,
                                         bool recurring)
 {
@@ -69,7 +66,7 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " registerEvent(" << hEvent
         << ", " << dg << ")";
     if (m_inUseCount == 1) {
-        boost::thread thread(boost::bind(&WaitBlock::run, this));
+        Thread thread(boost::bind(&WaitBlock::run, this));
     } else {
         if (!SetEvent(m_handles[0]))
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
@@ -79,11 +76,11 @@ IOManagerIOCP::WaitBlock::registerEvent(HANDLE hEvent,
 
 typedef boost::function<void ()> functor;
 size_t
-IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
+IOManager::WaitBlock::unregisterEvent(HANDLE handle)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     if (m_inUseCount == -1)
-        return false;
+        return 0;
     size_t unregistered = 0;
     HANDLE *srcHandle = std::find(m_handles + 1, m_handles + m_inUseCount + 1, handle);
     while (srcHandle != m_handles + m_inUseCount + 1) {
@@ -113,7 +110,7 @@ IOManagerIOCP::WaitBlock::unregisterEvent(HANDLE handle)
 }
 
 void
-IOManagerIOCP::WaitBlock::run()
+IOManager::WaitBlock::run()
 {
     DWORD dwRet;
     DWORD count;
@@ -199,7 +196,7 @@ IOManagerIOCP::WaitBlock::run()
 }
 
 void
-IOManagerIOCP::WaitBlock::removeEntry(int index)
+IOManager::WaitBlock::removeEntry(int index)
 {
     memmove(&m_handles[index], &m_handles[index + 1], (m_inUseCount - index) * sizeof(HANDLE));
     memmove(&m_schedulers[index], &m_schedulers[index + 1], (m_inUseCount - index) * sizeof(Scheduler *));
@@ -214,7 +211,7 @@ IOManagerIOCP::WaitBlock::removeEntry(int index)
     memmove(&m_recurring[index], &m_recurring[index + 1], (m_inUseCount - index) * sizeof(bool));
 }
 
-IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
+IOManager::IOManager(size_t threads, bool useCaller)
     : Scheduler(threads, useCaller)
 {
     m_pendingEventCount = 0;
@@ -225,28 +222,28 @@ IOManagerIOCP::IOManagerIOCP(int threads, bool useCaller)
     if (!m_hCompletionPort)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
     try {
-        if (threads - (useCaller ? 1 : 0)) start();
+        start();
     } catch (...) {
         CloseHandle(m_hCompletionPort);
         throw;
     }
 }
 
-IOManagerIOCP::~IOManagerIOCP()
+IOManager::~IOManager()
 {
     stop();
     CloseHandle(m_hCompletionPort);
 }
 
 bool
-IOManagerIOCP::stopping()
+IOManager::stopping()
 {
     unsigned long long timeout;
     return stopping(timeout);
 }
 
 void
-IOManagerIOCP::registerFile(HANDLE handle)
+IOManager::registerFile(HANDLE handle)
 {
     HANDLE hRet = CreateIoCompletionPort(handle, m_hCompletionPort, 0, 0);
     MORDOR_LOG_LEVEL(g_log, m_hCompletionPort ? Log::DEBUG : Log::ERROR) << this <<
@@ -258,46 +255,53 @@ IOManagerIOCP::registerFile(HANDLE handle)
 }
 
 void
-IOManagerIOCP::registerEvent(AsyncEventIOCP *e)
+IOManager::registerEvent(AsyncEvent *e)
 {
     MORDOR_ASSERT(e);
-    MORDOR_ASSERT(Scheduler::getThis());
     e->m_scheduler = Scheduler::getThis();
-    e->m_thread = boost::this_thread::get_id();
+    e->m_thread = gettid();
     e->m_fiber = Fiber::getThis();
+    MORDOR_ASSERT(e->m_scheduler);
+    MORDOR_ASSERT(e->m_fiber);
     MORDOR_LOG_DEBUG(g_log) << this << " registerEvent(" << &e->overlapped << ")";
-    atomicIncrement(m_pendingEventCount);
 #ifdef DEBUG
     {
         boost::mutex::scoped_lock lock(m_mutex);
         MORDOR_ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
         m_pendingEvents[&e->overlapped] = e;
+#endif
+        atomicIncrement(m_pendingEventCount);
+#ifdef DEBUG
+        MORDOR_ASSERT(m_pendingEvents.size() == m_pendingEventCount);
     }
 #endif
 }
 
 void
-IOManagerIOCP::unregisterEvent(AsyncEventIOCP *e)
+IOManager::unregisterEvent(AsyncEvent *e)
 {
     MORDOR_ASSERT(e);
     MORDOR_LOG_DEBUG(g_log) << this << " unregisterEvent(" << &e->overlapped << ")";
-    atomicDecrement(m_pendingEventCount);
-    e->m_thread = boost::thread::id();
+    e->m_thread = emptytid();
     e->m_scheduler = NULL;
     e->m_fiber.reset();
 #ifdef DEBUG
     {
         boost::mutex::scoped_lock lock(m_mutex);
-        std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
+        std::map<OVERLAPPED *, AsyncEvent *>::iterator it =
             m_pendingEvents.find(&e->overlapped);
         MORDOR_ASSERT(it != m_pendingEvents.end());
         m_pendingEvents.erase(it);
+#endif
+        atomicDecrement(m_pendingEventCount);
+#ifdef DEBUG
+        MORDOR_ASSERT(m_pendingEvents.size() == m_pendingEventCount);
     }
 #endif
 }
 
 void
-IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg, bool recurring)
+IOManager::registerEvent(HANDLE handle, boost::function<void ()> dg, bool recurring)
 {
     MORDOR_LOG_DEBUG(g_log) << this << " registerEvent(" << handle << ", " << dg
         << ")";
@@ -318,7 +322,7 @@ IOManagerIOCP::registerEvent(HANDLE handle, boost::function<void ()> dg, bool re
 }
 
 size_t
-IOManagerIOCP::unregisterEvent(HANDLE handle)
+IOManager::unregisterEvent(HANDLE handle)
 {
     MORDOR_ASSERT(handle);
     boost::mutex::scoped_lock lock(m_mutex);
@@ -333,7 +337,7 @@ IOManagerIOCP::unregisterEvent(HANDLE handle)
 }
 
 void
-IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
+IOManager::cancelEvent(HANDLE hFile, AsyncEvent *e)
 {
     MORDOR_ASSERT(hFile);
     MORDOR_ASSERT(e);
@@ -343,10 +347,10 @@ IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
     if (!pCancelIoEx(hFile, &e->overlapped)) {
         DWORD lastError = GetLastError();
         if (lastError == ERROR_CALL_NOT_IMPLEMENTED) {
-            if (e->m_thread == boost::thread::id()) {
+            if (e->m_thread == emptytid()) {
                 // Nothing to cancel
                 return;
-            } else if (e->m_thread == boost::this_thread::get_id()) {
+            } else if (e->m_thread == gettid()) {
                 if (!CancelIo(hFile))
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIo");
             } else {
@@ -366,7 +370,7 @@ IOManagerIOCP::cancelEvent(HANDLE hFile, AsyncEventIOCP *e)
 }
 
 bool
-IOManagerIOCP::stopping(unsigned long long &nextTimeout)
+IOManager::stopping(unsigned long long &nextTimeout)
 {
     nextTimeout = nextTimer();
     if (nextTimeout == ~0ull && Scheduler::stopping()) {
@@ -379,7 +383,7 @@ IOManagerIOCP::stopping(unsigned long long &nextTimeout)
 }
 
 void
-IOManagerIOCP::idle()
+IOManager::idle()
 {
     OVERLAPPED_ENTRY events[64];
     ULONG count;
@@ -406,7 +410,11 @@ IOManagerIOCP::idle()
                 std::vector<boost::function<void ()> > expired = processTimers();
                 if (!expired.empty()) {
                     schedule(expired.begin(), expired.end());
-                    Fiber::yield();
+                    try {
+                        Fiber::yield();
+                    } catch (OperationAbortedException &) {
+                        return;
+                    }
                 }
                 continue;
             }
@@ -425,42 +433,50 @@ IOManagerIOCP::idle()
                 ++tickles;
                 continue;
             }
-            AsyncEventIOCP *e = (AsyncEventIOCP *)events[i].lpOverlapped;
+            AsyncEvent *e = (AsyncEvent *)events[i].lpOverlapped;
 #ifdef DEBUG
             if (!lock.owns_lock())
                 lock.lock();
 
-            std::map<OVERLAPPED *, AsyncEventIOCP *>::iterator it =
+            std::map<OVERLAPPED *, AsyncEvent *>::iterator it =
                 m_pendingEvents.find(events[i].lpOverlapped);
             MORDOR_ASSERT(it != m_pendingEvents.end());
             MORDOR_ASSERT(e == it->second);
             m_pendingEvents.erase(it);
 #endif
+            MORDOR_ASSERT(e->m_scheduler);
+            MORDOR_ASSERT(e->m_fiber);
 
             MORDOR_LOG_TRACE(g_log) << this << " OVERLAPPED_ENTRY {"
                 << events[i].lpCompletionKey << ", " << events[i].lpOverlapped
                 << ", " << events[i].Internal << ", "
                 << events[i].dwNumberOfBytesTransferred << "}";
 
-            e->m_scheduler->schedule(e->m_fiber);
-            e->m_thread = boost::thread::id();
+            Scheduler *scheduler = e->m_scheduler;
+            Fiber::ptr fiber;
+            fiber.swap(e->m_fiber);
+            e->m_thread = emptytid();
             e->m_scheduler = NULL;
-            e->m_fiber.reset();
+            scheduler->schedule(fiber);
         }
+        if (count != tickles)
+            atomicAdd(m_pendingEventCount, (size_t)(-(ptrdiff_t)(count - tickles)));
 #ifdef DEBUG
-        if (lock.owns_lock())
+        if (lock.owns_lock()) {
+            MORDOR_ASSERT(m_pendingEventCount == m_pendingEvents.size());
             lock.unlock();
+        }
 #endif
-        atomicAdd(m_pendingEventCount, (size_t)(-(ptrdiff_t)(count - tickles)));
-        // We could have possibly retrieved more tickles than we needed;
-        // retickle so other threads will get them
-        while (--tickles > 0) tickle();
-        Fiber::yield();
+        try {
+            Fiber::yield();
+        } catch (OperationAbortedException &) {
+            return;
+        }
     }
 }
 
 void
-IOManagerIOCP::tickle()
+IOManager::tickle()
 {
     BOOL bRet = PostQueuedCompletionStatus(m_hCompletionPort, 0, ~0, NULL);
     MORDOR_LOG_LEVEL(g_log, bRet ? Log::DEBUG : Log::ERROR) << this

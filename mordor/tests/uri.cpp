@@ -1,7 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include "mordor/uri.h"
 #include "mordor/streams/buffer.h"
 #include "mordor/test/test.h"
@@ -95,6 +93,8 @@ MORDOR_UNITTEST(URI, serializationAndParsing)
     serializeAndParse("g#s/../x");
     serializeAndParse("http://a/b/c/g#s/../x");
     serializeAndParse("http:g");
+    serializeAndParse("http:/hi");
+    serializeAndParse("http:////hi");
 }
 
 MORDOR_UNITTEST(URI, pathNormalization)
@@ -125,7 +125,6 @@ MORDOR_UNITTEST(URI, normalization)
     MORDOR_TEST_ASSERT(!lhs.authority.userinfoDefined());
     MORDOR_TEST_ASSERT(!rhs.authority.userinfoDefined());
     MORDOR_TEST_ASSERT_EQUAL(lhs.authority, rhs.authority);
-    MORDOR_TEST_ASSERT_EQUAL(lhs.path.type, rhs.path.type);
     MORDOR_TEST_ASSERT_EQUAL(lhs.path.segments, rhs.path.segments);
     MORDOR_TEST_ASSERT_EQUAL(lhs.path, rhs.path);
     MORDOR_TEST_ASSERT(!lhs.queryDefined());
@@ -185,6 +184,9 @@ MORDOR_UNITTEST(URI, transform)
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("g#s/../x")), URI("http://a/b/c/g#s/../x"));
 
     MORDOR_TEST_ASSERT_EQUAL(URI::transform(base, URI("http:g")), URI("http:g"));
+
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform("http:hi", "bob"), "http:bob");
+    MORDOR_TEST_ASSERT_EQUAL(URI::transform("http://authority", "bob"), "http://authority/bob");
 }
 
 MORDOR_UNITTEST(URI, serializeCompleteOnBlockBoundary)
@@ -299,12 +301,12 @@ MORDOR_UNITTEST(URI, queryString)
 MORDOR_UNITTEST(URI, encoding)
 {
     URI uri;
-    uri.path.type = URI::Path::ABSOLUTE;
+    uri.path.segments.push_back(std::string());
     uri.path.segments.push_back("WiX Tutorial \xe2\x80\x94 Introduction to the Windows Installer XML Toolset.URL");
     MORDOR_TEST_ASSERT_EQUAL(uri.toString(),
         "/WiX%20Tutorial%20%E2%80%94%20Introduction%20to%20the%20Windows%20Installer%20XML%20Toolset.URL");
 
-    uri.path.segments[0] = "\xe5\xa4\x9a\xe8\xa8\x80\xe8\xaa\x9e\xe5\xaf\xbe\xe5\xbf\x9c\xe3\x82"
+    uri.path.segments[1] = "\xe5\xa4\x9a\xe8\xa8\x80\xe8\xaa\x9e\xe5\xaf\xbe\xe5\xbf\x9c\xe3\x82"
         "\xb5\xe3\x83\xbc\xe3\x83\x81\xe3\x82\xa8\xe3\x83\xb3\xe3\x82\xb8\xe3"
         "\x83\xb3\xe3\x81\xae\xe6\x97\xa5\xe6\x9c\xac\xe7\x89\x88\xe3\x80\x82"
         "\xe3\x82\xa6\xe3\x82\xa7\xe3\x83\x96\xe3\x80\x81\xe3\x82\xa4\xe3\x83"
@@ -317,4 +319,132 @@ MORDOR_UNITTEST(URI, encoding)
         "%E3%82%A6%E3%82%A7%E3%83%96%E3%80%81%E3%82%A4%E3%83"
         "%A1%E3%83%BC%E3%82%B8%E3%81%8A%E3%82%88%E3%81%B3%E3"
         "%83%8B%E3%83%A5%E3%83%BC%E3%82%B9%E6%A4%9C%E7%B4%A2.txt");
+}
+
+MORDOR_UNITTEST(URI, emptyFirstComponent)
+{
+    serializeAndParse("/");
+    serializeAndParse("http://localhost/");
+    serializeAndParse("http://localhost//");
+    serializeAndParse("http://localhost///");
+
+    URI::Path path;
+    path = "/";
+    MORDOR_TEST_ASSERT_EQUAL(path.segments.size(), 2u);
+    MORDOR_TEST_ASSERT(path.isAbsolute());
+    MORDOR_TEST_ASSERT(path.segments.front().empty());
+    MORDOR_TEST_ASSERT(path.segments.back().empty());
+    path = "";
+    MORDOR_TEST_ASSERT(path.isRelative());
+    MORDOR_TEST_ASSERT(path.segments.empty());
+    path = "//";
+    MORDOR_TEST_ASSERT(path.isAbsolute());
+    MORDOR_TEST_ASSERT_EQUAL(path.segments.size(), 3u);
+    path = "a//";
+    MORDOR_TEST_ASSERT(path.isRelative());
+    MORDOR_TEST_ASSERT_EQUAL(path.segments.size(), 3u);
+
+    URI uri = "http://localhost/";
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "http://localhost/");
+    uri.path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "http://localhost/hi");
+    uri.path.segments.push_back("");
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "http://localhost/hi/");
+    uri.path.segments.push_back("bye");
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "http://localhost/hi//bye");
+    uri.path.segments.push_back("");
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "http://localhost/hi//bye/");
+    uri.path.append("adios");
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "http://localhost/hi//bye/adios");
+    uri = "http://localhost/";
+    uri.path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "http://localhost/hi");
+
+    // scheme == http, authority is not defined, path = "//hi";
+    // serialization has to add an extra // so it's not ambiguous with
+    // authority
+    uri = URI();
+    uri.scheme("http");
+    uri.path.segments.push_back(std::string());
+    uri.path.segments.push_back(std::string());
+    uri.path.segments.push_back("hi");
+    MORDOR_TEST_ASSERT_EQUAL(uri.toString(), "http:////hi");
+}
+
+MORDOR_UNITTEST(URI, append)
+{
+    URI uri = "http://localhost";
+    uri.path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(uri, "http://localhost/hi");
+    uri.path.append("bye");
+    MORDOR_TEST_ASSERT_EQUAL(uri, "http://localhost/hi/bye");
+    uri.path.append(std::string());
+    MORDOR_TEST_ASSERT_EQUAL(uri, "http://localhost/hi/bye/");
+    uri.path.append(std::string());
+    MORDOR_TEST_ASSERT_EQUAL(uri, "http://localhost/hi/bye/");
+
+    uri = "http:";
+    uri.path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(uri, "http:hi");
+    uri.path.append("bye");
+    MORDOR_TEST_ASSERT_EQUAL(uri, "http:hi/bye");
+
+    URI::Path path;
+    path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(path, "hi");
+    path.append("bye");
+    MORDOR_TEST_ASSERT_EQUAL(path, "hi/bye");
+
+    // The following four tests ensure that path's hidden pointer back to the
+    // URI owning it is copied/assigned correctly through URI and Path's
+    // copy constructors and assignement operators
+
+    // Force operator=(const URI &uri)
+    URI uri2 = "http://localhost";
+    uri = uri2;
+    uri2.authority.hostDefined(false);
+    uri.path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(uri, "http://localhost/hi");
+
+    // Force URI::URI(const URI &uri)
+    uri2.authority.host("localhost");
+    URI uri3(uri2);
+    uri2.authority.hostDefined(false);
+    uri3.path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(uri3, "http://localhost/hi");
+
+    // Force operator=(const Path &path)
+    path = uri3.path;
+    path.segments.clear();
+    path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(path, "hi");
+
+    // Force Path::Path(const Path &path)
+    URI::Path path2(uri3.path);
+    path2.segments.clear();
+    path2.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(path2, "hi");
+}
+
+MORDOR_UNITTEST(URI, makeAbsolute)
+{
+    URI::Path path;
+    path.makeAbsolute();
+    MORDOR_TEST_ASSERT_EQUAL(path, "/");
+    path.makeAbsolute();
+    MORDOR_TEST_ASSERT_EQUAL(path, "/");
+    path.makeRelative();
+    MORDOR_TEST_ASSERT(path.segments.empty());
+    path.makeRelative();
+    MORDOR_TEST_ASSERT(path.segments.empty());
+    path.append("hi");
+    MORDOR_TEST_ASSERT_EQUAL(path, "hi");
+    path.makeAbsolute();
+    MORDOR_TEST_ASSERT_EQUAL(path, "/hi");
+    path.makeAbsolute();
+    MORDOR_TEST_ASSERT_EQUAL(path, "/hi");
+    path.makeRelative();
+    MORDOR_TEST_ASSERT_EQUAL(path, "hi");
+    path.makeRelative();
+    MORDOR_TEST_ASSERT_EQUAL(path, "hi");
 }

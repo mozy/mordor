@@ -12,13 +12,13 @@ namespace OAuth {
 
 std::pair<std::string, std::string>
 getTemporaryCredentials(RequestBroker::ptr requestBroker, const URI &uri,
-    Method method, const std::string &signatureMethod,
+    const std::string &method, const std::string &signatureMethod,
     const std::pair<std::string, std::string> &clientCredentials,
     const URI &callbackUri = URI());
 
 std::pair<std::string, std::string>
 getTokenCredentials(RequestBroker::ptr requestBroker, const URI &uri,
-    Method method, const std::string signatureMethod,
+    const std::string &method, const std::string &signatureMethod,
     const std::pair<std::string, std::string> &clientCredentials,
     const std::pair<std::string, std::string> &temporaryCredentials,
     const std::string &verifier);
@@ -37,19 +37,19 @@ void nonceAndTimestamp(T &oauthParameters);
 // oauthParameters should *not* be empty; instead if oauth params are in the
 // POST body or in the querystring, those fields should be empty instead
 template <class T>
-std::string generateSignature(const URI &uri, Method method,
+std::string generateSignature(const URI &uri, const std::string &method,
     const std::string &clientSecret, const std::string &tokenSecret,
     const T &oauthParameters,
     const URI::QueryString &postParameters = URI::QueryString());
 
 template <class T>
-void sign(const URI &uri, Method method,
+void sign(const URI &uri, const std::string &method,
     const std::string &signatureMethod, const std::string &clientSecret,
     const std::string &tokenSecret, T &oauthParameters,
     const URI::QueryString &postParameters = URI::QueryString());
 
 template <class T>
-bool validate(const URI &uri, Method method,
+bool validate(const URI &uri, const std::string &method,
     const std::string &clientSecret, const std::string &tokenSecret,
     const T &oauthParameters,
     const URI::QueryString &postParameters = URI::QueryString());

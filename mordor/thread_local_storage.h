@@ -12,6 +12,8 @@
 #include <pthread.h>
 #endif
 
+#include "exception.h"
+
 namespace Mordor {
 
 template <class T>
@@ -81,14 +83,14 @@ template <class T>
 class ThreadLocalStorage : public ThreadLocalStorageBase<T>
 {
 public:
-    T operator =(T t) { set(t); return t; }
+    T operator =(T t) { ThreadLocalStorageBase<T>::set(t); return t; }
 };
 
 template <class T>
 class ThreadLocalStorage<T *> : public ThreadLocalStorageBase<T *>
 {
 public:
-    T * operator =(T *const t) { set(t); return t; }
+    T * operator =(T *const t) { ThreadLocalStorageBase<T *>::set(t); return t; }
     T & operator*() { return *ThreadLocalStorageBase<T *>::get(); }
     T * operator->() { return ThreadLocalStorageBase<T *>::get(); }
 };

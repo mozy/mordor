@@ -40,15 +40,24 @@ public:
     void close(CloseType type = BOTH) { if (m_own) m_parent->close(type); }
     void cancelRead() { m_parent->cancelRead(); }
     void cancelWrite() { m_parent->cancelWrite(); }
-    long long seek(long long offset, Anchor anchor = BEGIN) { return m_parent->seek(offset, anchor); }
+    long long seek(long long offset, Anchor anchor = BEGIN)
+    { return m_parent->seek(offset, anchor); }
     long long size() { return m_parent->size(); }
     void truncate(long long size) { m_parent->truncate(size); }
-    void flush(bool flushParent = true) { if (flushParent) m_parent->flush(true); }
-    ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true)
+    void flush(bool flushParent = true)
+    { if (flushParent) m_parent->flush(true); }
+    ptrdiff_t find(char delim, size_t sanitySize = ~0,
+        bool throwIfNotFound = true)
     { return m_parent->find(delim, sanitySize, throwIfNotFound); }
-    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true)
+    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0,
+        bool throwIfNotFound = true)
     { return m_parent->find(str, sanitySize, throwIfNotFound); }
-    void unread(const Buffer &b, size_t len) { return m_parent->unread(b, len); }
+    void unread(const Buffer &b, size_t len)
+    { return m_parent->unread(b, len); }
+
+    boost::signals2::connection onRemoteClose(
+        const boost::signals2::slot<void ()> &slot)
+    { return m_parent->onRemoteClose(slot); }
 
 private:
     Stream::ptr m_parent;
@@ -75,12 +84,14 @@ public:
     bool supportsFind() { return false; }
     bool supportsUnread() { return false; }
 
-    long long seek(long long offset, Anchor anchor = BEGIN) { MORDOR_NOTREACHED(); }
-    long long size() { MORDOR_NOTREACHED(); }
-    void truncate(long long size) { MORDOR_NOTREACHED(); }
-    ptrdiff_t find(char delim, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
-    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwIfNotFound = true) { MORDOR_NOTREACHED(); }
-    void unread(const Buffer &b, size_t len) { MORDOR_NOTREACHED(); }
+    long long seek(long long offset, Anchor anchor = BEGIN);
+    long long size();
+    void truncate(long long size);
+    ptrdiff_t find(char delim, size_t sanitySize = ~0,
+        bool throwIfNotFound = true);
+    ptrdiff_t find(const std::string &str, size_t sanitySize = ~0,
+        bool throwIfNotFound = true);
+    void unread(const Buffer &b, size_t len);
 };
 
 }

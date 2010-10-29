@@ -1,11 +1,12 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "mordor/pch.h"
-
 #include <boost/bind.hpp>
 
 #include "efs.h"
 
+#include "buffer.h"
+#include "mordor/assert.h"
+#include "mordor/fiber.h"
 #include "mordor/string.h"
 
 namespace Mordor {

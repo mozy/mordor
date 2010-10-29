@@ -2,6 +2,7 @@
 #define __MORDOR_HTTP_CHUNKED_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
+#include "mordor/exception.h"
 #include "mordor/streams/filter.h"
 
 namespace Mordor {
