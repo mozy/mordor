@@ -21,10 +21,6 @@ else
     endif
 endif
 
-ifdef INSURE
-	INSURE_CC := insure
-endif
-
 PLATFORM := $(shell uname -o 2>/dev/null)
 ifneq ($(PLATFORM), Cygwin)
     PLATFORM := $(shell uname)
@@ -39,26 +35,6 @@ ifneq ($(PLATFORM), Darwin)
         ARCH := $(shell uname -m)
     endif
 endif
-DEBIANVER := $(shell cat /etc/debian_version 2>/dev/null)
-UBUNTUCODENAME := $(shell sed -n 's/DISTRIB_CODENAME\=\(.*\)/\1/p' /etc/lsb_release 2>/dev/null)
-ifdef UBUNTUCODENAME
-    PLATFORM := $(PLATFORM)-$(UBUNTUCODENAME)
-else
-    ifeq ($(DEBIANVER), 3.1)
-        PLATFORM := $(PLATFORM)-sarge
-    endif
-    ifeq ($(DEBIANVER), 4.0)
-        PLATFORM := $(PLATFORM)-etch
-    endif
-    ifeq ($(DEBIANVER), 5.0)
-        PLATFORM := $(PLATFORM)-lenny
-    endif
-    ifeq ($(DEBIANVER), testing)
-        PLATFORM := $(PLATFORM)-squeeze
-    endif
-endif
-
-PLATFORMDIR := $(PLATFORM)/$(ARCH)
 
 ifeq ($(PLATFORM), Darwin)
     DARWIN := 1
@@ -168,7 +144,7 @@ ifeq ($(PLATFORM), Darwin)
    LIBS += -framework SystemConfiguration -framework CoreFoundation -framework CoreServices -framework Security
 endif
 
-ifeq ($(shell uname), Linux)
+ifeq ($(PLATFORM), Linux)
     LIBS += -lrt
 endif
 
