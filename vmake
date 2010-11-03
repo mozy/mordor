@@ -1,2 +1,0 @@
-#!/bin/sh
-`which gmake make | head -1` -f $(dirname $0)/Makefile SRCDIR=$(dirname $0) "$@"

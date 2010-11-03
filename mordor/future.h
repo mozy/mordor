@@ -4,6 +4,7 @@
 
 #include <bitset>
 
+#include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 

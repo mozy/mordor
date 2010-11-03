@@ -1,5 +1,7 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
+#include <boost/bind.hpp>
+
 #include "mordor/fiber.h"
 #include "mordor/fibersynchronization.h"
 #include "mordor/test/test.h"
