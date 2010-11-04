@@ -1,3 +1,5 @@
+AM_CXXFLAGS=-Wall -Werror
+
 lib_LTLIBRARIES=libmordortest.la
 libmordortest_la_SOURCES=	\
 	antxmllistener.cpp	\

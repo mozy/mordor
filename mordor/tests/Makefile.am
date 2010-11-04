@@ -1,12 +1,5 @@
 AM_CPPFLAGS=$(OPENSSL_INCLUDES) $(BOOST_CPPFLAGS) -I$(top_srcdir)
-AM_LDFLAGS=					\
-	$(OPENSSL_LDFLAGS)			\
-	$(BOOST_LDFLAGS)			\
-	$(CORESERVICES_FRAMEWORK_LIBS)		\
-	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
-	$(SECURITY_FRAMEWORK_LIBS)		\
-	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
-AM_CXXFLAGS=-Wall -Werror
+AM_CXXFLAGS=-Wall -Werror -fno-strict-aliasing
 
 check_PROGRAMS=run_tests
 run_tests_SOURCES=		\
@@ -44,7 +37,7 @@ run_tests_SOURCES=		\
 	uri.cpp			\
 	xml.cpp			\
 	zlib.cpp
-run_tests_LDADD=../libmordor.la ../test/libmordortest.la $(OPENSSL_LIBS) $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB)
+run_tests_LDADD=../libmordor.la ../test/libmordortest.la
 
 check:
 	./run_tests

@@ -70,6 +70,18 @@ libmordor_la_SOURCES=			\
 	xml/xml_parser.cpp		\
 	zip.cpp
 libmordor_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h
+libmordor_la_LDFLAGS=				\
+	$(OPENSSL_LDFLAGS)			\
+	$(BOOST_LDFLAGS)			\
+	$(CORESERVICES_FRAMEWORK_LIBS)		\
+	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
+	$(SECURITY_FRAMEWORK_LIBS)		\
+	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)	\
+	-version-info $(LIBMORDOR_SO_VERSION)
+libmordor_la_LIBADD=$(OPENSSL_LIBS) $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB)
+
+pkgconfigdir=$(libdir)/pkgconfig
+pkgconfig_DATA=libmordor.pc
 
 SUFFIXES=.rl
 
@@ -81,7 +93,7 @@ $(libmordor_la_OBJECTS): pch.h.gch
 
 MOSTLYCLEANFILES=pch.h.gch
 CLEANFILES=http/http_parser.cpp json.cpp uri.cpp xml/xml_parser.cpp
-EXTRA_DIST=http/http_parser.rl json.rl uri.rl xml/xml_parser.rl
+EXTRA_DIST=pch.h http/http_parser.rl json.rl uri.rl xml/xml_parser.rl
 
 pch.h.gch: pch.h
 	$(CXXCOMPILE) $(pic_flag) -x c++-header $< -o $@

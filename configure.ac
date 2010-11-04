@@ -2,12 +2,15 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([mordor],[1.3.0])
+AC_INIT([libmordor],[1.3.0])
 AM_INIT_AUTOMAKE
 LT_INIT([disable-static])
 AC_CONFIG_SRCDIR([mordor/fiber.cpp])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
+
+AC_SUBST([LIBMORDOR_SO_VERSION], [1:0:0])
+AC_SUBST([LIBMORDOR_API_VERSION], [1])
 
 # Checks for programs.
 AC_PROG_CXX
@@ -57,7 +60,9 @@ AC_SUBST([pic_flag])
 
 AC_CONFIG_FILES([Makefile
                  mordor/Makefile
+                 mordor/libmordor.pc
                  mordor/examples/Makefile
                  mordor/test/Makefile
+                 mordor/test/libmordortest.pc
                  mordor/tests/Makefile])
 AC_OUTPUT
