@@ -1,17 +1,22 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.61])
-AC_INIT(mordor, 1.3.0)
+AC_PREREQ(2.61)
+AC_INIT([mordor],[1.3.0])
 AM_INIT_AUTOMAKE
+LT_INIT([disable-static])
 AC_CONFIG_SRCDIR([mordor/fiber.cpp])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
 AC_PROG_CXX
-AC_DISABLE_STATIC
-AC_PROG_LIBTOOL
+AC_PROG_AWK
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
 CHECK_RAGEL([mordor/uri.cpp], [6.0])
 
 # Checks for libraries.
@@ -45,15 +50,14 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_ERROR_AT_LINE
 AC_HEADER_MAJOR
 AC_FUNC_MMAP
+AC_FUNC_STRTOD
 AC_CHECK_FUNCS([clock_gettime ftruncate memchr memmove memset munmap rmdir socket strchr strstr strtoull])
 
 AC_SUBST([pic_flag])
 
-AC_CONFIG_FILES([Makefile mordor/Makefile mordor/examples/Makefile mordor/test/Makefile mordor/tests/Makefile])
-
+AC_CONFIG_FILES([Makefile
+                 mordor/Makefile
+                 mordor/examples/Makefile
+                 mordor/test/Makefile
+                 mordor/tests/Makefile])
 AC_OUTPUT
-
-# Teach libtool about pre-compiled headers
-#cat libtool | sed 's/\*\.cpp/*.cpp | *.gch/' > libtool2
-#rm libtool
-#mv libtool2 libtool
