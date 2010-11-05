@@ -5,6 +5,7 @@
 #include <boost/bind.hpp>
 
 #include "mordor/config.h"
+#include "mordor/daemon.h"
 #include "mordor/http/multipart.h"
 #include "mordor/http/server.h"
 #include "mordor/iomanager.h"
@@ -134,10 +135,9 @@ void namedPipeServer(IOManager &ioManager)
 }
 #endif
 
-MORDOR_MAIN(int argc, char *argv[])
+int run(int argc, char *argv[])
 {
     try {
-        Config::loadFromEnvironment();
         IOManager ioManager;
         startSocketServer(ioManager);
         startHttpServer(ioManager);
@@ -148,6 +148,13 @@ MORDOR_MAIN(int argc, char *argv[])
         ioManager.dispatch();
     } catch (...) {
         std::cerr << boost::current_exception_diagnostic_information() << std::endl;
+        return 1;
     }
     return 0;
+}
+
+MORDOR_MAIN(int argc, char *argv[])
+{
+    Config::loadFromEnvironment();
+    return Daemon::run(argc, argv, &run);
 }
