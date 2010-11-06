@@ -59,10 +59,6 @@ AC_CHECK_FUNCS([clock_gettime ftruncate memchr memmove memset munmap rmdir socke
 AC_SUBST([pic_flag])
 
 AC_CONFIG_FILES([Makefile
-                 mordor/Makefile
                  mordor/libmordor.pc
-                 mordor/examples/Makefile
-                 mordor/test/Makefile
-                 mordor/test/libmordortest.pc
-                 mordor/tests/Makefile])
+                 mordor/test/libmordortest.pc])
 AC_OUTPUT
