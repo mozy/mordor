@@ -23,6 +23,9 @@ AC_PROG_MAKE_SET
 CHECK_RAGEL([mordor/uri.cpp], [6.0])
 
 # Checks for libraries.
+AC_SEARCH_LIBS([pthread_create], [pthread])
+AC_SEARCH_LIBS([clock_gettime], [rt])
+AC_SEARCH_LIBS([backtrace], [execinfo])
 AX_CHECK_OPENSSL
 AX_CHECK_ZLIB
 AX_BOOST_BASE([1.40])
