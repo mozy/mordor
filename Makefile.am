@@ -245,6 +245,7 @@ noinst_PROGRAMS=			\
 	mordor/examples/cat		\
 	mordor/examples/echoserver	\
 	mordor/examples/iombench	\
+	mordor/examples/simpleappserver	\
 	mordor/examples/tunnel		\
 	mordor/examples/udpstats	\
 	mordor/examples/wget
@@ -259,6 +260,9 @@ mordor_examples_iombench_SOURCES=	\
 	mordor/examples/iombench.cpp	\
 	mordor/examples/netbench.cpp
 mordor_examples_iombench_LDADD=mordor/libmordor.la
+
+mordor_examples_simpleappserver_SOURCES=mordor/examples/simpleappserver.cpp
+mordor_examples_simpleappserver_LDADD=mordor/libmordor.la
 
 mordor_examples_tunnel_SOURCES=mordor/examples/tunnel.cpp
 mordor_examples_tunnel_LDADD=mordor/libmordor.la
