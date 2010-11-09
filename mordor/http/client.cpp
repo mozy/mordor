@@ -1259,7 +1259,7 @@ ClientRequest::requestFailed()
     // Throw an HTTP exception if we can
     if (m_conn->m_priorResponseClosed <= m_requestNumber)
         MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-    if (m_conn->m_priorResponseFailed <= m_requestNumber)
+    if (m_conn->m_priorResponseFailed < m_requestNumber)
         MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
 }
 

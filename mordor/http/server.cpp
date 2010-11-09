@@ -84,11 +84,13 @@ ServerConnection::requestComplete(ServerRequest *request)
         MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
             << " request complete";
         request->m_requestState = ServerRequest::COMPLETE;
+        close = request->m_willClose;
         if (request->m_responseState >= ServerRequest::COMPLETE) {
             MORDOR_ASSERT(request == m_pendingRequests.front());
             m_pendingRequests.pop_front();
+            if (!close)
+                scheduleNextRequest(request);
         }
-        close = request->m_willClose;
         if (!close) {
             if (request->m_pipeline)
                 scheduleNextRequest(request);

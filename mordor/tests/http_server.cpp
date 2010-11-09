@@ -743,3 +743,34 @@ MORDOR_UNITTEST(HTTPServer, ifMatch)
         NOT_MODIFIED);
     MORDOR_TEST_ASSERT_EQUAL(request->response().response.eTag, ETag("hello"));
 }
+
+void keepAliveAfterImplicitFinishWithRequestBodyServer(const URI &uri,
+    ServerRequest::ptr request)
+{
+    respondError(request, OK);
+}
+
+void writeHelloBody(ClientRequest::ptr request)
+{
+    request->requestStream()->write("hello", 5u);
+    request->requestStream()->close();
+}
+
+MORDOR_UNITTEST(HTTPServer, keepAliveAfterImplicitFinishWithRequestBody)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&keepAliveAfterImplicitFinishWithRequestBodyServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server,
+        &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+    requestHeaders.requestLine.method = PUT;
+    requestHeaders.entity.contentLength = 5;
+
+    ClientRequest::ptr request = requestBroker.request(requestHeaders, false,
+        &writeHelloBody);
+    request->finish();
+    // Now do it again, the server shouldn't have closed the connection
+    request = requestBroker.request(requestHeaders, false, &writeHelloBody);
+}
