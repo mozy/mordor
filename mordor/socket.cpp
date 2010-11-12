@@ -1363,10 +1363,21 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     return result;
 }
 
-std::map<std::string, std::vector<Address::ptr> >
+template <class T>
+static unsigned int countBits(T value)
+{
+    unsigned int result = 0;
+    // See http://www-graphics.stanford.edu/~seander/bithacks.html#CountBitsSetKernighan
+    for (; value; ++result)
+        value &= value - 1;
+    return result;
+}
+
+std::map<std::string, std::vector<std::pair<Address::ptr, unsigned int> > >
 Address::getInterfaceAddresses()
 {
-    std::map<std::string, std::vector<Address::ptr> > result;
+    std::map<std::string, std::vector<std::pair<Address::ptr, unsigned int> > >
+        result;
 #ifdef WINDOWS
     char buf[15 * 1024];
     IP_ADAPTER_ADDRESSES *addresses = (IP_ADAPTER_ADDRESSES *)buf;
@@ -1374,24 +1385,29 @@ Address::getInterfaceAddresses()
     ULONG error = pGetAdaptersAddresses(AF_UNSPEC, 0, NULL, addresses, &size);
     if (error && error != ERROR_CALL_NOT_IMPLEMENTED)
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "GetAdaptersAddresses");
-    if (error == ERROR_CALL_NOT_IMPLEMENTED) {
+    // Either doesn't exist, or doesn't include netmask info to construct broadcast addr
+    if (error == ERROR_CALL_NOT_IMPLEMENTED ||
+        addresses->FirstUnicastAddress->Length < sizeof(IP_ADAPTER_UNICAST_ADDRESS_LH)) {
         PIP_ADAPTER_INFO addresses2 = (PIP_ADAPTER_INFO)buf;
         size = sizeof(buf);
         error = GetAdaptersInfo(addresses2, &size);
         if (error)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "PIP_ADAPTER_INFO");
         for (; addresses2; addresses2 = addresses2->Next) {
-            std::map<std::string, std::vector<Address::ptr> >::iterator it =
+            std::map<std::string, std::vector<std::pair<Address::ptr,
+                unsigned int> > >::iterator it =
             result.insert(std::make_pair(addresses2->AdapterName,
-                std::vector<Address::ptr>())).first;
+                std::vector<std::pair<Address::ptr, unsigned int> >())).first;
             IP_ADDR_STRING *address = &addresses2->IpAddressList;
             for (; address; address = address->Next) {
                 sockaddr_in addr;
                 memset(&addr, 0, sizeof(sockaddr_in));
                 addr.sin_family = AF_INET;
                 addr.sin_addr.s_addr = inet_addr(address->IpAddress.String);
-                it->second.push_back(Address::create((sockaddr *)&addr,
-                    sizeof(sockaddr_in)));
+                unsigned int mask = inet_addr(address->IpMask.String);
+                it->second.push_back(std::make_pair(
+                    Address::create((sockaddr *)&addr,
+                    sizeof(sockaddr_in)), countBits(mask)));
             }
         }
 
@@ -1399,13 +1415,25 @@ Address::getInterfaceAddresses()
     }
 
     for (; addresses; addresses = addresses->Next) {
-        std::map<std::string, std::vector<Address::ptr> >::iterator it =
+        std::map<std::string,
+            std::vector<std::pair<Address::ptr, unsigned int> > >::iterator it =
             result.insert(std::make_pair(addresses->AdapterName,
-                std::vector<Address::ptr>())).first;
+                std::vector<std::pair<Address::ptr, unsigned int> >())).first;
         IP_ADAPTER_UNICAST_ADDRESS *address = addresses->FirstUnicastAddress;
-        for (; address; address = address->Next)
-            it->second.push_back(Address::create(address->Address.lpSockaddr,
-                address->Address.iSockaddrLength));
+        for (; address; address = address->Next) {
+            Address::ptr addr = Address::create(address->Address.lpSockaddr,
+                address->Address.iSockaddrLength);
+            unsigned int prefixLength = ~0u;
+            if (address->Address.lpSockaddr->sa_family == AF_INET &&
+                address->OnLinkPrefixLength <= 32) {
+                prefixLength = address->OnLinkPrefixLength;
+            } else if (address->Address.lpSockaddr->sa_family == AF_INET6 &&
+                address->OnLinkPrefixLength <= 128) {
+                prefixLength = address->OnLinkPrefixLength;
+            }
+
+            it->second.push_back(std::make_pair(addr, prefixLength));
+        }
     }
     return result;
 #else
@@ -1415,19 +1443,34 @@ Address::getInterfaceAddresses()
     try {
         next = results;
         while (next) {
-            Address::ptr address;
+            Address::ptr address, baddress;
+            unsigned int prefixLength = ~0u;
             switch (next->ifa_addr->sa_family) {
                 case AF_INET:
+                {
                     address = create(next->ifa_addr, sizeof(sockaddr_in));
+                    // http://www-graphics.stanford.edu/~seander/bithacks.html#CountBitsSetKernighan
+                    unsigned int netmask =
+                        ((sockaddr_in *)next->ifa_netmask)->sin_addr.s_addr;
+                    prefixLength = countBits(netmask);
                     break;
+                }
                 case AF_INET6:
+                {
                     address = create(next->ifa_addr, sizeof(sockaddr_in6));
+                    prefixLength = 0;
+                    in6_addr &netmask = ((sockaddr_in6 *)next->ifa_netmask)->sin6_addr;
+                    for (size_t i = 0; i < 16; ++i)
+                        prefixLength += countBits(netmask.s6_addr[i]);
+                    }
                     break;
+                }
                 default:
                     break;
             }
             if (address)
-                result[next->ifa_name].push_back(address);
+                result[next->ifa_name].push_back(
+                    std::make_pair(address, prefixLength));
             next = next->ifa_next;
         }
     } catch (...) {
@@ -1521,6 +1564,51 @@ IPv4Address::IPv4Address(int type, int protocol)
     sin.sin_addr.s_addr = INADDR_ANY;
 }
 
+// Returns an integer with bits 1s
+template <class T>
+static T createMask(unsigned int bits)
+{
+    MORDOR_ASSERT(bits <= sizeof(T) * 8);
+    return (1 << (sizeof(T) * 8 - bits)) - 1;
+}
+
+IPv4Address::ptr
+IPv4Address::broadcastAddress(unsigned int prefixLength)
+{
+    MORDOR_ASSERT(prefixLength <= 32);
+    sockaddr_in baddr(sin);
+    baddr.sin_addr.s_addr |= byteswapOnLittleEndian(
+        createMask<unsigned int>(prefixLength));
+    return boost::static_pointer_cast<IPv4Address>(
+        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in), type(),
+            protocol()));
+}
+
+IPv4Address::ptr
+IPv4Address::networkAddress(unsigned int prefixLength)
+{
+    MORDOR_ASSERT(prefixLength <= 32);
+    sockaddr_in baddr(sin);
+    baddr.sin_addr.s_addr &= byteswapOnLittleEndian(
+        ~createMask<unsigned int>(prefixLength));
+    return boost::static_pointer_cast<IPv4Address>(
+        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in), type(),
+            protocol()));
+}
+
+IPv4Address::ptr
+IPv4Address::createSubnetMask(unsigned int prefixLength)
+{
+    MORDOR_ASSERT(prefixLength <= 32);
+    sockaddr_in subnet;
+    memset(&subnet, 0, sizeof(sockaddr_in));
+    subnet.sin_family = AF_INET;
+    subnet.sin_addr.s_addr = byteswapOnLittleEndian(
+        ~createMask<unsigned int>(prefixLength));
+    return boost::static_pointer_cast<IPv4Address>(
+        Address::create((const sockaddr *)&subnet, sizeof(sockaddr_in)));
+}
+
 std::ostream &
 IPv4Address::insert(std::ostream &os) const
 {
@@ -1542,6 +1630,49 @@ IPv6Address::IPv6Address(int type, int protocol)
     sin.sin6_port = 0;
     in6_addr anyaddr = IN6ADDR_ANY_INIT;
     sin.sin6_addr = anyaddr;
+}
+
+IPv6Address::ptr
+IPv6Address::broadcastAddress(unsigned int prefixLength)
+{
+    MORDOR_ASSERT(prefixLength <= 128);
+    sockaddr_in6 baddr(sin);
+    baddr.sin6_addr.s6_addr[prefixLength / 8] |=
+        createMask<unsigned char>(prefixLength % 8);
+    for (unsigned int i = prefixLength / 8 + 1; i < 16; ++i)
+        baddr.sin6_addr.s6_addr[i] = 0xffu;
+    return boost::static_pointer_cast<IPv6Address>(
+        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in6),
+            type(), protocol()));
+}
+
+IPv6Address::ptr
+IPv6Address::networkAddress(unsigned int prefixLength)
+{
+    MORDOR_ASSERT(prefixLength <= 128);
+    sockaddr_in6 baddr(sin);
+    baddr.sin6_addr.s6_addr[prefixLength / 8] &=
+        ~createMask<unsigned char>(prefixLength % 8);
+    for (unsigned int i = prefixLength / 8 + 1; i < 16; ++i)
+        baddr.sin6_addr.s6_addr[i] = 0x00u;
+    return boost::static_pointer_cast<IPv6Address>(
+        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in6),
+            type(), protocol()));
+}
+
+IPv6Address::ptr
+IPv6Address::createSubnetMask(unsigned int prefixLength)
+{
+    MORDOR_ASSERT(prefixLength <= 128);
+    sockaddr_in6 subnet;
+    memset(&subnet, 0, sizeof(sockaddr_in6));
+    subnet.sin6_family = AF_INET6;
+    subnet.sin6_addr.s6_addr[prefixLength / 8] =
+        ~createMask<unsigned char>(prefixLength % 8);
+    for (unsigned int i = 0; i < prefixLength / 8; ++i)
+        subnet.sin6_addr.s6_addr[i] = 0xffu;
+    return boost::static_pointer_cast<IPv6Address>(
+        Address::create((const sockaddr *)&subnet, sizeof(sockaddr_in6)));
 }
 
 std::ostream &

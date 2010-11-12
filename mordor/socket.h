@@ -208,7 +208,8 @@ public:
     static std::vector<ptr>
         lookup(const std::string& host, int family = AF_UNSPEC,
             int type = 0, int protocol = 0);
-    static std::map<std::string, std::vector<ptr> >
+    /// @return interface => (list of (address, prefixLength) )
+    static std::map<std::string, std::vector<std::pair<ptr, unsigned int> > >
         getInterfaceAddresses();
     static ptr create(const sockaddr *name, socklen_t nameLen,
         int type = 0, int protocol = 0);
@@ -239,7 +240,12 @@ public:
 
 protected:
     IPAddress(int type = 0, int protocol = 0);
+
 public:
+    virtual ptr broadcastAddress(unsigned int prefixLength) = 0;
+    virtual ptr networkAddress(unsigned int prefixLength) = 0;
+    virtual ptr subnetMask(unsigned int prefixLength) = 0;
+
     virtual unsigned short port() const = 0;
     virtual void port(unsigned short p) = 0;
 };
@@ -250,6 +256,12 @@ public:
     IPv4Address(int type = 0, int protocol = 0);
     //IPv4Address(const std::string& addr, int type = 0, int protocol = 0);
     //IPv4Address(const std::string& addr, unsigned short port, int type = 0, int protocol = 0);
+
+    ptr broadcastAddress(unsigned int prefixLength);
+    ptr networkAddress(unsigned int prefixLength);
+    ptr subnetMask(unsigned int prefixLength)
+    { return IPv4Address::createSubnetMask(prefixLength); }
+    static ptr createSubnetMask(unsigned int prefixLength);
 
     unsigned short port() const { return byteswapOnLittleEndian(sin.sin_port); }
     void port(unsigned short p) { sin.sin_port = byteswapOnLittleEndian(p); }
@@ -269,6 +281,12 @@ public:
     IPv6Address(int type = 0, int protocol = 0);
     //IPv6Address(const std::string& addr, int type = 0, int protocol = 0);
     //IPv6Address(const std::string& addr, unsigned short port, int type = 0, int protocol = 0);
+
+    ptr broadcastAddress(unsigned int prefixLength);
+    ptr networkAddress(unsigned int prefixLength);
+    ptr subnetMask(unsigned int prefixLength)
+    { return createSubnetMask(prefixLength); }
+    static ptr createSubnetMask(unsigned int prefixLength);
 
     unsigned short port() const { return byteswapOnLittleEndian(sin.sin6_port); }
     void port(unsigned short p) { sin.sin6_port = byteswapOnLittleEndian(p); }
