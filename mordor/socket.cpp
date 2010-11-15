@@ -1449,7 +1449,6 @@ Address::getInterfaceAddresses()
                 case AF_INET:
                 {
                     address = create(next->ifa_addr, sizeof(sockaddr_in));
-                    // http://www-graphics.stanford.edu/~seander/bithacks.html#CountBitsSetKernighan
                     unsigned int netmask =
                         ((sockaddr_in *)next->ifa_netmask)->sin_addr.s_addr;
                     prefixLength = countBits(netmask);
@@ -1462,7 +1461,6 @@ Address::getInterfaceAddresses()
                     in6_addr &netmask = ((sockaddr_in6 *)next->ifa_netmask)->sin6_addr;
                     for (size_t i = 0; i < 16; ++i)
                         prefixLength += countBits(netmask.s6_addr[i]);
-                    }
                     break;
                 }
                 default:
