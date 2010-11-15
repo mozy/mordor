@@ -248,7 +248,10 @@ public:
 struct IPv4Address : public IPAddress
 {
 public:
-    IPv4Address();
+    /// @note address and port should be provided in native-endian format
+    IPv4Address(unsigned int address = INADDR_ANY, unsigned short port = 0);
+    /// @note address and port should be provided in native-endian format
+    IPv4Address(const char *address, unsigned short port = 0);
 
     ptr broadcastAddress(unsigned int prefixLength);
     ptr networkAddress(unsigned int prefixLength);
@@ -272,6 +275,7 @@ struct IPv6Address : public IPAddress
 {
 public:
     IPv6Address();
+    IPv6Address(const char *address, unsigned short port = 0);
 
     ptr broadcastAddress(unsigned int prefixLength);
     ptr networkAddress(unsigned int prefixLength);

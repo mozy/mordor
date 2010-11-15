@@ -20,6 +20,7 @@
 #pragma comment(lib, "mswsock")
 #pragma comment(lib, "iphlpapi")
 #else
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
 #include <netdb.h>
@@ -1570,11 +1571,29 @@ IPAddress::clone()
     return boost::static_pointer_cast<IPAddress>(Address::clone());
 }
 
-IPv4Address::IPv4Address()
+IPv4Address::IPv4Address(unsigned int address, unsigned short port)
 {
     sin.sin_family = AF_INET;
-    sin.sin_port = 0;
-    sin.sin_addr.s_addr = INADDR_ANY;
+    sin.sin_port = byteswapOnLittleEndian(port);
+    sin.sin_addr.s_addr = byteswapOnLittleEndian(address);
+}
+
+#ifndef WINDOWS
+static int pinet_pton(int af, const char *src, void *dst)
+{
+    return inet_pton(af, src, dst);
+}
+#endif
+
+IPv4Address::IPv4Address(const char *address, unsigned short port)
+{
+    sin.sin_family = AF_INET;
+    sin.sin_port = byteswapOnLittleEndian(port);
+    int result = pinet_pton(AF_INET, address, &sin.sin_addr);
+    if (result == 0)
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("address"));
+    if (result < 0)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("inet_pton");
 }
 
 // Returns an integer with bits 1s
@@ -1636,10 +1655,20 @@ IPv4Address::insert(std::ostream &os) const
 
 IPv6Address::IPv6Address()
 {
+    memset(&sin, 0, sizeof(sockaddr_in6));
     sin.sin6_family = AF_INET6;
-    sin.sin6_port = 0;
-    in6_addr anyaddr = IN6ADDR_ANY_INIT;
-    sin.sin6_addr = anyaddr;
+}
+
+IPv6Address::IPv6Address(const char *address, unsigned short port)
+{
+    memset(&sin, 0, sizeof(sockaddr_in6));
+    sin.sin6_family = AF_INET6;
+    sin.sin6_port = byteswapOnLittleEndian(port);
+    int result = pinet_pton(AF_INET6, address, &sin.sin6_addr);
+    if (result == 0)
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("address"));
+    if (result < 0)
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("inet_pton");
 }
 
 IPv6Address::ptr

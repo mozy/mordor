@@ -46,14 +46,14 @@ MORDOR_MAIN(int argc, char *argv[])
     try {
         Config::loadFromEnvironment();
         IOManager ioManager;
-        std::vector<Address::ptr> addresses = Address::lookup("0.0.0.0:80");
+        Socket s(ioManager, AF_INET, SOCK_STREAM);
+        IPv4Address address(INADDR_ANY, 80);
 
-        Socket::ptr s = addresses[0]->createSocket(ioManager, SOCK_STREAM);
-        s->bind(addresses[0]);
-        s->listen();
+        s.bind(address);
+        s.listen();
 
         while (true) {
-            Socket::ptr socket = s->accept();
+            Socket::ptr socket = s.accept();
             Stream::ptr stream(new SocketStream(socket));
             HTTP::ServerConnection::ptr conn(new HTTP::ServerConnection(stream,
                 &httpRequest));

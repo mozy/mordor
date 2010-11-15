@@ -389,4 +389,20 @@ MORDOR_RUNTIME_LINK_DEFINITION(WinHttpOpen, HINTERNET, WINAPI,
     return NULL;
 }
 
+MORDOR_RUNTIME_LINK_DEFINITION(inet_pton, INT, WSAAPI,
+    (INT Family, PCSTR pszAddrString, PVOID pAddrBuf),
+    (Family, pszAddrString, pAddrBuf),
+    L"ws2_32.dll")
+{
+    switch (Family) {
+        case AF_INET:
+            // No error checking
+            *(unsigned long *)pAddrBuf = inet_addr(pszAddrString);
+            return 1;
+        default:
+            SetLastError(WSAEAFNOSUPPORT);
+            return 0;
+    }
+}
+
 }
