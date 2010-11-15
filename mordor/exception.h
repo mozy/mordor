@@ -60,6 +60,7 @@ typedef DWORD error_t;
 typedef int error_t;
 #endif
 
+struct OperationNotSupportedException : virtual NativeException {};
 struct FileNotFoundException : virtual NativeException {};
 struct AccessDeniedException : virtual NativeException {};
 struct BadHandleException : virtual NativeException {};

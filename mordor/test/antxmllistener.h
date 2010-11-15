@@ -20,6 +20,8 @@ public:
         const std::string &test);
     void testComplete(const std::string &suite,
         const std::string &test);
+    void testSkipped(const std::string &suite,
+        const std::string &tests);
     void testAsserted(const std::string &suite,
         const std::string &test, const Assertion &message);
     void testException(const std::string &suite,

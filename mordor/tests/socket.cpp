@@ -228,13 +228,17 @@ MORDOR_UNITTEST(Address, parseIPv4Address)
 
 MORDOR_UNITTEST(Address, parseIPv6Address)
 {
-    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(IPv6Address("::")),
-        "[::]:0");
-    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(IPv6Address("::1", 443)),
-        "[::1]:443");
-    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(
-        IPv6Address("2001:470::273:20c:0:0:5ddf")),
-        "[2001:470::273:20c:0:0:5ddf]:0");
+    try {
+        MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(IPv6Address("::")),
+            "[::]:0");
+        MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(IPv6Address("::1", 443)),
+            "[::1]:443");
+        MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(
+            IPv6Address("2001:470::273:20c:0:0:5ddf")),
+            "[2001:470::273:20c:0:0:5ddf]:0");
+    } catch (OperationNotSupportedException &) {
+        throw TestSkippedException();
+    }
 }
 
 static void cancelMe(Socket::ptr sock)

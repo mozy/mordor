@@ -13,7 +13,8 @@ using namespace Mordor::Test;
 
 StdoutListener::StdoutListener()
 : m_tests(0),
-  m_success(0)
+  m_success(0),
+  m_skip(0)
 {}
 
 void
@@ -31,6 +32,16 @@ StdoutListener::testComplete(const std::string &suite, const std::string &test)
     if (test != "<invariant>")
         ++m_success;
     std::cout << "OK" << std::endl;
+}
+
+void
+StdoutListener::testSkipped(const std::string &suite, const std::string &test)
+{
+    if (test != "<invariant>") {
+        ++m_skip;
+        --m_tests;
+    }
+    std::cout << "skipped" << std::endl;
 }
 
 void
@@ -52,5 +63,5 @@ void
 StdoutListener::testsComplete()
 {
     std::cout << "Tests complete.  " << m_success << "/" << m_tests
-        << " passed." << std::endl;
+        << " passed, " << m_skip << " skipped." << std::endl;
 }

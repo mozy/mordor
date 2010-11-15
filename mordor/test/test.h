@@ -69,6 +69,8 @@ public:
         const std::string &test) = 0;
     virtual void testComplete(const std::string &suite,
         const std::string &test) = 0;
+    virtual void testSkipped(const std::string &suite,
+        const std::string &test) = 0;
     virtual void testAsserted(const std::string &suite,
         const std::string &test, const Assertion &assertion) = 0;
     virtual void testException(const std::string &suite,
@@ -89,6 +91,8 @@ bool runTests(const TestSuites &suites);
 bool runTests(TestListener &listener);
 bool runTests(const TestSuites &suites,
               TestListener &listener);
+
+struct TestSkippedException {};
 
 // Serialization for assertion reporting
 template <class T>

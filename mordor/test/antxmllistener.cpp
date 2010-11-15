@@ -91,6 +91,16 @@ AntXMLListener::testComplete(const std::string &suite, const std::string &test)
 }
 
 void
+AntXMLListener::testSkipped(const std::string &suite, const std::string &test)
+{
+    if (test != "<invariant>") {
+        TestSuiteInfo &suiteInfo = m_testSuites[suite];
+        suiteInfo.tests.erase(test);
+        suiteInfo.end = TimerManager::now();
+    }
+}
+
+void
 AntXMLListener::testAsserted(const std::string &suite, const std::string &test,
                              const Assertion &assertion)
 {

@@ -187,6 +187,9 @@ void rethrow_exception(boost::exception_ptr const & ep)
 static void throwSocketException(error_t error)
 {
     switch (error) {
+        case WSA(EAFNOSUPPORT):
+            throw boost::enable_current_exception(OperationNotSupportedException())
+                << errinfo_nativeerror(error);
         case WSA(EADDRINUSE):
 #ifdef WINDOWS
         // WSAEACESS is returned from bind when you set SO_REUSEADDR, and
