@@ -1508,11 +1508,18 @@ Address::create(const sockaddr *name, socklen_t nameLen)
     return result;
 }
 
+Address::ptr
+Address::clone()
+{
+    return create(name(), nameLen());
+}
+
 Socket::ptr
 Address::createSocket(int type, int protocol)
 {
     return Socket::ptr(new Socket(family(), type, protocol));
 }
+
 Socket::ptr
 Address::createSocket(IOManager &ioManager, int type, int protocol)
 {
@@ -1549,6 +1556,12 @@ Address::operator==(const Address &rhs) const
 bool Address::operator!=(const Address &rhs) const
 {
     return !(*this == rhs);
+}
+
+IPAddress::ptr
+IPAddress::clone()
+{
+    return boost::static_pointer_cast<IPAddress>(Address::clone());
 }
 
 IPv4Address::IPv4Address()

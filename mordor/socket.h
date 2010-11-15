@@ -213,6 +213,8 @@ public:
         getInterfaceAddresses();
     static ptr create(const sockaddr *name, socklen_t nameLen);
 
+    ptr clone();
+
     Socket::ptr createSocket(int type, int protocol = 0);
     Socket::ptr createSocket(IOManager &ioManager, int type, int protocol = 0);
 
@@ -233,6 +235,8 @@ public:
     typedef boost::shared_ptr<IPAddress> ptr;
 
 public:
+    ptr clone();
+
     virtual ptr broadcastAddress(unsigned int prefixLength) = 0;
     virtual ptr networkAddress(unsigned int prefixLength) = 0;
     virtual ptr subnetMask(unsigned int prefixLength) = 0;
