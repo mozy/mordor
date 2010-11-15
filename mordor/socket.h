@@ -201,7 +201,7 @@ struct Address
 public:
     typedef boost::shared_ptr<Address> ptr;
 protected:
-    Address(int type, int protocol = 0);
+    Address() {}
 public:
     virtual ~Address() {}
 
@@ -211,15 +211,12 @@ public:
     /// @return interface => (list of (address, prefixLength) )
     static std::map<std::string, std::vector<std::pair<ptr, unsigned int> > >
         getInterfaceAddresses();
-    static ptr create(const sockaddr *name, socklen_t nameLen,
-        int type = 0, int protocol = 0);
+    static ptr create(const sockaddr *name, socklen_t nameLen);
 
-    Socket::ptr createSocket(int type = 0, int protocol = 0);
-    Socket::ptr createSocket(IOManager &ioManager, int type = 0, int protocol = 0);
+    Socket::ptr createSocket(int type, int protocol = 0);
+    Socket::ptr createSocket(IOManager &ioManager, int type, int protocol = 0);
 
     int family() const { return name()->sa_family; }
-    int type() const { return m_type; }
-    int protocol() const { return m_protocol; }
     virtual const sockaddr *name() const = 0;
     virtual sockaddr *name() = 0;
     virtual socklen_t nameLen() const = 0;
@@ -228,18 +225,12 @@ public:
     bool operator<(const Address &rhs) const;
     bool operator==(const Address &rhs) const;
     bool operator!=(const Address &rhs) const;
-
-private:
-    int m_type, m_protocol;
 };
 
 struct IPAddress : public Address
 {
 public:
     typedef boost::shared_ptr<IPAddress> ptr;
-
-protected:
-    IPAddress(int type = 0, int protocol = 0);
 
 public:
     virtual ptr broadcastAddress(unsigned int prefixLength) = 0;
@@ -253,9 +244,7 @@ public:
 struct IPv4Address : public IPAddress
 {
 public:
-    IPv4Address(int type = 0, int protocol = 0);
-    //IPv4Address(const std::string& addr, int type = 0, int protocol = 0);
-    //IPv4Address(const std::string& addr, unsigned short port, int type = 0, int protocol = 0);
+    IPv4Address();
 
     ptr broadcastAddress(unsigned int prefixLength);
     ptr networkAddress(unsigned int prefixLength);
@@ -278,9 +267,7 @@ private:
 struct IPv6Address : public IPAddress
 {
 public:
-    IPv6Address(int type = 0, int protocol = 0);
-    //IPv6Address(const std::string& addr, int type = 0, int protocol = 0);
-    //IPv6Address(const std::string& addr, unsigned short port, int type = 0, int protocol = 0);
+    IPv6Address();
 
     ptr broadcastAddress(unsigned int prefixLength);
     ptr networkAddress(unsigned int prefixLength);
@@ -304,7 +291,7 @@ private:
 struct UnixAddress : public Address
 {
 public:
-    UnixAddress(const std::string &path, int type = 0, int protocol = 0);
+    UnixAddress(const std::string &path);
 
     const sockaddr *name() const { return (sockaddr*)&sun; }
     sockaddr *name() { return (sockaddr*)&sun; }
@@ -321,7 +308,7 @@ private:
 struct UnknownAddress : public Address
 {
 public:
-    UnknownAddress(int family, int type = 0, int protocol = 0);
+    UnknownAddress(int family);
 
     const sockaddr *name() const { return &sa; }
     sockaddr *name() { return &sa; }

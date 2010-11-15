@@ -41,19 +41,19 @@ void socketServer(Socket::ptr listen)
 
 void startSocketServer(IOManager &ioManager)
 {
-    std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
+    std::vector<Address::ptr> addresses = Address::lookup("localhost:8000");
 
     for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
         it != addresses.end();
         ++it) {
-        Socket::ptr s = (*it)->createSocket(ioManager);
+        Socket::ptr s = (*it)->createSocket(ioManager, SOCK_STREAM);
         s->bind(*it);
         Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
     }
 
 #ifndef WINDOWS
-    UnixAddress echoaddress("/tmp/echo", SOCK_STREAM);
-    Socket::ptr s = echoaddress.createSocket(ioManager);
+    UnixAddress echoaddress("/tmp/echo");
+    Socket::ptr s = echoaddress.createSocket(ioManager, SOCK_STREAM);
     s->bind(echoaddress);
     Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
 #endif
@@ -113,12 +113,12 @@ void httpServer(Socket::ptr listen)
 
 void startHttpServer(IOManager &ioManager)
 {
-    std::vector<Address::ptr> addresses = Address::lookup("localhost:80", AF_UNSPEC, SOCK_STREAM);
+    std::vector<Address::ptr> addresses = Address::lookup("localhost:80");
 
     for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
         it != addresses.end();
         ++it) {
-        Socket::ptr s = (*it)->createSocket(ioManager);
+        Socket::ptr s = (*it)->createSocket(ioManager, SOCK_STREAM);
         s->bind(*it);
         Scheduler::getThis()->schedule(boost::bind(&httpServer, s));
     }

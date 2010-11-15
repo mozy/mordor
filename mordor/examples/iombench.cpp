@@ -57,13 +57,12 @@ private:
 
         // figure out the host addr to use
         std::vector<Address::ptr> addrs;
-        addrs = Address::lookup(host, AF_UNSPEC, SOCK_STREAM);
+        addrs = Address::lookup(host);
         MORDOR_VERIFY(!addrs.empty());
 
         // setup the server
-        m_sock = addrs.front()->createSocket(m_iom);
-        unsigned int opt = 1;
-        m_sock->setOption(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        m_sock = addrs.front()->createSocket(m_iom, SOCK_STREAM);
+        m_sock->setOption(SOL_SOCKET, SO_REUSEADDR, 1);
         m_sock->bind(addrs.front());
         m_sock->listen();
 
@@ -136,7 +135,7 @@ public:
 
         // figure out the host addr to use
         std::vector<Address::ptr> addrs;
-        addrs = Address::lookup(host, AF_UNSPEC, SOCK_STREAM);
+        addrs = Address::lookup(host);
         MORDOR_VERIFY(!addrs.empty());
 
         // save off the server addr
@@ -221,7 +220,7 @@ public:
         int round = m_round;
         lock.unlock();
 
-        Socket::ptr conn = m_addr->createSocket(m_iom);
+        Socket::ptr conn = m_addr->createSocket(m_iom, SOCK_STREAM);
         conn->connect(m_addr);
 
         lock.lock();

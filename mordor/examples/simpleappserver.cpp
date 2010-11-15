@@ -46,10 +46,9 @@ MORDOR_MAIN(int argc, char *argv[])
     try {
         Config::loadFromEnvironment();
         IOManager ioManager;
-        std::vector<Address::ptr> addresses =
-            Address::lookup("0.0.0.0:80", AF_UNSPEC, SOCK_STREAM);
+        std::vector<Address::ptr> addresses = Address::lookup("0.0.0.0:80");
 
-        Socket::ptr s = addresses[0]->createSocket(ioManager);
+        Socket::ptr s = addresses[0]->createSocket(ioManager, SOCK_STREAM);
         s->bind(addresses[0]);
         s->listen();
 

@@ -177,6 +177,9 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
   m_isConnected(false),
   m_isRegisteredForRemoteClose(false)
 {
+    // Windows accepts type == 0 as implying SOCK_STREAM; other OS's aren't so
+    // lenient
+    MORDOR_ASSERT(type != 0);
 #ifdef WINDOWS
     if (pAcceptEx && m_ioManager) {
         m_sock = socket(family, type, protocol);
@@ -198,6 +201,9 @@ Socket::Socket(int family, int type, int protocol)
   m_isConnected(false),
   m_isRegisteredForRemoteClose(false)
 {
+    // Windows accepts type == 0 as implying SOCK_STREAM; other OS's aren't so
+    // lenient
+    MORDOR_ASSERT(type != 0);
     m_sock = socket(family, type, protocol);
     MORDOR_LOG_DEBUG(g_log) << this << " socket(" << (Family)family << ", "
         << (Type)type << ", " << (Protocol)protocol << "): " << m_sock << " ("
@@ -229,6 +235,9 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
   m_isConnected(false),
   m_isRegisteredForRemoteClose(false)
 {
+    // Windows accepts type == 0 as implying SOCK_STREAM; other OS's aren't so
+    // lenient
+    MORDOR_ASSERT(type != 0);
     m_sock = socket(family, type, protocol);
     MORDOR_LOG_DEBUG(g_log) << this << " socket(" << (Family)family << ", "
         << (Type)type << ", " << (Protocol)protocol << "): " << m_sock << " ("
@@ -617,7 +626,7 @@ Socket::accept(Socket &target)
                     sizeof(SOCKADDR_STORAGE) + 16, &localAddr, &localAddrLen,
                     &remoteAddr, &remoteAddrLen);
             if (remoteAddr)
-                m_remoteAddress = Address::create(remoteAddr, remoteAddrLen, m_family, m_protocol);
+                m_remoteAddress = Address::create(remoteAddr, remoteAddrLen);
 
             std::ostringstream os;
             if (remoteAddr)
@@ -1140,11 +1149,11 @@ Socket::emptyAddress()
 {
     switch (m_family) {
         case AF_INET:
-            return Address::ptr(new IPv4Address(type(), m_protocol));
+            return Address::ptr(new IPv4Address());
         case AF_INET6:
-            return Address::ptr(new IPv6Address(type(), m_protocol));
+            return Address::ptr(new IPv6Address());
         default:
-            return Address::ptr(new UnknownAddress(m_family, type(), m_protocol));
+            return Address::ptr(new UnknownAddress(m_family));
     }
 }
 
@@ -1156,13 +1165,13 @@ Socket::remoteAddress()
     Address::ptr result;
     switch (m_family) {
         case AF_INET:
-            result.reset(new IPv4Address(type(), m_protocol));
+            result.reset(new IPv4Address());
             break;
         case AF_INET6:
-            result.reset(new IPv6Address(type(), m_protocol));
+            result.reset(new IPv6Address());
             break;
         default:
-            result.reset(new UnknownAddress(m_family, type(), m_protocol));
+            result.reset(new UnknownAddress(m_family));
             break;
     }
     socklen_t namelen = result->nameLen();
@@ -1180,13 +1189,13 @@ Socket::localAddress()
     Address::ptr result;
     switch (m_family) {
         case AF_INET:
-            result.reset(new IPv4Address(type(), m_protocol));
+            result.reset(new IPv4Address());
             break;
         case AF_INET6:
-            result.reset(new IPv6Address(type(), m_protocol));
+            result.reset(new IPv6Address());
             break;
         default:
-            result.reset(new UnknownAddress(m_family, type(), m_protocol));
+            result.reset(new UnknownAddress(m_family));
             break;
     }
     socklen_t namelen = result->nameLen();
@@ -1244,11 +1253,6 @@ Socket::registerForRemoteClose()
 #endif
     m_isRegisteredForRemoteClose = true;
 }
-
-Address::Address(int type, int protocol)
-: m_type(type),
-  m_protocol(protocol)
-{}
 
 std::vector<Address::ptr>
 Address::lookup(const std::string &host, int family, int type, int protocol)
@@ -1351,8 +1355,7 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
     std::vector<Address::ptr> result;
     next = results;
     while (next) {
-        result.push_back(create(next->ai_addr, (socklen_t)next->ai_addrlen,
-            next->ai_socktype, next->ai_protocol));
+        result.push_back(create(next->ai_addr, (socklen_t)next->ai_addrlen));
         next = next->ai_next;
     }
 #ifdef WINDOWS
@@ -1481,23 +1484,23 @@ Address::getInterfaceAddresses()
 }
 
 Address::ptr
-Address::create(const sockaddr *name, socklen_t nameLen, int type, int protocol)
+Address::create(const sockaddr *name, socklen_t nameLen)
 {
     MORDOR_ASSERT(name);
     Address::ptr result;
     switch (name->sa_family) {
         case AF_INET:
-            result.reset(new IPv4Address(type, protocol));
+            result.reset(new IPv4Address());
             MORDOR_ASSERT(nameLen <= result->nameLen());
             memcpy(result->name(), name, nameLen);
             break;
         case AF_INET6:
-            result.reset(new IPv6Address(type, protocol));
+            result.reset(new IPv6Address());
             MORDOR_ASSERT(nameLen <= result->nameLen());
             memcpy(result->name(), name, nameLen);
             break;
         default:
-            result.reset(new UnknownAddress(name->sa_family, type, protocol));
+            result.reset(new UnknownAddress(name->sa_family));
             MORDOR_ASSERT(nameLen <= result->nameLen());
             memcpy(result->name(), name, nameLen);
             break;
@@ -1508,21 +1511,18 @@ Address::create(const sockaddr *name, socklen_t nameLen, int type, int protocol)
 Socket::ptr
 Address::createSocket(int type, int protocol)
 {
-    return Socket::ptr(new Socket(family(), type ? type : m_type,
-        protocol ? protocol : m_protocol));
+    return Socket::ptr(new Socket(family(), type, protocol));
 }
-
 Socket::ptr
 Address::createSocket(IOManager &ioManager, int type, int protocol)
 {
-    return Socket::ptr(new Socket(ioManager, family(), type ? type : m_type,
-        protocol ? protocol : m_protocol));
+    return Socket::ptr(new Socket(ioManager, family(), type, protocol));
 }
 
 std::ostream &
 Address::insert(std::ostream &os) const
 {
-    return os << "(Unknown addr " << m_type << ")";
+    return os << "(Unknown addr " << family() << ")";
 }
 
 bool
@@ -1542,8 +1542,7 @@ Address::operator<(const Address &rhs) const
 bool
 Address::operator==(const Address &rhs) const
 {
-    return m_type == rhs.m_type && m_protocol == rhs.m_protocol &&
-        nameLen() == rhs.nameLen() &&
+    return nameLen() == rhs.nameLen() &&
         memcmp(name(), rhs.name(), nameLen()) == 0;
 }
 
@@ -1552,12 +1551,7 @@ bool Address::operator!=(const Address &rhs) const
     return !(*this == rhs);
 }
 
-IPAddress::IPAddress(int type, int protocol)
-: Address(type, protocol)
-{}
-
-IPv4Address::IPv4Address(int type, int protocol)
-: IPAddress(type, protocol)
+IPv4Address::IPv4Address()
 {
     sin.sin_family = AF_INET;
     sin.sin_port = 0;
@@ -1580,8 +1574,7 @@ IPv4Address::broadcastAddress(unsigned int prefixLength)
     baddr.sin_addr.s_addr |= byteswapOnLittleEndian(
         createMask<unsigned int>(prefixLength));
     return boost::static_pointer_cast<IPv4Address>(
-        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in), type(),
-            protocol()));
+        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in)));
 }
 
 IPv4Address::ptr
@@ -1592,8 +1585,7 @@ IPv4Address::networkAddress(unsigned int prefixLength)
     baddr.sin_addr.s_addr &= byteswapOnLittleEndian(
         ~createMask<unsigned int>(prefixLength));
     return boost::static_pointer_cast<IPv4Address>(
-        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in), type(),
-            protocol()));
+        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in)));
 }
 
 IPv4Address::ptr
@@ -1623,8 +1615,7 @@ IPv4Address::insert(std::ostream &os) const
     return os;
 }
 
-IPv6Address::IPv6Address(int type, int protocol)
-: IPAddress(type, protocol)
+IPv6Address::IPv6Address()
 {
     sin.sin6_family = AF_INET6;
     sin.sin6_port = 0;
@@ -1642,8 +1633,7 @@ IPv6Address::broadcastAddress(unsigned int prefixLength)
     for (unsigned int i = prefixLength / 8 + 1; i < 16; ++i)
         baddr.sin6_addr.s6_addr[i] = 0xffu;
     return boost::static_pointer_cast<IPv6Address>(
-        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in6),
-            type(), protocol()));
+        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in6)));
 }
 
 IPv6Address::ptr
@@ -1656,8 +1646,7 @@ IPv6Address::networkAddress(unsigned int prefixLength)
     for (unsigned int i = prefixLength / 8 + 1; i < 16; ++i)
         baddr.sin6_addr.s6_addr[i] = 0x00u;
     return boost::static_pointer_cast<IPv6Address>(
-        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in6),
-            type(), protocol()));
+        Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in6)));
 }
 
 IPv6Address::ptr
@@ -1705,8 +1694,7 @@ IPv6Address::insert(std::ostream &os) const
 }
 
 #ifndef WINDOWS
-UnixAddress::UnixAddress(const std::string &path, int type, int protocol)
-: Address(type, protocol)
+UnixAddress::UnixAddress(const std::string &path)
 {
     sun.sun_family = AF_UNIX;
     length = path.size() + 1;
@@ -1733,8 +1721,7 @@ UnixAddress::insert(std::ostream &os) const
 }
 #endif
 
-UnknownAddress::UnknownAddress(int family, int type, int protocol)
-: Address(type, protocol)
+UnknownAddress::UnknownAddress(int family)
 {
     sa.sa_family = family;
 }

@@ -34,10 +34,10 @@ Connection
 establishConn(IOManager &ioManager)
 {
     Connection result;
-    std::vector<Address::ptr> addresses = Address::lookup("localhost", AF_UNSPEC, SOCK_STREAM);
+    std::vector<Address::ptr> addresses = Address::lookup("localhost");
     MORDOR_TEST_ASSERT(!addresses.empty());
     result.address = boost::dynamic_pointer_cast<IPAddress>(addresses.front());
-    result.listen = result.address->createSocket(ioManager);
+    result.listen = result.address->createSocket(ioManager, SOCK_STREAM);
     unsigned int opt = 1;
     result.listen->setOption(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     while (true) {
@@ -50,7 +50,7 @@ establishConn(IOManager &ioManager)
         }
     }
     result.listen->listen();
-    result.connect = result.address->createSocket(ioManager);
+    result.connect = result.address->createSocket(ioManager, SOCK_STREAM);
     return result;
 }
 
