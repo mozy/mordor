@@ -214,8 +214,8 @@ public:
     static ptr create(const sockaddr *name, socklen_t nameLen,
         int type = 0, int protocol = 0);
 
-    Socket::ptr createSocket();
-    Socket::ptr createSocket(IOManager &ioManager);
+    Socket::ptr createSocket(int type = 0, int protocol = 0);
+    Socket::ptr createSocket(IOManager &ioManager, int type = 0, int protocol = 0);
 
     int family() const { return name()->sa_family; }
     int type() const { return m_type; }

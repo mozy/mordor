@@ -1508,15 +1508,17 @@ Address::create(const sockaddr *name, socklen_t nameLen, int type, int protocol)
 }
 
 Socket::ptr
-Address::createSocket()
+Address::createSocket(int type, int protocol)
 {
-    return Socket::ptr(new Socket(family(), type(), protocol()));
+    return Socket::ptr(new Socket(family(), type ? type : m_type,
+        protocol ? protocol : m_protocol));
 }
 
 Socket::ptr
-Address::createSocket(IOManager &ioManager)
+Address::createSocket(IOManager &ioManager, int type, int protocol)
 {
-    return Socket::ptr(new Socket(ioManager, family(), type(), protocol()));
+    return Socket::ptr(new Socket(ioManager, family(), type ? type : m_type,
+        protocol ? protocol : m_protocol));
 }
 
 std::ostream &
