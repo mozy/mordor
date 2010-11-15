@@ -210,7 +210,7 @@ public:
             int type = 0, int protocol = 0);
     /// @return interface => (list of (address, prefixLength) )
     static std::map<std::string, std::vector<std::pair<ptr, unsigned int> > >
-        getInterfaceAddresses();
+        getInterfaceAddresses(int family = AF_UNSPEC);
     static ptr create(const sockaddr *name, socklen_t nameLen);
 
     ptr clone();

@@ -1377,7 +1377,7 @@ static unsigned int countBits(T value)
 }
 
 std::map<std::string, std::vector<std::pair<Address::ptr, unsigned int> > >
-Address::getInterfaceAddresses()
+Address::getInterfaceAddresses(int family)
 {
     std::map<std::string, std::vector<std::pair<Address::ptr, unsigned int> > >
         result;
@@ -1401,6 +1401,8 @@ Address::getInterfaceAddresses()
                 unsigned int> > >::iterator it =
             result.insert(std::make_pair(addresses2->AdapterName,
                 std::vector<std::pair<Address::ptr, unsigned int> >())).first;
+            if (family != AF_INET && family != AF_UNSPEC)
+                continue;
             IP_ADDR_STRING *address = &addresses2->IpAddressList;
             for (; address; address = address->Next) {
                 sockaddr_in addr;
@@ -1424,6 +1426,9 @@ Address::getInterfaceAddresses()
                 std::vector<std::pair<Address::ptr, unsigned int> >())).first;
         IP_ADAPTER_UNICAST_ADDRESS *address = addresses->FirstUnicastAddress;
         for (; address; address = address->Next) {
+            if (family != AF_UNSPEC &&
+                family != address->Address.lpSockaddr->sa_family)
+                continue;
             Address::ptr addr = Address::create(address->Address.lpSockaddr,
                 address->Address.iSockaddrLength);
             unsigned int prefixLength = ~0u;
@@ -1444,10 +1449,12 @@ Address::getInterfaceAddresses()
     if (getifaddrs(&results) != 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getifaddrs");
     try {
-        next = results;
-        while (next) {
+        for (next = results; next; next = next->ifa_next) {
             Address::ptr address, baddress;
             unsigned int prefixLength = ~0u;
+            result[next->ifa_name];
+            if (family != AF_UNSPEC && family != next->ifa_addr->sa_family)
+                continue;
             switch (next->ifa_addr->sa_family) {
                 case AF_INET:
                 {
@@ -1472,7 +1479,6 @@ Address::getInterfaceAddresses()
             if (address)
                 result[next->ifa_name].push_back(
                     std::make_pair(address, prefixLength));
-            next = next->ifa_next;
         }
     } catch (...) {
         freeifaddrs(results);
