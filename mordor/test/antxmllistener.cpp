@@ -32,6 +32,7 @@ public:
              const char* file, int line)
     {
         std::ostringstream *os = NULL;
+        std::ostringstream localOS;
         switch (level) {
             case Log::FATAL:
             case Log::ERROR:
@@ -40,12 +41,16 @@ public:
             default:
                 os = m_out;
         }
-        if (os)
-            *os << now << " " << elapsed << " " << level << " " << thread
-                << " " << fiber << " " << logger << " " << file << ":" << line
-                << " " << str << std::endl;
+        if (os) {
+            localOS << now << " " << elapsed << " " << level << " " << thread
+                    << " " << fiber << " " << logger << " " << file << ":"
+                    << line << " " << str << std::endl;
+            boost::mutex::scoped_lock lock(m_mutex);
+            *os << localOS.str();
+        }
     }
 
+    boost::mutex m_mutex;
     std::ostringstream *m_out, *m_err;
 };
 
