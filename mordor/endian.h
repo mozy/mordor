@@ -12,7 +12,7 @@
 #ifdef WINDOWS
 #include <stdlib.h>
 #elif defined(OSX)
-#include <libkern/_OSByteOrder.h>
+#include <libkern/OSByteOrder.h>
 #include <stdint.h>
 #include <sys/_endian.h>
 #elif defined(FREEBSD)

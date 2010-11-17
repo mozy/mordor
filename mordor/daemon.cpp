@@ -220,6 +220,7 @@ static void *signal_thread(void *arg)
     return NULL;
 }
 
+#ifndef OSX
 static bool shouldDaemonize(char **enviro)
 {
     if (!enviro)
@@ -258,6 +259,7 @@ static bool shouldDaemonizeDueToParent()
     const char *parentEnviro = parentEnviron.c_str();
     return shouldDaemonize((char **)&parentEnviro);
 }
+#endif
 
 int run(int argc, char **argv,
     boost::function<int (int, char **)> daemonMain)
