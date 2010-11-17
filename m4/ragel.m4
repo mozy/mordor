@@ -16,7 +16,7 @@ AC_DEFUN([_RAGEL_VARS], [
 
 AC_DEFUN([CHECK_RAGEL], [
   AC_REQUIRE([_RAGEL_VARS])
-  AC_CHECK_PROG([RAGEL], [ragel], [ragel], [no])
+  AC_PATH_PROG([RAGEL], [ragel], [no], [$PATH:/usr/local/bin:/opt/local/bin])
 
   dnl We set RAGEL to false so that it would execute the "false"
   dnl command if needed.
