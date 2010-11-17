@@ -5,9 +5,10 @@
 #ifdef LINUX
 #include <sys/prctl.h>
 #include <syscall.h>
-#endif
-#ifdef WINDOWS
+#elif defined(WINDOWS)
 #include <process.h>
+#elif defined (OSX)
+#include <mach/mach_init.h>
 #endif
 
 #include "exception.h"
