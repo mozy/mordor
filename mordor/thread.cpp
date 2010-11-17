@@ -192,7 +192,7 @@ Thread::run(void *arg)
 #else
     Context *pContext = (Context *)arg;
     dg.swap(pContext->dg);
-#ifdef OSX
+#ifdef __MAC_10_6
     if (pContext->name)
         pthread_setname_np(pContext->name);
 #endif
