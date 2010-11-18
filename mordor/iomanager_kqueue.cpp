@@ -141,10 +141,12 @@ IOManager::cancelEvent(int fd, Event events)
         fiber.swap(e.m_fiber);
         dg.swap(e.m_dg);
         if (e.m_fiberClose || e.m_dgClose) {
-            if (dg)
-                scheduler->schedule(dg);
-            else
-                scheduler->schedule(fiber);
+            if (dg || fiber) {
+                if (dg)
+                    scheduler->schedule(dg);
+                else
+                    scheduler->schedule(fiber);
+            }
             return;
         }
     } else if (events == CLOSE) {
@@ -152,10 +154,12 @@ IOManager::cancelEvent(int fd, Event events)
         fiber.swap(e.m_fiberClose);
         dg.swap(e.m_dgClose);
         if (e.m_fiber || e.m_dg) {
-            if (dg)
-                scheduler->schedule(dg);
-            else
-                scheduler->schedule(fiber);
+            if (dg || fiber) {
+                if (dg)
+                    scheduler->schedule(dg);
+                else
+                    scheduler->schedule(fiber);
+            }
             return;
         }
     } else if (events == WRITE) {
