@@ -335,8 +335,8 @@ MORDOR_UNITTEST(Scheduler, spreadTheLoad)
         WorkerPool pool(4);
         // Wait for the other threads to get to idle first
         Mordor::sleep(100000);
-        int count = 8;
-        for (size_t i = 0; i < 8; ++i)
+        int count = 80;
+        for (size_t i = 0; i < 80; ++i)
             pool.schedule(boost::bind(&sleepForABit, boost::ref(threads),
                 boost::ref(mutex), Fiber::getThis(), &count));
         // We have to have one of these fibers reschedule us, because if we
@@ -377,7 +377,7 @@ static void startTheFibers(std::set<tid_t> &threads,
     boost::mutex &mutex)
 {
     Mordor::sleep(100000);
-    for (size_t i = 0; i < 8; ++i)
+    for (size_t i = 0; i < 80; ++i)
         Scheduler::getThis()->schedule(boost::bind(&sleepForABit,
             boost::ref(threads), boost::ref(mutex), Fiber::ptr(),
             (int *)NULL));
