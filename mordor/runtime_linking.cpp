@@ -401,7 +401,7 @@ MORDOR_RUNTIME_LINK_DEFINITION(inet_pton, INT, WSAAPI,
             return 1;
         default:
             SetLastError(WSAEAFNOSUPPORT);
-            return 0;
+            return -1;
     }
 }
 
