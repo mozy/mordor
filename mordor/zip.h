@@ -29,7 +29,7 @@ private:
         : m_size(-1ll),
           m_compressedSize(-1ll),
           m_startOffset(0ll),
-          m_outer(outer),
+          m_outer(&outer),
           m_crc(0),
           m_flags(0x0800),
           m_extraFieldsLength(0)
@@ -67,7 +67,7 @@ private:
     std::string m_filename, m_comment;
     long long m_size, m_compressedSize;
     long long m_startOffset;
-    mutable Zip &m_outer;
+    mutable Zip *m_outer;
     unsigned int m_crc;
     unsigned short m_flags;
     unsigned short m_extraFieldsLength;

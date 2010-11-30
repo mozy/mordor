@@ -603,93 +603,93 @@ ZipEntry::size(long long size)
 Stream::ptr
 ZipEntry::stream()
 {
-    m_startOffset = m_outer.m_stream->tell();
+    m_startOffset = m_outer->m_stream->tell();
     commit();
-    if (m_outer.m_compressedStream) {
-        MORDOR_ASSERT(m_outer.m_deflateStream);
-        MORDOR_ASSERT(m_outer.m_crcStream);
-        MORDOR_ASSERT(m_outer.m_uncompressedStream);
-        m_outer.m_compressedStream->reset();
-        m_outer.m_deflateStream->reset();
-        m_outer.m_crcStream->reset();
-        m_outer.m_uncompressedStream->reset(
+    if (m_outer->m_compressedStream) {
+        MORDOR_ASSERT(m_outer->m_deflateStream);
+        MORDOR_ASSERT(m_outer->m_crcStream);
+        MORDOR_ASSERT(m_outer->m_uncompressedStream);
+        m_outer->m_compressedStream->reset();
+        m_outer->m_deflateStream->reset();
+        m_outer->m_crcStream->reset();
+        m_outer->m_uncompressedStream->reset(
             m_size == -1ll ? 0x7fffffffffffffffll : m_size);
     } else {
-        MORDOR_ASSERT(!m_outer.m_deflateStream);
-        MORDOR_ASSERT(!m_outer.m_crcStream);
-        MORDOR_ASSERT(!m_outer.m_uncompressedStream);
-        m_outer.m_compressedStream.reset(
-            new LimitedStream(m_outer.m_stream, 0x7fffffffffffffffll));
-        m_outer.m_deflateStream.reset(
-            new DeflateStream(m_outer.m_compressedStream, false));
-        m_outer.m_crcStream.reset(
-            new CRC32Stream(m_outer.m_deflateStream));
-        m_outer.m_uncompressedStream.reset(
-            new LimitedStream(m_outer.m_crcStream,
+        MORDOR_ASSERT(!m_outer->m_deflateStream);
+        MORDOR_ASSERT(!m_outer->m_crcStream);
+        MORDOR_ASSERT(!m_outer->m_uncompressedStream);
+        m_outer->m_compressedStream.reset(
+            new LimitedStream(m_outer->m_stream, 0x7fffffffffffffffll));
+        m_outer->m_deflateStream.reset(
+            new DeflateStream(m_outer->m_compressedStream, false));
+        m_outer->m_crcStream.reset(
+            new CRC32Stream(m_outer->m_deflateStream));
+        m_outer->m_uncompressedStream.reset(
+            new LimitedStream(m_outer->m_crcStream,
                 m_size == -1ll ? 0x7fffffffffffffffll : m_size));
     }
-    return m_outer.m_uncompressedStream;
+    return m_outer->m_uncompressedStream;
 }
 
 Stream::ptr
 ZipEntry::stream() const
 {
-    if (m_outer.m_currentFile != this) {
-        MORDOR_ASSERT(m_outer.m_stream->supportsSeek());
-        m_outer.m_stream->seek(m_startOffset);
+    if (m_outer->m_currentFile != this) {
+        MORDOR_ASSERT(m_outer->m_stream->supportsSeek());
+        m_outer->m_stream->seek(m_startOffset);
         LocalFileHeader header;
-        size_t read = m_outer.m_stream->read(&header, sizeof(LocalFileHeader));
+        size_t read = m_outer->m_stream->read(&header, sizeof(LocalFileHeader));
         if (read < sizeof(LocalFileHeader))
             MORDOR_THROW_EXCEPTION(UnexpectedEofException());
         if (header.signature != 0x04034b50)
             MORDOR_THROW_EXCEPTION(CorruptZipException());
         if (header.fileNameLength + header.extraFieldLength)
-            m_outer.m_stream->seek(header.fileNameLength +
+            m_outer->m_stream->seek(header.fileNameLength +
                 header.extraFieldLength, Stream::CURRENT);
 
-        if (!m_outer.m_deflateStream) {
-            MORDOR_ASSERT(!m_outer.m_compressedStream);
-            MORDOR_ASSERT(!m_outer.m_deflateStream);
-            m_outer.m_compressedStream.reset(
-                new LimitedStream(m_outer.m_stream, m_compressedSize, false));
-            m_outer.m_deflateStream.reset(new DeflateStream(
-                m_outer.m_compressedStream));
+        if (!m_outer->m_deflateStream) {
+            MORDOR_ASSERT(!m_outer->m_compressedStream);
+            MORDOR_ASSERT(!m_outer->m_deflateStream);
+            m_outer->m_compressedStream.reset(
+                new LimitedStream(m_outer->m_stream, m_compressedSize, false));
+            m_outer->m_deflateStream.reset(new DeflateStream(
+                m_outer->m_compressedStream));
         } else {
-            MORDOR_ASSERT(m_outer.m_compressedStream);
-            MORDOR_ASSERT(m_outer.m_deflateStream);
-            m_outer.m_compressedStream->reset(m_compressedSize);
-            m_outer.m_deflateStream->reset();
+            MORDOR_ASSERT(m_outer->m_compressedStream);
+            MORDOR_ASSERT(m_outer->m_deflateStream);
+            m_outer->m_compressedStream->reset(m_compressedSize);
+            m_outer->m_deflateStream->reset();
         }
         switch (header.compressionMethod) {
             case 0:
-                m_outer.m_fileStream = m_outer.m_compressedStream;
+                m_outer->m_fileStream = m_outer->m_compressedStream;
                 break;
             case 8:
-                m_outer.m_fileStream = m_outer.m_deflateStream;
+                m_outer->m_fileStream = m_outer->m_deflateStream;
                 break;
             default:
                 MORDOR_THROW_EXCEPTION(
                     UnsupportedCompressionMethodException());
         }
         if (header.generalPurposeFlags & 0x0008) {
-            if (!m_outer.m_notifyStream)
-                m_outer.m_notifyStream.reset(new NotifyStream(
-                    m_outer.m_fileStream));
-            m_outer.m_notifyStream->parent(m_outer.m_fileStream);
-            m_outer.m_notifyStream->notifyOnEof = boost::bind(&Zip::onFileEOF,
-                &m_outer);
-            m_outer.m_fileStream = m_outer.m_notifyStream;
+            if (!m_outer->m_notifyStream)
+                m_outer->m_notifyStream.reset(new NotifyStream(
+                    m_outer->m_fileStream));
+            m_outer->m_notifyStream->parent(m_outer->m_fileStream);
+            m_outer->m_notifyStream->notifyOnEof = boost::bind(&Zip::onFileEOF,
+                m_outer);
+            m_outer->m_fileStream = m_outer->m_notifyStream;
         }
     } else {
-        MORDOR_ASSERT(m_outer.m_fileStream);
+        MORDOR_ASSERT(m_outer->m_fileStream);
     }
-    return m_outer.m_fileStream;
+    return m_outer->m_fileStream;
 }
 
 void
 ZipEntry::commit()
 {
-    if (!m_outer.m_stream->supportsSeek())
+    if (!m_outer->m_stream->supportsSeek())
         m_flags = 0x0808;
     LocalFileHeader header;
 
@@ -719,22 +719,22 @@ ZipEntry::commit()
         extra += 2;
     }
     header.extraFieldLength = (unsigned short)extraFields.size();
-    m_outer.m_stream->write(&header, sizeof(LocalFileHeader));
-    m_outer.m_stream->write(m_filename.c_str(), m_filename.size());
+    m_outer->m_stream->write(&header, sizeof(LocalFileHeader));
+    m_outer->m_stream->write(m_filename.c_str(), m_filename.size());
     if (header.extraFieldLength)
-        m_outer.m_stream->write(extraFields.c_str(), extraFields.size());
+        m_outer->m_stream->write(extraFields.c_str(), extraFields.size());
 }
 
 void
 ZipEntry::close()
 {
     MORDOR_ASSERT(m_size == -1ll ||
-        m_outer.m_uncompressedStream->tell() == m_size);
-    m_outer.m_uncompressedStream->close();
+        m_outer->m_uncompressedStream->tell() == m_size);
+    m_outer->m_uncompressedStream->close();
     bool zip64 = (m_size == -1ll || m_size >= 0xffffffffll);
-    m_size = m_outer.m_uncompressedStream->tell();
-    m_compressedSize = m_outer.m_compressedStream->tell();
-    m_outer.m_crcStream->hash(&m_crc, sizeof(unsigned int));
+    m_size = m_outer->m_uncompressedStream->tell();
+    m_compressedSize = m_outer->m_compressedStream->tell();
+    m_outer->m_crcStream->hash(&m_crc, sizeof(unsigned int));
     m_crc = byteswapOnLittleEndian(m_crc);
     if (m_flags & 0x0008) {
         if (zip64) {
@@ -743,25 +743,25 @@ ZipEntry::close()
             dd.crc32 = m_crc;
             dd.compressedSize = m_compressedSize;
             dd.uncompressedSize = m_size;
-            m_outer.m_stream->write(&dd, sizeof(DataDescriptor64));
+            m_outer->m_stream->write(&dd, sizeof(DataDescriptor64));
         } else {
             DataDescriptor dd;
             dd.signature = 0x08074b50;
             dd.crc32 = m_crc;
             dd.compressedSize = (unsigned int)m_compressedSize;
             dd.uncompressedSize = (unsigned int)m_size;
-            m_outer.m_stream->write(&dd, sizeof(DataDescriptor));
+            m_outer->m_stream->write(&dd, sizeof(DataDescriptor));
         }
     }
-    if (m_outer.m_stream->supportsSeek()) {
-        long long current = m_outer.m_stream->tell();
-        m_outer.m_stream->seek(m_startOffset + 14);
-        m_outer.m_stream->write(&m_crc, 4);
+    if (m_outer->m_stream->supportsSeek()) {
+        long long current = m_outer->m_stream->tell();
+        m_outer->m_stream->seek(m_startOffset + 14);
+        m_outer->m_stream->write(&m_crc, 4);
         unsigned int size = (unsigned int)std::min<long long>(
             0xffffffffu, m_compressedSize);
-        m_outer.m_stream->write(&size, 4);
+        m_outer->m_stream->write(&size, 4);
         size = (unsigned int)std::min<long long>(0xffffffffu, m_size);
-        m_outer.m_stream->write(&size, 4);
+        m_outer->m_stream->write(&size, 4);
         if (zip64 && !(m_flags & 0x0008)) {
             std::string extraFields;
             extraFields.resize(20);
@@ -774,10 +774,10 @@ ZipEntry::close()
             extra += 8;
             *(long long *)extra = m_compressedSize;
             extra += 8;
-            m_outer.m_stream->seek(4 + m_filename.size(), Stream::CURRENT);
-            m_outer.m_stream->write(extraFields.c_str(), extraFields.size());
+            m_outer->m_stream->seek(4 + m_filename.size(), Stream::CURRENT);
+            m_outer->m_stream->write(extraFields.c_str(), extraFields.size());
         }
-        m_outer.m_stream->seek(current);
+        m_outer->m_stream->seek(current);
     }
 }
 
