@@ -1090,4 +1090,30 @@ URI::QueryString::toString() const
     return os.str();
 }
 
+std::string &
+URI::QueryString::operator[](const std::string &key)
+{
+    std::pair<iterator, iterator> its = equal_range(key);
+    // Did not exist; create it
+    if (its.first == end())
+        return insert(std::make_pair(key, std::string()))->second;
+    // Multiple instances; remove all but the first
+    iterator next = its.first;
+    ++next;
+    erase(next, its.second);
+    // Left with a single (first) instance; return it
+    return its.first->second;
+}
+
+std::string
+URI::QueryString::operator[](const std::string &key) const
+{
+    std::pair<const_iterator, const_iterator> its = equal_range(key);
+    // Did not exist
+    if (its.first == end())
+        return std::string();
+    // Return only the first instance
+    return its.first->second;
+}
+
 }
