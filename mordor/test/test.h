@@ -357,7 +357,7 @@ template <class T, class U, class V>
 void assertAboutEqual(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr, V variance)
 {
-    if (!(lhs - variance < rhs && lhs + variance > rhs)) {
+    if (!(lhs - variance <= rhs && lhs + variance >= rhs)) {
         assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
             "~==");
     }
