@@ -156,7 +156,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/workerpool.cpp			\
 	mordor/xml/xml_parser.cpp		\
 	mordor/zip.cpp
-mordor_libmordor_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h
+mordor_libmordor_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h $(AM_CPPFLAGS)
 mordor_libmordor_la_LDFLAGS=			\
 	$(OPENSSL_LDFLAGS)			\
 	$(BOOST_LDFLAGS)			\
