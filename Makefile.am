@@ -236,6 +236,7 @@ mordor_tests_run_tests_SOURCES=			\
 	mordor/tests/uri.cpp			\
 	mordor/tests/xml.cpp			\
 	mordor/tests/zlib.cpp
+mordor_tests_run_tests_CPPFLAGS=-include mordor/pch.h $(AM_CPPFLAGS)
 mordor_tests_run_tests_LDADD=mordor/libmordor.la mordor/test/libmordortest.la \
 	$(CORESERVICES_FRAMEWORK_LIBS)		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
