@@ -27,6 +27,7 @@ private:
     size_t m_tests;
     size_t m_success;
     size_t m_skip;
+    std::vector<std::pair<std::string, std::string> > m_failures;
 };
 
 }}

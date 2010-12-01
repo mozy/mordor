@@ -50,6 +50,7 @@ StdoutListener::testAsserted(const std::string &suite, const std::string &test,
 {
     std::cerr << "Assertion: "
         << boost::current_exception_diagnostic_information() << std::endl;
+    m_failures.push_back(std::make_pair(suite, test));
 }
 
 void
@@ -57,6 +58,7 @@ StdoutListener::testException(const std::string &suite, const std::string &test)
 {
     std::cerr << "Unexpected exception: "
         << boost::current_exception_diagnostic_information() << std::endl;
+    m_failures.push_back(std::make_pair(suite, test));
 }
 
 void
@@ -64,4 +66,13 @@ StdoutListener::testsComplete()
 {
     std::cout << "Tests complete.  " << m_success << "/" << m_tests
         << " passed, " << m_skip << " skipped." << std::endl;
+    if (!m_failures.empty()) {
+        std::cout << "Failures:" << std::endl;
+        for (std::vector<std::pair<std::string, std::string> >::iterator
+            it = m_failures.begin();
+            it != m_failures.end();
+            ++it)
+                std::cout << '\t' << it->first << "::" << it->second
+                    << std::endl;
+    }
 }
