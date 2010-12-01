@@ -17,6 +17,7 @@ static Logger::ptr g_logWaitBlock = Log::lookup("mordor:iomanager:waitblock");
 AsyncEvent::AsyncEvent()
 {
     memset(this, 0, sizeof(AsyncEvent));
+    m_thread = emptytid();
 }
 
 IOManager::WaitBlock::WaitBlock(IOManager &outer)
