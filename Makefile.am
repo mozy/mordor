@@ -79,6 +79,7 @@ nobase_include_HEADERS=			\
 	mordor/streams/zlib.h		\
 	mordor/string.h			\
 	mordor/test/antxmllistener.h	\
+	mordor/test/compoundlistener.h	\
 	mordor/test/stdoutlistener.h	\
 	mordor/test/test.h		\
 	mordor/thread.h			\
@@ -197,6 +198,7 @@ mordor/pch.h.gch: mordor/pch.h
 
 mordor_test_libmordortest_la_SOURCES=	\
 	mordor/test/antxmllistener.cpp	\
+	mordor/test/compoundlistener.cpp	\
 	mordor/test/stdoutlistener.cpp	\
 	mordor/test/test.cpp
 
