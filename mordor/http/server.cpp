@@ -536,11 +536,13 @@ ServerRequest::doRequest()
                 } else if (stricmp(it->value.c_str(), "compress") == 0 ||
                     stricmp(it->value.c_str(), "x-compress") == 0) {
                     m_requestState = ERROR;
-                    respondError(shared_from_this(), NOT_IMPLEMENTED, "compress transfer-coding is not supported", false);
+                    respondError(shared_from_this(), NOT_IMPLEMENTED,
+                        "compress transfer-coding is not supported");
                     return;
                 } else {
                     m_requestState = ERROR;
-                    respondError(shared_from_this(), NOT_IMPLEMENTED, "Unrecognized transfer-coding: " + it->value, false);
+                    respondError(shared_from_this(), NOT_IMPLEMENTED,
+                        "Unrecognized transfer-coding: " + it->value);
                     return;
                 }
             }
@@ -554,12 +556,25 @@ ServerRequest::doRequest()
             if (stricmp(it->key.c_str(), "100-continue") == 0) {
                 if (!it->value.empty() || !it->parameters.empty()) {
                     m_requestState = ERROR;
-                    respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized parameters to 100-continue expectation", false);
+                    respondError(shared_from_this(), EXPECTATION_FAILED,
+                        "Unrecognized parameters to 100-continue expectation");
+                    return;
+                }
+                // http://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.2.3
+                // A client MUST NOT send an Expect request-header field (section
+                // 14.20) with the "100-continue" expectation if it does not intend
+                // to send a request body.
+                if (!Connection::hasMessageBody(m_request.general, m_request.entity,
+                    m_request.requestLine.method, INVALID, false)) {
+                    m_requestState = ERROR;
+                    respondError(shared_from_this(), BAD_REQUEST,
+                        "Cannot use 100-continue expectation without a request body");
                     return;
                 }
             } else {
                 m_requestState = ERROR;
-                respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized expectation: " + it->key, false);
+                respondError(shared_from_this(), EXPECTATION_FAILED,
+                    "Unrecognized expectation: " + it->key);
                 return;
             }
         }

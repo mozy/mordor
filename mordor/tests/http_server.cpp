@@ -774,3 +774,18 @@ MORDOR_UNITTEST(HTTPServer, keepAliveAfterImplicitFinishWithRequestBody)
     // Now do it again, the server shouldn't have closed the connection
     request = requestBroker.request(requestHeaders, false, &writeHelloBody);
 }
+
+MORDOR_UNITTEST(HTTPServer, badRequestOnExpectContinueWithNoRequestBody)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&keepAliveAfterImplicitFinishWithRequestBodyServer);
+    BaseRequestBroker requestBroker(ConnectionBroker::ptr(&server,
+        &nop<ConnectionBroker *>));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "http://localhost/";
+    requestHeaders.request.expect.push_back("100-continue");
+
+    ClientRequest::ptr request = requestBroker.request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, BAD_REQUEST);
+}
