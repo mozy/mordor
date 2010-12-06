@@ -42,9 +42,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/MP"
 				Optimization="0"
 				AdditionalIncludeDirectories="../.."
-				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
@@ -118,9 +118,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/MP"
 				Optimization="0"
 				AdditionalIncludeDirectories="../.."
-				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
@@ -194,6 +194,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/MP"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../.."
@@ -273,6 +274,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/MP"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../.."
@@ -356,6 +358,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\endian.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\fibers.cpp"
 				>
 			</File>
@@ -376,7 +382,15 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http.cpp"
+				RelativePath=".\http_client.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\http_parser.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\http_server.cpp"
 				>
 			</File>
 			<File
@@ -464,7 +478,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\string.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\temp_stream.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\thread.cpp"
 				>
 			</File>
 			<File
@@ -477,6 +499,10 @@
 			</File>
 			<File
 				RelativePath=".\transfer_stream.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\unicode.cpp"
 				>
 			</File>
 			<File
