@@ -22,6 +22,8 @@ extern char **environ;
 
 namespace Mordor {
 
+static Logger::ptr g_log = Log::lookup("mordor:config");
+
 void
 Config::loadFromEnvironment()
 {
@@ -251,14 +253,22 @@ void
 Config::RegistryMonitor::onRegistryChange(
     boost::weak_ptr<RegistryMonitor> self)
 {
-    RegistryMonitor::ptr strongSelf = self.lock();
-    if (strongSelf) {
-        LSTATUS status = RegNotifyChangeKeyValue(strongSelf->m_hKey, FALSE,
-            REG_NOTIFY_CHANGE_LAST_SET, strongSelf->m_hEvent, TRUE);
-        if (status)
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(status,
-                "RegNotifyChangeKeyValue");
-        Mordor::loadFromRegistry(strongSelf->m_hKey);
+    try
+    {
+        RegistryMonitor::ptr strongSelf = self.lock();
+        if (strongSelf) {
+            LSTATUS status = RegNotifyChangeKeyValue(strongSelf->m_hKey, FALSE,
+                REG_NOTIFY_CHANGE_LAST_SET, strongSelf->m_hEvent, TRUE);
+            if (status)
+                MORDOR_THROW_EXCEPTION_FROM_ERROR_API(status,
+                    "RegNotifyChangeKeyValue");
+            Mordor::loadFromRegistry(strongSelf->m_hKey);
+        }
+    }
+    catch(...)
+    {
+        MORDOR_LOG_WARNING(g_log) << "failed to monitor registry: " <<
+            boost::current_exception_diagnostic_information();
     }
 }
 
