@@ -67,7 +67,7 @@ public:
         return m_arg;
     }
 
-    Fiber::State state()
+    Fiber::State state() const
     {
         return m_fiber->state();
     }
@@ -140,7 +140,7 @@ public:
         Fiber::yield();
     }
 
-    Fiber::State state()
+    Fiber::State state() const
     {
         return m_fiber->state();
     }
@@ -211,7 +211,7 @@ public:
         return m_arg;
     }
 
-    Fiber::State state()
+    Fiber::State state() const
     {
         return m_fiber->state();
     }
