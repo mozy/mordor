@@ -76,6 +76,56 @@ FiberMutex::unlockNoLock()
     }
 }
 
+FiberSemaphore::FiberSemaphore(size_t initialConcurrency)
+    : m_concurrency(initialConcurrency)
+{}
+
+FiberSemaphore::~FiberSemaphore()
+{
+#ifdef DEBUG
+    boost::mutex::scoped_lock scopeLock(m_mutex);
+    MORDOR_ASSERT(m_waiters.empty());
+#endif
+}
+
+void
+FiberSemaphore::wait()
+{
+    MORDOR_ASSERT(Scheduler::getThis());
+    {
+        boost::mutex::scoped_lock scopeLock(m_mutex);
+        MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
+            std::make_pair(Scheduler::getThis(), Fiber::getThis()))
+            == m_waiters.end());
+        if (m_concurrency > 0u) {
+            --m_concurrency;
+            return;
+        }
+        m_waiters.push_back(std::make_pair(Scheduler::getThis(),
+            Fiber::getThis()));
+    }
+    Scheduler::yieldTo();
+#ifdef DEBUG
+    boost::mutex::scoped_lock scopeLock(m_mutex);
+    MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
+            std::make_pair(Scheduler::getThis(), Fiber::getThis()))
+            == m_waiters.end());
+#endif
+}
+
+void
+FiberSemaphore::notify()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    if (!m_waiters.empty()) {
+        std::pair<Scheduler *, Fiber::ptr> next = m_waiters.front();
+        m_waiters.pop_front();
+        next.first->schedule(next.second);
+    } else {
+        ++m_concurrency;
+    }
+}
+
 FiberCondition::~FiberCondition()
 {
 #ifdef DEBUG
