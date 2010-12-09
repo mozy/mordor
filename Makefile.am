@@ -205,6 +205,7 @@ mordor_test_libmordortest_la_SOURCES=	\
 check_PROGRAMS=mordor/tests/run_tests
 mordor_tests_run_tests_SOURCES=			\
 	mordor/tests/run_tests.cpp		\
+	mordor/tests/atomic.cpp			\
 	mordor/tests/buffer.cpp			\
 	mordor/tests/buffered_stream.cpp	\
 	mordor/tests/chunked_stream.cpp		\
