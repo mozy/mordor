@@ -197,25 +197,32 @@ MORDOR_UNITTEST(Socket, receiveAfterShutdownOtherEnd)
     testShutdownException<DummyException>(false, true, true);
 }
 
-static void testAddress(const char *addr, const char *expected = NULL)
+static void testAddress(const char *addr, const char *expected)
 {
-    if (!expected)
-        expected = addr;
-    std::vector<Address::ptr> address = Address::lookup(addr);
-    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(*address.front()),
+    MORDOR_TEST_ASSERT_EQUAL(
+        boost::lexical_cast<std::string>(*IPAddress::create(addr, 80)),
         expected);
 }
 
-MORDOR_UNITTEST(Address, formatAddresses)
+MORDOR_UNITTEST(Address, formatIPv4Address)
 {
-    testAddress("127.0.0.1", "127.0.0.1:0");
-    testAddress("127.0.0.1:80");
-    testAddress("::", "[::]:0");
-    testAddress("[::]:80", "[::]:80");
-    testAddress("::1", "[::1]:0");
-    testAddress("[2001:470:1f05:273:20c:29ff:feb3:5ddf]:0");
-    testAddress("[2001:470::273:20c:0:0:5ddf]:0");
-    testAddress("[2001:470:0:0:273:20c::5ddf]:0", "[2001:470::273:20c:0:5ddf]:0");
+    testAddress("127.0.0.1", "127.0.0.1:80");
+}
+
+MORDOR_UNITTEST(Address, formatIPv6Address)
+{
+    try {
+        testAddress("::", "[::]:80");
+        testAddress("::1", "[::1]:80");
+        testAddress("[2001:470:1f05:273:20c:29ff:feb3:5ddf]",
+            "[2001:470:1f05:273:20c:29ff:feb3:5ddf]:80");
+        testAddress("[2001:470::273:20c:0:0:5ddf]",
+            "[2001:470::273:20c:0:0:5ddf]:80");
+        testAddress("[2001:470:0:0:273:20c::5ddf]",
+            "[2001:470::273:20c:0:5ddf]:80");
+    } catch (std::invalid_argument &) {
+        throw TestSkippedException();
+    }
 }
 
 MORDOR_UNITTEST(Address, parseIPv4Address)
@@ -224,6 +231,7 @@ MORDOR_UNITTEST(Address, parseIPv4Address)
         "127.0.0.1:80");
     MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(IPv4Address("127.0.0.1")),
         "127.0.0.1:0");
+    MORDOR_TEST_ASSERT_EXCEPTION(IPv4Address("garbage"), std::invalid_argument);
 }
 
 MORDOR_UNITTEST(Address, parseIPv6Address)
@@ -236,6 +244,7 @@ MORDOR_UNITTEST(Address, parseIPv6Address)
         MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(
             IPv6Address("2001:470::273:20c:0:0:5ddf")),
             "[2001:470::273:20c:0:0:5ddf]:0");
+        MORDOR_TEST_ASSERT_EXCEPTION(IPv6Address("garbage"), std::invalid_argument);
     } catch (OperationNotSupportedException &) {
         throw TestSkippedException();
     }

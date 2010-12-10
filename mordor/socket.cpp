@@ -1255,6 +1255,48 @@ Socket::registerForRemoteClose()
     m_isRegisteredForRemoteClose = true;
 }
 
+static void throwGaiException(int error)
+{
+    switch (error) {
+        case EAI_AGAIN:
+            MORDOR_THROW_EXCEPTION(TemporaryNameServerFailureException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+        case EAI_FAIL:
+            MORDOR_THROW_EXCEPTION(PermanentNameServerFailureException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+#if defined(WSANO_DATA) || defined(EAI_NODATA)
+        case MORDOR_NATIVE(WSANO_DATA, EAI_NODATA):
+            MORDOR_THROW_EXCEPTION(NoNameServerDataException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+#endif
+        case EAI_NONAME:
+            MORDOR_THROW_EXCEPTION(HostNotFoundException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+#ifdef EAI_ADDRFAMILY
+        case EAI_ADDRFAMILY:
+#endif
+        case EAI_FAMILY:
+            MORDOR_THROW_EXCEPTION(OperationNotSupportedException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+        case EAI_BADFLAGS:
+        case EAI_MEMORY:
+        case EAI_SERVICE:
+        case EAI_SOCKTYPE:
+#ifdef EAI_SYSTEM
+        case EAI_SYSTEM:
+#endif
+        default:
+            MORDOR_THROW_EXCEPTION(NameLookupException()
+                << errinfo_gaierror(error)
+                << boost::errinfo_api_function("getaddrinfo"));
+    }
+}
+
 std::vector<Address::ptr>
 Address::lookup(const std::string &host, int family, int type, int protocol)
 {
@@ -1313,46 +1355,12 @@ Address::lookup(const std::string &host, int family, int type, int protocol)
 #else
     error = getaddrinfo(node.c_str(), service, &hints, &results);
 #endif
-    if (error)
+    if (error) {
         MORDOR_LOG_ERROR(g_log) << "getaddrinfo(" << host << ", "
             << (Family)family << ", " << (Type)type << "): (" << error << ")";
-    switch (error) {
-        case 0:
-            break;
-        case EAI_AGAIN:
-            MORDOR_THROW_EXCEPTION(TemporaryNameServerFailureException()
-                << errinfo_gaierror(error)
-                << boost::errinfo_api_function("getaddrinfo"));
-        case EAI_FAIL:
-            MORDOR_THROW_EXCEPTION(PermanentNameServerFailureException()
-                << errinfo_gaierror(error)
-                << boost::errinfo_api_function("getaddrinfo"));
-#if defined(WSANO_DATA) || defined(EAI_NODATA)
-        case MORDOR_NATIVE(WSANO_DATA, EAI_NODATA):
-            MORDOR_THROW_EXCEPTION(NoNameServerDataException()
-                << errinfo_gaierror(error)
-                << boost::errinfo_api_function("getaddrinfo"));
-#endif
-        case EAI_NONAME:
-            MORDOR_THROW_EXCEPTION(HostNotFoundException()
-                << errinfo_gaierror(error)
-                << boost::errinfo_api_function("getaddrinfo"));
-#ifdef EAI_ADDRFAMILY
-        case EAI_ADDRFAMILY:
-#endif
-        case EAI_BADFLAGS:
-        case EAI_FAMILY:
-        case EAI_MEMORY:
-        case EAI_SERVICE:
-        case EAI_SOCKTYPE:
-#ifdef EAI_SYSTEM
-        case EAI_SYSTEM:
-#endif
-        default:
-            MORDOR_THROW_EXCEPTION(NameLookupException()
-                << errinfo_gaierror(error)
-                << boost::errinfo_api_function("getaddrinfo"));
+        throwGaiException(error);
     }
+
     std::vector<Address::ptr> result;
     next = results;
     while (next) {
@@ -1580,6 +1588,33 @@ IPAddress::ptr
 IPAddress::clone()
 {
     return boost::static_pointer_cast<IPAddress>(Address::clone());
+}
+
+IPAddress::ptr
+IPAddress::create(const char *address, unsigned short port)
+{
+    addrinfo hints, *results;
+    memset(&hints, 0, sizeof(addrinfo));
+    hints.ai_flags = AI_NUMERICHOST;
+    hints.ai_family = AF_UNSPEC;
+    int error = getaddrinfo(address, NULL, &hints, &results);
+    if (error == EAI_NONAME) {
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("address"));
+    } else if (error) {
+        MORDOR_LOG_ERROR(g_log) << "getaddrinfo(" << address
+            << ", AI_NUMERICHOST): (" << error << ")";
+        throwGaiException(error);
+    }
+    try {
+        IPAddress::ptr result = boost::static_pointer_cast<IPAddress>(
+            Address::create(results->ai_addr, (socklen_t)results->ai_addrlen));
+        result->port(port);
+        freeaddrinfo(results);
+        return result;
+    } catch (...) {
+        freeaddrinfo(results);
+        throw;
+    }
 }
 
 IPv4Address::IPv4Address(unsigned int address, unsigned short port)

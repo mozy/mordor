@@ -396,9 +396,33 @@ MORDOR_RUNTIME_LINK_DEFINITION(inet_pton, INT, WSAAPI,
 {
     switch (Family) {
         case AF_INET:
-            // No error checking
-            *(unsigned long *)pAddrBuf = inet_addr(pszAddrString);
-            return 1;
+        case AF_INET6:
+            {
+                addrinfo hints, *results;
+                memset(&hints, 0, sizeof(addrinfo));
+                hints.ai_flags = AI_NUMERICHOST;
+                hints.ai_family = Family;
+                int error = getaddrinfo(pszAddrString, NULL, &hints, &results);
+                if (error == EAI_NONAME) {
+                    return 0;
+                } else if (error == EAI_FAMILY) {
+                    SetLastError(WSAEAFNOSUPPORT);
+                    return -1;
+                } else if (error) {
+                    SetLastError(error);
+                    return -1;
+                }
+                if (Family == AF_INET6)
+                    memcpy(pAddrBuf,
+                        &((sockaddr_in6 *)results->ai_addr)->sin6_addr,
+                        sizeof(in6_addr));
+                else
+                    memcpy(pAddrBuf,
+                        &((sockaddr_in *)results->ai_addr)->sin_addr,
+                        sizeof(in_addr));
+                freeaddrinfo(results);
+                return 1;
+            }
         default:
             SetLastError(WSAEAFNOSUPPORT);
             return -1;

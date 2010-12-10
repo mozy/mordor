@@ -239,6 +239,12 @@ public:
     typedef boost::shared_ptr<IPAddress> ptr;
 
 public:
+    /// Create an IPAddress from a numeric string
+    /// @note port should be provided in native-endian format
+    /// @note std::invalid_argument may be thrown if it is an IPv6 address and
+    ///       IPv6 is not supported
+    static ptr create(const char *address, unsigned short port = 0);
+
     ptr clone();
 
     virtual ptr broadcastAddress(unsigned int prefixLength) = 0;
@@ -254,7 +260,7 @@ struct IPv4Address : public IPAddress
 public:
     /// @note address and port should be provided in native-endian format
     IPv4Address(unsigned int address = INADDR_ANY, unsigned short port = 0);
-    /// @note address and port should be provided in native-endian format
+    /// @note port should be provided in native-endian format
     IPv4Address(const char *address, unsigned short port = 0);
 
     ptr broadcastAddress(unsigned int prefixLength);
