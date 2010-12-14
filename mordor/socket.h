@@ -208,9 +208,13 @@ public:
     static std::vector<ptr>
         lookup(const std::string& host, int family = AF_UNSPEC,
             int type = 0, int protocol = 0);
-    /// @return interface => (list of (address, prefixLength) )
-    static std::map<std::string, std::vector<std::pair<ptr, unsigned int> > >
+    /// @returns interface => (address, prefixLength)
+    static std::multimap<std::string, std::pair<ptr, unsigned int> >
         getInterfaceAddresses(int family = AF_UNSPEC);
+    // @param interface Interface name, or "*" to indicate all interfaces
+    static std::vector<std::pair<ptr, unsigned int> >
+        getInterfaceAddresses(const std::string &interface,
+        int family = AF_UNSPEC);
     static ptr create(const sockaddr *name, socklen_t nameLen);
 
     ptr clone();

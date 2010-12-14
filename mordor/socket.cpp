@@ -1377,10 +1377,10 @@ static unsigned int countBits(T value)
     return result;
 }
 
-std::map<std::string, std::vector<std::pair<Address::ptr, unsigned int> > >
+std::multimap<std::string, std::pair<Address::ptr, unsigned int> >
 Address::getInterfaceAddresses(int family)
 {
-    std::map<std::string, std::vector<std::pair<Address::ptr, unsigned int> > >
+    std::multimap<std::string, std::pair<Address::ptr, unsigned int> >
         result;
 #ifdef WINDOWS
     char buf[15 * 1024];
@@ -1398,10 +1398,7 @@ Address::getInterfaceAddresses(int family)
         if (error)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "PIP_ADAPTER_INFO");
         for (; addresses2; addresses2 = addresses2->Next) {
-            std::map<std::string, std::vector<std::pair<Address::ptr,
-                unsigned int> > >::iterator it =
-            result.insert(std::make_pair(addresses2->AdapterName,
-                std::vector<std::pair<Address::ptr, unsigned int> >())).first;
+            std::string interface(addresses2->AdapterName);
             if (family != AF_INET && family != AF_UNSPEC)
                 continue;
             IP_ADDR_STRING *address = &addresses2->IpAddressList;
@@ -1411,9 +1408,9 @@ Address::getInterfaceAddresses(int family)
                 addr.sin_family = AF_INET;
                 addr.sin_addr.s_addr = inet_addr(address->IpAddress.String);
                 unsigned int mask = inet_addr(address->IpMask.String);
-                it->second.push_back(std::make_pair(
+                result.insert(std::make_pair(interface, std::make_pair(
                     Address::create((sockaddr *)&addr,
-                    sizeof(sockaddr_in)), countBits(mask)));
+                    sizeof(sockaddr_in)), countBits(mask))));
             }
         }
 
@@ -1421,10 +1418,7 @@ Address::getInterfaceAddresses(int family)
     }
 
     for (; addresses; addresses = addresses->Next) {
-        std::map<std::string,
-            std::vector<std::pair<Address::ptr, unsigned int> > >::iterator it =
-            result.insert(std::make_pair(addresses->AdapterName,
-                std::vector<std::pair<Address::ptr, unsigned int> >())).first;
+        std::string interface(addresses->AdapterName);
         IP_ADAPTER_UNICAST_ADDRESS *address = addresses->FirstUnicastAddress;
         for (; address; address = address->Next) {
             if (family != AF_UNSPEC &&
@@ -1441,7 +1435,8 @@ Address::getInterfaceAddresses(int family)
                 prefixLength = address->OnLinkPrefixLength;
             }
 
-            it->second.push_back(std::make_pair(addr, prefixLength));
+            result.insert(std::make_pair(interface,
+                std::make_pair(addr, prefixLength)));
         }
     }
     return result;
@@ -1453,7 +1448,6 @@ Address::getInterfaceAddresses(int family)
         for (next = results; next; next = next->ifa_next) {
             Address::ptr address, baddress;
             unsigned int prefixLength = ~0u;
-            result[next->ifa_name];
             if (family != AF_UNSPEC && family != next->ifa_addr->sa_family)
                 continue;
             switch (next->ifa_addr->sa_family) {
@@ -1478,8 +1472,8 @@ Address::getInterfaceAddresses(int family)
                     break;
             }
             if (address)
-                result[next->ifa_name].push_back(
-                    std::make_pair(address, prefixLength));
+                result.insert(std::make_pair(next->ifa_name,
+                    std::make_pair(address, prefixLength)));
         }
     } catch (...) {
         freeifaddrs(results);
@@ -1488,6 +1482,23 @@ Address::getInterfaceAddresses(int family)
     freeifaddrs(results);
     return result;
 #endif
+}
+
+std::vector<std::pair<Address::ptr, unsigned int> >
+Address::getInterfaceAddresses(const std::string &interface, int family)
+{
+    typedef std::multimap<std::string, std::pair<Address::ptr, unsigned int> >
+        AddressesMap;
+    std::vector<std::pair<Address::ptr, unsigned int> > result;
+    AddressesMap interfaces = getInterfaceAddresses(family);
+    std::pair<AddressesMap::iterator, AddressesMap::iterator> its;
+    if (interface.empty() || interface == "*")
+        its = std::make_pair(interfaces.begin(), interfaces.end());
+    else
+        its = interfaces.equal_range(interface);
+    for (; its.first != its.second; ++its.first)
+        result.push_back(its.first->second);
+    return result;
 }
 
 Address::ptr
