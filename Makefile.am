@@ -14,6 +14,7 @@ nobase_include_HEADERS=			\
 	mordor/endian.h			\
 	mordor/eventloop.h		\
 	mordor/exception.h		\
+	mordor/factory.h		\
 	mordor/fiber.h			\
 	mordor/fibersynchronization.h	\
 	mordor/future.h			\
@@ -31,6 +32,7 @@ nobase_include_HEADERS=			\
 	mordor/http/parser.h		\
 	mordor/http/proxy.h		\
 	mordor/http/server.h		\
+	mordor/http/servlet.h		\
 	mordor/iomanager_epoll.h	\
 	mordor/iomanager.h		\
 	mordor/iomanager_kqueue.h	\
@@ -114,6 +116,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/http/oauth.cpp			\
 	mordor/http/proxy.cpp			\
 	mordor/http/server.cpp			\
+	mordor/http/servlet.cpp			\
 	mordor/iomanager_epoll.cpp		\
 	mordor/iomanager_kqueue.cpp		\
 	mordor/json.cpp				\
@@ -203,41 +206,42 @@ mordor_test_libmordortest_la_SOURCES=	\
 	mordor/test/test.cpp
 
 check_PROGRAMS=mordor/tests/run_tests
-mordor_tests_run_tests_SOURCES=			\
-	mordor/tests/run_tests.cpp		\
-	mordor/tests/atomic.cpp			\
-	mordor/tests/buffer.cpp			\
-	mordor/tests/buffered_stream.cpp	\
-	mordor/tests/chunked_stream.cpp		\
-	mordor/tests/coroutine.cpp		\
-	mordor/tests/endian.cpp			\
-	mordor/tests/fibers.cpp			\
-	mordor/tests/fibersync.cpp		\
-	mordor/tests/file_stream.cpp		\
-	mordor/tests/fls.cpp			\
-	mordor/tests/future.cpp			\
-	mordor/tests/hmac.cpp			\
-	mordor/tests/http_client.cpp		\
-	mordor/tests/http_parser.cpp		\
-	mordor/tests/http_server.cpp		\
-	mordor/tests/iomanager.cpp		\
-	mordor/tests/json.cpp			\
-	mordor/tests/log.cpp			\
-	mordor/tests/memory_stream.cpp		\
-	mordor/tests/oauth.cpp			\
-	mordor/tests/pipe_stream.cpp		\
-	mordor/tests/scheduler.cpp		\
-	mordor/tests/socket.cpp			\
-	mordor/tests/ssl_stream.cpp		\
-	mordor/tests/stream.cpp			\
-	mordor/tests/string.cpp			\
-	mordor/tests/temp_stream.cpp		\
-	mordor/tests/thread.cpp			\
-	mordor/tests/timeout_stream.cpp		\
-	mordor/tests/timer.cpp			\
-	mordor/tests/transfer_stream.cpp	\
-	mordor/tests/uri.cpp			\
-	mordor/tests/xml.cpp			\
+mordor_tests_run_tests_SOURCES=				\
+	mordor/tests/run_tests.cpp			\
+	mordor/tests/atomic.cpp				\
+	mordor/tests/buffer.cpp				\
+	mordor/tests/buffered_stream.cpp		\
+	mordor/tests/chunked_stream.cpp			\
+	mordor/tests/coroutine.cpp			\
+	mordor/tests/endian.cpp				\
+	mordor/tests/fibers.cpp				\
+	mordor/tests/fibersync.cpp			\
+	mordor/tests/file_stream.cpp			\
+	mordor/tests/fls.cpp				\
+	mordor/tests/future.cpp				\
+	mordor/tests/hmac.cpp				\
+	mordor/tests/http_client.cpp			\
+	mordor/tests/http_parser.cpp			\
+	mordor/tests/http_server.cpp			\
+	mordor/tests/http_servlet_dispatcher.cpp	\
+	mordor/tests/iomanager.cpp			\
+	mordor/tests/json.cpp				\
+	mordor/tests/log.cpp				\
+	mordor/tests/memory_stream.cpp			\
+	mordor/tests/oauth.cpp				\
+	mordor/tests/pipe_stream.cpp			\
+	mordor/tests/scheduler.cpp			\
+	mordor/tests/socket.cpp				\
+	mordor/tests/ssl_stream.cpp			\
+	mordor/tests/stream.cpp				\
+	mordor/tests/string.cpp				\
+	mordor/tests/temp_stream.cpp			\
+	mordor/tests/thread.cpp				\
+	mordor/tests/timeout_stream.cpp			\
+	mordor/tests/timer.cpp				\
+	mordor/tests/transfer_stream.cpp		\
+	mordor/tests/uri.cpp				\
+	mordor/tests/xml.cpp				\
 	mordor/tests/zlib.cpp
 mordor_tests_run_tests_CPPFLAGS=-include mordor/pch.h $(AM_CPPFLAGS)
 mordor_tests_run_tests_LDADD=mordor/libmordor.la mordor/test/libmordortest.la \

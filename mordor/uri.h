@@ -85,9 +85,12 @@ struct URI
         std::string toString() const;
 
         int cmp(const Authority &rhs) const;
-        bool operator==(const Authority &rhs) const;
+        bool operator<(const Authority &rhs) const
+        { return cmp(rhs) < 0; }
+        bool operator==(const Authority &rhs) const
+        { return cmp(rhs) == 0; }
         bool operator!=(const Authority &rhs) const
-        { return !(*this == rhs); }
+        { return cmp(rhs) != 0; }
 
     private:
         std::string m_userinfo, m_host;
@@ -164,9 +167,12 @@ struct URI
         std::string toString() const;
 
         int cmp(const Path &rhs) const;
-        bool operator==(const Path &rhs) const;
+        bool operator<(const Path &rhs) const
+        { return cmp(rhs) < 0; }
+        bool operator==(const Path &rhs) const
+        { return cmp(rhs) == 0; }
         bool operator!=(const Path &rhs) const
-        { return !(*this == rhs); }
+        { return cmp(rhs) != 0; }
 
     private:
         const URI *m_uri;
@@ -222,10 +228,12 @@ struct URI
     static URI transform(const URI& base, const URI& relative);
 
     int cmp(const URI &rhs) const;
-    bool operator<(const URI &rhs) const;
-    bool operator==(const URI &rhs) const;
+    bool operator<(const URI &rhs) const
+    { return cmp(rhs) < 0; }
+    bool operator==(const URI &rhs) const
+    { return cmp(rhs) == 0; }
     bool operator!=(const URI &rhs) const
-    { return !(*this == rhs); }
+    { return cmp(rhs) != 0; }
 
 private:
     std::string m_scheme, m_query, m_fragment;

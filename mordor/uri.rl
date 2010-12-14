@@ -577,12 +577,6 @@ URI::Authority::cmp(const Authority &rhs) const
     return strcmp(m_userinfo.c_str(), rhs.m_userinfo.c_str());
 }
 
-bool
-URI::Authority::operator==(const Authority &rhs) const
-{
-    return cmp(rhs) == 0;
-}
-
 std::ostream&
 operator<<(std::ostream& os, const URI::Authority& authority)
 {
@@ -804,12 +798,6 @@ URI::Path::cmp(const Path &rhs) const
     }
 }
 
-bool
-URI::Path::operator==(const Path &rhs) const
-{
-    return segments == rhs.segments;
-}
-
 void
 URI::normalize()
 {
@@ -957,18 +945,6 @@ URI::cmp(const URI &rhs) const
     x = boolcmp(m_fragmentDefined, rhs.m_fragmentDefined);
     if (x != 0) return x;
     return strcmp(m_fragment.c_str(), rhs.m_fragment.c_str());
-}
-
-bool
-URI::operator<(const URI &rhs) const
-{
-    return cmp(rhs) < 0;
-}
-
-bool
-URI::operator==(const URI &rhs) const
-{
-    return cmp(rhs) == 0;
 }
 
 %%{

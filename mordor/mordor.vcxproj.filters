@@ -206,6 +206,9 @@
     <ClCompile Include="zip.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="http\servlet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h">
@@ -461,6 +464,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="zip.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="http\servlet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="factory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
