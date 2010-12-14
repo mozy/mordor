@@ -33,6 +33,7 @@ nobase_include_HEADERS=			\
 	mordor/http/proxy.h		\
 	mordor/http/server.h		\
 	mordor/http/servlet.h		\
+	mordor/http/servlets/config.h	\
 	mordor/iomanager_epoll.h	\
 	mordor/iomanager.h		\
 	mordor/iomanager_kqueue.h	\
@@ -117,6 +118,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/http/proxy.cpp			\
 	mordor/http/server.cpp			\
 	mordor/http/servlet.cpp			\
+	mordor/http/servlets/config.cpp		\
 	mordor/iomanager_epoll.cpp		\
 	mordor/iomanager_kqueue.cpp		\
 	mordor/json.cpp				\

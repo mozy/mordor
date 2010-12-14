@@ -859,9 +859,13 @@ respondError(ServerRequest::ptr request, Status status,
     if (!message.empty()) {
         request->response().entity.contentType.type = "text";
         request->response().entity.contentType.subtype = "plain";
-        Stream::ptr responseStream = request->responseStream();
-        responseStream->write(message.c_str(), message.size());
-        responseStream->close();
+        if (request->request().requestLine.method == HEAD) {
+            request->finish();
+        } else {
+            Stream::ptr responseStream = request->responseStream();
+            responseStream->write(message.c_str(), message.size());
+            responseStream->close();
+        }
     } else {
         request->finish();
     }
