@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS=-I m4
 AUTOMAKE_OPTIONS=nostdinc subdir-objects
-AM_CPPFLAGS=$(OPENSSL_INCLUDES) $(BOOST_CPPFLAGS) -I$(top_srcdir)
+AM_CPPFLAGS=$(OPENSSL_INCLUDES) $(BOOST_CPPFLAGS) $(POSTGRESQL_CFLAGS) -I$(top_srcdir)
 AM_CXXFLAGS=-Wall -Werror -fno-strict-aliasing
 
 nobase_include_HEADERS=			\
@@ -96,6 +96,7 @@ nobase_include_HEADERS=			\
 	mordor/zip.h
 
 lib_LTLIBRARIES=mordor/libmordor.la mordor/test/libmordortest.la
+
 mordor_libmordor_la_SOURCES=			\
 	mordor/assert.cpp			\
 	mordor/config.cpp			\
@@ -173,8 +174,24 @@ mordor_libmordor_la_LDFLAGS=			\
 	-version-info $(LIBMORDOR_SO_VERSION)
 mordor_libmordor_la_LIBADD=$(OPENSSL_LIBS) $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB)
 
+if HAVE_POSTGRESQL
+    lib_LTLIBRARIES+=mordor/libmordorpq.la
+endif
+
+mordor_libmordorpq_la_SOURCES=		\
+	mordor/pq.cpp
+
+mordor_libmordorpq_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h $(AM_CPPFLAGS)
+mordor_libmordorpq_la_LDFLAGS=			\
+	$(POSTGRESQL_LDFLAGS)
+mordor_libmordorpq_la_LIBADD=mordor/libmordor.la
+
 pkgconfigdir=$(libdir)/pkgconfig
-pkgconfig_DATA=mordor/libmordor.pc
+pkgconfig_DATA=mordor/libmordor.pc mordor/test/libmordortest.pc
+
+if HAVE_POSTGRESQL
+pkgconfig_DATA+=mordor/libmordorpq.pc
+endif
 
 SUFFIXES=.rl
 
@@ -206,6 +223,8 @@ mordor_test_libmordortest_la_SOURCES=	\
 	mordor/test/compoundlistener.cpp	\
 	mordor/test/stdoutlistener.cpp	\
 	mordor/test/test.cpp
+
+mordor_test_libmordortest_la_LIBADD=mordor/libmordor.la
 
 check_PROGRAMS=mordor/tests/run_tests
 mordor_tests_run_tests_SOURCES=				\
@@ -245,8 +264,24 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/uri.cpp				\
 	mordor/tests/xml.cpp				\
 	mordor/tests/zlib.cpp
+
 mordor_tests_run_tests_CPPFLAGS=-include mordor/pch.h $(AM_CPPFLAGS)
 mordor_tests_run_tests_LDADD=mordor/libmordor.la mordor/test/libmordortest.la \
+	$(CORESERVICES_FRAMEWORK_LIBS)		\
+	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
+	$(SECURITY_FRAMEWORK_LIBS)		\
+	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+
+
+if HAVE_POSTGRESQL
+check_PROGRAMS+=mordor/tests/run_pq_tests
+endif
+
+mordor_tests_run_pq_tests_SOURCES = mordor/tests/pq.cpp
+mordor_tests_run_pq_tests_CPPFLAGS=-include mordor/pch.h $(AM_CPPFLAGS)
+mordor_tests_run_pq_tests_LDADD = mordor/libmordor.la \
+	mordor/libmordorpq.la 				\
+	mordor/test/libmordortest.la		\
 	$(CORESERVICES_FRAMEWORK_LIBS)		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
 	$(SECURITY_FRAMEWORK_LIBS)		\

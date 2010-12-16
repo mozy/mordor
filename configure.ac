@@ -36,6 +36,8 @@ AX_CHECK_CORESERVICES_FRAMEWORK
 AX_CHECK_COREFOUNDATION_FRAMEWORK
 AX_CHECK_SECURITY_FRAMEWORK
 AX_CHECK_SYSTEMCONFIGURATION_FRAMEWORK
+AX_LIB_POSTGRESQL
+AM_CONDITIONAL([HAVE_POSTGRESQL], [test x${POSTGRESQL_VERSION} != x])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h])
@@ -63,5 +65,6 @@ AC_SUBST([pic_flag])
 
 AC_CONFIG_FILES([Makefile
                  mordor/libmordor.pc
+                 mordor/libmordorpq.pc
                  mordor/test/libmordortest.pc])
 AC_OUTPUT
