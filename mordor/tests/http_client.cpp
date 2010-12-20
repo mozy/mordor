@@ -8,6 +8,7 @@
 #include "mordor/http/multipart.h"
 #include "mordor/http/parser.h"
 #include "mordor/http/server.h"
+#include "mordor/http/servlet.h"
 #include "mordor/iomanager.h"
 #include "mordor/scheduler.h"
 #include "mordor/sleep.h"
@@ -2555,4 +2556,33 @@ MORDOR_UNITTEST(HTTPClient, forceAbsoluteUri)
 
     ClientRequest::ptr request = requestBroker.request(requestHeaders);
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+}
+
+namespace {
+class DummyStreamBroker : public StreamBroker
+{
+public:
+    Stream::ptr getStream(const URI &uri)
+    {
+        std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+        Servlet::ptr servlet(new ServletDispatcher());
+        ServerConnection::ptr server(new ServerConnection(pipe.second,
+            boost::bind(&Servlet::request, servlet, _1)));
+        server->processRequests();
+        return pipe.first;
+    }
+};
+}
+
+MORDOR_UNITTEST(HTTPConnectionCache, idleDoesntPreventStop)
+{
+    IOManager ioManager;
+    StreamBroker::ptr broker(new DummyStreamBroker());
+    ConnectionCache cache(broker, &ioManager);
+    cache.idleTimeout(5000000ull);
+    ClientConnection::ptr conn = cache.getConnection("http://localhost/").first;
+    cache.closeIdleConnections();
+    unsigned long long start = TimerManager::now();
+    ioManager.stop();
+    MORDOR_TEST_ASSERT_LESS_THAN(TimerManager::now() - start, 1000000ull);
 }

@@ -117,7 +117,7 @@ ClientConnection::writeTimeout(unsigned long long us)
 void
 ClientConnection::idleTimeout(unsigned long long us, boost::function<void ()> dg)
 {
-    MORDOR_ASSERT(m_timerManager);
+    MORDOR_ASSERT(us == ~0ull || m_timerManager);
     boost::mutex::scoped_lock lock(m_mutex);
     if (m_idleTimer) {
         m_idleTimer->cancel();

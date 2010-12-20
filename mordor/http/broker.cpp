@@ -414,7 +414,7 @@ ConnectionCache::closeIdleConnections()
     FiberMutex::ScopedLock lock(m_mutex);
     MORDOR_LOG_DEBUG(g_cacheLog) << " dropping idle connections";
     // We don't just clear the list, because there may be a connection in
-    // in progress that has an iterator into it
+    // progress that has an iterator into it
     std::map<URI, std::pair<ConnectionList,
         boost::shared_ptr<FiberCondition> > >::iterator it, extraIt;
     for (it = m_conns.begin(); it != m_conns.end();) {
@@ -425,6 +425,8 @@ ConnectionCache::closeIdleConnections()
                 Stream::ptr connStream = (*it2)->stream();
                 connStream->cancelRead();
                 connStream->cancelWrite();
+                if (m_idleTimeout != ~0ull)
+                    (*it2)->idleTimeout(~0ull, NULL);
                 it2 = it->second.first.erase(it2);
             } else {
                 ++it2;
@@ -456,6 +458,8 @@ ConnectionCache::abortConnections()
                 Stream::ptr connStream = (*it2)->stream();
                 connStream->cancelRead();
                 connStream->cancelWrite();
+                if (m_idleTimeout != ~0ull)
+                    (*it2)->idleTimeout(~0ull, NULL);
             }
         }
     }
@@ -473,6 +477,8 @@ ConnectionCache::cleanOutDeadConns(CachedConnectionMap &conns)
         for (it2 = it->second.first.begin();
             it2 != it->second.first.end();) {
             if (*it2 && !(*it2)->newRequestsAllowed()) {
+                if (m_idleTimeout != ~0ull)
+                    (*it2)->idleTimeout(~0ull, NULL);
                 it2 = it->second.first.erase(it2);
             } else {
                 ++it2;
@@ -551,6 +557,8 @@ ConnectionCache::dropConnection(const URI &uri,
     if (it2 != it->second.first.end()) {
         MORDOR_LOG_TRACE(g_cacheLog) << this << " dropping connection "
             << connection << " to " << uri;
+        if (m_idleTimeout != ~0ull)
+            (*it2)->idleTimeout(~0ull, NULL);
         it->second.first.erase(it2);
         if (it->second.first.empty())
             m_conns.erase(it);
