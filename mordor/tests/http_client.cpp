@@ -2586,3 +2586,38 @@ MORDOR_UNITTEST(HTTPConnectionCache, idleDoesntPreventStop)
     ioManager.stop();
     MORDOR_TEST_ASSERT_LESS_THAN(TimerManager::now() - start, 1000000ull);
 }
+
+namespace {
+class FailStreamBroker : public StreamBroker
+{
+public:
+    Stream::ptr getStream(const URI &uri)
+    {
+        Scheduler::yield();
+        MORDOR_THROW_EXCEPTION(DummyException());
+    }
+};
+}
+
+static void expectFail(ConnectionCache &cache)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(cache.getConnection("http://localhost/"),
+        DummyException);
+}
+
+static void expectPriorFail(ConnectionCache &cache)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(cache.getConnection("http://localhost/"),
+        PriorConnectionFailedException);
+}
+
+MORDOR_UNITTEST(HTTPConnectionCache, pendingConnectionsFailTogether)
+{
+    WorkerPool pool;
+    StreamBroker::ptr broker(new FailStreamBroker());
+    ConnectionCache cache(broker);
+    pool.schedule(boost::bind(&expectFail, boost::ref(cache)));
+    pool.schedule(boost::bind(&expectPriorFail, boost::ref(cache)));
+    pool.schedule(boost::bind(&expectPriorFail, boost::ref(cache)));
+    pool.dispatch();
+}
