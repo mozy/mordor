@@ -1275,6 +1275,9 @@ Result::getType(size_t column) const
     return PQftype(m_result.get(), (int)column);
 }
 
+bool Result::getIsNull(size_t row, size_t column) const {
+    return PQgetisnull(m_result.get(), (int)row, (int)column) == 0;
+}
 template <>
 std::string
 Result::get<std::string>(size_t row, size_t column) const
