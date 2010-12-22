@@ -16,7 +16,7 @@ TestStream::close(CloseType type)
 size_t
 TestStream::read(Buffer &b, size_t len)
 {
-    len = std::min(len, m_maxReadSize);
+    len = (std::min)(len, m_maxReadSize);
     if (m_onRead) {
         if (m_onReadBytes == 0) {
             m_onRead();
@@ -33,7 +33,7 @@ TestStream::read(Buffer &b, size_t len)
 size_t
 TestStream::write(const Buffer &b, size_t len)
 {
-    len = std::min(len, m_maxWriteSize);
+    len = (std::min)(len, m_maxWriteSize);
     if (m_onWrite) {
         if (m_onWriteBytes == 0) {
             m_onWrite();

@@ -721,7 +721,7 @@ Parser::earliestPointer() const
 {
     const char *parent = RagelParser::earliestPointer();
     if (mark2 && parent)
-        return std::min(mark2, parent);
+        return (std::min)(mark2, parent);
     if (mark2)
         return mark2;
     return parent;

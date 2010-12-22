@@ -78,23 +78,23 @@ struct MinStatistic : Statistic
 
     MinStatistic(const char *units = NULL)
         : Statistic(units),
-        min(std::numeric_limits<T>::max())
+        minimum((std::numeric_limits<T>::max)())
     {}
 
-    volatile value_type min;
+    volatile value_type minimum;
 
-    void reset() { min = std::numeric_limits<T>::max(); }
+    void reset() { minimum = (std::numeric_limits<T>::max)(); }
 
     std::ostream &serialize(std::ostream &os) const
-    { return os << min; }
+    { return os << minimum; }
 
     void update(value_type value)
     {
-        value_type oldval = min;
+        value_type oldval = minimum;
         do {
             if (oldval < value)
                 break;
-        } while (value != (oldval = atomicCompareAndSwap(min, value, oldval)));
+        } while (value != (oldval = atomicCompareAndSwap(minimum, value, oldval)));
     }
 };
 
@@ -106,22 +106,22 @@ struct MaxStatistic : Statistic
 
     MaxStatistic(const char *units = NULL)
         : Statistic(units),
-          max(std::numeric_limits<T>::min())
+          maximum((std::numeric_limits<T>::min)())
     {}
-    volatile value_type max;
+    volatile value_type maximum;
 
-    void reset() { max = std::numeric_limits<T>::min(); }
+    void reset() { maximum = (std::numeric_limits<T>::min)(); }
 
     std::ostream &serialize(std::ostream &os) const
-    { return os << max; }
+    { return os << maximum; }
 
     void update(value_type value)
     {
-        value_type oldval = max;
+        value_type oldval = maximum;
         do {
             if (oldval > value)
                 break;
-        } while (value != (oldval = atomicCompareAndSwap(max, value, oldval)));
+        } while (value != (oldval = atomicCompareAndSwap(maximum, value, oldval)));
     }
 };
 
@@ -178,33 +178,33 @@ struct AverageMinMaxStatistic : AverageStatistic<T>
 {
     AverageMinMaxStatistic(const char *sumunits = NULL, const char *countunits = NULL)
         : AverageStatistic<T>(sumunits, countunits),
-          min(sumunits),
-          max(sumunits)
+          minimum(sumunits),
+          maximum(sumunits)
     {}
 
-    MinStatistic<T> min;
-    MaxStatistic<T> max;
+    MinStatistic<T> minimum;
+    MaxStatistic<T> maximum;
 
     void reset()
     {
         AverageStatistic<T>::reset();
-        min.reset();
-        max.reset();
+        minimum.reset();
+        maximum.reset();
     }
 
     void update(T value)
     {
         AverageStatistic<T>::update(value);
-        min.update(value);
-        max.update(value);
+        minimum.update(value);
+        maximum.update(value);
     }
 
-    const Statistic *begin() const { return &min; }
+    const Statistic *begin() const { return &minimum; }
     const Statistic *next(const Statistic *previous) const
     {
-        if (previous == &min)
-            return &max;
-        else if (previous == &max)
+        if (previous == &minimum)
+            return &maximum;
+        else if (previous == &maximum)
             return AverageStatistic<T>::begin();
         else
             return AverageStatistic<T>::next(previous);

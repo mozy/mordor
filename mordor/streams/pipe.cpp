@@ -151,7 +151,7 @@ PipeStream::read(Buffer &b, size_t len)
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
             size_t avail = m_readBuffer.readAvailable();
             if (avail > 0) {
-                size_t todo = std::min(len, avail);
+                size_t todo = (std::min)(len, avail);
                 b.copyIn(m_readBuffer, todo);
                 m_readBuffer.consume(todo);
                 if (m_pendingWriter) {
@@ -226,7 +226,7 @@ PipeStream::write(const Buffer &b, size_t len)
                 MORDOR_THROW_EXCEPTION(BrokenPipeException());
 
             size_t available = otherStream->m_readBuffer.readAvailable();
-            size_t todo = std::min(m_bufferSize - available, len);
+            size_t todo = (std::min)(m_bufferSize - available, len);
             if (todo != 0) {
                 otherStream->m_readBuffer.copyIn(b, todo);
                 if (m_pendingReader) {

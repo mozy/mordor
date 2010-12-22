@@ -82,14 +82,14 @@ CatStream::seek(long long offset, Anchor anchor)
                 --it;
                 itOffset = (*it)->size();
             }
-            long long toChange = std::min(-offset, itOffset);
+            long long toChange = (std::min)(-offset, itOffset);
             itOffset -= toChange;
             pos -= toChange;
             offset += toChange;
         } else {
             long long toChange = offset;
             if (it != m_streams.end())
-                toChange = std::min(offset, (*it)->size() - itOffset);
+                toChange = (std::min)(offset, (*it)->size() - itOffset);
             itOffset += toChange;
             pos += toChange;
             offset -= toChange;

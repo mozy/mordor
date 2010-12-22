@@ -142,7 +142,7 @@ Zip::Zip(Stream::ptr stream, OpenMode mode)
                 long long fileSize = m_stream->size();
                 if (fileSize < (long long)sizeof(EndOfCentralDirectory))
                     MORDOR_THROW_EXCEPTION(CorruptZipException());
-                size_t toRead = (size_t)std::min(65536ll, fileSize);
+                size_t toRead = (size_t)(std::min)(65536ll, fileSize);
                 m_stream->seek(-(long long)toRead, Stream::END);
                 m_stream->read(buffer, toRead);
                 unsigned char *search = buffer + toRead -

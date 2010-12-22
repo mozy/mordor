@@ -1398,7 +1398,7 @@ Address::getInterfaceAddresses(int family)
         if (error)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "PIP_ADAPTER_INFO");
         for (; addresses2; addresses2 = addresses2->Next) {
-            std::string interface(addresses2->AdapterName);
+            std::string iface(addresses2->AdapterName);
             if (family != AF_INET && family != AF_UNSPEC)
                 continue;
             IP_ADDR_STRING *address = &addresses2->IpAddressList;
@@ -1408,7 +1408,7 @@ Address::getInterfaceAddresses(int family)
                 addr.sin_family = AF_INET;
                 addr.sin_addr.s_addr = inet_addr(address->IpAddress.String);
                 unsigned int mask = inet_addr(address->IpMask.String);
-                result.insert(std::make_pair(interface, std::make_pair(
+                result.insert(std::make_pair(iface, std::make_pair(
                     Address::create((sockaddr *)&addr,
                     sizeof(sockaddr_in)), countBits(mask))));
             }
@@ -1418,7 +1418,7 @@ Address::getInterfaceAddresses(int family)
     }
 
     for (; addresses; addresses = addresses->Next) {
-        std::string interface(addresses->AdapterName);
+        std::string iface(addresses->AdapterName);
         IP_ADAPTER_UNICAST_ADDRESS *address = addresses->FirstUnicastAddress;
         for (; address; address = address->Next) {
             if (family != AF_UNSPEC &&
@@ -1435,7 +1435,7 @@ Address::getInterfaceAddresses(int family)
                 prefixLength = address->OnLinkPrefixLength;
             }
 
-            result.insert(std::make_pair(interface,
+            result.insert(std::make_pair(iface,
                 std::make_pair(addr, prefixLength)));
         }
     }
@@ -1485,17 +1485,17 @@ Address::getInterfaceAddresses(int family)
 }
 
 std::vector<std::pair<Address::ptr, unsigned int> >
-Address::getInterfaceAddresses(const std::string &interface, int family)
+Address::getInterfaceAddresses(const std::string &iface, int family)
 {
     typedef std::multimap<std::string, std::pair<Address::ptr, unsigned int> >
         AddressesMap;
     std::vector<std::pair<Address::ptr, unsigned int> > result;
     AddressesMap interfaces = getInterfaceAddresses(family);
     std::pair<AddressesMap::iterator, AddressesMap::iterator> its;
-    if (interface.empty() || interface == "*")
+    if (iface.empty() || iface == "*")
         its = std::make_pair(interfaces.begin(), interfaces.end());
     else
-        its = interfaces.equal_range(interface);
+        its = interfaces.equal_range(iface);
     for (; its.first != its.second; ++its.first)
         result.push_back(its.first->second);
     return result;
@@ -1553,7 +1553,7 @@ Address::insert(std::ostream &os) const
 bool
 Address::operator<(const Address &rhs) const
 {
-    socklen_t minimum = std::min(nameLen(), rhs.nameLen());
+    socklen_t minimum = (std::min)(nameLen(), rhs.nameLen());
     int result = memcmp(name(), rhs.name(), minimum);
     if (result < 0)
         return true;

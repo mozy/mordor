@@ -211,9 +211,9 @@ public:
     /// @returns interface => (address, prefixLength)
     static std::multimap<std::string, std::pair<ptr, unsigned int> >
         getInterfaceAddresses(int family = AF_UNSPEC);
-    // @param interface Interface name, or "*" to indicate all interfaces
+    // @param iface Interface name, or "*" to indicate all interfaces
     static std::vector<std::pair<ptr, unsigned int> >
-        getInterfaceAddresses(const std::string &interface,
+        getInterfaceAddresses(const std::string &iface,
         int family = AF_UNSPEC);
     static ptr create(const sockaddr *name, socklen_t nameLen);
 

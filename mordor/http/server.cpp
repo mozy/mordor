@@ -186,7 +186,7 @@ ServerConnection::scheduleAllWaitingResponses()
     // MORDOR_ASSERT(m_mutex.locked());
     MORDOR_LOG_TRACE(g_log) << this << " scheduling all responses";
 
-    unsigned long long firstFailedRequest = std::min(m_priorRequestFailed,
+    unsigned long long firstFailedRequest = (std::min)(m_priorRequestFailed,
         m_priorResponseClosed);
     for (std::list<ServerRequest *>::iterator it(m_pendingRequests.begin());
         it != m_pendingRequests.end();
@@ -392,7 +392,7 @@ ServerRequest::cancel()
         m_responseState = ERROR;
     m_conn->m_stream->cancelRead();
     m_conn->m_stream->cancelWrite();
-    m_conn->m_priorRequestFailed = std::min(m_conn->m_priorRequestFailed,
+    m_conn->m_priorRequestFailed = (std::min)(m_conn->m_priorRequestFailed,
         m_requestNumber);
     std::list<ServerRequest *>::iterator it =
         std::find(m_conn->m_pendingRequests.begin(),
@@ -783,7 +783,7 @@ ServerRequest::commit()
     } catch(...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        m_conn->m_priorRequestFailed = std::min(m_conn->m_priorRequestFailed,
+        m_conn->m_priorRequestFailed = (std::min)(m_conn->m_priorRequestFailed,
             m_requestNumber);
         m_conn->scheduleAllWaitingResponses();
         throw;
@@ -986,7 +986,7 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                             cr.first = size - it->second;
                     } else {
                         cr.first = it->first;
-                        cr.last = std::min(it->second, size - 1);
+                        cr.last = (std::min)(it->second, size - 1);
                     }
                     if (response->supportsSeek())
                         response->seek(cr.first);
@@ -1035,7 +1035,7 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                     cr->last = size - 1;
                 } else {
                     cr->first = range.front().first;
-                    cr->last = std::min(range.front().second, size - 1);
+                    cr->last = (std::min)(range.front().second, size - 1);
                 }
                 request->response().entity.contentLength = cr->last - cr->first + 1;
             }

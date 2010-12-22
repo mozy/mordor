@@ -4,13 +4,19 @@
 #include "version.h"
 
 #ifdef WINDOWS
+// Get Vista+ APIs
 #define _WIN32_WINNT 0x0600
+// Don't include tons of crap from windows.h
 #define WIN32_LEAN_AND_MEAN
+// Define this so security.h works
 #define SECURITY_WIN32
+// Shut up, CRT
 #define _CRT_SECURE_NO_WARNINGS
 #define _CRT_NONSTDC_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
+// Use more common names for functions
+// (cross-platform 64-bit, strip the underscores)
 #define strtoll _strtoi64
 #define strtoull _strtoui64
 #define strnicmp _strnicmp
@@ -22,27 +28,20 @@
 #include <windows.h>
 #include <ws2tcpip.h>
 
-#ifdef min
-#undef min
-#endif
-#ifdef max
-#undef max
-#endif
-#ifdef ABSOLUTE
-#undef ABSOLUTE
-#endif
-#ifdef RELATIVE
-#undef RELATIVE
-#endif
+// Take things out of the preprocessor, and put into the global namespace
+// From WinGDI.h: #define ERROR 0
 #ifdef ERROR
 #undef ERROR
+enum {
+    ERROR = 0
+};
 #endif
 
-// Take things out of the preprocessor, and put into the global namespace
+// From WinNT.h: #define DELETE (0x00010000L)
 #ifdef DELETE
 #undef DELETE
 enum {
-    DELETE = (0x00010000L)
+    DELETE =  (0x00010000L)
 };
 #endif
 
