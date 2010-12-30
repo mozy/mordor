@@ -3,6 +3,7 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
 #include "stream.h"
+#include "mordor/util.h"
 
 namespace Mordor {
 
@@ -13,6 +14,7 @@ private:
 
 public:
     static NullStream &get() { return s_nullStream; }
+    static Stream::ptr get_ptr() { return Stream::ptr(&s_nullStream, &nop<Stream *>); }
 
     bool supportsRead() { return true; }
     bool supportsWrite() { return true; }
