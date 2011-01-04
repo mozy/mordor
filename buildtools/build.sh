@@ -6,7 +6,7 @@ fi
 if [ ! -f Makefile ]; then
     if [ "$1" = "debug" ]; then
         export CXXFLAGS='-g -O0 -DDEBUG'
-    elif [ "$1" = "gcov" ]; then
+    elif [ "$1" = "coverage" ]; then
         export CXXFLAGS='-g -O0 -DDEBUG -fprofile-arcs -ftest-coverage'
     fi
     which pg_config >/dev/null || POSTGRESFLAGS=--without-postgresql
