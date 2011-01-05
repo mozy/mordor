@@ -29,6 +29,22 @@ public:
     anymap &cache() { return m_cache; }
     boost::mutex &cacheMutex() { return m_cacheMutex; }
 
+    /// lock cacheMutex and return a copy of value
+    template <class TagType>
+    typename TagType::value_type getCache(const TagType &key)
+    {
+        boost::mutex::scoped_lock lock(m_cacheMutex);
+        return m_cache[key];
+    }
+
+    /// update cache with lock
+    template <class TagType>
+    void setCache(const TagType &key, const typename TagType::value_type& value)
+    {
+        boost::mutex::scoped_lock lock(m_cacheMutex);
+        m_cache[key] = value;
+    }
+
 protected:
     Connection(boost::shared_ptr<Stream> stream);
 

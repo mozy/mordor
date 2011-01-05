@@ -69,6 +69,8 @@ public:
     boost::shared_ptr<Multipart> responseMultipart();
     EntityHeaders &responseTrailer();
 
+    boost::shared_ptr<ServerConnection> connection() { return m_conn; }
+
     bool committed() const { return m_responseState >= HEADERS; }
 
     /// Start reading the next request
