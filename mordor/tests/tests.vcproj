@@ -338,6 +338,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\atomic.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\buffer.cpp"
 				>
 			</File>
@@ -391,6 +395,10 @@
 			</File>
 			<File
 				RelativePath=".\http_server.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\http_servlet_dispatcher.cpp"
 				>
 			</File>
 			<File

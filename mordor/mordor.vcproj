@@ -349,6 +349,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\servlets\config.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\connection.cpp"
 				>
 			</File>
@@ -561,15 +565,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\servlet.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\singleplex.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\sleep.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\socket.cpp"
 				>
 			</File>
 			<File
@@ -607,6 +611,10 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\socks.cpp"
@@ -673,6 +681,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\zip.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\zlib.cpp"
 				>
 			</File>
@@ -728,6 +740,10 @@
 			</File>
 			<File
 				RelativePath=".\config.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http\servlets\config.h"
 				>
 			</File>
 			<File
@@ -807,11 +823,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\http.h"
+				RelativePath=".\streams\http.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\http.h"
+				RelativePath=".\http\http.h"
 				>
 			</File>
 			<File
@@ -911,11 +927,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\scheduler.h"
+				RelativePath=".\scheduler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\scheduler.h"
+				RelativePath=".\streams\scheduler.h"
 				>
 			</File>
 			<File
@@ -927,6 +943,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\servlet.h"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\singleplex.h"
 				>
 			</File>
@@ -935,11 +955,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
@@ -1016,6 +1036,10 @@
 			</File>
 			<File
 				RelativePath=".\workerpool.h"
+				>
+			</File>
+			<File
+				RelativePath=".\zip.h"
 				>
 			</File>
 			<File
