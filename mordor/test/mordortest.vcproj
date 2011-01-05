@@ -50,7 +50,7 @@
 				WarningLevel="3"
 				WarnAsError="true"
 				DebugInformationFormat="4"
-				DisableSpecificWarnings="4345"
+				DisableSpecificWarnings="4345;4503"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -113,7 +113,7 @@
 				WarningLevel="3"
 				WarnAsError="true"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4345"
+				DisableSpecificWarnings="4345;4503"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -177,7 +177,7 @@
 				WarningLevel="3"
 				WarnAsError="true"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4345"
+				DisableSpecificWarnings="4345;4503"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -242,7 +242,7 @@
 				WarningLevel="3"
 				WarnAsError="true"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4345"
+				DisableSpecificWarnings="4345;4503"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
