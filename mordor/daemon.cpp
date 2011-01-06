@@ -2,16 +2,23 @@
 
 #include "daemon.h"
 
+#include "log.h"
 #include "main.h"
 
 namespace Mordor {
 namespace Daemon {
+
+static Logger::ptr g_log = Log::lookup("mordor:daemon");
 
 boost::signals2::signal<void ()> onTerminate;
 boost::signals2::signal<void ()> onInterrupt;
 boost::signals2::signal<void ()> onReload;
 boost::signals2::signal<void ()> onPause;
 boost::signals2::signal<void ()> onContinue;
+
+#define CTRL_CASE(ctrl)             \
+    case ctrl:                      \
+        return os << #ctrl;         \
 
 #ifdef WINDOWS
 static boost::function<int (int, char **)> g_daemonMain;
@@ -36,10 +43,47 @@ static DWORD acceptedControls()
     return accepted;
 }
 
+namespace {
+
+enum ServiceCtrl {};
+
+std::ostream &operator <<(std::ostream &os, ServiceCtrl ctrl)
+{
+    switch (ctrl) {
+        CTRL_CASE(SERVICE_CONTROL_STOP);
+        CTRL_CASE(SERVICE_CONTROL_PAUSE);
+        CTRL_CASE(SERVICE_CONTROL_CONTINUE);
+        CTRL_CASE(SERVICE_CONTROL_INTERROGATE);
+        CTRL_CASE(SERVICE_CONTROL_SHUTDOWN);
+        CTRL_CASE(SERVICE_CONTROL_PARAMCHANGE);
+        CTRL_CASE(SERVICE_CONTROL_NETBINDADD);
+        CTRL_CASE(SERVICE_CONTROL_NETBINDREMOVE);
+        CTRL_CASE(SERVICE_CONTROL_NETBINDENABLE);
+        CTRL_CASE(SERVICE_CONTROL_NETBINDDISABLE);
+        CTRL_CASE(SERVICE_CONTROL_DEVICEEVENT);
+        CTRL_CASE(SERVICE_CONTROL_HARDWAREPROFILECHANGE);
+        CTRL_CASE(SERVICE_CONTROL_POWEREVENT);
+        CTRL_CASE(SERVICE_CONTROL_SESSIONCHANGE);
+        CTRL_CASE(SERVICE_CONTROL_PRESHUTDOWN);
+#ifdef SERVICE_CONTROL_TIMECHANGE
+        CTRL_CASE(SERVICE_CONTROL_TIMECHANGE);
+#endif
+#ifdef SERVICE_CONTROL_TRIGGEREVENT
+        CTRL_CASE(SERVICE_CONTROL_TRIGGEREVENT);
+#endif
+        default:
+            return os << (int)ctrl;
+    }
+}
+
+}
+
 static DWORD WINAPI HandlerEx(DWORD dwControl, DWORD dwEventType,
     LPVOID lpEventData, LPVOID lpContext)
 {
     ServiceStatus *status = (ServiceStatus *)lpContext;
+    MORDOR_LOG_DEBUG(g_log) << "Received service control "
+        << (ServiceCtrl)dwControl;
 
     switch (dwControl) {
         case SERVICE_CONTROL_INTERROGATE:
@@ -64,8 +108,16 @@ static DWORD WINAPI HandlerEx(DWORD dwControl, DWORD dwEventType,
         default:
             return ERROR_CALL_NOT_IMPLEMENTED;
     }
-    status->status.dwControlsAccepted = acceptedControls();
-    SetServiceStatus(status->serviceHandle, &status->status);
+    MORDOR_LOG_TRACE(g_log) << "Service control " << (ServiceCtrl)dwControl
+        << " handled";
+    // If it's stop, onTerminate may cause ServiceMain to exit immediately,
+    // before onTerminate returns, and our pointer to status on ServiceMain's
+    // stack would then be invalid; we update the service status in ServiceMain
+    // anyway, so it's okay to skip it here
+    if (dwControl != SERVICE_CONTROL_STOP) {
+        status->status.dwControlsAccepted = acceptedControls();
+        SetServiceStatus(status->serviceHandle, &status->status);
+    }
     return NO_ERROR;
 }
 
@@ -88,6 +140,7 @@ static void WINAPI ServiceMain(DWORD argc, LPWSTR *argvW)
     if (!SetServiceStatus(status.serviceHandle, &status.status))
         return;
 
+    MORDOR_LOG_INFO(g_log) << "Starting service";
     char **argv = CommandLineToUtf8(argc, argvW);
     if (argv) {
         try {
@@ -105,25 +158,50 @@ static void WINAPI ServiceMain(DWORD argc, LPWSTR *argvW)
     if (status.status.dwServiceSpecificExitCode)
         status.status.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
     SetServiceStatus(status.serviceHandle, &status.status);
+    MORDOR_LOG_INFO(g_log) << "Service stopped";
+}
+
+namespace {
+
+enum ConsoleCtrl {};
+
+std::ostream &operator <<(std::ostream &os, ConsoleCtrl ctrl)
+{
+    switch (ctrl) {
+        CTRL_CASE(CTRL_C_EVENT);
+        CTRL_CASE(CTRL_BREAK_EVENT);
+        CTRL_CASE(CTRL_CLOSE_EVENT);
+        CTRL_CASE(CTRL_LOGOFF_EVENT);
+        CTRL_CASE(CTRL_SHUTDOWN_EVENT);
+        default:
+            return os << (int)ctrl;
+    }
+}
+
 }
 
 static BOOL WINAPI HandlerRoutine(DWORD dwCtrlType)
 {
+    MORDOR_LOG_DEBUG(g_log) << "Received console control "
+        << (ConsoleCtrl)dwCtrlType;
     switch (dwCtrlType) {
         case CTRL_C_EVENT:
             if (onInterrupt.empty())
                 return FALSE;
             onInterrupt();
-            return TRUE;
+            break;
         case CTRL_CLOSE_EVENT:
         case CTRL_BREAK_EVENT:
             if (onTerminate.empty())
                 return FALSE;
             onTerminate();
-            return TRUE;
+            break;
         default:
             return FALSE;
     }
+    MORDOR_LOG_TRACE(g_log) << "Console control " << (ServiceCtrl)dwCtrlType
+        << " handled";
+    return TRUE;
 }
 
 int run(int argc, char **argv,
@@ -136,9 +214,11 @@ int run(int argc, char **argv,
     g_daemonMain = daemonMain;
     if (!StartServiceCtrlDispatcherW(ServiceStartTable)) {
         if (GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
+            MORDOR_LOG_INFO(g_log) << "Starting console process";
             SetConsoleCtrlHandler(&HandlerRoutine, TRUE);
             int result = daemonMain(argc, argv);
             SetConsoleCtrlHandler(&HandlerRoutine, FALSE);
+            MORDOR_LOG_INFO(g_log) << "Console process stopped";
             return result;
         } else {
             return GetLastError();
@@ -174,6 +254,25 @@ static void unblockAndRaise(int signal)
     pthread_sigmask(SIG_BLOCK, &set, NULL);
 }
 
+namespace {
+
+enum Signal {};
+
+std::ostream &operator <<(std::ostream &os, Signal signal)
+{
+    switch ((int)signal) {
+        CTRL_CASE(SIGTERM);
+        CTRL_CASE(SIGINT);
+        CTRL_CASE(SIGTSTP);
+        CTRL_CASE(SIGCONT);
+        CTRL_CASE(SIGHUP);
+        default:
+            return os << (int)signal;
+    }
+}
+
+}
+
 static void *signal_thread(void *arg)
 {
     sigset_t mask = blockedSignals();
@@ -182,6 +281,7 @@ static void *signal_thread(void *arg)
         int rc = sigwait(&mask, &caught);
         if (rc != 0)
             continue;
+        MORDOR_LOG_DEBUG(g_log) << "Received signal " << (Signal)caught;
         switch (caught) {
             case SIGTERM:
                 if (onTerminate.empty()) {
@@ -213,8 +313,10 @@ static void *signal_thread(void *arg)
                 onReload();
                 break;
             default:
-                break;
+                continue;
         }
+        MORDOR_LOG_TRACE(g_log) << "Signal " << (Signal)caught
+            << " handled";
     }
 
     return NULL;
@@ -268,6 +370,7 @@ int run(int argc, char **argv,
     // Check for being run from /etc/init.d or start-stop-daemon as a hint to
     // daemonize
     if (shouldDaemonize(environ) || shouldDaemonizeDueToParent()) {
+        MORDOR_LOG_VERBOSE(g_log) << "Daemonizing";
         if (daemon(0, 0) == -1)
             return errno;
     }
@@ -287,7 +390,10 @@ int run(int argc, char **argv,
         return errno;
 
     // Run the daemon's main
-    return daemonMain(argc, argv);
+    MORDOR_LOG_INFO(g_log) << "Starting daemon";
+    rc = daemonMain(argc, argv);
+    MORDOR_LOG_INFO(g_log) << "Daemon stopped";
+    return rc;
 }
 #endif
 
