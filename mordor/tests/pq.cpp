@@ -92,8 +92,8 @@ void constantQuery(const std::string &queryName = std::string(),
     Result result = stmt.execute();
     MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(result.columns(), 2u);
-    MORDOR_TEST_ASSERT_EQUAL(result.get<int>(0, 0), 1);
-    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, 0), 1);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<int>(0, (size_t)0), 1);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, (size_t)0), 1);
     MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 1), "mordor");
     MORDOR_TEST_ASSERT_EQUAL(result.get<std::string>(0, 1), "mordor");
 }
@@ -138,7 +138,7 @@ void queryAfterDisconnect(IOManager *ioManager = NULL)
     Result result = conn.execute("SELECT 1");
     MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
-    MORDOR_TEST_ASSERT_EQUAL(result.get<int>(0, 0), 1);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<int>(0, (size_t)0), 1);
 }
 
 MORDOR_PQ_UNITTEST(queryAfterDisconnect)
@@ -162,7 +162,7 @@ void queryForParam(const std::string &query, ParamType param, size_t expectedCou
     Result result = stmt.execute(param);
     MORDOR_TEST_ASSERT_EQUAL(result.rows(), expectedCount);
     MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
-    MORDOR_TEST_ASSERT_EQUAL(result.get<ExpectedType>(0, 0), expected);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<ExpectedType>(0, (size_t)0), expected);
 }
 
 MORDOR_PQ_UNITTEST(queryForInt)
@@ -226,7 +226,7 @@ MORDOR_UNITTEST(PQ, transactionCommits)
     Result result = conn.execute("SELECT name FROM users WHERE id=1");
     MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
-    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "tom");
+    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, (size_t)0), "tom");
 }
 
 MORDOR_UNITTEST(PQ, transactionRollsback)
@@ -239,7 +239,7 @@ MORDOR_UNITTEST(PQ, transactionRollsback)
     Result result = conn.execute("SELECT name FROM users WHERE id=1");
     MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
-    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "cody");
+    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, (size_t)0), "cody");
 }
 
 MORDOR_UNITTEST(PQ, transactionRollsbackAutomatically)
@@ -253,7 +253,7 @@ MORDOR_UNITTEST(PQ, transactionRollsbackAutomatically)
     Result result = conn.execute("SELECT name FROM users WHERE id=1");
     MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
-    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, 0), "cody");
+    MORDOR_TEST_ASSERT_EQUAL(result.get<const char *>(0, (size_t)0), "cody");
 }
 
 static void copyIn(IOManager *ioManager = NULL)
@@ -275,11 +275,11 @@ static void copyIn(IOManager *ioManager = NULL)
     Result result = conn.execute("SELECT COUNT(*) FROM stuff");
     MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
-    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, 0), 10);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, (size_t)0), 10);
     result = conn.execute("SELECT SUM(id) FROM stuff");
     MORDOR_TEST_ASSERT_EQUAL(result.rows(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(result.columns(), 1u);
-    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, 0), 55);
+    MORDOR_TEST_ASSERT_EQUAL(result.get<long long>(0, (size_t)0), 55);
 }
 
 MORDOR_PQ_UNITTEST(copyIn)
