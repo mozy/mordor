@@ -288,9 +288,6 @@ mordor_tests_run_pq_tests_LDADD = mordor/libmordor.la \
 	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
 
 
-check:
-	mordor/tests/run_tests
-
 noinst_PROGRAMS=			\
 	mordor/examples/cat		\
 	mordor/examples/echoserver	\

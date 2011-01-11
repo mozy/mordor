@@ -19,4 +19,4 @@ elif [ $(uname) = 'Darwin' ]; then
 else
     j=2
 fi
-make mordor/tests/run_tests -j$j && make all -j$j
+make check -j$j
