@@ -25,6 +25,56 @@ namespace Mordor {
 static Logger::ptr g_log = Log::lookup("mordor:config");
 
 void
+Config::loadFromCommandLine(int &argc, char *argv[])
+{
+    char **end = argv + argc;
+    char **arg = argv;
+    // Skip argv[0] (presumably program name)
+    ++arg;
+    while (arg < end) {
+        // Only look at arguments that begin with --
+        if (strncmp(*arg, "--", 2u) != 0) {
+            ++arg;
+            continue;
+        }
+        // Don't process arguments after --
+        if (strcmp(*arg, "--") == 0)
+            break;
+        char *equals = strchr(*arg, '=');
+        char *val;
+        // Support either --arg=value or --arg value
+        if (equals) {
+            *equals = '\0';
+            val = equals + 1;
+        } else {
+            val = *(arg + 1);
+        }
+
+        ConfigVarBase::ptr var = lookup(*arg + 2);
+        if (var) {
+            // Don't use val == *end, we don't want to actually dereference end
+            if (val == *(arg + 1) && arg + 1 == end)
+                MORDOR_THROW_EXCEPTION(std::invalid_argument(*arg + 2));
+            if (!var->fromString(val))
+                MORDOR_THROW_EXCEPTION(std::invalid_argument(*arg + 2));
+            // Adjust argv to remove this arg (and its param, if it was a
+            // separate arg)
+            int toSkip = 1;
+            if (val != equals + 1)
+                ++toSkip;
+            memmove(arg, arg + toSkip, (end - arg - toSkip) * sizeof(char *));
+            argc -= toSkip;
+            end -= toSkip;
+        } else {
+            // --arg=value wasn't a ConfigVar, restore the equals
+            if (equals)
+                *equals = '=';
+            ++arg;
+        }
+    }
+}
+
+void
 Config::loadFromEnvironment()
 {
 #ifdef WINDOWS

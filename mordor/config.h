@@ -185,6 +185,15 @@ public:
     static ConfigVarBase::ptr lookup(const std::string &name);
     static void visit(boost::function<void (ConfigVarBase::ptr)> dg);
 
+    /// Load ConfigVars from command line arguments
+    ///
+    /// argv[0] is skipped (assumed to be the program name), and argc and argv
+    /// are updated to remove any arguments that were used to set ConfigVars.
+    /// Arguments can be of the form --configVarName=value or
+    /// --configVarName value.  Any arguments after a -- are ignored.
+    /// @throws std::invalid_argument With what() == the name of the ConfigVar
+    ///         if the value was not successfully set
+    static void loadFromCommandLine(int &argc, char *argv[]);
     static void loadFromEnvironment();
     static void loadFromJSON(const JSON::Value &json);
 #ifdef WINDOWS

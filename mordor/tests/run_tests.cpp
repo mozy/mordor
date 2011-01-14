@@ -18,6 +18,16 @@ static ConfigVar<std::string>::ptr g_xmlDirectory = Config::lookup<std::string>(
 
 MORDOR_MAIN(int argc, char *argv[])
 {
+    try {
+        Config::loadFromCommandLine(argc, argv);
+    } catch (std::invalid_argument &ex) {
+        ConfigVarBase::ptr configVar = Config::lookup(ex.what());
+        MORDOR_ASSERT(configVar);
+        std::cerr << "Invalid value for " << typeid(*configVar).name()
+            << ' ' << configVar->name() << ": " << configVar->description()
+            << std::endl;
+        return 1;
+    }
     Config::loadFromEnvironment();
 
     CompoundListener listener;

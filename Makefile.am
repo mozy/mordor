@@ -233,6 +233,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/buffer.cpp				\
 	mordor/tests/buffered_stream.cpp		\
 	mordor/tests/chunked_stream.cpp			\
+	mordor/tests/config.cpp				\
 	mordor/tests/coroutine.cpp			\
 	mordor/tests/endian.cpp				\
 	mordor/tests/fibers.cpp				\

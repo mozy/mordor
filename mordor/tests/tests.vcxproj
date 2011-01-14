@@ -188,6 +188,7 @@
     <ClCompile Include="buffer.cpp" />
     <ClCompile Include="buffered_stream.cpp" />
     <ClCompile Include="chunked_stream.cpp" />
+    <ClCompile Include="config.cpp" />
     <ClCompile Include="coroutine.cpp" />
     <ClCompile Include="efs_stream.cpp" />
     <ClCompile Include="endian.cpp" />
