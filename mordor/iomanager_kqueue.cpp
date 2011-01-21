@@ -238,9 +238,8 @@ IOManager::idle()
         unsigned long long nextTimeout;
         if (stopping(nextTimeout))
             return;
-        int rc = -1;
-        errno = EINTR;
-        while (rc < 0 && errno == EINTR) {
+        int rc;
+        do {
             struct timespec *timeout = NULL, timeoutStorage;
             if (nextTimeout != ~0ull) {
                 timeout = &timeoutStorage;
@@ -248,9 +247,11 @@ IOManager::idle()
                 timeout->tv_nsec = (nextTimeout % 1000000) * 1000;
             }
             rc = kevent(m_kqfd, NULL, 0, events, 64, timeout);
-            if (rc < 0 && errno == EINTR)
+            if (rc < 0 && errno == EINTR) {
                 nextTimeout = nextTimer();
-        }
+                continue;
+            }
+        } while (false);
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " kevent(" << m_kqfd << "): " << rc << " (" << errno << ")";
         if (rc < 0)

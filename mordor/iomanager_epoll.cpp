@@ -342,17 +342,19 @@ IOManager::idle()
         unsigned long long nextTimeout;
         if (stopping(nextTimeout))
             return;
-        int rc = -1;
-        errno = EINTR;
+        int rc;
         int timeout;
-        while (rc < 0 && errno == EINTR) {
-            timeout = -1;
+        do {
             if (nextTimeout != ~0ull)
                 timeout = (int)(nextTimeout / 1000) + 1;
+            else
+                timeout = -1;
             rc = epoll_wait(m_epfd, events, 64, timeout);
-            if (rc < 0 && errno == EINTR)
+            if (rc < 0 && errno == EINTR) {
                 nextTimeout = nextTimer();
-        }
+                continue;
+            }
+        } while (false);
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " epoll_wait(" << m_epfd << ", 64, " << timeout << "): " << rc
             << " (" << errno << ")";
