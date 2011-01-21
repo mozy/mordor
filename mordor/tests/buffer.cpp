@@ -114,7 +114,7 @@ MORDOR_UNITTEST(Buffer, copyInToSplitSegment)
     MORDOR_TEST_ASSERT(b1 == "helloworld");
 }
 
-#ifdef DEBUG
+#ifndef NDEBUG
 MORDOR_UNITTEST(Buffer, copyInMoreThanThereIs)
 {
     Buffer b1, b2;
@@ -483,7 +483,7 @@ MORDOR_UNITTEST(Buffer, visitWithMixedSegment)
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
 }
 
-#ifdef DEBUG
+#ifndef NDEBUG
 MORDOR_UNITTEST(Buffer, visitMoreThanThereIs)
 {
     Buffer b;
@@ -498,7 +498,7 @@ MORDOR_UNITTEST(Buffer, findCharEmpty)
     MORDOR_TEST_ASSERT_EQUAL(b.find('\n'), -1);
     MORDOR_TEST_ASSERT_EQUAL(b.find('\n', 0), -1);
 
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(b.find('\n', 1));
 #endif
 
@@ -507,7 +507,7 @@ MORDOR_UNITTEST(Buffer, findCharEmpty)
     MORDOR_TEST_ASSERT_EQUAL(b.segments(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(b.find('\n'), -1);
 
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(b.find('\n', 1));
 #endif
 }
@@ -622,7 +622,7 @@ MORDOR_UNITTEST(Buffer, findStringEmpty)
 
     MORDOR_TEST_ASSERT_EQUAL(b.find("h"), -1);
     MORDOR_TEST_ASSERT_EQUAL(b.find("h", 0), -1);
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(b.find(""));
     MORDOR_TEST_ASSERT_ASSERTED(b.find("h", 1));
 #endif
@@ -633,7 +633,7 @@ MORDOR_UNITTEST(Buffer, findStringEmpty)
     MORDOR_TEST_ASSERT_EQUAL(b.find("h"), -1);
     MORDOR_TEST_ASSERT_EQUAL(b.find("h", 0), -1);
 
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(b.find(""));
     MORDOR_TEST_ASSERT_ASSERTED(b.find("h", 1));
 #endif

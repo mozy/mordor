@@ -782,7 +782,7 @@ MORDOR_UNITTEST(HTTP, doubleSlashRequest)
     parser.run("GET //hi HTTP/1.0\r\n\r\n");
     MORDOR_TEST_ASSERT(parser.error());
 
-#ifdef DEBUG
+#ifndef NDEBUG
     request.requestLine.uri.path = "//hi";
     MORDOR_TEST_ASSERT_ASSERTED(boost::lexical_cast<std::string>(request));
 #endif

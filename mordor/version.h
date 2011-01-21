@@ -55,16 +55,10 @@
 #   endif
 #endif
 
-#ifdef _DEBUG
-#define DEBUG
-#endif
-
 #ifdef MSVC
-#define MORDOR_USE_PCH
+#ifndef _DEBUG
+#define NDEBUG
 #endif
-
-#ifdef GCC
-#define MORDOR_USE_PCH
 #endif
 
 #endif

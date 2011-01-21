@@ -903,7 +903,7 @@ Buffer::opCmp(const char *string, size_t length) const
 void
 Buffer::invariant() const
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     size_t read = 0;
     size_t write = 0;
     bool seenWrite = false;

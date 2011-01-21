@@ -651,7 +651,7 @@ std::ostream& operator<<(std::ostream& os, const RequestLine &r)
             return os << r.method << " * " << r.ver;
         } else {
             MORDOR_ASSERT(!r.uri.fragmentDefined());
-#ifdef DEBUG
+#ifndef NDEBUG
             // Must be a absolute_URI or a path_absolute (with query allowed)
             if (!r.uri.schemeDefined()) {
                 MORDOR_ASSERT(!r.uri.authority.hostDefined());

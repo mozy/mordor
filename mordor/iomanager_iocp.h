@@ -88,7 +88,7 @@ protected:
 
 private:
     HANDLE m_hCompletionPort;
-#ifdef DEBUG
+#ifndef NDEBUG
     std::map<OVERLAPPED *, AsyncEvent*> m_pendingEvents;
 #endif
     size_t m_pendingEventCount;

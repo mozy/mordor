@@ -53,17 +53,13 @@ Semaphore::Semaphore(unsigned int count)
 Semaphore::~Semaphore()
 {
 #ifdef WINDOWS
-    BOOL bRet = CloseHandle(m_semaphore);
-    MORDOR_VERIFY(bRet);
+    MORDOR_VERIFY(CloseHandle(m_semaphore));
 #elif defined(OSX)
-    int rc = semaphore_destroy(m_task, m_semaphore);
-    MORDOR_VERIFY(!rc);
+    MORDOR_VERIFY(!semaphore_destroy(m_task, m_semaphore));
 #elif defined(FREEBSD)
-    int rc = semctl(m_semaphore, 0, IPC_RMID);
-    MORDOR_VERIFY(rc >= 0);
+    MORDOR_VERIFY(semctl(m_semaphore, 0, IPC_RMID) >= 0);
 #else
-    int rc = sem_destroy(&m_semaphore);
-    MORDOR_VERIFY(!rc);
+    MORDOR_VERIFY(!sem_destroy(&m_semaphore));
 #endif
 }
 

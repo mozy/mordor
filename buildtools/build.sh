@@ -5,12 +5,14 @@ if [ ! -x configure ]; then
 fi
 if [ ! -f Makefile ]; then
     if [ "$1" = "debug" ]; then
-        export CXXFLAGS='-g -O0 -DDEBUG'
+        export CXXFLAGS='-g -O0'
     elif [ "$1" = "coverage" ]; then
-        export CXXFLAGS='-g -O0 -DDEBUG -fprofile-arcs -ftest-coverage'
+        export CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage'
+    else
+        ASSERTFLAGS=--disable-assert
     fi
     which pg_config >/dev/null || POSTGRESFLAGS=--without-postgresql
-    ./configure --disable-shared $POSTGRESFLAGS
+    ./configure --disable-shared $ASSERTFLAGS $POSTGRESFLAGS
 fi
 if [ $(uname) = 'Linux' ]; then
     j=$(grep processor /proc/cpuinfo | wc -l)

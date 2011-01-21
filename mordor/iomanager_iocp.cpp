@@ -265,14 +265,14 @@ IOManager::registerEvent(AsyncEvent *e)
     MORDOR_ASSERT(e->m_scheduler);
     MORDOR_ASSERT(e->m_fiber);
     MORDOR_LOG_DEBUG(g_log) << this << " registerEvent(" << &e->overlapped << ")";
-#ifdef DEBUG
+#ifndef NDEBUG
     {
         boost::mutex::scoped_lock lock(m_mutex);
         MORDOR_ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
         m_pendingEvents[&e->overlapped] = e;
 #endif
         atomicIncrement(m_pendingEventCount);
-#ifdef DEBUG
+#ifndef NDEBUG
         MORDOR_ASSERT(m_pendingEvents.size() == m_pendingEventCount);
     }
 #endif
@@ -286,7 +286,7 @@ IOManager::unregisterEvent(AsyncEvent *e)
     e->m_thread = emptytid();
     e->m_scheduler = NULL;
     e->m_fiber.reset();
-#ifdef DEBUG
+#ifndef NDEBUG
     {
         boost::mutex::scoped_lock lock(m_mutex);
         std::map<OVERLAPPED *, AsyncEvent *>::iterator it =
@@ -295,7 +295,7 @@ IOManager::unregisterEvent(AsyncEvent *e)
         m_pendingEvents.erase(it);
 #endif
         atomicDecrement(m_pendingEventCount);
-#ifdef DEBUG
+#ifndef NDEBUG
         MORDOR_ASSERT(m_pendingEvents.size() == m_pendingEventCount);
     }
 #endif
@@ -424,7 +424,7 @@ IOManager::idle()
         std::vector<boost::function<void ()> > expired = processTimers();
         schedule(expired.begin(), expired.end());
 
-#ifdef DEBUG
+#ifndef NDEBUG
         boost::mutex::scoped_lock lock(m_mutex, boost::defer_lock_t());
 #endif
         int tickles = 0;
@@ -435,7 +435,7 @@ IOManager::idle()
                 continue;
             }
             AsyncEvent *e = (AsyncEvent *)events[i].lpOverlapped;
-#ifdef DEBUG
+#ifndef NDEBUG
             if (!lock.owns_lock())
                 lock.lock();
 
@@ -462,7 +462,7 @@ IOManager::idle()
         }
         if (count != tickles)
             atomicAdd(m_pendingEventCount, (size_t)(-(ptrdiff_t)(count - tickles)));
-#ifdef DEBUG
+#ifndef NDEBUG
         if (lock.owns_lock()) {
             MORDOR_ASSERT(m_pendingEventCount == m_pendingEvents.size());
             lock.unlock();

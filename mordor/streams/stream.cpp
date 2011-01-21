@@ -135,11 +135,8 @@ Stream::getDelimited(char delim, bool eofIsDelimiter, bool includeDelimiter)
         offset = -offset - 1;
     std::string result;
     result.resize(offset + (eofIsDelimiter ? 0 : 1));
-#ifdef DEBUG
-    size_t readResult =
-#endif
-    read((char *)result.c_str(), result.size());
-    MORDOR_ASSERT(readResult == result.size());
+    MORDOR_VERIFY(read((char *)result.c_str(), result.size())
+        == result.size());
     if (!eofIsDelimiter && !includeDelimiter)
         result.resize(result.size() - 1);
     return result;
@@ -155,11 +152,8 @@ Stream::getDelimited(const std::string &delim, bool eofIsDelimiter,
         offset = -offset - delim.size();
     std::string result;
     result.resize(offset + (eofIsDelimiter ? 0 : delim.size()));
-#ifdef DEBUG
-    size_t readResult =
-#endif
-    read((char *)result.c_str(), result.size());
-    MORDOR_ASSERT(readResult == result.size());
+    MORDOR_VERIFY(read((char *)result.c_str(), result.size())
+        == result.size());
     if (!eofIsDelimiter && !includeDelimiter)
         result.resize(result.size() - delim.size());
     return result;

@@ -173,7 +173,7 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
         m_ctx.reset(SSL_CTX_new(client ? SSLv23_client_method() :
             SSLv23_server_method()), &SSL_CTX_free);
     if (!m_ctx) {
-        MORDOR_VERIFY(hasOpenSSLError());
+        MORDOR_ASSERT(hasOpenSSLError());
         MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
             << boost::errinfo_api_function("SSL_CTX_new");
     }
@@ -187,7 +187,7 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
     }
     m_ssl.reset(SSL_new(m_ctx.get()), &SSL_free);
     if (!m_ssl) {
-        MORDOR_VERIFY(hasOpenSSLError());
+        MORDOR_ASSERT(hasOpenSSLError());
         MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
             << boost::errinfo_api_function("SSL_CTX_new");
     }
@@ -196,7 +196,7 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
     if (!m_readBio || !m_writeBio) {
         if (m_readBio) BIO_free(m_readBio);
         if (m_writeBio) BIO_free(m_writeBio);
-        MORDOR_VERIFY(hasOpenSSLError());
+        MORDOR_ASSERT(hasOpenSSLError());
         MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
             << boost::errinfo_api_function("BIO_new");
     }
@@ -239,7 +239,7 @@ SSLStream::close(CloseType type)
                 MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    MORDOR_VERIFY(hasOpenSSLError());
+                    MORDOR_ASSERT(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
                     MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown("
                         << m_ssl.get() << "): " << result << " (" << error
@@ -287,7 +287,7 @@ SSLStream::close(CloseType type)
                 MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    MORDOR_VERIFY(hasOpenSSLError());
+                    MORDOR_ASSERT(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
                     MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown("
                         << m_ssl.get() << "): " << result << " (" << error
@@ -345,7 +345,7 @@ SSLStream::read(void *buffer, size_t length)
                 MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    MORDOR_VERIFY(hasOpenSSLError());
+                    MORDOR_ASSERT(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
                     MORDOR_LOG_ERROR(g_log) << this << " SSL_read("
                         << m_ssl.get() << ", " << toRead << "): " << result
@@ -418,7 +418,7 @@ SSLStream::write(const void *buffer, size_t length)
                 MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    MORDOR_VERIFY(hasOpenSSLError());
+                    MORDOR_ASSERT(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
                     MORDOR_LOG_ERROR(g_log) << this << " SSL_write("
                         << m_ssl.get() << ", " << toWrite << "): " << result
@@ -499,7 +499,7 @@ SSLStream::accept()
                 MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    MORDOR_VERIFY(hasOpenSSLError());
+                    MORDOR_ASSERT(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
                     MORDOR_LOG_ERROR(g_log) << this << " SSL_accept("
                         << m_ssl.get() << "): " << result << " (" << error
@@ -555,7 +555,7 @@ SSLStream::connect()
                 MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
-                    MORDOR_VERIFY(hasOpenSSLError());
+                    MORDOR_ASSERT(hasOpenSSLError());
                     std::string message = getOpenSSLErrorMessage();
                     MORDOR_LOG_ERROR(g_log) << this << " SSL_connect("
                         << m_ssl.get() << "): " << result << " (" << error

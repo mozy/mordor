@@ -10,7 +10,7 @@ namespace Mordor {
 
 FiberMutex::~FiberMutex()
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     boost::mutex::scoped_lock scopeLock(m_mutex);
     MORDOR_ASSERT(!m_owner);
     MORDOR_ASSERT(m_waiters.empty());
@@ -35,7 +35,7 @@ FiberMutex::lock()
             Fiber::getThis()));
     }
     Scheduler::yieldTo();
-#ifdef DEBUG
+#ifndef NDEBUG
     boost::mutex::scoped_lock scopeLock(m_mutex);
     MORDOR_ASSERT(m_owner == Fiber::getThis());
     MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
@@ -82,7 +82,7 @@ FiberSemaphore::FiberSemaphore(size_t initialConcurrency)
 
 FiberSemaphore::~FiberSemaphore()
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     boost::mutex::scoped_lock scopeLock(m_mutex);
     MORDOR_ASSERT(m_waiters.empty());
 #endif
@@ -105,7 +105,7 @@ FiberSemaphore::wait()
             Fiber::getThis()));
     }
     Scheduler::yieldTo();
-#ifdef DEBUG
+#ifndef NDEBUG
     boost::mutex::scoped_lock scopeLock(m_mutex);
     MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
             std::make_pair(Scheduler::getThis(), Fiber::getThis()))
@@ -128,7 +128,7 @@ FiberSemaphore::notify()
 
 FiberCondition::~FiberCondition()
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     boost::mutex::scoped_lock lock(m_mutex);
     MORDOR_ASSERT(m_waiters.empty());
 #endif
@@ -147,7 +147,7 @@ FiberCondition::wait()
         m_fiberMutex.unlockNoLock();
     }
     Scheduler::yieldTo();
-#ifdef DEBUG
+#ifndef NDEBUG
     boost::mutex::scoped_lock lock2(m_fiberMutex.m_mutex);
     MORDOR_ASSERT(m_fiberMutex.m_owner == Fiber::getThis());
 #endif
@@ -207,7 +207,7 @@ FiberCondition::broadcast()
 
 FiberEvent::~FiberEvent()
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     boost::mutex::scoped_lock lock(m_mutex);
     MORDOR_ASSERT(m_waiters.empty());
 #endif

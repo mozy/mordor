@@ -51,7 +51,7 @@ MORDOR_UNITTEST(FiberMutex, contention)
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 8);
 }
 
-#ifdef DEBUG
+#ifndef NDEBUG
 MORDOR_UNITTEST(FiberMutex, notRecursive)
 {
     WorkerPool pool;

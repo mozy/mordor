@@ -305,7 +305,7 @@ MORDOR_UNITTEST(Scheduler, parallelForEachStopShortParallel)
     MORDOR_TEST_ASSERT_LESS_THAN(sequence, 10);
 }
 
-#ifdef DEBUG
+#ifndef NDEBUG
 MORDOR_UNITTEST(Scheduler, scheduleForThreadNotOnScheduler)
 {
     Fiber::ptr doNothingFiber(new Fiber(&doNothing));

@@ -5,8 +5,6 @@
 
 #include "predef.h"
 
-#ifdef MORDOR_USE_PCH
-
 // OS Headers
 #include <errno.h>
 #include <fcntl.h>
@@ -128,8 +126,6 @@
 
 #if defined(VALGRIND) && (defined(LINUX) || defined (OSX))
 #include <valgrind/valgrind.h>
-#endif
-
 #endif
 
 #endif

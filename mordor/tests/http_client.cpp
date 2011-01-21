@@ -147,7 +147,7 @@ MORDOR_UNITTEST(HTTPClient, emptyResponseBody)
     MORDOR_TEST_ASSERT(responseBody.buffer() == "");
 
     response.reset();
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(request->responseStream());
 #endif
 }
@@ -217,7 +217,7 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseBody)
     MORDOR_TEST_ASSERT(responseBody.buffer() == "hello");
 
     response.reset();
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(request->responseStream());
 #endif
 }
@@ -560,7 +560,7 @@ MORDOR_UNITTEST(HTTPClient, underflowRequestBody)
 
     // Write the body
     MORDOR_TEST_ASSERT_EQUAL(requestBody->write("hel"), 3u);
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(requestBody->close());
 #endif
 }
@@ -854,7 +854,7 @@ MORDOR_UNITTEST(HTTPClient, missingTrailerResponse)
     MORDOR_TEST_ASSERT(!response->supportsUnread());
 
     // Trailer hasn't been read yet
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(request->responseTrailer());
 #endif
 
@@ -904,7 +904,7 @@ MORDOR_UNITTEST(HTTPClient, badTrailerResponse)
     MORDOR_TEST_ASSERT(!response->supportsUnread());
 
     // Trailer hasn't been read yet
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(request->responseTrailer());
 #endif
 
@@ -1032,7 +1032,7 @@ MORDOR_UNITTEST(HTTPClient, simpleRequestAbandoned)
 
     request.reset();
     // Write the body - not allowed because we abandoned the request
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(requestBody->write("hello"));
 #endif
 }

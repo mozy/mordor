@@ -56,9 +56,8 @@ private:
         memset(m_data.get(), 'B', perConnToWrite);
 
         // figure out the host addr to use
-        std::vector<Address::ptr> addrs;
-        addrs = Address::lookup(host);
-        MORDOR_VERIFY(!addrs.empty());
+        std::vector<Address::ptr> addrs = Address::lookup(host);
+        MORDOR_ASSERT(!addrs.empty());
 
         // setup the server
         m_sock = addrs.front()->createSocket(m_iom, SOCK_STREAM);
@@ -134,9 +133,8 @@ public:
         memset(m_data.get(), 'A', m_perConnToWrite);
 
         // figure out the host addr to use
-        std::vector<Address::ptr> addrs;
-        addrs = Address::lookup(host);
-        MORDOR_VERIFY(!addrs.empty());
+        std::vector<Address::ptr> addrs = Address::lookup(host);
+        MORDOR_ASSERT(!addrs.empty());
 
         // save off the server addr
         m_addr = addrs.front();

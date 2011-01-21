@@ -250,7 +250,7 @@ ServerRequest::ServerRequest(ServerConnection::ptr conn)
 ServerRequest::~ServerRequest()
 {
     cancel();
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_ASSERT(m_conn);
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
     MORDOR_ASSERT(std::find(m_conn->m_pendingRequests.begin(),
@@ -710,15 +710,7 @@ ServerRequest::commit()
         ServerRequest *request = m_conn->m_pendingRequests.front();
         if (request != this) {
             m_responseState = WAITING;
-#ifdef DEBUG
-            bool inserted =
-#endif
-            m_conn->m_waitingResponses.insert(this)
-#ifdef DEBUG
-            .second
-#endif
-            ;
-            MORDOR_ASSERT(inserted);
+            MORDOR_VERIFY(m_conn->m_waitingResponses.insert(this).second);
             wait = true;
             MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
                 << " waiting to respond";

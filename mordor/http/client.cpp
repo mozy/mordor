@@ -381,7 +381,7 @@ ClientConnection::scheduleAllWaitingResponses()
 void
 ClientConnection::invariant() const
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     // MORDOR_ASSERT(m_mutex.locked());
     bool seenFirstUnrequested = false;
     unsigned long long lastRequestNumber = 0;
@@ -456,7 +456,7 @@ ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &request)
 ClientRequest::~ClientRequest()
 {
     cancel(true);
-#ifdef DEBUG
+#ifndef NDEBUG
     MORDOR_ASSERT(m_conn);
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
     MORDOR_ASSERT(std::find(m_conn->m_pendingRequests.begin(),
@@ -980,15 +980,7 @@ ClientRequest::ensureResponse()
                 m_fiber = Fiber::getThis();
                 MORDOR_ASSERT(m_scheduler);
                 MORDOR_ASSERT(m_fiber);
-        #ifdef DEBUG
-                bool inserted =
-        #endif
-                m_conn->m_waitingResponses.insert(this)
-#ifdef DEBUG
-                .second
-#endif
-                ;
-                MORDOR_ASSERT(inserted);
+                MORDOR_VERIFY(m_conn->m_waitingResponses.insert(this).second);
                 wait = true;
                 m_responseState = WAITING;
                 MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber<< " waiting for response";

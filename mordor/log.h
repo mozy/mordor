@@ -30,11 +30,6 @@ class LoggerIterator;
 
 class Stream;
 
-#ifdef DEBUG
-#undef DEBUG
-#define DEBUG DEBUG
-#endif
-
 /// Static class to gain access to and configure global logger instances
 
 /// The logging framework is made up of three main classes: Log, Logger, and
