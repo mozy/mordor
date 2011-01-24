@@ -13,6 +13,10 @@
 #include <libkern/OSAtomic.h>
 #endif
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 namespace Mordor {
 
 #ifdef WINDOWS
@@ -266,6 +270,16 @@ public:
 private:
     mutable T m_val;
 };
+
+#ifdef _MSC_VER
+inline void compilerReadWriteBarrier() { _ReadWriteBarrier(); }
+inline void compilerReadBarrier() { _ReadBarrier(); }
+inline void compilerWriteBarrier() { _WriteBarrier(); }
+#elif defined (__GNUC__)
+inline void compilerReadWriteBarrier() { __asm__ __volatile__ ("" ::: "memory"); }
+inline void compilerReadBarrier() { compilerReadWriteBarrier(); }
+inline void compilerWriteBarrier() { compilerReadWriteBarrier(); }
+#endif
 
 }
 
