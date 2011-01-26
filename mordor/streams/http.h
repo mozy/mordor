@@ -29,6 +29,9 @@ public:
 
     /// Force the transfer to begin (i.e. so a call to size() won't try to
     /// do an extra HEAD)
+    ///
+    /// @note If the current read advice is zero, this will be forced to do an
+    /// HTTP request for the entire entity
     void start();
     /// This will abandon any current transfer in progress.  If it returns
     /// true, the transfer will have already begun at the current position
@@ -41,10 +44,19 @@ public:
     bool supportsTell() { return true; }
 
     size_t read(Buffer &buffer, size_t length);
+    /// Advise about subsequent read requests, so that a more efficient HTTP
+    /// request can be used.
+    ///
+    /// Setting the advice sets the minimum number of bytes per HTTP request.
+    /// The default is ~0ull, which means only one HTTP request will be needed.
+    /// Setting to 0 would mean each call to read will generate a new HTTP
+    /// request.
+    void adviseRead(unsigned long long advice) { m_readAdvice = advice; }
     long long seek(long long offset, Anchor anchor = BEGIN);
     long long size();
 
 private:
+    void start(size_t length);
     void stat();
 
 private:
@@ -53,6 +65,7 @@ private:
     HTTP::RequestBroker::ptr m_requestBroker;
     HTTP::ETag m_eTag;
     long long m_pos, m_size;
+    unsigned long long m_readAdvice, m_readRequested;
     boost::function<bool (size_t)> m_delayDg;
     size_t *mp_retries;
 };

@@ -402,6 +402,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http_stream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\iomanager.cpp"
 				>
 			</File>

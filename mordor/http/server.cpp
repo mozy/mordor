@@ -594,8 +594,27 @@ ServerRequest::doRequest()
         m_conn->m_dg(shared_from_this());
         finish();
     } catch (OperationAbortedException &) {
-        // Do nothing (this occurs when a pipelined request fails because a prior request closed the connection
+        // Do nothing (this occurs when a pipelined request fails because a
+        // prior request closed the connection)
     } catch (Assertion &) {
+         if (m_requestState == ERROR || m_responseState == ERROR)
+            throw;
+        MORDOR_LOG_ERROR(g_log) << m_conn << "-" << m_requestNumber
+            << " Unexpected exception: "
+            << boost::current_exception_diagnostic_information();
+        if (m_responseState < COMPLETE) {
+            try {
+                if (!committed())
+                    respondError(shared_from_this(), INTERNAL_SERVER_ERROR);
+                finish();
+                // Somebody got our 500; they should report the error, so drop
+                // the assertion
+                return;
+            } catch(...) {
+                // Swallow any exceptions that happen while trying to report
+                // the error - re-throw the assertion instead
+            }
+        }
         throw;
     } catch (...) {
         if (m_requestState == ERROR || m_responseState == ERROR)

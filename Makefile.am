@@ -246,6 +246,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/http_parser.cpp			\
 	mordor/tests/http_server.cpp			\
 	mordor/tests/http_servlet_dispatcher.cpp	\
+	mordor/tests/http_stream.cpp			\
 	mordor/tests/iomanager.cpp			\
 	mordor/tests/json.cpp				\
 	mordor/tests/log.cpp				\

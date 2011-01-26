@@ -17,6 +17,8 @@ HTTPStream::HTTPStream(const URI &uri, RequestBroker::ptr requestBroker,
   m_requestBroker(requestBroker),
   m_pos(0),
   m_size(-1),
+  m_readAdvice(~0ull),
+  m_readRequested(0ull),
   m_delayDg(delayDg),
   mp_retries(NULL)
 {
@@ -30,6 +32,8 @@ HTTPStream::HTTPStream(const Request &requestHeaders, RequestBroker::ptr request
   m_requestBroker(requestBroker),
   m_pos(0),
   m_size(-1),
+  m_readAdvice(~0ull),
+  m_readRequested(0ull),
   m_delayDg(delayDg),
   mp_retries(NULL)
 {}
@@ -44,7 +48,28 @@ HTTPStream::eTag()
 void
 HTTPStream::start()
 {
-    if (!parent()) {
+    start(m_readAdvice == 0ull ? (size_t)-1 : 0u);
+}
+
+void
+HTTPStream::start(size_t length)
+{
+    if (!parent() || m_readRequested == 0) {
+        if (parent()) {
+            // We've read everything, but haven't triggered EOF yet
+            MORDOR_ASSERT(m_readRequested == 0);
+            try {
+                char byte;
+                MORDOR_VERIFY(parent()->read(&byte, 1) == 0);
+            } catch (...) {
+                // Ignore errors finishing the request
+            }
+        }
+        // Don't bother doing a request that will never do anything
+        if (m_size >= 0 && m_pos >= m_size) {
+            parent(NullStream::get_ptr());
+            return;
+        }
         m_requestHeaders.requestLine.method = GET;
         m_requestHeaders.request.ifNoneMatch.clear();
         if (!m_eTag.unspecified) {
@@ -60,9 +85,18 @@ HTTPStream::start()
             m_requestHeaders.request.ifMatch.clear();
         }
         m_requestHeaders.request.range.clear();
-        if (m_pos != 0)
+        if (m_pos != 0 || (m_readAdvice != ~0ull && length != (size_t)-1)) {
+            if (length == (size_t)-1)
+                m_readRequested = ~0ull;
+            else
+                m_readRequested = (std::max)((unsigned long long)length,
+                    m_readAdvice);
             m_requestHeaders.request.range.push_back(
-                std::make_pair((unsigned long long)m_pos, ~0ull));
+                std::make_pair((unsigned long long)m_pos,
+                m_readRequested == ~0ull ? ~0ull : m_pos + m_readRequested - 1));
+        } else {
+            m_readRequested = ~0ull;
+        }
         ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
         const Response &response = request->response();
         Stream::ptr responseStream;
@@ -96,9 +130,10 @@ HTTPStream::start()
                 }
                 responseStream = request->responseStream();
                 // Server doesn't support Range
-                if (m_pos != 0 && response.status.status == OK)
-                    transferStream(responseStream,
-                        NullStream::get(), m_pos);
+                if (m_pos != 0 && response.status.status == OK) {
+                    m_readRequested = ~0ull;
+                    transferStream(responseStream, NullStream::get(), m_pos);
+                }
                 parent(responseStream);
                 break;
             default:
@@ -119,9 +154,14 @@ HTTPStream::checkModified()
     m_requestHeaders.request.ifRange = ETag();
     m_requestHeaders.request.range.clear();
     m_requestHeaders.request.ifNoneMatch.insert(m_eTag);
-    if (m_pos != 0)
+    if (m_pos != 0 || m_readAdvice != ~0ull) {
+        m_readRequested = m_readAdvice == 0ull ? ~0ull : m_readAdvice;
         m_requestHeaders.request.range.push_back(
-            std::make_pair((unsigned long long)m_pos, ~0ull));
+            std::make_pair((unsigned long long)m_pos,
+            m_readRequested == ~0ull ? ~0ull : m_pos + m_readRequested - 1));
+    } else {
+        m_readRequested = ~0ull;
+    }
     ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
     const Response &response = request->response();
     switch (response.status.status) {
@@ -150,6 +190,7 @@ HTTPStream::checkModified()
         // We don't really care about any data transfer problems here,
         // since that's not what the caller is asking for
         try {
+            m_readRequested = ~0ull;
             transferStream(responseStream, NullStream::get(), m_pos);
         } catch (...) {
             return true;
@@ -172,12 +213,13 @@ HTTPStream::read(Buffer &buffer, size_t length)
     size_t localRetries = 0;
     size_t *retries = mp_retries ? mp_retries : &localRetries;
     while (true) {
-        start();
+        start(length);
 
         MORDOR_ASSERT(parent());
         try {
             size_t result = parent()->read(buffer, length);
             m_pos += result;
+            m_readRequested -= result;
             *retries = 0;
             return result;
         } catch (SocketException &) {
@@ -216,7 +258,19 @@ HTTPStream::seek(long long offset, Anchor anchor)
             "resulting offset is before the beginning of the file"));
     if (offset == m_pos)
         return m_pos;
-    parent(Stream::ptr());
+    // Attempt to do an optimized forward seek
+    if (offset > m_pos && m_readRequested != ~0ull && parent() &&
+        m_pos + m_readRequested < (unsigned long long)offset) {
+        try {
+            transferStream(*this, NullStream::get(), offset - m_pos);
+            MORDOR_ASSERT(m_pos == offset);
+            return m_pos;
+        } catch (...) {
+            parent(Stream::ptr());
+        }
+    } else {
+        parent(Stream::ptr());
+    }
     return m_pos = offset;
 }
 
