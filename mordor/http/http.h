@@ -317,12 +317,14 @@ struct ContentRange
     {}
 
     unsigned long long first;
+    /// @note If first == ~0ull, then last is ignored for comparison, and only
+    /// useful for forcing a serialization of "bytes */*"
     unsigned long long last;
     unsigned long long instance;
 
     bool operator==(const ContentRange &rhs) const
     {
-        return first == rhs.first && last == rhs.last &&
+        return first == rhs.first && (first == ~0ull || last == rhs.last) &&
             instance == rhs.instance;
     }
     bool operator!=(const ContentRange &rhs) const

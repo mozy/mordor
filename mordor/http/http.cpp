@@ -540,12 +540,16 @@ std::ostream& operator<<(std::ostream& os, const MediaType &m)
 std::ostream& operator<<(std::ostream& os, const ContentRange &cr)
 {
     os << "bytes ";
-    if (cr.first == ~0ull || cr.last == ~0ull)
-        os << "*/";
-    else
-        os << cr.first << "-" << cr.last << "/";
+    if (cr.first == ~0ull) {
+        os << '*';
+    } else {
+        os << cr.first << '-';
+        if (cr.last != ~0ull)
+            os << cr.last;
+    }
+    os << '/';
     if (cr.instance == ~0ull)
-        os << "*";
+        os << '*';
     else
         os << cr.instance;
     return os;

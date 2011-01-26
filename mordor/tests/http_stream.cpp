@@ -8,7 +8,9 @@
 #include "mordor/streams/buffer.h"
 #include "mordor/streams/http.h"
 #include "mordor/streams/limited.h"
+#include "mordor/streams/null.h"
 #include "mordor/streams/random.h"
+#include "mordor/streams/transfer.h"
 #include "mordor/util.h"
 #include "mordor/workerpool.h"
 
@@ -16,16 +18,15 @@ using namespace Mordor;
 using namespace Mordor::HTTP;
 
 namespace {
-
-class Fixture
+class ReadAdviceFixture
 {
 public:
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4355)
 #endif
-    Fixture()
-        : server(boost::bind(&Fixture::dummyServer, this, _1, _2)),
+    ReadAdviceFixture()
+        : server(boost::bind(&ReadAdviceFixture::dummyServer, this, _1, _2)),
           baseRequestBroker(ConnectionBroker::ptr(&server,
               &nop<ConnectionBroker *>)),
           requestBroker(&baseRequestBroker, &nop<RequestBroker *>),
@@ -128,14 +129,14 @@ protected:
 };
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startNoAdvice)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, startNoAdvice)
 {
     HTTPStream stream("http://localhost/startNoAdvice", requestBroker);
     stream.start();
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAdvice0)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, startAdvice0)
 {
     HTTPStream stream("http://localhost/startAdvice0", requestBroker);
     stream.adviseRead(0);
@@ -143,7 +144,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAdvice0)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAdvice64K)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, startAdvice64K)
 {
     HTTPStream stream("http://localhost/startAdvice64K", requestBroker);
     stream.adviseRead(65536);
@@ -151,7 +152,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAdvice64K)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAfterSeekNoAdvice)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, startAfterSeekNoAdvice)
 {
     HTTPStream stream("http://localhost/startAfterSeekNoAdvice", requestBroker);
     stream.seek(512 * 1024);
@@ -159,7 +160,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAfterSeekNoAdvice)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAfterSeekAdvice0)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, startAfterSeekAdvice0)
 {
     HTTPStream stream("http://localhost/startAfterSeekAdvice0", requestBroker);
     stream.adviseRead(0);
@@ -168,7 +169,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAfterSeekAdvice0)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAfterSeekAdvice64K)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, startAfterSeekAdvice64K)
 {
     HTTPStream stream("http://localhost/startAfterSeekAdvice64K", requestBroker);
     stream.adviseRead(65536);
@@ -177,7 +178,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, startAfterSeekAdvice64K)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, readNoAdvice)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, readNoAdvice)
 {
     HTTPStream stream("http://localhost/readNoAdvice", requestBroker);
     Buffer buffer;
@@ -185,7 +186,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, readNoAdvice)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, readAdvice0)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, readAdvice0)
 {
     HTTPStream stream("http://localhost/readAdvice0", requestBroker);
     stream.adviseRead(0);
@@ -194,7 +195,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, readAdvice0)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, readAdvice64K)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, readAdvice64K)
 {
     HTTPStream stream("http://localhost/readAdvice64K", requestBroker);
     stream.adviseRead(65536);
@@ -203,7 +204,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, readAdvice64K)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, readAdvice4K)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, readAdvice4K)
 {
     HTTPStream stream("http://localhost/readAdvice4K", requestBroker);
     stream.adviseRead(4096);
@@ -212,7 +213,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, readAdvice4K)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, read4KAdvice4K)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, read4KAdvice4K)
 {
     HTTPStream stream("http://localhost/read4KAdvice4K", requestBroker);
     stream.adviseRead(4096);
@@ -223,7 +224,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, read4KAdvice4K)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, adviceStillGetsEOF)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, adviceStillGetsEOF)
 {
     HTTPStream stream("http://localhost/adviceStillGetsEOF", requestBroker);
     stream.adviseRead(4096);
@@ -234,7 +235,7 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, adviceStillGetsEOF)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
-MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, adviceStillGetsEOFStraddle)
+MORDOR_UNITTEST_FIXTURE(ReadAdviceFixture, HTTPStream, adviceStillGetsEOFStraddle)
 {
     HTTPStream stream("http://localhost/adviceStillGetsEOFStraddle", requestBroker);
     stream.adviseRead(4096);
@@ -242,5 +243,165 @@ MORDOR_UNITTEST_FIXTURE(Fixture, HTTPStream, adviceStillGetsEOFStraddle)
     Buffer buffer;
     MORDOR_TEST_ASSERT_EQUAL(stream.read(buffer, 4096), 2048u);
     MORDOR_TEST_ASSERT_EQUAL(stream.read(buffer, 4096), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+}
+
+namespace {
+class WriteAdviceFixture
+{
+public:
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4355)
+#endif
+    WriteAdviceFixture()
+        : server(boost::bind(&WriteAdviceFixture::dummyServer, this, _1, _2)),
+          baseRequestBroker(ConnectionBroker::ptr(&server,
+              &nop<ConnectionBroker *>)),
+          requestBroker(&baseRequestBroker, &nop<RequestBroker *>),
+          sequence(0)
+    {}
+#ifdef _MSC_VER
+#pragma warning(pop)
+#pragma warning(disable: 4355)
+#endif
+
+private:
+    void dummyServer(const URI &uri, ServerRequest::ptr request)
+    {
+        const unsigned long long &contentLength =
+            request->request().entity.contentLength;
+        const ContentRange &contentRange =
+            request->request().entity.contentRange;
+        const URI &requestUri = request->request().requestLine.uri;
+        bool chunked = !request->request().general.transferEncoding.empty();
+        if (requestUri == "/writeNoAdvice") {
+            MORDOR_TEST_ASSERT_EQUAL(1, ++sequence);
+            MORDOR_TEST_ASSERT(chunked);
+            MORDOR_TEST_ASSERT_EQUAL(contentLength, ~0ull);
+            MORDOR_TEST_ASSERT_EQUAL(contentRange, ContentRange());
+            MORDOR_TEST_ASSERT_EQUAL(transferStream(request->requestStream(),
+                NullStream::get()), 1024 * 1024ull);
+        } else if (requestUri == "/writeSizeAdvice") {
+            MORDOR_TEST_ASSERT_EQUAL(1, ++sequence);
+            MORDOR_TEST_ASSERT(!chunked);
+            MORDOR_TEST_ASSERT_EQUAL(contentLength, 1024 * 1024ull);
+            MORDOR_TEST_ASSERT_EQUAL(contentRange, ContentRange());
+            MORDOR_TEST_ASSERT_EQUAL(transferStream(request->requestStream(),
+                NullStream::get()), 1024 * 1024ull);
+        } else if (requestUri == "/writeWriteAdvice") {
+            MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(++sequence, 16);
+            MORDOR_TEST_ASSERT(chunked);
+            MORDOR_TEST_ASSERT_EQUAL(contentLength, ~0ull);
+            MORDOR_TEST_ASSERT_EQUAL(contentRange,
+                ContentRange(65536 * (sequence - 1)));
+            MORDOR_TEST_ASSERT_EQUAL(transferStream(request->requestStream(),
+                NullStream::get()), 65536ull);
+        } else if (requestUri == "/writeWriteAndSizeAdvice") {
+            MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(++sequence, 16);
+            MORDOR_TEST_ASSERT(!chunked);
+            MORDOR_TEST_ASSERT_EQUAL(contentLength, 65536ull);
+            MORDOR_TEST_ASSERT_EQUAL(contentRange,
+                ContentRange(65536 * (sequence - 1), 65536 * sequence - 1,
+                    1024 * 1024));
+            MORDOR_TEST_ASSERT_EQUAL(transferStream(request->requestStream(),
+                NullStream::get()), 65536ull);
+        } else if (requestUri == "/writeWriteAndSizeAdviceStraddle") {
+            MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(++sequence, 16);
+            MORDOR_TEST_ASSERT(!chunked);
+            if (sequence != 16) {
+                MORDOR_TEST_ASSERT_EQUAL(contentLength, 65536ull);
+                MORDOR_TEST_ASSERT_EQUAL(contentRange,
+                    ContentRange(65536 * (sequence - 1), 65536 * sequence - 1,
+                        1024 * 1024 - 4096));
+                MORDOR_TEST_ASSERT_EQUAL(transferStream(
+                    request->requestStream(), NullStream::get()), 65536ull);
+            } else {
+                MORDOR_TEST_ASSERT_EQUAL(contentLength, 65536 - 4096ull);
+                MORDOR_TEST_ASSERT_EQUAL(contentRange,
+                    ContentRange(1024 * 1024 - 65536, 1024 * 1024 - 4096 - 1,
+                        1024 * 1024 - 4096));
+                MORDOR_TEST_ASSERT_EQUAL(transferStream(
+                    request->requestStream(), NullStream::get()),
+                    65536 - 4096ull);
+            }
+        } else if (requestUri == "/truncate") {
+            MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);
+            MORDOR_TEST_ASSERT(!chunked);
+            MORDOR_TEST_ASSERT_EQUAL(contentLength, 0ull);
+            MORDOR_TEST_ASSERT_EQUAL(contentRange,
+                ContentRange(~0ull, ~0ull, 65536));
+        } else {
+            MORDOR_NOTREACHED();
+        }
+        respondError(request, OK);
+    }
+
+private:
+    WorkerPool pool;
+    MockConnectionBroker server;
+    BaseRequestBroker baseRequestBroker;
+
+protected:
+    RequestBroker::ptr requestBroker;
+    int sequence;
+};
+}
+
+MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, writeNoAdvice)
+{
+    HTTPStream stream("http://localhost/writeNoAdvice", requestBroker);
+    RandomStream random;
+    transferStream(random, stream, 1024 * 1024);
+    stream.close();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+}
+
+MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, writeSizeAdvice)
+{
+    HTTPStream stream("http://localhost/writeSizeAdvice", requestBroker);
+    stream.adviseSize(1024 * 1024);
+    RandomStream random;
+    transferStream(random, stream, 1024 * 1024);
+    stream.close();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+}
+
+MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, writeWriteAdvice)
+{
+    HTTPStream stream("http://localhost/writeWriteAdvice", requestBroker);
+    stream.adviseWrite(65536);
+    RandomStream random;
+    transferStream(random, stream, 1024 * 1024);
+    stream.close();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 16);
+}
+
+MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, writeWriteAndSizeAdvice)
+{
+    HTTPStream stream("http://localhost/writeWriteAndSizeAdvice", requestBroker);
+    stream.adviseWrite(65536);
+    stream.adviseSize(1024 * 1024);
+    RandomStream random;
+    transferStream(random, stream, 1024 * 1024);
+    stream.close();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 16);
+}
+
+MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, writeWriteAndSizeAdviceStraddle)
+{
+    HTTPStream stream("http://localhost/writeWriteAndSizeAdviceStraddle", requestBroker);
+    stream.adviseWrite(65536);
+    stream.adviseSize(1024 * 1024 - 4096);
+    RandomStream random;
+    transferStream(random, stream, 1024 * 1024 - 4096);
+    stream.close();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 16);
+}
+
+MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, truncate)
+{
+    HTTPStream stream("http://localhost/truncate", requestBroker);
+    stream.truncate(65536);
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }

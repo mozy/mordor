@@ -2,6 +2,7 @@
 
 #include "http.h"
 
+#include "mordor/fiber.h"
 #include "mordor/http/client.h"
 #include "mordor/socket.h"
 #include "null.h"
@@ -17,10 +18,15 @@ HTTPStream::HTTPStream(const URI &uri, RequestBroker::ptr requestBroker,
   m_requestBroker(requestBroker),
   m_pos(0),
   m_size(-1),
+  m_sizeAdvice(-1),
   m_readAdvice(~0ull),
+  m_writeAdvice(~0ull),
   m_readRequested(0ull),
+  m_writeRequested(0ull),
   m_delayDg(delayDg),
-  mp_retries(NULL)
+  mp_retries(NULL),
+  m_writeInProgress(false),
+  m_abortWrite(false)
 {
     m_requestHeaders.requestLine.uri = uri;
 }
@@ -32,11 +38,21 @@ HTTPStream::HTTPStream(const Request &requestHeaders, RequestBroker::ptr request
   m_requestBroker(requestBroker),
   m_pos(0),
   m_size(-1),
+  m_sizeAdvice(-1),
   m_readAdvice(~0ull),
+  m_writeAdvice(~0ull),
   m_readRequested(0ull),
+  m_writeRequested(0ull),
   m_delayDg(delayDg),
-  mp_retries(NULL)
+  mp_retries(NULL),
+  m_writeInProgress(false),
+  m_abortWrite(false)
 {}
+
+HTTPStream::~HTTPStream()
+{
+    clearParent();
+}
 
 ETag
 HTTPStream::eTag()
@@ -54,6 +70,8 @@ HTTPStream::start()
 void
 HTTPStream::start(size_t length)
 {
+    if (parent() && !parent()->supportsRead())
+        clearParent();
     if (!parent() || m_readRequested == 0) {
         if (parent()) {
             // We've read everything, but haven't triggered EOF yet
@@ -72,6 +90,9 @@ HTTPStream::start(size_t length)
         }
         m_requestHeaders.requestLine.method = GET;
         m_requestHeaders.request.ifNoneMatch.clear();
+        m_requestHeaders.general.transferEncoding.clear();
+        m_requestHeaders.entity.contentLength = ~0ull;
+        m_requestHeaders.entity.contentRange = ContentRange();
         if (!m_eTag.unspecified) {
             if (m_pos != 0) {
                 m_requestHeaders.request.ifRange = m_eTag;
@@ -147,13 +168,16 @@ HTTPStream::checkModified()
 {
     MORDOR_ASSERT(!m_eTag.unspecified);
     if (parent())
-        parent(Stream::ptr());
+        clearParent();
 
     m_requestHeaders.requestLine.method = GET;
     m_requestHeaders.request.ifMatch.clear();
     m_requestHeaders.request.ifRange = ETag();
     m_requestHeaders.request.range.clear();
     m_requestHeaders.request.ifNoneMatch.insert(m_eTag);
+    m_requestHeaders.general.transferEncoding.clear();
+    m_requestHeaders.entity.contentLength = ~0ull;
+    m_requestHeaders.entity.contentRange = ContentRange();
     if (m_pos != 0 || m_readAdvice != ~0ull) {
         m_readRequested = m_readAdvice == 0ull ? ~0ull : m_readAdvice;
         m_requestHeaders.request.range.push_back(
@@ -236,6 +260,104 @@ HTTPStream::read(Buffer &buffer, size_t length)
     }
 }
 
+void
+HTTPStream::doWrite(ClientRequest::ptr request)
+{
+    parent(request->requestStream());
+    m_writeFuture2.reset();
+    m_writeFuture.signal();
+    m_writeFuture2.wait();
+    if (m_abortWrite)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
+    MORDOR_ASSERT(!parent());
+}
+
+void
+HTTPStream::startWrite()
+{
+    try {
+        m_writeRequest = m_requestBroker->request(m_requestHeaders,
+            false, boost::bind(&HTTPStream::doWrite, this, _1));
+        m_writeInProgress = false;
+        m_writeFuture.signal();
+    } catch (OperationAbortedException &) {
+        if (!m_abortWrite)
+            m_writeException = boost::current_exception();
+        m_writeInProgress = false;
+        m_writeFuture.signal();
+    } catch (...) {
+        m_writeException = boost::current_exception();
+        m_writeInProgress = false;
+        m_writeFuture.signal();
+    }
+}
+
+size_t
+HTTPStream::write(const Buffer &buffer, size_t length)
+{
+    MORDOR_ASSERT(m_sizeAdvice == -1 ||
+        (unsigned long long)m_pos + length <= (unsigned long long)m_sizeAdvice);
+    if (parent() && !parent()->supportsWrite())
+        clearParent();
+    if (!parent()) {
+        m_requestHeaders.requestLine.method = PUT;
+        m_requestHeaders.request.ifMatch.clear();
+        m_requestHeaders.request.ifRange = ETag();
+        m_requestHeaders.request.range.clear();
+        m_requestHeaders.request.ifNoneMatch.clear();
+
+        if (m_pos != 0 || m_writeAdvice != ~0ull) {
+            m_requestHeaders.entity.contentRange.first = m_pos;
+            if (m_sizeAdvice != -1) {
+                m_writeRequested = (std::max)((unsigned long long)length,
+                    m_writeAdvice);
+                m_writeRequested = (std::min)(m_pos + m_writeRequested,
+                    (unsigned long long)m_sizeAdvice) - m_pos;
+                m_requestHeaders.entity.contentLength = m_writeRequested;
+                m_requestHeaders.entity.contentRange.last = m_pos +
+                    m_writeRequested - 1;
+            } else {
+                m_requestHeaders.entity.contentLength = ~0ull;
+                m_requestHeaders.entity.contentRange.last = ~0ull;
+                m_writeRequested = m_writeAdvice;
+            }
+            m_requestHeaders.entity.contentRange.instance =
+                (unsigned long long)m_sizeAdvice;
+        } else {
+            m_requestHeaders.entity.contentLength =
+                (unsigned long long)m_sizeAdvice;
+            m_requestHeaders.entity.contentRange = ContentRange();
+            m_writeRequested = m_writeAdvice;
+        }
+        if (m_sizeAdvice == -1) {
+            if (m_requestHeaders.general.transferEncoding.empty())
+                m_requestHeaders.general.transferEncoding.push_back("chunked");
+        } else {
+            m_requestHeaders.general.transferEncoding.clear();
+        }
+
+        m_writeException = boost::exception_ptr();
+        m_writeFuture.reset();
+        // Have to schedule this because RequestBroker::request doesn't return
+        // until the entire request is complete
+        m_writeInProgress = true;
+        MORDOR_ASSERT(Scheduler::getThis());
+        Scheduler::getThis()->schedule(
+            boost::bind(&HTTPStream::startWrite, this));
+        m_writeFuture.wait();
+        if (m_writeException)
+            Mordor::rethrow_exception(m_writeException);
+        MORDOR_ASSERT(parent());
+    }
+    size_t result = parent()->write(buffer,
+        (size_t)(std::min)((unsigned long long)length, m_writeRequested));
+    m_pos += result;
+    m_writeRequested -= result;
+    if (m_writeRequested == 0)
+        close();
+    return result;
+}
+
 long long
 HTTPStream::seek(long long offset, Anchor anchor)
 {
@@ -260,6 +382,7 @@ HTTPStream::seek(long long offset, Anchor anchor)
         return m_pos;
     // Attempt to do an optimized forward seek
     if (offset > m_pos && m_readRequested != ~0ull && parent() &&
+        parent()->supportsRead() &&
         m_pos + m_readRequested < (unsigned long long)offset) {
         try {
             transferStream(*this, NullStream::get(), offset - m_pos);
@@ -290,7 +413,15 @@ void
 HTTPStream::stat()
 {
     if (m_size == -1) {
+        clearParent();
         m_requestHeaders.requestLine.method = HEAD;
+        m_requestHeaders.request.ifMatch.clear();
+        m_requestHeaders.request.ifRange = ETag();
+        m_requestHeaders.request.range.clear();
+        m_requestHeaders.request.ifNoneMatch.clear();
+        m_requestHeaders.general.transferEncoding.clear();
+        m_requestHeaders.entity.contentLength = ~0ull;
+        m_requestHeaders.entity.contentRange = ContentRange();
         ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
         const Response &response = request->response();
         switch (response.status.status) {
@@ -323,6 +454,76 @@ HTTPStream::size()
     stat();
     MORDOR_ASSERT(supportsSize());
     return m_size;
+}
+
+void
+HTTPStream::truncate(long long size)
+{
+    if (parent())
+        clearParent();
+    m_requestHeaders.requestLine.method = PUT;
+    m_requestHeaders.request.ifMatch.clear();
+    m_requestHeaders.request.ifRange = ETag();
+    m_requestHeaders.request.range.clear();
+    m_requestHeaders.request.ifNoneMatch.clear();
+    m_requestHeaders.general.transferEncoding.clear();
+    m_requestHeaders.entity.contentLength = 0;
+    m_requestHeaders.entity.contentRange = ContentRange(~0ull, ~0ull, size);
+    ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
+    if (request->response().status.status != OK)
+        MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
+    request->finish();
+}
+
+void
+HTTPStream::close(CloseType type)
+{
+    if (parent() && (type & WRITE) && parent()->supportsWrite()) {
+        parent()->close();
+        parent(Stream::ptr());
+        m_writeFuture.reset();
+        m_writeFuture2.signal();
+        m_writeFuture.wait();
+        if (m_writeException)
+            Mordor::rethrow_exception(m_writeException);
+        MORDOR_ASSERT(m_writeRequest);
+        switch (m_writeRequest->response().status.status) {
+            case OK:
+            case CREATED:
+            case 207: // Partial Update OK, from http://www.hpl.hp.com/personal/ange/archives/archives-97/http-wg-archive/2530.html
+                m_response = m_writeRequest->response();
+                try {
+                    m_writeRequest->finish();
+                } catch (...) {
+                    m_writeRequest.reset();
+                    throw;
+                }
+                m_writeRequest.reset();
+                break;
+            default:
+                MORDOR_THROW_EXCEPTION(InvalidResponseException(m_writeRequest));
+        }
+    }
+}
+
+void
+HTTPStream::flush(bool flushParent)
+{
+    if (parent() && parent()->supportsWrite())
+        parent()->flush(flushParent);
+}
+
+void
+HTTPStream::clearParent()
+{
+    if (m_writeInProgress) {
+        m_abortWrite = true;
+        m_writeFuture.reset();
+        m_writeFuture2.signal();
+        m_writeFuture.wait();
+        MORDOR_ASSERT(!m_abortWrite);
+    }
+    parent(Stream::ptr());
 }
 
 }
