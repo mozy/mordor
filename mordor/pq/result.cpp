@@ -16,6 +16,7 @@
 #define FLOAT8OID 701
 #define TIMESTAMPOID 1114
 #define TIMESTAMPTZOID 1184
+#define INT4ARRAYOID 1007
 
 namespace Mordor {
 namespace PQ {
@@ -170,6 +171,42 @@ Result::get<boost::posix_time::ptime>(size_t row, size_t column) const
     return postgres_epoch +
         boost::posix_time::seconds((long)(microseconds / 1000000)) +
         boost::posix_time::microseconds(microseconds % 1000000);
+}
+
+template<>
+std::vector<int>
+Result::get<std::vector<int> >(size_t row, size_t column) const
+{
+    std::vector<int> result;
+    MORDOR_ASSERT(getType(column) == INT4ARRAYOID);
+    MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) >= 12);
+    const int *array = (const int *)PQgetvalue(m_result.get(), (int)row, (int)column);
+    // No embedded NULLs
+    MORDOR_ASSERT(array[1] == 0);
+    // Correct element type
+    MORDOR_ASSERT(byteswapOnLittleEndian(array[2]) == INT4OID);
+    // Number of dimensions
+    switch (byteswapOnLittleEndian(array[0])) {
+        case 0:
+            return result;
+        case 1:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) >= 20);
+            break;
+        default:
+            MORDOR_NOTREACHED();
+    }
+    int numberOfElements = byteswapOnLittleEndian(array[3]);
+    // Ignore starting index
+    array = &array[5];
+    // Now verify we have the entire array, as described
+    MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 20 + numberOfElements * 8);
+    result.resize(numberOfElements);
+    for (int i = 0; i < numberOfElements; ++i) {
+        // Correct element size
+        MORDOR_ASSERT(byteswapOnLittleEndian(array[i * 2]) == 4);
+        result[i] = byteswapOnLittleEndian(array[i * 2 + 1]);
+    }
+    return result;
 }
 
 }}

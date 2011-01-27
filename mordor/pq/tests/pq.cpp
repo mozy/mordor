@@ -148,9 +148,9 @@ MORDOR_PQ_UNITTEST(queryAfterDisconnect)
 
 void fillUsers(Connection &conn)
 {
-    conn.execute("CREATE TEMPORARY TABLE users (id INTEGER, name TEXT, height SMALLINT, awesome BOOLEAN, company TEXT, gender CHAR, efficiency REAL, crazy DOUBLE PRECISION, sometime TIMESTAMP)");
-    conn.execute("INSERT INTO users VALUES (1, 'cody', 72, true, 'Mozy', 'M', .9, .75, '2009-05-19 15:53:45.123456')");
-    conn.execute("INSERT INTO users VALUES (2, 'brian', 70, false, NULL, 'M', .9, .25, NULL)");
+    conn.execute("CREATE TEMPORARY TABLE users (id INTEGER, name TEXT, height SMALLINT, awesome BOOLEAN, company TEXT, gender CHAR, efficiency REAL, crazy DOUBLE PRECISION, sometime TIMESTAMP, version INTEGER[4])");
+    conn.execute("INSERT INTO users VALUES (1, 'cody', 72, true, 'Mozy', 'M', .9, .75, '2009-05-19 15:53:45.123456', '{1,3,5,7}')");
+    conn.execute("INSERT INTO users VALUES (2, 'brian', 70, false, NULL, 'M', .9, .25, NULL, '{}')");
 }
 
 template <class ParamType, class ExpectedType>
@@ -201,6 +201,24 @@ MORDOR_PQ_UNITTEST(queryForDouble)
 { queryForParam("SELECT crazy FROM users WHERE crazy=$1", .75, 1u, .75, std::string(), ioManager); }
 MORDOR_PQ_UNITTEST(queryForDoublePrepared)
 { queryForParam("SELECT crazy FROM users WHERE crazy=$1::DOUBLE PRECISION", .75, 1u, .75, "constant", ioManager); }
+
+MORDOR_PQ_UNITTEST(queryForIntArray)
+{
+    std::vector<int> expected(4);
+    expected[0] = 1; expected[1] = 3; expected[2] = 5; expected[3] = 7;
+    queryForParam("SELECT version FROM users WHERE id=$1", 1, 1u, expected, std::string(), ioManager);
+}
+MORDOR_PQ_UNITTEST(queryForIntArrayPrepared)
+{
+    std::vector<int> expected(4);
+    expected[0] = 1; expected[1] = 3; expected[2] = 5; expected[3] = 7;
+    queryForParam("SELECT version FROM users WHERE id=$1::INTEGER", 1, 1u, expected, "constant", ioManager);
+}
+
+MORDOR_PQ_UNITTEST(queryForEmptyIntArray)
+{ queryForParam("SELECT version FROM users WHERE id=$1", 2, 1u, std::vector<int>(), std::string(), ioManager); }
+MORDOR_PQ_UNITTEST(queryForEmptyIntArrayPrepared)
+{ queryForParam("SELECT version FROM users WHERE id=$1::INTEGER", 2, 1u, std::vector<int>(), "constant", ioManager); }
 
 static const boost::posix_time::ptime thetime(
     boost::gregorian::date(2009, 05, 19),
