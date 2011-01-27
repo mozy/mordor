@@ -23,14 +23,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iombench", "mordor\examples
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "decodebacktrace", "mordor\examples\decodebacktrace.vcxproj", "{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordorpq", "mordor\mordorpq.vcxproj", "{A5020D4B-0E75-4DF9-9EEC-501394520228}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pqtests", "mordor\pq\tests\pqtests.vcxproj", "{935A3C00-3771-41B7-81C3-8E543DC8191A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pqtests", "mordor\tests\pqtests.vcxproj", "{935A3C00-3771-41B7-81C3-8E543DC8191A}"
-	ProjectSection(ProjectDependencies) = postProject
-		{CD888334-383F-4DB6-BE16-153BA25D98FB} = {CD888334-383F-4DB6-BE16-153BA25D98FB}
-		{A5020D4B-0E75-4DF9-9EEC-501394520228} = {A5020D4B-0E75-4DF9-9EEC-501394520228}
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordorpq", "mordor\pq\mordorpq.vcxproj", "{A5020D4B-0E75-4DF9-9EEC-501394520228}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -120,14 +115,14 @@ Global
 		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|Win32.Build.0 = Release|Win32
 		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|x64.ActiveCfg = Release|x64
 		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|x64.Build.0 = Release|x64
-		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Debug|Win32.ActiveCfg = Debug|Win32
-		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Debug|x64.ActiveCfg = Debug|x64
-		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Release|Win32.ActiveCfg = Release|Win32
-		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Release|x64.ActiveCfg = Release|x64
 		{935A3C00-3771-41B7-81C3-8E543DC8191A}.Debug|Win32.ActiveCfg = Debug|Win32
 		{935A3C00-3771-41B7-81C3-8E543DC8191A}.Debug|x64.ActiveCfg = Debug|x64
 		{935A3C00-3771-41B7-81C3-8E543DC8191A}.Release|Win32.ActiveCfg = Release|Win32
 		{935A3C00-3771-41B7-81C3-8E543DC8191A}.Release|x64.ActiveCfg = Release|x64
+		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Debug|x64.ActiveCfg = Debug|x64
+		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Release|Win32.ActiveCfg = Release|Win32
+		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

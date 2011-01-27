@@ -19,13 +19,16 @@
 #include <boost/signals2/signal.hpp>
 
 #include "assert.h"
-#include "json.h"
 
 namespace Mordor {
 
 #ifdef WINDOWS
 class IOManager;
 #endif
+
+namespace JSON {
+class Value;
+}
 
 class ConfigVarBase : public boost::noncopyable
 {

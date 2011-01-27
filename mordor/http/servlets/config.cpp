@@ -4,6 +4,7 @@
 
 #include "mordor/config.h"
 #include "mordor/http/server.h"
+#include "mordor/json.h"
 #include "mordor/streams/buffered.h"
 #include "mordor/streams/limited.h"
 #include "mordor/streams/memory.h"

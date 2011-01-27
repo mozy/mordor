@@ -41,7 +41,6 @@ nobase_include_HEADERS=			\
 	mordor/log.h			\
 	mordor/main.h			\
 	mordor/parallel.h		\
-	mordor/pq.h			\
 	mordor/predef.h			\
 	mordor/ragel.h			\
 	mordor/scheduler.h		\
@@ -94,6 +93,15 @@ nobase_include_HEADERS=			\
 	mordor/workerpool.h		\
 	mordor/xml/parser.h		\
 	mordor/zip.h
+
+if HAVE_POSTGRESQL
+	nobase_include_HEADERS+=		\
+		mordor/pq/connection.h		\
+		mordor/pq/exception.h		\
+		mordor/pq/preparedstatement.h	\
+		mordor/pq/result.h		\
+		mordor/pq/transaction.h
+endif
 
 lib_LTLIBRARIES=mordor/libmordor.la mordor/test/libmordortest.la
 
@@ -175,16 +183,21 @@ mordor_libmordor_la_LDFLAGS=			\
 mordor_libmordor_la_LIBADD=$(OPENSSL_LIBS) $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB)
 
 if HAVE_POSTGRESQL
-    lib_LTLIBRARIES+=mordor/libmordorpq.la
+    lib_LTLIBRARIES+=mordor/pq/libmordorpq.la
 endif
 
-mordor_libmordorpq_la_SOURCES=		\
-	mordor/pq.cpp
+mordor_pq_libmordorpq_la_SOURCES=		\
+	mordor/pq/connection.cpp		\
+	mordor/pq/copy.cpp			\
+	mordor/pq/exception.cpp			\
+	mordor/pq/preparedstatement.cpp		\
+	mordor/pq/result.cpp			\
+	mordor/pq/transaction.cpp
 
-mordor_libmordorpq_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h $(AM_CPPFLAGS)
-mordor_libmordorpq_la_LDFLAGS=			\
+mordor_pq_libmordorpq_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h $(AM_CPPFLAGS)
+mordor_pq_libmordorpq_la_LDFLAGS=			\
 	$(POSTGRESQL_LDFLAGS)
-mordor_libmordorpq_la_LIBADD=mordor/libmordor.la
+mordor_pq_libmordorpq_la_LIBADD=mordor/libmordor.la
 
 pkgconfigdir=$(libdir)/pkgconfig
 pkgconfig_DATA=mordor/libmordor.pc mordor/test/libmordortest.pc
@@ -218,10 +231,10 @@ EXTRA_DIST=				\
 mordor/pch.h.gch: mordor/pch.h
 	$(CXXCOMPILE) $(pic_flag) -x c++-header $< -o $@
 
-mordor_test_libmordortest_la_SOURCES=	\
-	mordor/test/antxmllistener.cpp	\
+mordor_test_libmordortest_la_SOURCES=		\
+	mordor/test/antxmllistener.cpp		\
 	mordor/test/compoundlistener.cpp	\
-	mordor/test/stdoutlistener.cpp	\
+	mordor/test/stdoutlistener.cpp		\
 	mordor/test/test.cpp
 
 mordor_test_libmordortest_la_LIBADD=mordor/libmordor.la
@@ -276,13 +289,14 @@ mordor_tests_run_tests_LDADD=mordor/libmordor.la mordor/test/libmordortest.la \
 
 
 if HAVE_POSTGRESQL
-check_PROGRAMS+=mordor/tests/run_pq_tests
+check_PROGRAMS+=mordor/pq/tests/run_tests
 endif
 
-mordor_tests_run_pq_tests_SOURCES = mordor/tests/pq.cpp
-mordor_tests_run_pq_tests_CPPFLAGS=-include mordor/pch.h $(AM_CPPFLAGS)
-mordor_tests_run_pq_tests_LDADD = mordor/libmordor.la \
-	mordor/libmordorpq.la 				\
+mordor_pq_tests_run_tests_SOURCES = mordor/pq/tests/pq.cpp
+mordor_pq_tests_run_tests_CPPFLAGS=-include mordor/pch.h $(AM_CPPFLAGS)
+mordor_pq_tests_run_tests_LDADD =		\
+	mordor/libmordor.la			\
+	mordor/pq/libmordorpq.la 		\
 	mordor/test/libmordortest.la		\
 	$(CORESERVICES_FRAMEWORK_LIBS)		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
