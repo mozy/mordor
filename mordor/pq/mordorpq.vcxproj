@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="connection.cpp" />
+    <ClCompile Include="connectionpool.cpp" />
     <ClCompile Include="copy.cpp" />
     <ClCompile Include="exception.cpp" />
     <ClCompile Include="preparedstatement.cpp" />
@@ -28,6 +29,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="connection.h" />
+    <ClInclude Include="connectionpool.h" />
     <ClInclude Include="exception.h" />
     <ClInclude Include="preparedstatement.h" />
     <ClInclude Include="result.h" />

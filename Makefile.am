@@ -97,6 +97,7 @@ nobase_include_HEADERS=			\
 if HAVE_POSTGRESQL
 	nobase_include_HEADERS+=		\
 		mordor/pq/connection.h		\
+		mordor/pq/connectionpool.h	\
 		mordor/pq/exception.h		\
 		mordor/pq/preparedstatement.h	\
 		mordor/pq/result.h		\
@@ -188,6 +189,7 @@ endif
 
 mordor_pq_libmordorpq_la_SOURCES=		\
 	mordor/pq/connection.cpp		\
+	mordor/pq/connectionpool.cpp		\
 	mordor/pq/copy.cpp			\
 	mordor/pq/exception.cpp			\
 	mordor/pq/preparedstatement.cpp		\
