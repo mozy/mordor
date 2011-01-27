@@ -1705,6 +1705,14 @@ IPv6Address::IPv6Address()
     sin.sin6_family = AF_INET6;
 }
 
+IPv6Address::IPv6Address(const unsigned char address[16], unsigned short port)
+{
+    memset(&sin, 0, sizeof(sockaddr_in6));
+    sin.sin6_family = AF_INET6;
+    sin.sin6_port = byteswapOnLittleEndian(port);
+    memcpy(&sin.sin6_addr.s6_addr, address, 16);
+}
+
 IPv6Address::IPv6Address(const char *address, unsigned short port)
 {
     memset(&sin, 0, sizeof(sockaddr_in6));

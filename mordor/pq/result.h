@@ -41,6 +41,25 @@ public:
     bool getIsNull(size_t row, const std::string &col) const
     { return getIsNull(row, column(col)); }
 
+    /// Get the value of a cell
+    ///
+    /// Supported overloads:
+    ///  * std::string  (bytea, text, <any>)
+    ///  * const char * (bytea, text, <any>)
+    ///  * bool (boolean)
+    ///  * char (char)
+    ///  * long long (bigint)
+    ///  * short (smallint)
+    ///  * int (integer)
+    ///  * float (real)
+    ///  * double (double precision)
+    ///  * boost::posix_time::ptime (timestamp)
+    ///  * std::vector<int> (integer[])
+    ///  * std::pair<IPAddress::ptr, unsigned int> (inet, cidr)
+    ///  * IPAddress::ptr (inet, cidr)
+    /// @note Except for the string overloads, these will all ASSERT if the
+    ///       value is NULL.  Additionally, the integer[] will also ASSERT if
+    ///       any of the values within the array are NULL.
     template <class T> T get(size_t row, size_t column) const;
     template <class T> T get(size_t row, const char* col) const
         { return get<T>(row, column(col)); }

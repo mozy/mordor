@@ -285,6 +285,7 @@ struct IPv6Address : public IPAddress
 {
 public:
     IPv6Address();
+    IPv6Address(const unsigned char address[16], unsigned short port = 0);
     IPv6Address(const char *address, unsigned short port = 0);
 
     ptr broadcastAddress(unsigned int prefixLength);

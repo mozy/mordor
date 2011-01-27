@@ -6,14 +6,17 @@
 
 #include "mordor/assert.h"
 #include "mordor/endian.h"
+#include "mordor/socket.h"
 
 #define BOOLOID 16
 #define CHAROID 18
 #define INT8OID 20
 #define INT2OID 21
 #define INT4OID 23
+#define CIDROID 650
 #define FLOAT4OID 700
 #define FLOAT8OID 701
+#define INETOID 869
 #define TIMESTAMPOID 1114
 #define TIMESTAMPTZOID 1184
 #define INT4ARRAYOID 1007
@@ -207,6 +210,37 @@ Result::get<std::vector<int> >(size_t row, size_t column) const
         result[i] = byteswapOnLittleEndian(array[i * 2 + 1]);
     }
     return result;
+}
+
+template<>
+std::pair<IPAddress::ptr, unsigned int>
+Result::get<std::pair<IPAddress::ptr, unsigned int> >(size_t row, size_t column) const
+{
+    MORDOR_ASSERT(getType(column) == INETOID || getType(column) == CIDROID);
+    MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) >= 2);
+    const char *bytes = PQgetvalue(m_result.get(), (int)row, (int)column);
+    std::pair<IPAddress::ptr, unsigned int> result;
+    switch (bytes[0]) {
+        case AF_INET:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 8);
+            result.second = bytes[1];
+            result.first.reset(new IPv4Address(byteswapOnLittleEndian(*(unsigned int*)&bytes[4])));
+            return result;
+        case AF_INET + 1:
+            MORDOR_ASSERT(PQgetlength(m_result.get(), (int)row, (int)column) == 20);
+            result.second = bytes[1];
+            result.first.reset(new IPv6Address((const unsigned char *)&bytes[4]));
+            return result;
+        default:
+            MORDOR_NOTREACHED();
+    }
+}
+
+template<>
+IPAddress::ptr
+Result::get<IPAddress::ptr>(size_t row, size_t column) const
+{
+    return get<std::pair<IPAddress::ptr, unsigned int> >(row, column).first;
 }
 
 }}
