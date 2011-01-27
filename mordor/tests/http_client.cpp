@@ -8,6 +8,7 @@
 #include "mordor/http/multipart.h"
 #include "mordor/http/parser.h"
 #include "mordor/http/server.h"
+#include "mordor/http/servlet.h"
 #include "mordor/iomanager.h"
 #include "mordor/scheduler.h"
 #include "mordor/sleep.h"
@@ -2555,4 +2556,68 @@ MORDOR_UNITTEST(HTTPClient, forceAbsoluteUri)
 
     ClientRequest::ptr request = requestBroker.request(requestHeaders);
     MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+}
+
+namespace {
+class DummyStreamBroker : public StreamBroker
+{
+public:
+    Stream::ptr getStream(const URI &uri)
+    {
+        std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+        Servlet::ptr servlet(new ServletDispatcher());
+        ServerConnection::ptr server(new ServerConnection(pipe.second,
+            boost::bind(&Servlet::request, servlet, _1)));
+        server->processRequests();
+        return pipe.first;
+    }
+};
+}
+
+MORDOR_UNITTEST(HTTPConnectionCache, idleDoesntPreventStop)
+{
+    IOManager ioManager;
+    StreamBroker::ptr broker(new DummyStreamBroker());
+    ConnectionCache cache(broker, &ioManager);
+    cache.idleTimeout(5000000ull);
+    ClientConnection::ptr conn = cache.getConnection("http://localhost/").first;
+    cache.closeIdleConnections();
+    unsigned long long start = TimerManager::now();
+    ioManager.stop();
+    MORDOR_TEST_ASSERT_LESS_THAN(TimerManager::now() - start, 1000000ull);
+}
+
+namespace {
+class FailStreamBroker : public StreamBroker
+{
+public:
+    Stream::ptr getStream(const URI &uri)
+    {
+        Scheduler::yield();
+        MORDOR_THROW_EXCEPTION(DummyException());
+    }
+};
+}
+
+static void expectFail(ConnectionCache &cache)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(cache.getConnection("http://localhost/"),
+        DummyException);
+}
+
+static void expectPriorFail(ConnectionCache &cache)
+{
+    MORDOR_TEST_ASSERT_EXCEPTION(cache.getConnection("http://localhost/"),
+        PriorConnectionFailedException);
+}
+
+MORDOR_UNITTEST(HTTPConnectionCache, pendingConnectionsFailTogether)
+{
+    WorkerPool pool;
+    StreamBroker::ptr broker(new FailStreamBroker());
+    ConnectionCache cache(broker);
+    pool.schedule(boost::bind(&expectFail, boost::ref(cache)));
+    pool.schedule(boost::bind(&expectPriorFail, boost::ref(cache)));
+    pool.schedule(boost::bind(&expectPriorFail, boost::ref(cache)));
+    pool.dispatch();
 }

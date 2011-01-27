@@ -3,82 +3,71 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
 #include <boost/bind.hpp>
-#include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>
-#include <boost/shared_ptr.hpp>
+#include <boost/noncopyable.hpp>
 
+#include "exception.h"
 #include "fiber.h"
 
 namespace Mordor {
 
 struct DummyVoid;
 
+struct CoroutineAbortedException : virtual OperationAbortedException {};
+
 template <class Result, class Arg = DummyVoid>
-class Coroutine : public boost::enable_shared_from_this<Coroutine<Result, Arg> >
+class Coroutine : boost::noncopyable
 {
-public:
-    typedef boost::shared_ptr<Coroutine> ptr;
-    typedef boost::weak_ptr<Coroutine> weak_ptr;
 public:
     Coroutine()
     {
         m_fiber = Fiber::ptr(new Fiber(boost::bind(&Coroutine::run, this)));
     }
 
-    Coroutine(boost::function<Result (typename Coroutine<Result, Arg>::ptr, Arg)> dg)
-        : m_dg1(dg)
+    Coroutine(boost::function<void (Coroutine &, Arg)> dg)
+        : m_dg(dg)
     {
         m_fiber = Fiber::ptr(new Fiber(boost::bind(&Coroutine::run, this)));
     }
 
-    Coroutine(boost::function<void (typename Coroutine<Result, Arg>::ptr, Arg)> dg)
-        : m_dg2(dg)
+    ~Coroutine()
     {
-        m_fiber = Fiber::ptr(new Fiber(boost::bind(&Coroutine::run, this)));
+        reset();
     }
 
     void reset()
     {
+        if (m_fiber->state() == Fiber::HOLD) {
+            try {
+                throw boost::enable_current_exception(CoroutineAbortedException());
+            } catch (...) {
+                m_fiber->inject(boost::current_exception());
+            }
+        }
         m_fiber->reset();
     }
 
-    void reset(boost::function<Result (typename Coroutine<Result, Arg>::ptr, Arg)> dg)
+    void reset(boost::function<void (Coroutine &, Arg)> dg)
     {
-        m_fiber->reset();
-        m_dg1 = dg;
-        m_dg2 = NULL;
+        reset();
+        m_dg = dg;
     }
 
-    void reset(boost::function<void (typename Coroutine<Result, Arg>::ptr, Arg)> dg)
-    {
-        m_fiber->reset();
-        m_dg2 = NULL;
-        m_dg2 = dg;
-    }
-
-    Result call(Arg arg)
+    Result call(const Arg &arg)
     {
         m_arg = arg;
         m_fiber->call();
         return m_result;
     }
 
-    Arg yield(Result r)
+    Arg yield(const Result &result)
     {
-        m_result = r;
+        m_result = result;
         Fiber::yield();
         return m_arg;
     }
-/*
-    template <class OtherArg>
-    Arg yieldTo(typename Coroutine<Arg, OtherArg>::ptr other, OtherArg arg)
-    {
-        other->m_arg = arg;
-        other->m_fiber->yieldTo();
-        return m_result;
-    }
-*/
-    Fiber::State state()
+
+    Fiber::State state() const
     {
         return m_fiber->state();
     }
@@ -86,17 +75,15 @@ public:
 private:
     void run()
     {
-        if (m_dg1) {
-            m_result = m_dg1(boost::enable_shared_from_this<Coroutine<Result, Arg> >::shared_from_this(), m_arg);
-        } else {
-            m_dg2(boost::enable_shared_from_this<Coroutine<Result, Arg> >::shared_from_this(), m_arg);
+        try {
+            m_dg(*this, m_arg);
             m_result = Result();
+        } catch (CoroutineAbortedException &) {
         }
     }
 
 private:
-    boost::function<Result (typename Coroutine<Result, Arg>::ptr, Arg)> m_dg1;
-    boost::function<void (typename Coroutine<Result, Arg>::ptr, Arg)> m_dg2;
+    boost::function<void (Coroutine &, Arg)> m_dg;
     Result m_result;
     Arg m_arg;
     Fiber::ptr m_fiber;
@@ -104,31 +91,40 @@ private:
 
 
 template <class Result>
-class Coroutine<Result, DummyVoid> : public boost::enable_shared_from_this<Coroutine<Result> >
+class Coroutine<Result, DummyVoid> : boost::noncopyable
 {
-public:
-    typedef boost::shared_ptr<Coroutine> ptr;
-    typedef boost::weak_ptr<Coroutine> weak_ptr;
 public:
     Coroutine()
     {
         m_fiber = Fiber::ptr(new Fiber(boost::bind(&Coroutine::run, this)));
     }
 
-    Coroutine(boost::function<Result (typename Coroutine<Result>::ptr)> dg)
+    Coroutine(boost::function<void (Coroutine &)> dg)
         : m_dg(dg)
     {
         m_fiber = Fiber::ptr(new Fiber(boost::bind(&Coroutine::run, this)));
     }
 
+    ~Coroutine()
+    {
+        reset();
+    }
+
     void reset()
     {
+        if (m_fiber->state() == Fiber::HOLD) {
+            try {
+                throw boost::enable_current_exception(CoroutineAbortedException());
+            } catch (...) {
+                m_fiber->inject(boost::current_exception());
+            }
+        }
         m_fiber->reset();
     }
 
-    void reset(boost::function<Result (typename Coroutine<Result>::ptr)> dg)
+    void reset(boost::function<void (Coroutine &)> dg)
     {
-        m_fiber->reset();
+        reset();
         m_dg = dg;
     }
 
@@ -138,13 +134,13 @@ public:
         return m_result;
     }
 
-    void yield(Result r)
+    void yield(const Result &result)
     {
-        m_result = r;
+        m_result = result;
         Fiber::yield();
     }
 
-    Fiber::State state()
+    Fiber::State state() const
     {
         return m_fiber->state();
     }
@@ -152,12 +148,86 @@ public:
 private:
     void run()
     {
-        m_result = m_dg(boost::enable_shared_from_this<Coroutine<Result> >::shared_from_this());
+        try {
+            m_dg(*this);
+            m_result = Result();
+        } catch (CoroutineAbortedException &) {
+        }
     }
 
 private:
-    boost::function<Result (typename Coroutine<Result>::ptr)> m_dg;
+    boost::function<void (Coroutine &)> m_dg;
     Result m_result;
+    Fiber::ptr m_fiber;
+};
+
+template <class Arg>
+class Coroutine<void, Arg> : boost::noncopyable
+{
+public:
+    Coroutine()
+    {
+        m_fiber = Fiber::ptr(new Fiber(boost::bind(&Coroutine::run, this)));
+    }
+
+    Coroutine(boost::function<void (Coroutine &, Arg)> dg)
+        : m_dg(dg)
+    {
+        m_fiber = Fiber::ptr(new Fiber(boost::bind(&Coroutine::run, this)));
+    }
+
+    ~Coroutine()
+    {
+        reset();
+    }
+
+    void reset()
+    {
+        if (m_fiber->state() == Fiber::HOLD) {
+            try {
+                throw boost::enable_current_exception(CoroutineAbortedException());
+            } catch (...) {
+                m_fiber->inject(boost::current_exception());
+            }
+        }
+        m_fiber->reset();
+    }
+
+    void reset(boost::function<void (Coroutine &, Arg)> dg)
+    {
+        reset();
+        m_dg = dg;
+    }
+
+    void call(const Arg &arg)
+    {
+        m_arg = arg;
+        m_fiber->call();
+    }
+
+    Arg yield()
+    {
+        Fiber::yield();
+        return m_arg;
+    }
+
+    Fiber::State state() const
+    {
+        return m_fiber->state();
+    }
+
+private:
+    void run()
+    {
+        try {
+            m_dg(*this, m_arg);
+        } catch (CoroutineAbortedException &) {
+        }
+    }
+
+private:
+    boost::function<void (Coroutine &, Arg)> m_dg;
+    Arg m_arg;
     Fiber::ptr m_fiber;
 };
 

@@ -85,9 +85,12 @@ struct URI
         std::string toString() const;
 
         int cmp(const Authority &rhs) const;
-        bool operator==(const Authority &rhs) const;
+        bool operator<(const Authority &rhs) const
+        { return cmp(rhs) < 0; }
+        bool operator==(const Authority &rhs) const
+        { return cmp(rhs) == 0; }
         bool operator!=(const Authority &rhs) const
-        { return !(*this == rhs); }
+        { return cmp(rhs) != 0; }
 
     private:
         std::string m_userinfo, m_host;
@@ -164,9 +167,12 @@ struct URI
         std::string toString() const;
 
         int cmp(const Path &rhs) const;
-        bool operator==(const Path &rhs) const;
+        bool operator<(const Path &rhs) const
+        { return cmp(rhs) < 0; }
+        bool operator==(const Path &rhs) const
+        { return cmp(rhs) == 0; }
         bool operator!=(const Path &rhs) const
-        { return !(*this == rhs); }
+        { return cmp(rhs) != 0; }
 
     private:
         const URI *m_uri;
@@ -186,6 +192,18 @@ struct URI
         QueryString &operator =(const std::string &string);
         QueryString &operator =(Stream &stream);
         QueryString &operator =(boost::shared_ptr<Stream> stream) { return *this = *stream; }
+
+        /// Convenience function for working with a non-multi-valued key
+        ///
+        /// This function will return a refence to the value corresponding to
+        /// key.  If key does not yet exist, it is created.  If multiple values
+        /// exist, all but the first are erased.
+        std::string &operator[](const std::string &key);
+        /// Convenience function for working with a non-multi-valued key
+        ///
+        /// This function will return a copy of the first value corresponding
+        /// to key.  If key does not exist, an empy string is returned.
+        std::string operator[](const std::string &key) const;
     };
 
     std::string query() const;
@@ -210,10 +228,12 @@ struct URI
     static URI transform(const URI& base, const URI& relative);
 
     int cmp(const URI &rhs) const;
-    bool operator<(const URI &rhs) const;
-    bool operator==(const URI &rhs) const;
+    bool operator<(const URI &rhs) const
+    { return cmp(rhs) < 0; }
+    bool operator==(const URI &rhs) const
+    { return cmp(rhs) == 0; }
     bool operator!=(const URI &rhs) const
-    { return !(*this == rhs); }
+    { return cmp(rhs) != 0; }
 
 private:
     std::string m_scheme, m_query, m_fragment;

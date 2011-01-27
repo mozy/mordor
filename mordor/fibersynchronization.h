@@ -100,6 +100,34 @@ private:
     std::list<std::pair<Scheduler *, boost::shared_ptr<Fiber> > > m_waiters;
 };
 
+/// Scheduler based Semaphore for Fibers
+
+/// Semaphore for use by Fibers that yields to a Scheduler instead of blocking
+/// if the mutex cannot be immediately acquired.  It also provides the
+/// additional guarantee that it is strictly FIFO, instead of random which
+/// Fiber will acquire the semaphore next after it is released.
+struct FiberSemaphore : boost::noncopyable
+{
+public:
+    FiberSemaphore(size_t initialConcurrency = 0);
+    ~FiberSemaphore();
+
+    /// @brief Waits for the semaphore
+    /// Decreases the amount of concurrency.  If concurrency is already at
+    /// zero, it will wait for someone else to notify the semaphore
+    /// @note It is possible for this Fiber to switch threads after this
+    /// method, though it is guaranteed to still be on the same Scheduler
+    /// @pre Scheduler::getThis() != NULL
+    void wait();
+    /// @brief Increases the level of concurrency
+    void notify();
+
+private:
+    boost::mutex m_mutex;
+    std::list<std::pair<Scheduler *, boost::shared_ptr<Fiber> > > m_waiters;
+    size_t m_concurrency;
+};
+
 /// Scheduler based condition variable for Fibers
 
 /// Condition for use by Fibers that yields to a Scheduler instead of blocking.

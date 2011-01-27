@@ -29,7 +29,7 @@ ThrottleStream::read(Buffer &b, size_t len)
     if (actualTime < minTime) {
         unsigned long long sleepTime = minTime - actualTime;
         // Never sleep for longer than a tenth of a second
-        sleepTime = std::max(100000ull, sleepTime);
+        sleepTime = (std::max)(100000ull, sleepTime);
         if (m_timerManager)
             sleep(*m_timerManager, sleepTime);
         else
@@ -63,7 +63,7 @@ ThrottleStream::write(const Buffer &b, size_t len)
     if (actualTime < minTime) {
         unsigned long long sleepTime = minTime - actualTime;
         // Never sleep for longer than a tenth of a second
-        sleepTime = std::max(100000ull, sleepTime);
+        sleepTime = (std::max)(100000ull, sleepTime);
         if (m_timerManager)
             sleep(*m_timerManager, sleepTime);
         else

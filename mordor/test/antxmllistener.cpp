@@ -32,6 +32,7 @@ public:
              const char* file, int line)
     {
         std::ostringstream *os = NULL;
+        std::ostringstream localOS;
         switch (level) {
             case Log::FATAL:
             case Log::ERROR:
@@ -40,12 +41,16 @@ public:
             default:
                 os = m_out;
         }
-        if (os)
-            *os << now << " " << elapsed << " " << level << " " << thread
-                << " " << fiber << " " << logger << " " << file << ":" << line
-                << " " << str << std::endl;
+        if (os) {
+            localOS << now << " " << elapsed << " " << level << " " << thread
+                    << " " << fiber << " " << logger << " " << file << ":"
+                    << line << " " << str << std::endl;
+            boost::mutex::scoped_lock lock(m_mutex);
+            *os << localOS.str();
+        }
     }
 
+    boost::mutex m_mutex;
     std::ostringstream *m_out, *m_err;
 };
 
@@ -91,6 +96,16 @@ AntXMLListener::testComplete(const std::string &suite, const std::string &test)
 }
 
 void
+AntXMLListener::testSkipped(const std::string &suite, const std::string &test)
+{
+    if (test != "<invariant>") {
+        TestSuiteInfo &suiteInfo = m_testSuites[suite];
+        suiteInfo.tests.erase(test);
+        suiteInfo.end = TimerManager::now();
+    }
+}
+
+void
 AntXMLListener::testAsserted(const std::string &suite, const std::string &test,
                              const Assertion &assertion)
 {
@@ -119,8 +134,6 @@ AntXMLListener::testException(const std::string &suite, const std::string &test)
             throw;
         } catch (std::exception &ex) {
             testInfo.exceptionMessage = ex.what();
-            replace(testInfo.exceptionMessage, "&", "&amp;");
-            replace(testInfo.exceptionMessage, "\"", "&quot;");
             testInfo.exceptionType = typeid(ex).name();
         } catch (boost::exception &ex) {
             testInfo.exceptionType = typeid(ex).name();
@@ -134,6 +147,15 @@ static void listProperties(std::ostringstream *os, ConfigVarBase::ptr var)
 {
     *os << "    <property name=\"" << var->name() << "\" value=\""
         << var->toString() << "\" />" << std::endl;
+}
+
+static std::string sanitize(std::string string, bool cdata = true)
+{
+    replace(string, '&', "&amp;");
+    replace(string, '<', "&lt;");
+    if (!cdata)
+        replace(string, '\"', "&quot;");
+    return string;
 }
 
 void
@@ -165,17 +187,17 @@ AntXMLListener::testsComplete()
                 if (!it2->second.exceptionMessage.empty()) {
                     os << ">" << std::endl
                         << "    <failure message=\""
-                        << it2->second.exceptionMessage << "\" type=\""
-                        << it2->second.exceptionType << "\"><![CDATA["
-                        << it2->second.exceptionDetails << "]]></failure>"
+                        << sanitize(it2->second.exceptionMessage, false) << "\" type=\""
+                        << sanitize(it2->second.exceptionType, false) << "\"><![CDATA["
+                        << sanitize(it2->second.exceptionDetails) << "]]></failure>"
                         << std::endl << "  </testcase>" << std::endl;
                 } else {
                     os << " />" << std::endl;
                 }
             }
-            os << "  <system-out><![CDATA[" << it->second.out->str()
+            os << "  <system-out><![CDATA[" << sanitize(it->second.out->str())
                 << "]]></system-out>" << std::endl
-                << "  <system-err><![CDATA[" << it->second.err->str()
+                << "  <system-err><![CDATA[" << sanitize(it->second.err->str())
                 << "]]></system-err>" << std::endl
                 << "</testsuite>" << std::endl;
             std::string xml = os.str();

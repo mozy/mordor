@@ -199,6 +199,8 @@ private:
     std::vector<intptr_t> m_fls;
 };
 
+std::ostream &operator<<(std::ostream &os, Fiber::State state);
+
 template <class T>
 class FiberLocalStorageBase : boost::noncopyable
 {

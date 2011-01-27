@@ -34,7 +34,7 @@ template <class T>
 size_t
 MemoryStream::readInternal(T &buffer, size_t length)
 {
-    size_t todo = std::min(length, m_read.readAvailable());
+    size_t todo = (std::min)(length, m_read.readAvailable());
     m_read.copyOut(buffer, todo);
     m_read.consume(todo);
     m_offset += todo;
@@ -103,7 +103,7 @@ MemoryStream::seek(long long offset, Anchor anchor)
             m_read.clear();
             m_read.copyIn(m_original, m_original.readAvailable());
             m_offset = (size_t)offset;
-            m_read.consume(std::min((size_t)offset, size));
+            m_read.consume((std::min)((size_t)offset, size));
             return (long long)m_offset;
         case CURRENT:
             if (offset < 0) {
@@ -115,7 +115,7 @@ MemoryStream::seek(long long offset, Anchor anchor)
                         "Memory stream position cannot exceed virtual address space."));
                 }
                 if (m_offset <= size) {
-                    m_read.consume(std::min((size_t)offset, size - m_offset));
+                    m_read.consume((std::min)((size_t)offset, size - m_offset));
                     m_offset += (size_t)offset;
                 }
                 return (long long)m_offset;
@@ -166,7 +166,7 @@ MemoryStream::truncate(long long size)
         // Reset the read buf so we're referencing the same memory
         m_read.clear();
         m_read.copyIn(m_original);
-        m_read.consume(std::min(m_offset, (size_t)size));
+        m_read.consume((std::min)(m_offset, (size_t)size));
     }
 
     MORDOR_ASSERT(m_original.readAvailable() == (size_t)size);
@@ -175,7 +175,8 @@ MemoryStream::truncate(long long size)
 ptrdiff_t
 MemoryStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 {
-    ptrdiff_t result = m_read.find(delim, std::min(sanitySize, m_read.readAvailable()));
+    ptrdiff_t result = m_read.find(delim,
+        (std::min)(sanitySize, m_read.readAvailable()));
     if (result != -1)
         return result;
     if (throwIfNotFound)
@@ -186,7 +187,8 @@ MemoryStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
 ptrdiff_t
 MemoryStream::find(const std::string &str, size_t sanitySize, bool throwIfNotFound)
 {
-    ptrdiff_t result = m_read.find(str, std::min(sanitySize, m_read.readAvailable()));
+    ptrdiff_t result = m_read.find(str,
+        (std::min)(sanitySize, m_read.readAvailable()));
     if (result != -1)
         return result;
     if (throwIfNotFound)

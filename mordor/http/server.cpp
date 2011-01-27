@@ -84,11 +84,13 @@ ServerConnection::requestComplete(ServerRequest *request)
         MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
             << " request complete";
         request->m_requestState = ServerRequest::COMPLETE;
+        close = request->m_willClose;
         if (request->m_responseState >= ServerRequest::COMPLETE) {
             MORDOR_ASSERT(request == m_pendingRequests.front());
             m_pendingRequests.pop_front();
+            if (!close)
+                scheduleNextRequest(request);
         }
-        close = request->m_willClose;
         if (!close) {
             if (request->m_pipeline)
                 scheduleNextRequest(request);
@@ -184,7 +186,7 @@ ServerConnection::scheduleAllWaitingResponses()
     // MORDOR_ASSERT(m_mutex.locked());
     MORDOR_LOG_TRACE(g_log) << this << " scheduling all responses";
 
-    unsigned long long firstFailedRequest = std::min(m_priorRequestFailed,
+    unsigned long long firstFailedRequest = (std::min)(m_priorRequestFailed,
         m_priorResponseClosed);
     for (std::list<ServerRequest *>::iterator it(m_pendingRequests.begin());
         it != m_pendingRequests.end();
@@ -390,7 +392,7 @@ ServerRequest::cancel()
         m_responseState = ERROR;
     m_conn->m_stream->cancelRead();
     m_conn->m_stream->cancelWrite();
-    m_conn->m_priorRequestFailed = std::min(m_conn->m_priorRequestFailed,
+    m_conn->m_priorRequestFailed = (std::min)(m_conn->m_priorRequestFailed,
         m_requestNumber);
     std::list<ServerRequest *>::iterator it =
         std::find(m_conn->m_pendingRequests.begin(),
@@ -534,11 +536,13 @@ ServerRequest::doRequest()
                 } else if (stricmp(it->value.c_str(), "compress") == 0 ||
                     stricmp(it->value.c_str(), "x-compress") == 0) {
                     m_requestState = ERROR;
-                    respondError(shared_from_this(), NOT_IMPLEMENTED, "compress transfer-coding is not supported", false);
+                    respondError(shared_from_this(), NOT_IMPLEMENTED,
+                        "compress transfer-coding is not supported");
                     return;
                 } else {
                     m_requestState = ERROR;
-                    respondError(shared_from_this(), NOT_IMPLEMENTED, "Unrecognized transfer-coding: " + it->value, false);
+                    respondError(shared_from_this(), NOT_IMPLEMENTED,
+                        "Unrecognized transfer-coding: " + it->value);
                     return;
                 }
             }
@@ -552,12 +556,25 @@ ServerRequest::doRequest()
             if (stricmp(it->key.c_str(), "100-continue") == 0) {
                 if (!it->value.empty() || !it->parameters.empty()) {
                     m_requestState = ERROR;
-                    respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized parameters to 100-continue expectation", false);
+                    respondError(shared_from_this(), EXPECTATION_FAILED,
+                        "Unrecognized parameters to 100-continue expectation");
+                    return;
+                }
+                // http://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.2.3
+                // A client MUST NOT send an Expect request-header field (section
+                // 14.20) with the "100-continue" expectation if it does not intend
+                // to send a request body.
+                if (!Connection::hasMessageBody(m_request.general, m_request.entity,
+                    m_request.requestLine.method, INVALID, false)) {
+                    m_requestState = ERROR;
+                    respondError(shared_from_this(), BAD_REQUEST,
+                        "Cannot use 100-continue expectation without a request body");
                     return;
                 }
             } else {
                 m_requestState = ERROR;
-                respondError(shared_from_this(), EXPECTATION_FAILED, "Unrecognized expectation: " + it->key, false);
+                respondError(shared_from_this(), EXPECTATION_FAILED,
+                    "Unrecognized expectation: " + it->key);
                 return;
             }
         }
@@ -766,7 +783,7 @@ ServerRequest::commit()
     } catch(...) {
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        m_conn->m_priorRequestFailed = std::min(m_conn->m_priorRequestFailed,
+        m_conn->m_priorRequestFailed = (std::min)(m_conn->m_priorRequestFailed,
             m_requestNumber);
         m_conn->scheduleAllWaitingResponses();
         throw;
@@ -842,9 +859,13 @@ respondError(ServerRequest::ptr request, Status status,
     if (!message.empty()) {
         request->response().entity.contentType.type = "text";
         request->response().entity.contentType.subtype = "plain";
-        Stream::ptr responseStream = request->responseStream();
-        responseStream->write(message.c_str(), message.size());
-        responseStream->close();
+        if (request->request().requestLine.method == HEAD) {
+            request->finish();
+        } else {
+            Stream::ptr responseStream = request->responseStream();
+            responseStream->write(message.c_str(), message.size());
+            responseStream->close();
+        }
     } else {
         request->finish();
     }
@@ -965,7 +986,7 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                             cr.first = size - it->second;
                     } else {
                         cr.first = it->first;
-                        cr.last = std::min(it->second, size - 1);
+                        cr.last = (std::min)(it->second, size - 1);
                     }
                     if (response->supportsSeek())
                         response->seek(cr.first);
@@ -1014,7 +1035,7 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                     cr->last = size - 1;
                 } else {
                     cr->first = range.front().first;
-                    cr->last = std::min(range.front().second, size - 1);
+                    cr->last = (std::min)(range.front().second, size - 1);
                 }
                 request->response().entity.contentLength = cr->last - cr->first + 1;
             }

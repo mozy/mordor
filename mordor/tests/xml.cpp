@@ -1,5 +1,7 @@
 // Copyright (c) 2010 - Mozy, Inc.
 
+#include <boost/bind.hpp>
+
 #include "mordor/xml/parser.h"
 #include "mordor/test/test.h"
 

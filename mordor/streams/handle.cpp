@@ -118,7 +118,7 @@ HandleStream::read(void *buffer, size_t length)
             overlapped->OffsetHigh = (DWORD)(m_pos >> 32);
         }
     }
-    length = std::min(length, m_maxOpSize);
+    length = (std::min)(length, m_maxOpSize);
     BOOL ret = ReadFile(m_hFile, buffer, (DWORD)length, &read, overlapped);
     Log::Level level = Log::DEBUG;
     if (!ret) {
@@ -196,7 +196,7 @@ HandleStream::write(const void *buffer, size_t length)
             overlapped->OffsetHigh = (DWORD)(m_pos >> 32);
         }
     }
-    length = std::min(length, m_maxOpSize);
+    length = (std::min)(length, m_maxOpSize);
     BOOL ret = WriteFile(m_hFile, buffer, (DWORD)length, &written, overlapped);
     Log::Level level = Log::DEBUG;
     if (!ret) {

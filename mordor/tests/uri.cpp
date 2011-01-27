@@ -448,3 +448,35 @@ MORDOR_UNITTEST(URI, makeAbsolute)
     path.makeRelative();
     MORDOR_TEST_ASSERT_EQUAL(path, "hi");
 }
+
+MORDOR_UNITTEST(URI, queryStringConvenience)
+{
+    URI::QueryString qs;
+    qs["a"] = "1";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=1");
+    qs.insert(std::make_pair("a", "2"));
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 2u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=1&a=2");
+    // Returns only the first item (removing others)
+    qs["a"] = "3";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3");
+    qs.insert(std::make_pair("a", "4"));
+    // Implicitly creates the item, even though we don't assign to it
+    MORDOR_TEST_ASSERT(qs["b"].empty());
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 3u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&b");
+
+    // Create a const reference, so we call the const version
+    const URI::QueryString &qs2 = qs;
+    // Does not create a new item
+    MORDOR_TEST_ASSERT(qs2["c"].empty());
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 3u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&b");
+
+    // Returns the first item, but keeps the rest
+    MORDOR_TEST_ASSERT_EQUAL(qs2["a"], "3");
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 3u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&b");
+}

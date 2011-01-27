@@ -25,8 +25,8 @@ int main(int argc, char **argv)
         AverageMinMaxStatistic<size_t> &stats = Statistics::registerStatistic("broadcasts",
             AverageMinMaxStatistic<size_t>("bytes", "packets"));
 
-        std::vector<Address::ptr> addresses = Address::lookup(argv[1], AF_UNSPEC, SOCK_DGRAM);
-        Socket::ptr sock = addresses[0]->createSocket(ioManager);
+        std::vector<Address::ptr> addresses = Address::lookup(argv[1]);
+        Socket::ptr sock = addresses[0]->createSocket(ioManager, SOCK_DGRAM);
         sock->bind(addresses[0]);
         char buf[65536];
         IPv4Address addr;

@@ -42,9 +42,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/MP"
 				Optimization="0"
 				AdditionalIncludeDirectories="../.."
-				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				WarningLevel="3"
@@ -105,9 +105,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/MP"
 				Optimization="0"
 				AdditionalIncludeDirectories="../.."
-				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				WarningLevel="3"
@@ -168,6 +168,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/MP"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../.."
@@ -232,6 +233,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/MP"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="../.."
@@ -281,6 +283,10 @@
 			>
 			<File
 				RelativePath=".\antxmllistener.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\compoundlistener.cpp"
 				>
 			</File>
 			<File
@@ -335,6 +341,10 @@
 			>
 			<File
 				RelativePath=".\antxmllistener.h"
+				>
+			</File>
+			<File
+				RelativePath=".\compoundlistener.h"
 				>
 			</File>
 			<File

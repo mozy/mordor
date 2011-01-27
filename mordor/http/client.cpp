@@ -117,7 +117,7 @@ ClientConnection::writeTimeout(unsigned long long us)
 void
 ClientConnection::idleTimeout(unsigned long long us, boost::function<void ()> dg)
 {
-    MORDOR_ASSERT(m_timerManager);
+    MORDOR_ASSERT(us == ~0ull || m_timerManager);
     boost::mutex::scoped_lock lock(m_mutex);
     if (m_idleTimer) {
         m_idleTimer->cancel();
@@ -336,7 +336,7 @@ ClientConnection::scheduleAllWaitingResponses()
     // MORDOR_ASSERT(m_mutex.locked());
     MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " scheduling all responses";
     unsigned long long firstResponseToSchedule =
-        std::min(m_priorResponseFailed, m_priorResponseClosed);
+        (std::min)(m_priorResponseFailed, m_priorResponseClosed);
 
     std::list<ClientRequest *>::iterator end = m_currentRequest;
     if (end != m_pendingRequests.end())
@@ -1142,7 +1142,8 @@ ClientRequest::ensureResponse()
         } catch (...) {
             boost::mutex::scoped_lock lock(m_conn->m_mutex);
             m_conn->invariant();
-            m_conn->m_priorResponseFailed = std::min(m_requestNumber, m_conn->m_priorResponseFailed);
+            m_conn->m_priorResponseFailed = (std::min)(m_requestNumber,
+                m_conn->m_priorResponseFailed);
             m_responseState = ERROR;
             if (!m_conn->m_pendingRequests.empty() &&
                 m_conn->m_pendingRequests.front() == this) {
@@ -1259,7 +1260,7 @@ ClientRequest::requestFailed()
     // Throw an HTTP exception if we can
     if (m_conn->m_priorResponseClosed <= m_requestNumber)
         MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
-    if (m_conn->m_priorResponseFailed <= m_requestNumber)
+    if (m_conn->m_priorResponseFailed < m_requestNumber)
         MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
 }
 

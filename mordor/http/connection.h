@@ -5,6 +5,7 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "mordor/anymap.h"
 #include "http.h"
 
 namespace Mordor {
@@ -24,6 +25,10 @@ public:
         Status status,
         bool includeEmpty = true);
 
+    /// @note Be sure to lock the cacheMutex whenever you access the cache
+    anymap &cache() { return m_cache; }
+    boost::mutex &cacheMutex() { return m_cacheMutex; }
+
 protected:
     Connection(boost::shared_ptr<Stream> stream);
 
@@ -37,6 +42,10 @@ protected:
 
 protected:
     boost::shared_ptr<Stream> m_stream;
+
+private:
+    boost::mutex m_cacheMutex;
+    anymap m_cache;
 };
 
 }}

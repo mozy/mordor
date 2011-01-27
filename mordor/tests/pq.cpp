@@ -7,6 +7,7 @@
 #include <boost/date_time/posix_time/posix_time_io.hpp>
 
 #include "mordor/config.h"
+#include "mordor/iomanager.h"
 #include "mordor/main.h"
 #include "mordor/pq.h"
 #include "mordor/version.h"
@@ -77,6 +78,7 @@ MORDOR_MAIN(int argc, char **argv)
     MORDOR_UNITTEST(PQ, TestName ## Async)                                      \
     {                                                                           \
                                                            \
+        IOManager ioManager;                                                    \
         PQ_ ## TestName(&ioManager);                                            \
     }                                                                           \
     static void PQ_ ## TestName(IOManager *ioManager)

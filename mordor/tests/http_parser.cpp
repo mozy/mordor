@@ -773,3 +773,17 @@ MORDOR_UNITTEST(HTTP, ETagComparison)
     MORDOR_TEST_ASSERT_NOT_EQUAL(ETag("abc"), ETag("xyz", true));
     MORDOR_TEST_ASSERT_NOT_EQUAL(ETag("abc", true), ETag("xyz", true));
 }
+
+MORDOR_UNITTEST(HTTP, doubleSlashRequest)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("GET //hi HTTP/1.0\r\n\r\n");
+    MORDOR_TEST_ASSERT(parser.error());
+
+#ifdef DEBUG
+    request.requestLine.uri.path = "//hi";
+    MORDOR_TEST_ASSERT_ASSERTED(boost::lexical_cast<std::string>(request));
+#endif
+}

@@ -103,6 +103,13 @@
     <ClCompile Include="http\auth.cpp" />
     <ClCompile Include="http\basic.cpp" />
     <ClCompile Include="http\broker.cpp" />
+    <ClCompile Include="http\servlet.cpp" />
+    <ClCompile Include="http\servlets\config.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)config_servlet.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)config_servlet.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)config_servlet.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)config_servlet.obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="daemon.cpp" />
     <ClCompile Include="parallel.cpp" />
@@ -178,6 +185,9 @@
     <ClInclude Include="http\auth.h" />
     <ClInclude Include="http\basic.h" />
     <ClInclude Include="http\broker.h" />
+    <ClInclude Include="factory.h" />
+    <ClInclude Include="http\servlet.h" />
+    <ClInclude Include="http\servlets\config.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="daemon.h" />
     <ClInclude Include="parallel.h" />

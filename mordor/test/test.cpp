@@ -86,6 +86,9 @@ runTest(TestListener *listener, const std::string &suite,
             test();
             if (listener)
                 listener->testComplete(suite, testName);
+        } catch (const TestSkippedException &) {
+            if (listener)
+                listener->testSkipped(suite, testName);
         } catch (const Assertion &assertion) {
             if (listener)
                 listener->testAsserted(suite, testName, assertion);
@@ -96,9 +99,14 @@ runTest(TestListener *listener, const std::string &suite,
             return false;
         }
     } else {
-        test();
-        if (listener)
-            listener->testComplete(suite, testName);
+        try {
+            test();
+            if (listener)
+                listener->testComplete(suite, testName);
+        } catch (const TestSkippedException &) {
+            if (listener)
+                listener->testSkipped(suite, testName);
+        }
     }
     return true;
 }

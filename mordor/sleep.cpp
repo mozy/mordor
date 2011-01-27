@@ -33,7 +33,7 @@ sleep(unsigned long long us)
 #else
     struct timespec ts;
     ts.tv_sec = us / 1000000;
-    ts.tv_nsec = (us % 1000) * 1000;
+    ts.tv_nsec = (us % 1000000) * 1000;
     while (true) {
         if (nanosleep(&ts, &ts) == -1) {
             if (errno == EINTR)

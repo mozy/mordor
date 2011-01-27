@@ -5,6 +5,7 @@
 #include <boost/bind.hpp>
 
 #include "mordor/config.h"
+#include "mordor/daemon.h"
 #include "mordor/http/multipart.h"
 #include "mordor/http/server.h"
 #include "mordor/iomanager.h"
@@ -40,19 +41,19 @@ void socketServer(Socket::ptr listen)
 
 void startSocketServer(IOManager &ioManager)
 {
-    std::vector<Address::ptr> addresses = Address::lookup("localhost:8000", AF_UNSPEC, SOCK_STREAM);
+    std::vector<Address::ptr> addresses = Address::lookup("localhost:8000");
 
     for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
         it != addresses.end();
         ++it) {
-        Socket::ptr s = (*it)->createSocket(ioManager);
+        Socket::ptr s = (*it)->createSocket(ioManager, SOCK_STREAM);
         s->bind(*it);
         Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
     }
 
 #ifndef WINDOWS
-    UnixAddress echoaddress("/tmp/echo", SOCK_STREAM);
-    Socket::ptr s = echoaddress.createSocket(ioManager);
+    UnixAddress echoaddress("/tmp/echo");
+    Socket::ptr s = echoaddress.createSocket(ioManager, SOCK_STREAM);
     s->bind(echoaddress);
     Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
 #endif
@@ -112,12 +113,12 @@ void httpServer(Socket::ptr listen)
 
 void startHttpServer(IOManager &ioManager)
 {
-    std::vector<Address::ptr> addresses = Address::lookup("localhost:80", AF_UNSPEC, SOCK_STREAM);
+    std::vector<Address::ptr> addresses = Address::lookup("localhost:80");
 
     for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
         it != addresses.end();
         ++it) {
-        Socket::ptr s = (*it)->createSocket(ioManager);
+        Socket::ptr s = (*it)->createSocket(ioManager, SOCK_STREAM);
         s->bind(*it);
         Scheduler::getThis()->schedule(boost::bind(&httpServer, s));
     }
@@ -134,10 +135,9 @@ void namedPipeServer(IOManager &ioManager)
 }
 #endif
 
-MORDOR_MAIN(int argc, char *argv[])
+int run(int argc, char *argv[])
 {
     try {
-        Config::loadFromEnvironment();
         IOManager ioManager;
         startSocketServer(ioManager);
         startHttpServer(ioManager);
@@ -148,6 +148,13 @@ MORDOR_MAIN(int argc, char *argv[])
         ioManager.dispatch();
     } catch (...) {
         std::cerr << boost::current_exception_diagnostic_information() << std::endl;
+        return 1;
     }
     return 0;
+}
+
+MORDOR_MAIN(int argc, char *argv[])
+{
+    Config::loadFromEnvironment();
+    return Daemon::run(argc, argv, &run);
 }

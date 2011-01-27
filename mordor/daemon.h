@@ -51,7 +51,9 @@ namespace Daemon {
 /// @note On Windows run automagically determines if it is being run as a
 ///       system service or from the console.
 ///       On OS X, you should be using launchd, and never daemonize.
-///       On Linux, you have to daemonize yourself before calling run
+///       On Linux, run attempts to automagically determine if it needs to
+///       daemonize by seeing if it is being run directly from an script in
+///       /etc/init.d, or by start-stop-daemon (Debian)
 /// @note In all cases, the signals are invoked on a thread separate from
 ///       the thread daemonMain is called on, or any that it created
 /// @note run should be called *exactly* once, since the signals are global

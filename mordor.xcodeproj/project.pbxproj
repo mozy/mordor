@@ -314,8 +314,8 @@
 		E29FD2A81136FD1D004BC293 /* timeout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timeout.cpp; sourceTree = "<group>"; };
 		E29FD2A91136FD1D004BC293 /* timeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timeout.h; sourceTree = "<group>"; };
 		E2DE14A811E67AB400D9622F /* libmordortest.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmordortest.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = antxmllistener.cpp; path = test/antxmllistener.cpp; sourceTree = "<group>"; };
-		E2DE14B211E67ADD00D9622F /* antxmllistener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = antxmllistener.h; path = test/antxmllistener.h; sourceTree = "<group>"; };
+		E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = antxmllistener.cpp; sourceTree = "<group>"; };
+		E2DE14B211E67ADD00D9622F /* antxmllistener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = antxmllistener.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -388,8 +388,6 @@
 				C32025B511F949CF00E09E5A /* parallel.h */,
 				C32025B611F949CF00E09E5A /* workerpool.cpp */,
 				C32025B711F949CF00E09E5A /* workerpool.h */,
-				E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */,
-				E2DE14B211E67ADD00D9622F /* antxmllistener.h */,
 				C34893C811BEB1300044E9C8 /* socks.cpp */,
 				C34893C911BEB1300044E9C8 /* socks.h */,
 				3CAB26D5112B096700607AEE /* .gitignore */,
@@ -585,6 +583,8 @@
 		3CAB2771112B096700607AEE /* test */ = {
 			isa = PBXGroup;
 			children = (
+				E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */,
+				E2DE14B211E67ADD00D9622F /* antxmllistener.h */,
 				3CAB2773112B096700607AEE /* stdoutlistener.cpp */,
 				3CAB2774112B096700607AEE /* stdoutlistener.h */,
 				3CAB2775112B096700607AEE /* test.cpp */,

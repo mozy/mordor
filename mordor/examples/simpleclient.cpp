@@ -17,9 +17,8 @@ MORDOR_MAIN(int argc, char *argv[])
     try {
         Config::loadFromEnvironment();
         IOManager ioManager;
-        std::vector<Address::ptr> addresses =
-            Address::lookup(argv[1], AF_UNSPEC, SOCK_STREAM);
-        Socket::ptr s(addresses[0]->createSocket(ioManager));
+        std::vector<Address::ptr> addresses = Address::lookup(argv[1]);
+        Socket::ptr s(addresses[0]->createSocket(ioManager, SOCK_STREAM));
         s->connect(addresses[0]);
         size_t rc = s->send("hello\r\n", 7);
         char buf[8192];

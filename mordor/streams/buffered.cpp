@@ -70,7 +70,7 @@ BufferedStream::readInternal(T &buffer, size_t length)
         flush(false);
     size_t remaining = length;
 
-    size_t buffered = std::min(m_readBuffer.readAvailable(), remaining);
+    size_t buffered = (std::min)(m_readBuffer.readAvailable(), remaining);
     m_readBuffer.copyOut(buffer, buffered);
     m_readBuffer.consume(buffered);
     remaining -= buffered;
@@ -104,7 +104,7 @@ BufferedStream::readInternal(T &buffer, size_t length)
                 }
             }
 
-            buffered = std::min(m_readBuffer.readAvailable(), remaining);
+            buffered = (std::min)(m_readBuffer.readAvailable(), remaining);
             m_readBuffer.copyOut(buffer, buffered);
             m_readBuffer.consume(buffered);
             advance(buffer, buffered);
@@ -128,7 +128,7 @@ BufferedStream::write(const Buffer &buffer, size_t length)
 size_t
 BufferedStream::write(const void *buffer, size_t length)
 {
-    m_writeBuffer.reserve(std::max(m_bufferSize, length));
+    m_writeBuffer.reserve((std::max)(m_bufferSize, length));
     m_writeBuffer.copyIn(buffer, length);
     size_t result = flushWrite(length);
     // Partial writes not allowed
@@ -236,7 +236,7 @@ BufferedStream::size()
 {
     long long size = parent()->size();
     if (parent()->supportsTell()) {
-        return std::max(size, tell());
+        return (std::max)(size, tell());
     } else {
         // not a seekable stream; we can only write to the end
         size += m_writeBuffer.readAvailable();
@@ -286,7 +286,8 @@ BufferedStream::find(char delim, size_t sanitySize, bool throwIfNotFound)
     while (true) {
         size_t readAvailable = m_readBuffer.readAvailable();
         if (readAvailable > 0) {
-            ptrdiff_t result = m_readBuffer.find(delim, std::min(sanitySize, readAvailable));
+            ptrdiff_t result = m_readBuffer.find(delim,
+                (std::min)(sanitySize, readAvailable));
             if (result != -1) {
                 return result;
             }
@@ -322,7 +323,8 @@ BufferedStream::find(const std::string &str, size_t sanitySize, bool throwIfNotF
     while (true) {
         size_t readAvailable = m_readBuffer.readAvailable();
         if (readAvailable > 0) {
-            ptrdiff_t result = m_readBuffer.find(str, std::min(sanitySize, readAvailable));
+            ptrdiff_t result = m_readBuffer.find(str,
+                (std::min)(sanitySize, readAvailable));
             if (result != -1) {
                 return result;
             }

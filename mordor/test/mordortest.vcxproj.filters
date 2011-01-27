@@ -24,6 +24,9 @@
     <ClCompile Include="antxmllistener.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="compoundlistener.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdoutlistener.h">
@@ -33,6 +36,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="antxmllistener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="compoundlistener.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -272,6 +272,20 @@ typedef std::vector<AuthParams> ChallengeList;
 
 struct KeyValueWithParameters
 {
+    KeyValueWithParameters()
+    {}
+    KeyValueWithParameters(const std::string &_key,
+        const std::string &_value)
+        : key(_key), value(_value)
+    {}
+    KeyValueWithParameters(const char *_key)
+        : key(_key)
+    {}
+    KeyValueWithParameters(const char *_key,
+        const char *_value)
+        : key(_key), value(_value)
+    {}
+
     std::string key;
     std::string value;
     StringMap parameters;

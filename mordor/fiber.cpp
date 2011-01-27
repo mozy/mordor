@@ -644,4 +644,22 @@ Fiber::backtrace()
     return result;
 }
 
+std::ostream &operator<<(std::ostream &os, Fiber::State state)
+{
+    switch (state) {
+        case Fiber::INIT:
+            return os << "INIT";
+        case Fiber::HOLD:
+            return os << "HOLD";
+        case Fiber::EXEC:
+            return os << "EXEC";
+        case Fiber::EXCEPT:
+            return os << "EXCEPT";
+        case Fiber::TERM:
+            return os << "TERM";
+        default:
+            return os << (int)state;
+    }
+}
+
 }

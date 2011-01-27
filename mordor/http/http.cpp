@@ -656,6 +656,11 @@ std::ostream& operator<<(std::ostream& os, const RequestLine &r)
             if (!r.uri.schemeDefined()) {
                 MORDOR_ASSERT(!r.uri.authority.hostDefined());
                 MORDOR_ASSERT(r.uri.path.isAbsolute());
+                // The first path segment (after the leading slash)
+                // cannot be empty (unless it is the trailing slash
+                // as well)
+                MORDOR_ASSERT(r.uri.path.segments.size() <= 2 ||
+                    !r.uri.path.segments[1].empty())
             }
 #endif
             return os << r.method << " " << r.uri << " " << r.ver;

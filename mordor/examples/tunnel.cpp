@@ -42,13 +42,12 @@ static void outgoingConnection(Stream::ptr client, IOManager &ioManager,
                                const std::string &toConnectTo, bool ssl)
 {
     try {
-        std::vector<Address::ptr> addresses =
-            Address::lookup(toConnectTo, AF_UNSPEC, SOCK_STREAM);
+        std::vector<Address::ptr> addresses = Address::lookup(toConnectTo);
         Socket::ptr sock;
         for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
             it != addresses.end();
             ) {
-            sock = (*it)->createSocket(ioManager);
+            sock = (*it)->createSocket(ioManager, SOCK_STREAM);
             try {
                 sock->connect(*it);
                 break;
@@ -188,21 +187,21 @@ MORDOR_MAIN(int argc, char *argv[])
             Stream::ptr std(new DuplexStream(stdIn, stdOut));
             outgoing(std);
         } else {
-            std::vector<Address::ptr> addresses =
-                Address::lookup(from, AF_UNSPEC, SOCK_STREAM);
+            std::vector<Address::ptr> addresses = Address::lookup(from);
 
             for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
                 it != addresses.end();
                 ++it) {
-                Socket::ptr s = (*it)->createSocket(ioManager);
+                Socket::ptr s = (*it)->createSocket(ioManager, SOCK_STREAM);
                 s->bind(*it);
                 Scheduler::getThis()->schedule(boost::bind(&socketServer, s,
                     boost::ref(ioManager), outgoing));
             }
             ioManager.yieldTo();
         }
-    } catch (std::exception &ex) {
-        std::cerr << typeid(ex).name() << ": " << ex.what( ) << std::endl;
+    } catch (...) {
+        std::cerr << boost::current_exception_diagnostic_information()
+            << std::endl;
         return 1;
     }
     return 0;

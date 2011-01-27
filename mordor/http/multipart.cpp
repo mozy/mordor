@@ -134,7 +134,7 @@ public:
     {
         ptrdiff_t boundary = parent()->find(m_boundary, len, false);
         if (boundary >= 0)
-            len = std::min((size_t)boundary, len);
+            len = (std::min)((size_t)boundary, len);
         return parent()->read(b, len);
     }
 

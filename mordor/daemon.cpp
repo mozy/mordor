@@ -220,9 +220,59 @@ static void *signal_thread(void *arg)
     return NULL;
 }
 
+#ifndef OSX
+static bool shouldDaemonize(char **enviro)
+{
+    if (!enviro)
+        return false;
+    std::string parent;
+    for (const char *env = *enviro; *env; env += strlen(env) + 1) {
+        const char *equals = strchr(env, '=');
+        if (equals != env + 1 || *env != '_')
+            continue;
+        parent = equals + 1;
+        break;
+    }
+    if (parent.size() >= 12 &&
+        strncmp(parent.c_str(), "/etc/init.d/", 12) == 0)
+        return true;
+    if (parent.size() >= 17 &&
+        strcmp(parent.c_str() + parent.size() - 17, "start-stop-daemon") == 0)
+        return true;
+    return false;
+}
+
+static bool shouldDaemonizeDueToParent()
+{
+    std::ostringstream os;
+    os << "/proc/" << getppid() << "/environ";
+    std::string parentEnviron;
+    parentEnviron.resize(65536);
+    int fd = open(os.str().c_str(), O_RDONLY);
+    if (fd < 0)
+        return false;
+    int size = read(fd, &parentEnviron[0], 65536);
+    close(fd);
+    if (size < 0)
+        return false;
+    parentEnviron.resize(size + 1);
+    const char *parentEnviro = parentEnviron.c_str();
+    return shouldDaemonize((char **)&parentEnviro);
+}
+#endif
+
 int run(int argc, char **argv,
     boost::function<int (int, char **)> daemonMain)
 {
+#ifndef OSX
+    // Check for being run from /etc/init.d or start-stop-daemon as a hint to
+    // daemonize
+    if (shouldDaemonize(environ) || shouldDaemonizeDueToParent()) {
+        if (daemon(0, 0) == -1)
+            return errno;
+    }
+#endif
+
     // Mask signals from other threads so we can handle them
     // ourselves
     sigset_t mask = blockedSignals();

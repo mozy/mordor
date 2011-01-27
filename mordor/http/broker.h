@@ -101,6 +101,8 @@ public:
         getConnection(const URI &uri, bool forceNewConnection = false) = 0;
 };
 
+struct PriorConnectionFailedException : virtual Exception {};
+
 class ConnectionCache : public ConnectionBroker
 {
 public:
@@ -146,8 +148,18 @@ public:
 
 private:
     typedef std::list<boost::shared_ptr<ClientConnection> > ConnectionList;
-    typedef std::map<URI, std::pair<ConnectionList, boost::shared_ptr<FiberCondition> > >
-        CachedConnectionMap;
+    struct ConnectionInfo
+    {
+        ConnectionInfo(FiberMutex &mutex)
+            : condition(mutex),
+              lastFailedConnectionTimestamp(~0ull)
+        {}
+
+        ConnectionList connections;
+        FiberCondition condition;
+        unsigned long long lastFailedConnectionTimestamp;
+    };
+    typedef std::map<URI, boost::shared_ptr<ConnectionInfo> > CachedConnectionMap;
 
 private:
     std::pair<boost::shared_ptr<ClientConnection>, bool>

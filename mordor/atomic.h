@@ -187,7 +187,7 @@ atomicAdd(volatile T& t, T v) { return __sync_add_and_fetch(&t, v); }
 template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(void *), T>::type
 atomicCompareAndSwap(volatile T &t, T newvalue, T comparand)
-{ return __sync_val_compare_and_swap((volatile int *)&t, comparand, newvalue); }
+{ return __sync_val_compare_and_swap((volatile T *)&t, comparand, newvalue); }
 template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(void *), T>::type
 atomicSwap(volatile T &t, T newvalue)

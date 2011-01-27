@@ -332,11 +332,11 @@ MORDOR_UNITTEST(Scheduler, spreadTheLoad)
     std::set<tid_t> threads;
     {
         boost::mutex mutex;
-        WorkerPool pool(4);
+        WorkerPool pool(8);
         // Wait for the other threads to get to idle first
         Mordor::sleep(100000);
-        int count = 8;
-        for (size_t i = 0; i < 8; ++i)
+        int count = 24;
+        for (size_t i = 0; i < 24; ++i)
             pool.schedule(boost::bind(&sleepForABit, boost::ref(threads),
                 boost::ref(mutex), Fiber::getThis(), &count));
         // We have to have one of these fibers reschedule us, because if we
@@ -345,7 +345,7 @@ MORDOR_UNITTEST(Scheduler, spreadTheLoad)
         Scheduler::yieldTo();
     }
     // Make sure we hit every thread
-    MORDOR_TEST_ASSERT_EQUAL(threads.size(), 4u);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(threads.size(), 8u, 2u);
 }
 
 static void fail()
@@ -377,7 +377,7 @@ static void startTheFibers(std::set<tid_t> &threads,
     boost::mutex &mutex)
 {
     Mordor::sleep(100000);
-    for (size_t i = 0; i < 8; ++i)
+    for (size_t i = 0; i < 24; ++i)
         Scheduler::getThis()->schedule(boost::bind(&sleepForABit,
             boost::ref(threads), boost::ref(mutex), Fiber::ptr(),
             (int *)NULL));
@@ -388,7 +388,7 @@ MORDOR_UNITTEST(Scheduler, spreadTheLoadWhileStopping)
     std::set<tid_t> threads;
     {
         boost::mutex mutex;
-        WorkerPool pool(4);
+        WorkerPool pool(8);
         // Wait for the other threads to get to idle first
         Mordor::sleep(100000);
 
@@ -397,5 +397,5 @@ MORDOR_UNITTEST(Scheduler, spreadTheLoadWhileStopping)
         pool.stop();
     }
     // Make sure we hit every thread
-    MORDOR_TEST_ASSERT_EQUAL(threads.size(), 4u);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(threads.size(), 8u, 2u);
 }

@@ -109,16 +109,16 @@ SocketStreamBroker::getStream(const URI &uri)
     std::vector<Address::ptr> addresses;
     {
         SchedulerSwitcher switcher(m_scheduler);
-        addresses = Address::lookup(os.str(), AF_UNSPEC, SOCK_STREAM);
+        addresses = Address::lookup(os.str());
     }
     Socket::ptr socket;
     for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
         it != addresses.end();
         ) {
         if (m_ioManager)
-            socket = (*it)->createSocket(*m_ioManager);
+            socket = (*it)->createSocket(*m_ioManager, SOCK_STREAM);
         else
-            socket = (*it)->createSocket();
+            socket = (*it)->createSocket(SOCK_STREAM);
         std::list<Socket::ptr>::iterator it2;
         {
             boost::mutex::scoped_lock lock(m_mutex);
@@ -266,9 +266,10 @@ ConnectionCache::getConnectionViaProxyFromCache(const URI &uri, const URI &proxy
     ConnectionList::iterator it2;
     while (true) {
         if (it != m_conns.end() &&
-            !it->second.first.empty() &&
-            it->second.first.size() >= m_connectionsPerHost) {
-            ConnectionList &connsForThisUri = it->second.first;
+            !it->second->connections.empty() &&
+            it->second->connections.size() >= m_connectionsPerHost) {
+            boost::shared_ptr<ConnectionInfo> info = it->second;
+            ConnectionList &connsForThisUri = info->connections;
             // Assign it2 to point to the connection with the
             // least number of outstanding requests
             it2 = std::min_element(connsForThisUri.begin(),
@@ -278,11 +279,10 @@ ConnectionCache::getConnectionViaProxyFromCache(const URI &uri, const URI &proxy
                 MORDOR_LOG_TRACE(g_cacheLog) << this << " waiting for connection to "
                     << endpoint;
                 // Wait for somebody to let us try again
-                // Have to copy the shared ptr to this stack, because the element may be
-                // removed while we're waiting for it; the wait will then crash because
-                // the object gets deleted out from under it
-                boost::shared_ptr<FiberCondition> condition = it->second.second;
-                condition->wait();
+                unsigned long long start = TimerManager::now();
+                info->condition.wait();
+                if (info->lastFailedConnectionTimestamp <= start)
+                    MORDOR_THROW_EXCEPTION(PriorConnectionFailedException());
                 // We let go of the mutex, and the last connection may have
                 // disappeared
                 it = m_conns.find(endpoint);
@@ -311,16 +311,17 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
 
     // Make sure we have a ConnectionList and mutex for this endpoint
     CachedConnectionMap::iterator it = m_conns.find(endpoint);
+    boost::shared_ptr<ConnectionInfo> info;
     if (it == m_conns.end()) {
-        it = m_conns.insert(std::make_pair(endpoint,
-            std::make_pair(ConnectionList(),
-            boost::shared_ptr<FiberCondition>()))).first;
-        it->second.second.reset(new FiberCondition(m_mutex));
+        info.reset(new ConnectionInfo(m_mutex));
+        it = m_conns.insert(std::make_pair(endpoint, info)).first;
     }
     // Add a placeholder for the new connection
-    it->second.first.push_back(ClientConnection::ptr());
+    info->connections.push_back(ClientConnection::ptr());
 
-    MORDOR_LOG_TRACE(g_cacheLog) << this << " establishing connection to " << endpoint;
+    MORDOR_LOG_TRACE(g_cacheLog) << this << " establishing connection to "
+        << endpoint;
+    unsigned long long start = TimerManager::now();
     lock.unlock();
 
     ConnectionList::iterator it2;
@@ -368,9 +369,8 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
                 result.first.get()));
         // Assign this connection to the first blank connection for this
         // schemeAndAuthority
-        // it should still be valid, even if the map changed
-        for (it2 = it->second.first.begin();
-            it2 != it->second.first.end();
+        for (it2 = info->connections.begin();
+            it2 != info->connections.end();
             ++it2) {
             if (!*it2) {
                 *it2 = result.first;
@@ -378,7 +378,7 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
             }
         }
         // Unblock all waiters for them to choose an existing connection
-        it->second.second->broadcast();
+        info->condition.broadcast();
     } catch (...) {
         lock.lock();
         MORDOR_LOG_TRACE(g_cacheLog) << this << " connection to " << endpoint
@@ -392,16 +392,17 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
         // for this schemeAndAuthority to let someone else try to establish a
         // connection
         // it should still be valid, even if the map changed
-        for (it2 = it->second.first.begin();
-            it2 != it->second.first.end();
+        for (it2 = info->connections.begin();
+            it2 != info->connections.end();
             ++it2) {
             if (!*it2) {
-                it->second.first.erase(it2);
+                info->connections.erase(it2);
                 break;
             }
         }
-        it->second.second->broadcast();
-        if (it->second.first.empty())
+        info->lastFailedConnectionTimestamp = start;
+        info->condition.broadcast();
+        if (info->connections.empty())
             m_conns.erase(it);
         throw;
     }
@@ -414,23 +415,24 @@ ConnectionCache::closeIdleConnections()
     FiberMutex::ScopedLock lock(m_mutex);
     MORDOR_LOG_DEBUG(g_cacheLog) << " dropping idle connections";
     // We don't just clear the list, because there may be a connection in
-    // in progress that has an iterator into it
-    std::map<URI, std::pair<ConnectionList,
-        boost::shared_ptr<FiberCondition> > >::iterator it, extraIt;
+    // progress that has an iterator into it
+    CachedConnectionMap::iterator it, extraIt;
     for (it = m_conns.begin(); it != m_conns.end();) {
-        it->second.second->broadcast();
-        for (ConnectionList::iterator it2 = it->second.first.begin();
-            it2 != it->second.first.end();) {
+        it->second->condition.broadcast();
+        for (ConnectionList::iterator it2 = it->second->connections.begin();
+            it2 != it->second->connections.end();) {
             if (*it2) {
                 Stream::ptr connStream = (*it2)->stream();
                 connStream->cancelRead();
                 connStream->cancelWrite();
-                it2 = it->second.first.erase(it2);
+                if (m_idleTimeout != ~0ull)
+                    (*it2)->idleTimeout(~0ull, NULL);
+                it2 = it->second->connections.erase(it2);
             } else {
                 ++it2;
             }
         }
-        if (it->second.first.empty()) {
+        if (it->second->connections.empty()) {
             extraIt = it;
             ++it;
             m_conns.erase(extraIt);
@@ -448,14 +450,16 @@ ConnectionCache::abortConnections()
     m_closed = true;
     CachedConnectionMap::iterator it;
     for (it = m_conns.begin(); it != m_conns.end(); ++it) {
-        it->second.second->broadcast();
-        for (ConnectionList::iterator it2 = it->second.first.begin();
-            it2 != it->second.first.end();
+        it->second->condition.broadcast();
+        for (ConnectionList::iterator it2 = it->second->connections.begin();
+            it2 != it->second->connections.end();
             ++it2) {
             if (*it2) {
                 Stream::ptr connStream = (*it2)->stream();
                 connStream->cancelRead();
                 connStream->cancelWrite();
+                if (m_idleTimeout != ~0ull)
+                    (*it2)->idleTimeout(~0ull, NULL);
             }
         }
     }
@@ -470,15 +474,17 @@ ConnectionCache::cleanOutDeadConns(CachedConnectionMap &conns)
     CachedConnectionMap::iterator it, it3;
     ConnectionList::iterator it2;
     for (it = conns.begin(); it != conns.end();) {
-        for (it2 = it->second.first.begin();
-            it2 != it->second.first.end();) {
+        for (it2 = it->second->connections.begin();
+            it2 != it->second->connections.end();) {
             if (*it2 && !(*it2)->newRequestsAllowed()) {
-                it2 = it->second.first.erase(it2);
+                if (m_idleTimeout != ~0ull)
+                    (*it2)->idleTimeout(~0ull, NULL);
+                it2 = it->second->connections.erase(it2);
             } else {
                 ++it2;
             }
         }
-        if (it->second.first.empty()) {
+        if (it->second->connections.empty()) {
             it3 = it;
             ++it3;
             conns.erase(it);
@@ -546,13 +552,15 @@ ConnectionCache::dropConnection(const URI &uri,
     CachedConnectionMap::iterator it = m_conns.find(uri);
     if (it == m_conns.end())
         return;
-    ConnectionList::iterator it2 = std::find_if(it->second.first.begin(),
-        it->second.first.end(), CompareConn(connection));
-    if (it2 != it->second.first.end()) {
+    ConnectionList::iterator it2 = std::find_if(it->second->connections.begin(),
+        it->second->connections.end(), CompareConn(connection));
+    if (it2 != it->second->connections.end()) {
         MORDOR_LOG_TRACE(g_cacheLog) << this << " dropping connection "
             << connection << " to " << uri;
-        it->second.first.erase(it2);
-        if (it->second.first.empty())
+        if (m_idleTimeout != ~0ull)
+            (*it2)->idleTimeout(~0ull, NULL);
+        it->second->connections.erase(it2);
+        if (it->second->connections.empty())
             m_conns.erase(it);
     }
 }
@@ -739,6 +747,13 @@ RetryRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
                 throw;
             continue;
         } catch (PriorRequestFailedException &ex) {
+            const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
+            if (!source || *source != HTTP)
+                throw;
+            if (m_delayDg && !m_delayDg(*retries + 1))
+                throw;
+            continue;
+        } catch (PriorConnectionFailedException &ex) {
             const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
             if (!source || *source != HTTP)
                 throw;

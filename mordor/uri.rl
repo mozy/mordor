@@ -577,12 +577,6 @@ URI::Authority::cmp(const Authority &rhs) const
     return strcmp(m_userinfo.c_str(), rhs.m_userinfo.c_str());
 }
 
-bool
-URI::Authority::operator==(const Authority &rhs) const
-{
-    return cmp(rhs) == 0;
-}
-
 std::ostream&
 operator<<(std::ostream& os, const URI::Authority& authority)
 {
@@ -804,12 +798,6 @@ URI::Path::cmp(const Path &rhs) const
     }
 }
 
-bool
-URI::Path::operator==(const Path &rhs) const
-{
-    return segments == rhs.segments;
-}
-
 void
 URI::normalize()
 {
@@ -959,18 +947,6 @@ URI::cmp(const URI &rhs) const
     return strcmp(m_fragment.c_str(), rhs.m_fragment.c_str());
 }
 
-bool
-URI::operator<(const URI &rhs) const
-{
-    return cmp(rhs) < 0;
-}
-
-bool
-URI::operator==(const URI &rhs) const
-{
-    return cmp(rhs) == 0;
-}
-
 %%{
     machine querystring_parser;
 
@@ -1088,6 +1064,32 @@ URI::QueryString::toString() const
             os << '=' << escape(it->second, Mordor::queryString, true);
     }
     return os.str();
+}
+
+std::string &
+URI::QueryString::operator[](const std::string &key)
+{
+    std::pair<iterator, iterator> its = equal_range(key);
+    // Did not exist; create it
+    if (its.first == end())
+        return insert(std::make_pair(key, std::string()))->second;
+    // Multiple instances; remove all but the first
+    iterator next = its.first;
+    ++next;
+    erase(next, its.second);
+    // Left with a single (first) instance; return it
+    return its.first->second;
+}
+
+std::string
+URI::QueryString::operator[](const std::string &key) const
+{
+    std::pair<const_iterator, const_iterator> its = equal_range(key);
+    // Did not exist
+    if (its.first == end())
+        return std::string();
+    // Return only the first instance
+    return its.first->second;
 }
 
 }

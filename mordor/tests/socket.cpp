@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include <boost/lexical_cast.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/shared_array.hpp>
 
@@ -34,10 +35,10 @@ Connection
 establishConn(IOManager &ioManager)
 {
     Connection result;
-    std::vector<Address::ptr> addresses = Address::lookup("localhost", AF_UNSPEC, SOCK_STREAM);
+    std::vector<Address::ptr> addresses = Address::lookup("localhost");
     MORDOR_TEST_ASSERT(!addresses.empty());
     result.address = boost::dynamic_pointer_cast<IPAddress>(addresses.front());
-    result.listen = result.address->createSocket(ioManager);
+    result.listen = result.address->createSocket(ioManager, SOCK_STREAM);
     unsigned int opt = 1;
     result.listen->setOption(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     while (true) {
@@ -50,7 +51,7 @@ establishConn(IOManager &ioManager)
         }
     }
     result.listen->listen();
-    result.connect = result.address->createSocket(ioManager);
+    result.connect = result.address->createSocket(ioManager, SOCK_STREAM);
     return result;
 }
 
@@ -200,10 +201,9 @@ static void testAddress(const char *addr, const char *expected = NULL)
 {
     if (!expected)
         expected = addr;
-    std::ostringstream os;
     std::vector<Address::ptr> address = Address::lookup(addr);
-    os << *address.front();
-    MORDOR_TEST_ASSERT_EQUAL(os.str(), expected);
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(*address.front()),
+        expected);
 }
 
 MORDOR_UNITTEST(Address, formatAddresses)
@@ -216,6 +216,29 @@ MORDOR_UNITTEST(Address, formatAddresses)
     testAddress("[2001:470:1f05:273:20c:29ff:feb3:5ddf]:0");
     testAddress("[2001:470::273:20c:0:0:5ddf]:0");
     testAddress("[2001:470:0:0:273:20c::5ddf]:0", "[2001:470::273:20c:0:5ddf]:0");
+}
+
+MORDOR_UNITTEST(Address, parseIPv4Address)
+{
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(IPv4Address(0x7f000001, 80)),
+        "127.0.0.1:80");
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(IPv4Address("127.0.0.1")),
+        "127.0.0.1:0");
+}
+
+MORDOR_UNITTEST(Address, parseIPv6Address)
+{
+    try {
+        MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(IPv6Address("::")),
+            "[::]:0");
+        MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(IPv6Address("::1", 443)),
+            "[::1]:443");
+        MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(
+            IPv6Address("2001:470::273:20c:0:0:5ddf")),
+            "[2001:470::273:20c:0:0:5ddf]:0");
+    } catch (OperationNotSupportedException &) {
+        throw TestSkippedException();
+    }
 }
 
 static void cancelMe(Socket::ptr sock)

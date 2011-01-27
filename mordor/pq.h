@@ -190,6 +190,10 @@ public:
     { return getIsNull(row, column(col)); }
 
     template <class T> T get(size_t row, size_t column) const;
+    template <class T> T get(size_t row, const char* col) const
+        { return get<T>(row, column(col)); }
+    template <class T> T get(size_t row, const std::string & col) const
+        { return get<T>(row, column(col)); }
 
 private:
     boost::shared_ptr<PGresult> m_result;

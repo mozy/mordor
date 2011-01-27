@@ -319,7 +319,7 @@ Buffer::produce(size_t length)
     m_writeAvailable -= length;
     while (length > 0) {
         Segment &segment = *m_writeIt;
-        size_t toProduce = std::min(segment.writeAvailable(), length);
+        size_t toProduce = (std::min)(segment.writeAvailable(), length);
         segment.produce(toProduce);
         length -= toProduce;
         if (segment.writeAvailable() == 0)
@@ -336,7 +336,7 @@ Buffer::consume(size_t length)
     m_readAvailable -= length;
     while (length > 0) {
         Segment &segment = *m_segments.begin();
-        size_t toConsume = std::min(segment.readAvailable(), length);
+        size_t toConsume = (std::min)(segment.readAvailable(), length);
         segment.consume(toConsume);
         length -= toConsume;
         if (segment.length() == 0)
@@ -389,7 +389,7 @@ Buffer::readBuffers(size_t length) const
     size_t remaining = length;
     std::list<Segment>::const_iterator it;
     for (it = m_segments.begin(); it != m_segments.end(); ++it) {
-        size_t toConsume = std::min(it->readAvailable(), remaining);
+        size_t toConsume = (std::min)(it->readAvailable(), remaining);
         SegmentData data = it->readBuffer().slice(0, toConsume);
 #ifdef WINDOWS
         while (data.length() > 0) {
@@ -485,7 +485,7 @@ Buffer::writeBuffers(size_t length)
     std::list<Segment>::iterator it = m_writeIt;
     while (remaining > 0) {
         Segment& segment = *it;
-        size_t toProduce = std::min(segment.writeAvailable(), remaining);
+        size_t toProduce = (std::min)(segment.writeAvailable(), remaining);
         SegmentData data = segment.writeBuffer().slice(0, toProduce);
 #ifdef WINDOWS
         while (data.length() > 0) {
@@ -572,7 +572,7 @@ Buffer::copyIn(const Buffer &buffer, size_t length)
 
     std::list<Segment>::const_iterator it;
     for (it = buffer.m_segments.begin(); it != buffer.m_segments.end(); ++it) {
-        size_t toConsume = std::min(it->readAvailable(), length);
+        size_t toConsume = (std::min)(it->readAvailable(), length);
         if (m_readAvailable != 0 && it == buffer.m_segments.begin()) {
             std::list<Segment>::iterator previousIt = m_writeIt;
             --previousIt;
@@ -605,7 +605,7 @@ Buffer::copyIn(const void *data, size_t length)
     invariant();
 
     while (m_writeIt != m_segments.end() && length > 0) {
-        size_t todo = std::min(length, m_writeIt->writeAvailable());
+        size_t todo = (std::min)(length, m_writeIt->writeAvailable());
         memcpy(m_writeIt->writeBuffer().start(), data, todo);
         m_writeIt->produce(todo);
         m_writeAvailable -= todo;
@@ -641,7 +641,7 @@ Buffer::copyOut(void *buffer, size_t length) const
     unsigned char *next = (unsigned char*)buffer;
     std::list<Segment>::const_iterator it;
     for (it = m_segments.begin(); it != m_segments.end(); ++it) {
-        size_t todo = std::min(length, it->readAvailable());
+        size_t todo = (std::min)(length, it->readAvailable());
         memcpy(next, it->readBuffer().start(), todo);
         next += todo;
         length -= todo;
@@ -664,7 +664,7 @@ Buffer::find(char delimiter, size_t length) const
     std::list<Segment>::const_iterator it;
     for (it = m_segments.begin(); it != m_segments.end(); ++it) {
         const void *start = it->readBuffer().start();
-        size_t toscan = std::min(length, it->readAvailable());
+        size_t toscan = (std::min)(length, it->readAvailable());
         const void *point = memchr(start, delimiter, toscan);
         if (point != NULL) {
             success = true;
@@ -695,7 +695,7 @@ Buffer::find(const std::string &string, size_t length) const
     std::list<Segment>::const_iterator it;
     for (it = m_segments.begin(); it != m_segments.end(); ++it) {
         const void *start = it->readBuffer().start();
-        size_t toscan = std::min(length, it->readAvailable());
+        size_t toscan = (std::min)(length, it->readAvailable());
         while (toscan > 0) {
             if (foundSoFar == 0) {
                 const void *point = memchr(start, string[0], toscan);
@@ -715,7 +715,7 @@ Buffer::find(const std::string &string, size_t length) const
                 }
             }
             MORDOR_ASSERT(foundSoFar != 0);
-            size_t tocompare = std::min(toscan, string.size() - foundSoFar);
+            size_t tocompare = (std::min)(toscan, string.size() - foundSoFar);
             if (memcmp(start, string.c_str() + foundSoFar, tocompare) == 0) {
                 foundSoFar += tocompare;
                 toscan -= tocompare;
@@ -786,7 +786,7 @@ Buffer::visit(boost::function<void (const void *, size_t)> dg, size_t length) co
 
     std::list<Segment>::const_iterator it;
     for (it = m_segments.begin(); it != m_segments.end() && length > 0; ++it) {
-        size_t todo = std::min(length, it->readAvailable());
+        size_t todo = (std::min)(length, it->readAvailable());
         MORDOR_ASSERT(todo != 0);
         dg(it->readBuffer().start(), todo);
         length -= todo;
@@ -855,7 +855,7 @@ Buffer::opCmp(const Buffer &rhs) const
     {
         MORDOR_ASSERT(leftOffset <= leftIt->readAvailable());
         MORDOR_ASSERT(rightOffset <= rightIt->readAvailable());
-        size_t tocompare = std::min(leftIt->readAvailable() - leftOffset,
+        size_t tocompare = (std::min)(leftIt->readAvailable() - leftOffset,
             rightIt->readAvailable() - rightOffset);
         if (tocompare == 0)
             break;
@@ -888,7 +888,7 @@ Buffer::opCmp(const char *string, size_t length) const
     if (lengthResult > 0)
         length = readAvailable();
     for (it = m_segments.begin(); it != m_segments.end(); ++it) {
-        size_t tocompare = std::min(it->readAvailable(), length);
+        size_t tocompare = (std::min)(it->readAvailable(), length);
         int result = memcmp(it->readBuffer().start(), string + offset, tocompare);
         if (result != 0)
             return result;

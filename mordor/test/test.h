@@ -69,6 +69,8 @@ public:
         const std::string &test) = 0;
     virtual void testComplete(const std::string &suite,
         const std::string &test) = 0;
+    virtual void testSkipped(const std::string &suite,
+        const std::string &test) = 0;
     virtual void testAsserted(const std::string &suite,
         const std::string &test, const Assertion &assertion) = 0;
     virtual void testException(const std::string &suite,
@@ -89,6 +91,8 @@ bool runTests(const TestSuites &suites);
 bool runTests(TestListener &listener);
 bool runTests(const TestSuites &suites,
               TestListener &listener);
+
+struct TestSkippedException {};
 
 // Serialization for assertion reporting
 template <class T>
@@ -353,7 +357,7 @@ template <class T, class U, class V>
 void assertAboutEqual(const char *file, int line, const char *function,
     T lhs, U rhs, const char *lhsExpr, const char *rhsExpr, V variance)
 {
-    if (!(lhs - variance < rhs && lhs + variance > rhs)) {
+    if (!(lhs - variance <= rhs && lhs + variance >= rhs)) {
         assertComparison(file, line, function, lhs, rhs, lhsExpr, rhsExpr,
             "~==");
     }
