@@ -787,3 +787,19 @@ MORDOR_UNITTEST(HTTP, doubleSlashRequest)
     MORDOR_TEST_ASSERT_ASSERTED(boost::lexical_cast<std::string>(request));
 #endif
 }
+
+MORDOR_UNITTEST(HTTP, proxyAuthorizationHeader)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("CONNECT mozy.com:443 HTTP/1.1\r\n"
+        "Connection: Proxy-Connection\r\n"
+        "Proxy-Connection: Keep-Alive\r\n"
+        "Host: mozy.com:443\r\n"
+        "Proxy-Authorization: NTLM TlRMTVNTUAABAAAAt4II4gAAAAAAAAAAAAAAAAAAAAAGAbAdAAAADw==\r\n"
+        "\r\n");
+
+    MORDOR_TEST_ASSERT_EQUAL(request.request.proxyAuthorization.scheme, "NTLM");
+    MORDOR_TEST_ASSERT_EQUAL(request.request.proxyAuthorization.base64, "TlRMTVNTUAABAAAAt4II4gAAAAAAAAAAAAAAAAAAAAAGAbAdAAAADw==");
+}

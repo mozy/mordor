@@ -263,6 +263,11 @@ typedef std::vector<ValueWithParameters> ParameterizedList;
 
 struct AuthParams
 {
+    AuthParams(const std::string &_scheme = std::string(),
+        const std::string &_base64 = std::string())
+        : scheme(_scheme),
+          base64(_base64)
+    {}
     std::string scheme;
     std::string base64;
     StringMap parameters;

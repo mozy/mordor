@@ -660,7 +660,7 @@ unquote(const std::string &str)
     If_Range = 'If-Range:'i LWS* (entity_tag_for_if_range | HTTP_date >set_if_range_http_date) LWS*;
     If_Unmodified_Since = 'If-Unmodified-Since:'i @set_if_unmodified_since LWS* HTTP_date LWS*;
 
-    Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization credentials;
+    Proxy_Authorization = 'Proxy-Authorization:'i @set_proxy_authorization LWS* credentials;
 
     byte_range_spec = DIGIT+ >mark %save_first_byte_pos '-' (DIGIT+ >mark %save_last_byte_pos)?;
     suffix_byte_range_spec = '-' DIGIT+ > mark %save_suffix_byte_pos;
