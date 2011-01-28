@@ -315,6 +315,8 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
     if (it == m_conns.end()) {
         info.reset(new ConnectionInfo(m_mutex));
         it = m_conns.insert(std::make_pair(endpoint, info)).first;
+    } else {
+        info = it->second;
     }
     // Add a placeholder for the new connection
     info->connections.push_back(ClientConnection::ptr());
