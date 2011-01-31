@@ -247,11 +247,11 @@ IOManager::idle()
                 timeout->tv_nsec = (nextTimeout % 1000000) * 1000;
             }
             rc = kevent(m_kqfd, NULL, 0, events, 64, timeout);
-            if (rc < 0 && errno == EINTR) {
+            if (rc < 0 && errno == EINTR)
                 nextTimeout = nextTimer();
-                continue;
-            }
-        } while (false);
+            else
+                break;
+        } while (true);
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " kevent(" << m_kqfd << "): " << rc << " (" << errno << ")";
         if (rc < 0)

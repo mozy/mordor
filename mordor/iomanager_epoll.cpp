@@ -350,11 +350,11 @@ IOManager::idle()
             else
                 timeout = -1;
             rc = epoll_wait(m_epfd, events, 64, timeout);
-            if (rc < 0 && errno == EINTR) {
+            if (rc < 0 && errno == EINTR)
                 nextTimeout = nextTimer();
-                continue;
-            }
-        } while (false);
+            else
+                break;
+        } while (true);
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " epoll_wait(" << m_epfd << ", 64, " << timeout << "): " << rc
             << " (" << errno << ")";
