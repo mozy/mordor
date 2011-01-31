@@ -47,8 +47,14 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
     MORDOR_LOG_VERBOSE(g_log) << "CreateFileW(" << path << ", " << access
         << ", " << createFlags << ", " << flags << "): " << handle << " ("
         << error << ")";
-    if (handle == INVALID_HANDLE_VALUE)
-        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CreateFileW");
+    if (handle == INVALID_HANDLE_VALUE) {
+        try {
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CreateFileW");
+        } catch (boost::exception &ex) {
+            ex << boost::errinfo_file_name(path);
+            throw;
+        }
+    }
 #else
     int oflags = (int)accessFlags;
     switch (createFlags & ~DELETE_ON_CLOSE) {
@@ -73,8 +79,14 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
     int error = errno;
     MORDOR_LOG_VERBOSE(g_log) << "open(" << path << ", " << oflags << "): "
         << handle << " (" << error << ")";
-    if (handle < 0)
-        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "open");
+    if (handle < 0) {
+        try {
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "open");
+        } catch (boost::exception &ex) {
+            ex << boost::errinfo_file_name(path);
+            throw;
+        }
+    }
     if (createFlags & DELETE_ON_CLOSE) {
         int rc = unlink(path.c_str());
         if (rc != 0) {
@@ -124,8 +136,14 @@ FileStream::init(const std::wstring &path, AccessFlags accessFlags,
     MORDOR_LOG_VERBOSE(g_log) << "CreateFileW(" << toUtf8(path) << ", "
         << access << ", " << createFlags << ", " << flags << "): " << handle
         << " (" << error << ")";
-    if (handle == INVALID_HANDLE_VALUE)
-        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CreateFileW");
+    if (handle == INVALID_HANDLE_VALUE) {
+        try {
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CreateFileW");
+        } catch (boost::exception &ex) {
+            ex << boost::errinfo_file_name(toUtf8(path));
+            throw;
+        }
+    }
     NativeStream::init(handle, ioManager, scheduler);
     m_supportsRead = accessFlags == READ || accessFlags == READWRITE;
     m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||
