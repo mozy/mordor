@@ -46,20 +46,32 @@ AuthRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
     boost::scoped_ptr<NegotiateAuth> negotiateAuth, negotiateProxyAuth;
 #endif
     while (true) {
+#ifdef WINDOWS
+        // Reset Negotiate auth sequence if the server didn't continue the
+        // handshake
+        if (negotiateProxyAuth) {
+            const ChallengeList &challenge =
+                priorRequest->response().response.proxyAuthenticate;
+            if (!isAcceptable(challenge, scheme) ||
+                !negotiateProxyAuth->authorize(
+                    challengeForSchemeAndRealm(challenge, scheme),
+                    requestHeaders.request.proxyAuthorization,
+                    requestHeaders.requestLine.uri))
+                negotiateProxyAuth.reset();
+        }
+        if (negotiateAuth) {
+            const ChallengeList &challenge =
+                priorRequest->response().response.wwwAuthenticate;
+            if (!isAcceptable(challenge, scheme) ||
+                !negotiateAuth->authorize(
+                    challengeForSchemeAndRealm(challenge, scheme),
+                    requestHeaders.request.authorization,
+                    requestHeaders.requestLine.uri))
+                negotiateAuth.reset();
+        }
         // Negotiate auth is a multi-request transaction; if we're in the
         // middle of one, just do the next step, and skip asking for
         // credentials again
-#ifdef WINDOWS
-        if (negotiateProxyAuth && !negotiateProxyAuth->authorize(
-            challengeForSchemeAndRealm(priorRequest->response().response.proxyAuthenticate, scheme),
-            requestHeaders.request.proxyAuthorization,
-            requestHeaders.requestLine.uri))
-            negotiateProxyAuth.reset();
-        if (negotiateAuth && !negotiateAuth->authorize(
-            challengeForSchemeAndRealm(priorRequest->response().response.wwwAuthenticate, scheme),
-            requestHeaders.request.authorization,
-            requestHeaders.requestLine.uri))
-            negotiateAuth.reset();
         if (!negotiateAuth && !negotiateProxyAuth) {
 #endif
             // If this is the first try, or the last one failed UNAUTHORIZED,

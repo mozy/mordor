@@ -379,6 +379,8 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
                 break;
             }
         }
+        // We should have assigned this connection *somewhere*
+        MORDOR_ASSERT(it2 != info->connections.end());
         // Unblock all waiters for them to choose an existing connection
         info->condition.broadcast();
     } catch (...) {
