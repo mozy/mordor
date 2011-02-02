@@ -73,6 +73,12 @@ private:
 #endif
 
 /// Establish a tunnel via an HTTPS proxy
+///
+/// @note This is *broken* if the ConnectionCache this RequestBroker is using
+///       attempts to re-use the connection.  We can't set forceNewConnection,
+///       because that would break NTLM authentication, and ConnectionCache
+///       hasn't been improved yet to do allowPipelining instead of
+///       forceNewConnection
 boost::shared_ptr<Stream>
 tunnel(boost::shared_ptr<RequestBroker> requestBroker, const URI &proxy,
     const URI &target);

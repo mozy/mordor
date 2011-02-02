@@ -431,7 +431,7 @@ tunnel(RequestBroker::ptr requestBroker, const URI &proxy, const URI &target)
     requestHeaders.request.host = os.str();
     requestHeaders.general.connection.insert("Proxy-Connection");
     requestHeaders.general.proxyConnection.insert("Keep-Alive");
-    ClientRequest::ptr request = requestBroker->request(requestHeaders, true);
+    ClientRequest::ptr request = requestBroker->request(requestHeaders);
     if (request->response().status.status == HTTP::OK)
         return request->stream();
     else
