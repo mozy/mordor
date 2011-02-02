@@ -73,6 +73,7 @@ BufferedStream::readInternal(T &buffer, size_t length)
     size_t buffered = (std::min)(m_readBuffer.readAvailable(), remaining);
     m_readBuffer.copyOut(buffer, buffered);
     m_readBuffer.consume(buffered);
+    advance(buffer, buffered);
     remaining -= buffered;
 
     MORDOR_LOG_VERBOSE(g_log) << this << " read(" << length << "): "

@@ -490,3 +490,17 @@ MORDOR_UNITTEST(BufferedStream, readAndWrite)
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->tell(), 19);
     MORDOR_TEST_ASSERT(baseStream->buffer() == "abCDefGHijKLMNOPQRStuvwxyz0123456789");
 }
+
+MORDOR_UNITTEST(BufferedStream, partiallyBufferedReadRawBuffer)
+{
+    MemoryStream::ptr baseStream(new MemoryStream("0123456789"));
+    BufferedStream::ptr bufferedStream(new BufferedStream(baseStream));
+    bufferedStream->bufferSize(3);
+    Stream::ptr stream = bufferedStream;
+    char buffer[3];
+    buffer[2] = '\0';
+    MORDOR_TEST_ASSERT_EQUAL(stream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT_EQUAL((const char *)buffer, "01");
+    MORDOR_TEST_ASSERT_EQUAL(stream->read(buffer, 2), 2u);
+    MORDOR_TEST_ASSERT_EQUAL((const char *)buffer, "23");
+}
