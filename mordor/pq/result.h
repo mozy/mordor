@@ -22,6 +22,9 @@ private:
     {}
 
 public:
+    Result() {}
+
+public:
     size_t rows() const;
     size_t columns() const;
 
