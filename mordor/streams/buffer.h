@@ -73,6 +73,8 @@ public:
     Buffer(const std::string &string);
     Buffer(const void *data, size_t length);
 
+    Buffer &operator =(const Buffer &copy);
+
     size_t readAvailable() const;
     size_t writeAvailable() const;
     // Primarily for unit tests

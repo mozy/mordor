@@ -213,6 +213,14 @@ Buffer::Buffer(const void *data, size_t length)
     copyIn(data, length);
 }
 
+Buffer &
+Buffer::operator =(const Buffer &copy)
+{
+    clear();
+    copyIn(copy);
+    return *this;
+}
+
 size_t
 Buffer::readAvailable() const
 {
