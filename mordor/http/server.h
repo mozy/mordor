@@ -180,6 +180,7 @@ void respondError(ServerRequest::ptr request, Status status,
 /// This function will process Range, If-Range, and TE headers to stream
 /// response in the most efficient way, applying transfer encodings if
 /// necessary or possible
+void respondStream(ServerRequest::ptr request, Stream &response);
 void respondStream(ServerRequest::ptr request,
     boost::shared_ptr<Stream> response);
 

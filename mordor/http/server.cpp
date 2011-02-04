@@ -883,12 +883,12 @@ respondError(ServerRequest::ptr request, Status status,
 }
 
 void
-respondStream(ServerRequest::ptr request, Stream::ptr response)
+respondStream(ServerRequest::ptr request, Stream &response)
 {
     MORDOR_ASSERT(!request->committed());
     unsigned long long size = ~0ull;
-    if (response->supportsSize())
-        size = response->size();
+    if (response.supportsSize())
+        size = response.size();
     bool trailers = (size == ~0ull &&
         isAcceptable(request->request().request.te, "trailers"));
     // Only advertise byte range request if it would be possible on the current
@@ -957,7 +957,7 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
         }
         // Unsupported: un-ordered range and stream doesn't support seeking
         if (it != range.begin()) {
-            if (it->first <= previousLast && !response->supportsSeek()) {
+            if (it->first <= previousLast && !response.supportsSeek()) {
                 fullEntity = true;
                 break;
             }
@@ -999,8 +999,8 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                         cr.first = it->first;
                         cr.last = (std::min)(it->second, size - 1);
                     }
-                    if (response->supportsSeek())
-                        response->seek(cr.first);
+                    if (response.supportsSeek())
+                        response.seek(cr.first);
                     else
                         transferStream(response, NullStream::get(), cr.first - currentPos);
                     transferStream(response, part->stream(), cr.last - cr.first + 1);
@@ -1057,8 +1057,8 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
             // Skip the seek if it's a HEAD, and we don't need to check for
             // out-of-range because we already know the size
             if (!isHead || trailers) {
-                if (response->supportsSeek()) {
-                    response->seek(cr->first, Stream::BEGIN);
+                if (response.supportsSeek()) {
+                    response.seek(cr->first, Stream::BEGIN);
                 } else {
                     // Can't seek, have to do this the old fashioned way
                     unsigned long long transferred = transferStream(
@@ -1076,7 +1076,7 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                 // the stream (by reading a single byte)
                 if (trailers) {
                     char byte;
-                    if (response->read(&byte, 1) == 0) {
+                    if (response.read(&byte, 1) == 0) {
                         respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
                         return;
                     }
@@ -1090,7 +1090,7 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
                 // the request
                 if (trailers) {
                     char byte;
-                    transferred = response->read(&byte, 1);
+                    transferred = response.read(&byte, 1);
                     if (transferred == 0) {
                         respondError(request, REQUESTED_RANGE_NOT_SATISFIABLE);
                         return;
@@ -1137,6 +1137,12 @@ respondStream(ServerRequest::ptr request, Stream::ptr response)
     }
     if (request->request().requestLine.method == HEAD)
         request->finish();
+}
+
+void
+respondStream(ServerRequest::ptr request, Stream::ptr response)
+{
+    respondStream(request, *response);
 }
 
 bool ifMatch(ServerRequest::ptr request, const ETag &eTag)
