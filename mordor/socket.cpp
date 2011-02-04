@@ -1495,15 +1495,21 @@ Address::getInterfaceAddresses(int family)
 std::vector<std::pair<Address::ptr, unsigned int> >
 Address::getInterfaceAddresses(const std::string &iface, int family)
 {
+    std::vector<std::pair<Address::ptr, unsigned int> > result;
+    if (iface.empty() || iface == "*") {
+        if (family == AF_INET || family == AF_UNSPEC)
+            result.push_back(
+                std::make_pair(Address::ptr(new IPv4Address()), 0u));
+        if (family == AF_INET6 || family == AF_UNSPEC)
+            result.push_back(
+                std::make_pair(Address::ptr(new IPv6Address()), 0u));
+        return result;
+    }
     typedef std::multimap<std::string, std::pair<Address::ptr, unsigned int> >
         AddressesMap;
-    std::vector<std::pair<Address::ptr, unsigned int> > result;
     AddressesMap interfaces = getInterfaceAddresses(family);
-    std::pair<AddressesMap::iterator, AddressesMap::iterator> its;
-    if (iface.empty() || iface == "*")
-        its = std::make_pair(interfaces.begin(), interfaces.end());
-    else
-        its = interfaces.equal_range(iface);
+    std::pair<AddressesMap::iterator, AddressesMap::iterator> its =
+        interfaces.equal_range(iface);
     for (; its.first != its.second; ++its.first)
         result.push_back(its.first->second);
     return result;
