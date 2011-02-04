@@ -444,7 +444,7 @@ toUtf8(const utf16char *str, size_t len)
     int ret = WideCharToMultiByte(CP_UTF8, g_wcFlags, str, (int)len, NULL, 0, NULL, NULL);
     MORDOR_ASSERT(ret >= 0);
     if (ret == 0) {
-        if (GetLastError() == ERROR_INVALID_FLAGS) {
+        if (lastError() == ERROR_INVALID_FLAGS) {
             g_wcFlags = 0;
             ret = WideCharToMultiByte(CP_UTF8, g_wcFlags, str, (int)len, NULL, 0, NULL, NULL);
             MORDOR_ASSERT(ret >= 0);
@@ -481,7 +481,7 @@ toUtf16(const char *str, size_t len)
     int ret = MultiByteToWideChar(CP_UTF8, g_mbFlags, str, (int)len, NULL, 0);
     MORDOR_ASSERT(ret >= 0);
     if (ret == 0) {
-        if (GetLastError() == ERROR_INVALID_FLAGS) {
+        if (lastError() == ERROR_INVALID_FLAGS) {
             g_mbFlags = 0;
             ret = MultiByteToWideChar(CP_UTF8, g_mbFlags, str, (int)len, NULL, 0);
             MORDOR_ASSERT(ret >= 0);

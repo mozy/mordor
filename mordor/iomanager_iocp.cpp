@@ -26,12 +26,12 @@ IOManager::WaitBlock::WaitBlock(IOManager &outer)
 {
     m_handles[0] = CreateEventW(NULL, FALSE, FALSE, NULL);
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " CreateEventW(): " << m_handles[0]
-        << " (" << GetLastError() << ")";
+        << " (" << lastError() << ")";
     if (!m_handles[0])
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
     m_reconfigured = CreateEventW(NULL, FALSE, FALSE, NULL);
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " CreateEventW(): "
-        << m_reconfigured << " (" << GetLastError() << ")";
+        << m_reconfigured << " (" << lastError() << ")";
     if (!m_reconfigured) {
         CloseHandle(m_handles[0]);
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateEventW");
@@ -43,10 +43,10 @@ IOManager::WaitBlock::~WaitBlock()
     MORDOR_ASSERT(m_inUseCount <= 0);
     BOOL bRet = CloseHandle(m_handles[0]);
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " CloseHandle("
-        << m_handles[0] << "): " << bRet << " (" << GetLastError() << ")";
+        << m_handles[0] << "): " << bRet << " (" << lastError() << ")";
     bRet = CloseHandle(m_reconfigured);
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " CloseHandle("
-        << m_reconfigured << "): " << bRet << " (" << GetLastError() << ")";
+        << m_reconfigured << "): " << bRet << " (" << lastError() << ")";
 }
 
 bool
@@ -135,7 +135,7 @@ IOManager::WaitBlock::run()
         dwRet = WaitForMultipleObjects(count, handles, FALSE, INFINITE);
         MORDOR_LOG_LEVEL(g_logWaitBlock, dwRet == WAIT_FAILED ? Log::ERROR : Log::DEBUG)
             << this << " WaitForMultipleObjects(" << count << ", " << handles
-            << "): " << dwRet << " (" << GetLastError() << ")";
+            << "): " << dwRet << " (" << lastError() << ")";
         if (dwRet == WAIT_OBJECT_0) {
             // Array just got reconfigured
             boost::mutex::scoped_lock lock(m_mutex);
@@ -219,7 +219,7 @@ IOManager::IOManager(size_t threads, bool useCaller)
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
     MORDOR_LOG_LEVEL(g_log, m_hCompletionPort ? Log::VERBOSE : Log::ERROR) << this <<
         " CreateIoCompletionPort(): " << m_hCompletionPort << " ("
-        << GetLastError() << ")";
+        << lastError() << ")";
     if (!m_hCompletionPort)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
     try {
@@ -249,7 +249,7 @@ IOManager::registerFile(HANDLE handle)
     HANDLE hRet = CreateIoCompletionPort(handle, m_hCompletionPort, 0, 0);
     MORDOR_LOG_LEVEL(g_log, m_hCompletionPort ? Log::DEBUG : Log::ERROR) << this <<
         " CreateIoCompletionPort(" << handle << ", " << m_hCompletionPort
-        << "): " << hRet << " (" << GetLastError() << ")";
+        << "): " << hRet << " (" << lastError() << ")";
     if (hRet != m_hCompletionPort) {
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
     }
@@ -346,8 +346,8 @@ IOManager::cancelEvent(HANDLE hFile, AsyncEvent *e)
         << &e->overlapped << ")";
 
     if (!pCancelIoEx(hFile, &e->overlapped)) {
-        DWORD lastError = GetLastError();
-        if (lastError == ERROR_CALL_NOT_IMPLEMENTED) {
+        error_t error = lastError();
+        if (error == ERROR_CALL_NOT_IMPLEMENTED) {
             if (e->m_thread == emptytid()) {
                 // Nothing to cancel
                 return;
@@ -362,7 +362,7 @@ IOManager::cancelEvent(HANDLE hFile, AsyncEvent *e)
                 if (!CancelIo(hFile))
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIo");
             }
-        } else if (lastError == ERROR_NOT_FOUND || lastError == ERROR_FILE_NOT_FOUND) {
+        } else if (error == ERROR_NOT_FOUND || error == ERROR_FILE_NOT_FOUND) {
             // Nothing to cancel
         } else {
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIoEx");
@@ -402,12 +402,12 @@ IOManager::idle()
             &count,
             timeout,
             FALSE);
-        DWORD lastError = GetLastError();
+        error_t error = lastError();
         MORDOR_LOG_DEBUG(g_log) << this << " GetQueuedCompletionStatusEx("
             << m_hCompletionPort << ", " << timeout << "): " << ret << ", ("
-            << count << ") (" << lastError << ")";
-        if (!ret && lastError) {
-            if (lastError == WAIT_TIMEOUT) {
+            << count << ") (" << error << ")";
+        if (!ret && error) {
+            if (error == WAIT_TIMEOUT) {
                 std::vector<boost::function<void ()> > expired = processTimers();
                 if (!expired.empty()) {
                     schedule(expired.begin(), expired.end());
@@ -482,7 +482,7 @@ IOManager::tickle()
     BOOL bRet = PostQueuedCompletionStatus(m_hCompletionPort, 0, ~0, NULL);
     MORDOR_LOG_LEVEL(g_log, bRet ? Log::DEBUG : Log::ERROR) << this
         << " PostQueuedCompletionStatus(" << m_hCompletionPort
-        << ", 0, ~0, NULL): " << bRet << " (" << GetLastError() << ")";
+        << ", 0, ~0, NULL): " << bRet << " (" << lastError() << ")";
     if (!bRet)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("PostQueuedCompletionStatus");
 }

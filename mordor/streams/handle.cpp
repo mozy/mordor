@@ -63,7 +63,7 @@ HandleStream::~HandleStream()
         BOOL result = CloseHandle(m_hFile);
         MORDOR_LOG_LEVEL(g_log, result ? Log::VERBOSE : Log::ERROR) << this
             << " CloseHandle(" << m_hFile << "): " << result << " ("
-            << GetLastError() << ")";
+            << lastError() << ")";
     }
 }
 
@@ -78,7 +78,7 @@ HandleStream::supportsCancel()
     if (!g_supportsCancel && !g_queriedSupportsCancel) {
         BOOL bRet = pCancelIoEx(INVALID_HANDLE_VALUE, NULL);
         MORDOR_ASSERT(!bRet);
-        g_supportsCancel = GetLastError() != ERROR_CALL_NOT_IMPLEMENTED;
+        g_supportsCancel = lastError() != ERROR_CALL_NOT_IMPLEMENTED;
         g_queriedSupportsCancel = true;
     }
     return g_supportsCancel;
@@ -91,7 +91,7 @@ HandleStream::close(CloseType type)
     if (m_hFile != INVALID_HANDLE_VALUE && m_own) {
         SchedulerSwitcher switcher(m_scheduler);
         BOOL result = CloseHandle(m_hFile);
-        DWORD error = GetLastError();
+        error_t error = lastError();
         MORDOR_LOG_LEVEL(g_log, result ? Log::VERBOSE : Log::ERROR) << this
             << " CloseHandle(" << m_hFile << "): " << result << " ("
             << error << ")";
@@ -122,9 +122,9 @@ HandleStream::read(void *buffer, size_t length)
     BOOL ret = ReadFile(m_hFile, buffer, (DWORD)length, &read, overlapped);
     Log::Level level = Log::DEBUG;
     if (!ret) {
-        if (GetLastError() == ERROR_HANDLE_EOF) {
+        if (lastError() == ERROR_HANDLE_EOF) {
         } else if (m_ioManager) {
-            if (GetLastError() == ERROR_IO_PENDING)
+            if (lastError() == ERROR_IO_PENDING)
                 level = Log::TRACE;
             else
                 level = Log::ERROR;
@@ -132,7 +132,7 @@ HandleStream::read(void *buffer, size_t length)
             level = Log::ERROR;
         }
     }
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, level) << this << " ReadFile(" << m_hFile << ", "
         << length << "): " << ret << " - " << read << " (" << error << ")";
     if (m_ioManager) {
@@ -200,12 +200,12 @@ HandleStream::write(const void *buffer, size_t length)
     BOOL ret = WriteFile(m_hFile, buffer, (DWORD)length, &written, overlapped);
     Log::Level level = Log::DEBUG;
     if (!ret) {
-        if (m_ioManager && GetLastError() == ERROR_IO_PENDING)
+        if (m_ioManager && lastError() == ERROR_IO_PENDING)
             level = Log::TRACE;
         else
             level = Log::ERROR;
     }
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, level) << this << " WriteFile(" << m_hFile << ", "
         << length << "): " << ret << " - " << written << " (" << error << ")";
     if (m_ioManager) {
@@ -283,7 +283,7 @@ HandleStream::seek(long long offset, Anchor anchor)
     long long pos;
     BOOL ret = SetFilePointerEx(m_hFile, *(LARGE_INTEGER*)&offset,
         (LARGE_INTEGER*)&pos, (DWORD)anchor);
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, ret ? Log::VERBOSE : Log::ERROR) << this
         << " SetFilePointerEx(" << m_hFile << ", " << offset << ", " << pos
         << ", " << anchor << "): " << ret << " (" << error << ")";
@@ -298,7 +298,7 @@ HandleStream::size()
     SchedulerSwitcher switcher(m_scheduler);
     long long size;
     BOOL ret = GetFileSizeEx(m_hFile, (LARGE_INTEGER*)&size);
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_VERBOSE(g_log) << this << " GetFileSizeEx(" << m_hFile << ", "
         << size << "): " << ret << " (" << error << ")";
     if (!ret)
@@ -313,7 +313,7 @@ HandleStream::truncate(long long size)
     long long pos = seek(0, CURRENT);
     seek(size, BEGIN);
     BOOL ret = SetEndOfFile(m_hFile);
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, ret ? Log::VERBOSE : Log::ERROR) << this
         << " SetEndOfFile(" << m_hFile << "): " << ret << " ("
         << error << ")";
@@ -327,7 +327,7 @@ HandleStream::flush(bool flushParent)
 {
     SchedulerSwitcher switcher(m_scheduler);
     BOOL ret = FlushFileBuffers(m_hFile);
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, ret ? Log::VERBOSE : Log::ERROR) << this
         << " FlushFileBuffers(" << m_hFile << "): " << ret << " (" << error
         << ")";

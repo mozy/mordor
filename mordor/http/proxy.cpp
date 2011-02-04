@@ -198,7 +198,7 @@ ProxyCache::ProxyCache(const std::string &userAgent)
         WINHTTP_NO_PROXY_NAME,
         WINHTTP_NO_PROXY_BYPASS,
         0);
-    if (!m_hHttpSession && GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
+    if (!m_hHttpSession && lastError() != ERROR_CALL_NOT_IMPLEMENTED)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WinHttpOpen");
 }
 

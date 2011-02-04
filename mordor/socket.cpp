@@ -368,8 +368,8 @@ Socket::connect(const Address &to)
 
             m_ioManager->registerEvent(&m_sendEvent);
             BOOL bRet = ConnectEx(m_sock, to.name(), to.nameLen(), NULL, 0, NULL, &m_sendEvent.overlapped);
-            if (!bRet && GetLastError() != WSA_IO_PENDING) {
-                if (GetLastError() == WSAEINVAL) {
+            if (!bRet && lastError() != WSA_IO_PENDING) {
+                if (lastError() == WSAEINVAL) {
                     m_ioManager->unregisterEvent(&m_sendEvent);
                     // Some LSPs are *borken* (I'm looking at you, bmnet.dll),
                     // and don't properly support ConnectEx (and AcceptEx).  In
@@ -401,7 +401,7 @@ Socket::connect(const Address &to)
                 if (timeout)
                     timeout->cancel();
             }
-            DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_sendEvent.overlapped.Internal);
+            error_t error = pRtlNtStatusToDosError((NTSTATUS)m_sendEvent.overlapped.Internal);
             if (error == ERROR_OPERATION_ABORTED &&
                 m_cancelledSend != ERROR_OPERATION_ABORTED)
                 error = WSAETIMEDOUT;
@@ -428,7 +428,7 @@ suckylsp:
                 // Worked first time
                 return;
             }
-            if (GetLastError() == WSAEWOULDBLOCK) {
+            if (lastError() == WSAEWOULDBLOCK) {
                 m_ioManager->registerEvent(m_hEvent);
                 m_fiber = Fiber::getThis();
                 m_scheduler = Scheduler::getThis();
@@ -460,18 +460,18 @@ suckylsp:
                     MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "connect");
                 }
                 ::connect(m_sock, to.name(), to.nameLen());
-                DWORD lastError = GetLastError();
+                error_t error = lastError();
                 // Windows 2000 is funny this way
-                if (lastError == WSAEINVAL) {
+                if (error == WSAEINVAL) {
                     ::connect(m_sock, to.name(), to.nameLen());
-                    lastError = GetLastError();
+                    error = GetLastError();
                 }
-                if (lastError == WSAEISCONN)
-                    lastError = ERROR_SUCCESS;
-                MORDOR_LOG_LEVEL(g_log, lastError ? Log::ERROR : Log::INFO)
+                if (error == WSAEISCONN)
+                    error = ERROR_SUCCESS;
+                MORDOR_LOG_LEVEL(g_log, error ? Log::ERROR : Log::INFO)
                     << this << " connect(" << m_sock << ", " << to
-                    << "): (" << lastError << ")";
-                if (lastError)
+                    << "): (" << error << ")";
+                if (error)
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("connect");
             } else {
                 MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", "
@@ -581,8 +581,8 @@ Socket::accept(Socket &target)
             DWORD bytes;
             BOOL ret = pAcceptEx(m_sock, target.m_sock, addrs, 0, sizeof(SOCKADDR_STORAGE) + 16, sizeof(SOCKADDR_STORAGE) + 16, &bytes,
                 &m_receiveEvent.overlapped);
-            if (!ret && GetLastError() != WSA_IO_PENDING) {
-                if (GetLastError() == WSAENOTSOCK) {
+            if (!ret && lastError() != WSA_IO_PENDING) {
+                if (lastError() == WSAENOTSOCK) {
                     m_ioManager->unregisterEvent(&m_receiveEvent);
                     // See comment in similar line in connect()
                     goto suckylsp;
@@ -611,7 +611,7 @@ Socket::accept(Socket &target)
                 if (timeout)
                     timeout->cancel();
             }
-            DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_receiveEvent.overlapped.Internal);
+            error_t error = pRtlNtStatusToDosError((NTSTATUS)m_receiveEvent.overlapped.Internal);
             if (error && error != ERROR_MORE_DATA) {
                 if (error == ERROR_OPERATION_ABORTED &&
                     m_cancelledReceive != ERROR_OPERATION_ABORTED)
@@ -656,7 +656,7 @@ suckylsp:
                 MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
                     << newsock;
                 // Worked first time
-            } else if (GetLastError() == WSAEWOULDBLOCK) {
+            } else if (lastError() == WSAEWOULDBLOCK) {
                 m_ioManager->registerEvent(m_hEvent);
                 m_fiber = Fiber::getThis();
                 m_scheduler = Scheduler::getThis();
@@ -688,7 +688,7 @@ suckylsp:
                     MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "accept");
                 }
                 newsock = ::accept(m_sock, NULL, NULL);
-                MORDOR_LOG_LEVEL(g_log, GetLastError() ? Log::ERROR : Log::INFO)
+                MORDOR_LOG_LEVEL(g_log, lastError() ? Log::ERROR : Log::INFO)
                     << this << " accept(" << m_sock << "): " << newsock << " ("
                     << lastError() << ")";
                 if (newsock == -1)
@@ -872,7 +872,7 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
     }
 
     if (result) {
-        if (!m_ioManager || GetLastError() != WSA_IO_PENDING) {
+        if (!m_ioManager || lastError() != WSA_IO_PENDING) {
             MORDOR_SOCKET_LOG(-1, lastError());
             if (m_ioManager)
                 m_ioManager->unregisterEvent(&event);
@@ -893,7 +893,7 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
             if (timer)
                 timer->cancel();
         }
-        DWORD error = pRtlNtStatusToDosError(
+        error_t error = pRtlNtStatusToDosError(
             (NTSTATUS)event.overlapped.Internal);
         if (error == ERROR_OPERATION_ABORTED &&
             cancelled != ERROR_OPERATION_ABORTED)

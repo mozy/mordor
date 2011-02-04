@@ -19,7 +19,7 @@ NamedPipeStream::NamedPipeStream(const std::string &name, Flags flags, IOManager
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
         0, 0, 0, NULL);
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, hPipe == INVALID_HANDLE_VALUE ? Log::ERROR : Log::INFO)
         << this << " CreateNamedPipeW(" << name << ", " << flags << "): "
         << hPipe << " (" << error << ")";
@@ -37,7 +37,7 @@ NamedPipeStream::NamedPipeStream(const std::wstring &name, Flags flags, IOManage
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
         0, 0, 0, NULL);
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, hPipe == INVALID_HANDLE_VALUE ? Log::ERROR : Log::INFO)
         << this << " CreateNamedPipeW(" << toUtf8(name) << ", " << flags
         << "): " << hPipe << " (" << error << ")";
@@ -54,7 +54,7 @@ NamedPipeStream::close(CloseType type)
     if (m_hFile != INVALID_HANDLE_VALUE) {
         SchedulerSwitcher switcher(m_scheduler);
         BOOL ret = DisconnectNamedPipe(m_hFile);
-        DWORD error = GetLastError();
+        error_t error = lastError();
         MORDOR_LOG_VERBOSE(g_log) << this << " DisconnectNamedPipe(" << m_hFile
             << "): " << ret << " (" << error << ")";
         if (!ret)
@@ -78,9 +78,9 @@ NamedPipeStream::accept()
     BOOL ret = ConnectNamedPipe(m_hFile, overlapped);
     Log::Level level = Log::INFO;
     if (!ret) {
-        if (GetLastError() == ERROR_PIPE_CONNECTED) {
+        if (lastError() == ERROR_PIPE_CONNECTED) {
         } else if (m_ioManager) {
-            if (GetLastError() == ERROR_IO_PENDING)
+            if (lastError() == ERROR_IO_PENDING)
                 level = Log::TRACE;
             else
                 level = Log::ERROR;
@@ -88,7 +88,7 @@ NamedPipeStream::accept()
             level = Log::ERROR;
         }
     }
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, level) << this
         << " ConnectNamedPipe(" << m_hFile << "): " << ret << " ("
         << error << ")";
@@ -105,9 +105,9 @@ NamedPipeStream::accept()
             m_ioManager->unregisterEvent(&m_readEvent);
         else
             Scheduler::yieldTo();
-        DWORD error = pRtlNtStatusToDosError((NTSTATUS)m_readEvent.overlapped.Internal);
+        error_t error = pRtlNtStatusToDosError((NTSTATUS)m_readEvent.overlapped.Internal);
         MORDOR_LOG_LEVEL(g_log, error ? Log::ERROR : Log::INFO) << this
-            << " ConnectNamedPipe(" << m_hFile << "): (" << GetLastError()
+            << " ConnectNamedPipe(" << m_hFile << "): (" << error
             << ")";
         if (error)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ConnectNamedPipe");

@@ -148,7 +148,7 @@ IOManager::IOManager(size_t threads, bool useCaller)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_create");
     int rc = pipe(m_tickleFds);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " pipe(): "
-        << rc << " (" << errno << ")";
+        << rc << " (" << lastError() << ")";
     if (rc) {
         close(m_epfd);
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
@@ -162,7 +162,7 @@ IOManager::IOManager(size_t threads, bool useCaller)
     rc = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_ADD, " << m_tickleFds[0]
-        << ", EPOLLIN | EPOLLET): " << rc << " (" << errno << ")";
+        << ", EPOLLIN | EPOLLET): " << rc << " (" << lastError() << ")";
     if (rc) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
@@ -233,7 +233,7 @@ IOManager::registerEvent(int fd, Event event, boost::function<void ()> dg)
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
         << fd << ", " << (EPOLL_EVENTS)epevent.events << "): " << rc
-        << " (" << errno << ")";
+        << " (" << lastError() << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
     atomicIncrement(m_pendingEventCount);
@@ -277,7 +277,7 @@ IOManager::unregisterEvent(int fd, Event event)
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
         << fd << ", " << (EPOLL_EVENTS)epevent.events << "): " << rc
-        << " (" << errno << ")";
+        << " (" << lastError() << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
     atomicDecrement(m_pendingEventCount);
@@ -319,7 +319,7 @@ IOManager::cancelEvent(int fd, Event event)
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
         << fd << ", " << (EPOLL_EVENTS)epevent.events << "): " << rc
-        << " (" << errno << ")";
+        << " (" << lastError() << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
     state.triggerEvent(event, m_pendingEventCount);
@@ -357,7 +357,7 @@ IOManager::idle()
         } while (true);
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
             << " epoll_wait(" << m_epfd << ", 64, " << timeout << "): " << rc
-            << " (" << errno << ")";
+            << " (" << lastError() << ")";
         if (rc < 0)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_wait");
         std::vector<boost::function<void ()> > expired = processTimers();
@@ -405,7 +405,7 @@ IOManager::idle()
             MORDOR_LOG_LEVEL(g_log, rc2 ? Log::ERROR : Log::VERBOSE) << this
                 << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
                 << state.m_fd << ", " << (EPOLL_EVENTS)event.events << "): " << rc2
-                << " (" << errno << ")";
+                << " (" << lastError() << ")";
             if (rc2)
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
         }
@@ -422,7 +422,7 @@ IOManager::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
     MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
-        << rc << " (" << errno << ")";
+        << rc << " (" << lastError() << ")";
     MORDOR_VERIFY(rc == 1);
 }
 

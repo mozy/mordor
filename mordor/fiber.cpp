@@ -512,7 +512,7 @@ Fiber::flsAlloc()
 #ifdef WINDOWS
     while (!g_doesntHaveOSFLS) {
         size_t result = pFlsAlloc(NULL);
-        if (result == FLS_OUT_OF_INDEXES && GetLastError() == ERROR_CALL_NOT_IMPLEMENTED) {
+        if (result == FLS_OUT_OF_INDEXES && lastError() == ERROR_CALL_NOT_IMPLEMENTED) {
             g_doesntHaveOSFLS = true;
             break;
         }
@@ -580,9 +580,9 @@ Fiber::flsGet(size_t key)
 {
 #ifdef WINDOWS
     if (!g_doesntHaveOSFLS) {
-        DWORD lastError = GetLastError();
+        error_t error = lastError();
         intptr_t result = (intptr_t)pFlsGetValue((DWORD)key);
-        SetLastError(lastError);
+        lastError(error);
         return result;
     }
 #endif
@@ -633,7 +633,7 @@ Fiber::backtrace()
         if (!StackWalk64(type, GetCurrentProcess(), GetCurrentThread(),
             &frame, context, NULL, &SymFunctionTableAccess64,
             &SymGetModuleBase64, NULL)) {
-            DWORD lastError = GetLastError();
+            error_t error = lastError();
             break;
         }
         if (frame.AddrPC.Offset != 0) {

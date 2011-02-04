@@ -43,7 +43,7 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
         createFlags,
         flags,
         NULL);
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_VERBOSE(g_log) << "CreateFileW(" << path << ", " << access
         << ", " << createFlags << ", " << flags << "): " << handle << " ("
         << error << ")";
@@ -76,7 +76,7 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
             MORDOR_NOTREACHED();
     }
     handle = open(path.c_str(), oflags, 0777);
-    int error = errno;
+    error_t error = lastError();
     MORDOR_LOG_VERBOSE(g_log) << "open(" << path << ", " << oflags << "): "
         << handle << " (" << error << ")";
     if (handle < 0) {
@@ -90,7 +90,7 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
     if (createFlags & DELETE_ON_CLOSE) {
         int rc = unlink(path.c_str());
         if (rc != 0) {
-            int error = errno;
+            error_t error = lastError();
             ::close(handle);
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "unlink");
         }
@@ -132,7 +132,7 @@ FileStream::init(const std::wstring &path, AccessFlags accessFlags,
         createFlags,
         flags,
         NULL);
-    DWORD error = GetLastError();
+    error_t error = lastError();
     MORDOR_LOG_VERBOSE(g_log) << "CreateFileW(" << toUtf8(path) << ", "
         << access << ", " << createFlags << ", " << flags << "): " << handle
         << " (" << error << ")";

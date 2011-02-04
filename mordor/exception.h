@@ -55,9 +55,22 @@ struct BufferOverflowException : virtual StreamException {};
 struct NativeException : virtual Exception {};
 
 #ifdef WINDOWS
-typedef DWORD error_t;
+// error_t is a struct so that operator <<(ostream, error_t) is not ambiguous
+struct error_t
+{
+    error_t(DWORD v = 0u) : value(v) {}
+    operator DWORD() { return value; }
+
+    DWORD value;
+};
 #else
-typedef int error_t;
+struct error_t
+{
+    error_t(int v = 0) : value(v) {}
+    operator int() { return value; }
+
+    int value;
+};
 #endif
 
 struct OperationNotSupportedException : virtual NativeException {};
@@ -76,6 +89,8 @@ struct InvalidUnicodeException : virtual NativeException {};
 
 error_t lastError();
 void lastError(error_t error);
+
+std::ostream &operator <<(std::ostream &os, error_t error);
 
 void throwExceptionFromLastError(error_t lastError);
 

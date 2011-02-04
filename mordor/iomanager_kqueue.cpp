@@ -24,7 +24,7 @@ IOManager::IOManager(size_t threads, bool useCaller)
     }
     int rc = pipe(m_tickleFds);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " pipe(): "
-        << rc << " (" << errno << ")";
+        << rc << " (" << lastError() << ")";
     if (rc) {
         close(m_kqfd);
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
@@ -36,7 +36,7 @@ IOManager::IOManager(size_t threads, bool useCaller)
     rc = kevent(m_kqfd, &event, 1, NULL, 0, NULL);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
         << m_kqfd << ", (" << m_tickleFds[0] << ", EVFILT_READ, EV_ADD)): " << rc
-        << " (" << errno << ")";
+        << " (" << lastError() << ")";
     if (rc) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
@@ -115,7 +115,7 @@ IOManager::registerEvent(int fd, Event events,
     int rc = kevent(m_kqfd, &e.event, 1, NULL, 0, NULL);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
         << m_kqfd << ", (" << fd << ", " << events << ", EV_ADD)): " << rc
-        << " (" << errno << ")";
+        << " (" << lastError() << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
 }
@@ -173,7 +173,7 @@ IOManager::cancelEvent(int fd, Event events)
     int rc = kevent(m_kqfd, &e.event, 1, NULL, 0, NULL);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
         << m_kqfd << ", (" << fd << ", " << eventsKey << ", EV_DELETE)): " << rc
-        << " (" << errno << ")";
+        << " (" << lastError() << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     if (dg)
@@ -211,7 +211,7 @@ IOManager::unregisterEvent(int fd, Event events)
     int rc = kevent(m_kqfd, &e.event, 1, NULL, 0, NULL);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
         << m_kqfd << ", (" << fd << ", " << eventsKey << ", EV_DELETE)): " << rc
-        << " (" << errno << ")";
+        << " (" << lastError() << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     m_pendingEvents.erase(it);
@@ -253,7 +253,8 @@ IOManager::idle()
                 break;
         } while (true);
         MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::VERBOSE) << this
-            << " kevent(" << m_kqfd << "): " << rc << " (" << errno << ")";
+            << " kevent(" << m_kqfd << "): " << rc << " (" << lastError()
+            << ")";
         if (rc < 0)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
         std::vector<boost::function<void ()> > expired = processTimers();
@@ -295,7 +296,7 @@ IOManager::idle()
                 MORDOR_LOG_LEVEL(g_log, rc2 ? Log::ERROR : Log::VERBOSE)
                     << this << " kevent(" << m_kqfd << ", (" << event.ident
                     << ", " << event.filter << ", EV_DELETE)): " << rc2 << " ("
-                    << errno << ")";
+                    << lastError() << ")";
                 if (rc2)
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
             }
@@ -331,7 +332,7 @@ IOManager::tickle()
 {
     int rc = write(m_tickleFds[1], "T", 1);
     MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
-        << rc << " (" << errno << ")";
+        << rc << " (" << lastError() << ")";
     MORDOR_VERIFY(rc == 1);
 }
 

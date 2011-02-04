@@ -99,22 +99,7 @@ std::string to_string( errinfo_backtrace const &bt )
 #ifdef WINDOWS
 std::string to_string( errinfo_lasterror const &e)
 {
-    std::string result;
-    char *desc;
-    DWORD numChars = FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        e.value(), 0,
-        (char*)&desc, 0, NULL);
-    if (numChars > 0) {
-        result = desc;
-        LocalFree((HANDLE)desc);
-    }
-    std::ostringstream os;
-    os << e.value() << ", \"" << result << "\"";
-    return os.str();
+    return boost::lexical_cast<std::string>(e.value());
 }
 #else
 std::string to_string( errinfo_gaierror const &e)
@@ -257,6 +242,37 @@ void lastError(error_t error)
     SetLastError(error);
 }
 
+std::ostream &operator <<(std::ostream &os, error_t error)
+{
+    if (error == ERROR_SUCCESS)
+        return os << "0, \"The operation completed successfully.\"";
+    os << (DWORD)error;
+    std::string result;
+    char *desc;
+    DWORD numChars = FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        error, 0,
+        (char*)&desc, 0, NULL);
+    if (numChars > 0) {
+        if (desc[numChars - 1] == '\n') {
+            desc[numChars - 1] = '\0';
+            if (desc[numChars - 2] == '\r')
+                desc[numChars - 2] = '\0';
+        }
+        try {
+            os << ", \"" << desc << "\"";
+        } catch (...) {
+            LocalFree((HANDLE)desc);
+            throw;
+        }
+        LocalFree((HANDLE)desc);
+    }
+    return os;
+}
+
 void throwExceptionFromLastError(error_t error)
 {
     switch (error) {
@@ -307,6 +323,11 @@ error_t lastError()
 void lastError(error_t error)
 {
     errno = error;
+}
+
+std::ostream &operator <<(std::ostream &os, error_t error)
+{
+    return os << (int)error << ", \"" << strerror(error) << "\"";
 }
 
 void throwExceptionFromLastError(error_t error)

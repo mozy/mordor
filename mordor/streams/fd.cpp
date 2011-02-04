@@ -33,7 +33,7 @@ FDStream::init(int fd, IOManager *ioManager, Scheduler *scheduler, bool own)
     m_own = own;
     if (m_ioManager) {
         if (fcntl(m_fd, F_SETFL, O_NONBLOCK)) {
-            int error = errno;
+            error_t error = lastError();
             if (own) {
                 ::close(m_fd);
                 m_fd = -1;
@@ -49,7 +49,7 @@ FDStream::~FDStream()
         SchedulerSwitcher switcher(m_scheduler);
         int rc = ::close(m_fd);
         MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
-            << " close(" << m_fd << "): " << rc << " (" << errno << ")";
+            << " close(" << m_fd << "): " << rc << " (" << lastError() << ")";
     }
 }
 
@@ -60,7 +60,7 @@ FDStream::close(CloseType type)
     if (m_fd > 0 && m_own) {
         SchedulerSwitcher switcher(m_scheduler);
         int rc = ::close(m_fd);
-        int error = errno;
+        error_t error = lastError();
         MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
             << " close(" << m_fd << "): " << rc << " (" << error << ")";
         if (rc)
@@ -85,7 +85,7 @@ FDStream::read(Buffer &buffer, size_t length)
         Scheduler::yieldTo();
         rc = readv(m_fd, &iovs[0], iovs.size());
     }
-    int error = errno;
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::DEBUG) << this
         << " readv(" << m_fd << ", " << length << "): " << rc << " (" << error
         << ")";
@@ -110,7 +110,7 @@ FDStream::read(void *buffer, size_t length)
         Scheduler::yieldTo();
         rc = ::read(m_fd, buffer, length);
     }
-    int error = errno;
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::DEBUG) << this
         << " read(" << m_fd << ", " << length << "): " << rc << " (" << error
         << ")";
@@ -135,7 +135,7 @@ FDStream::write(const Buffer &buffer, size_t length)
         Scheduler::yieldTo();
         rc = writev(m_fd, &iovs[0], iovs.size());
     }
-    int error = errno;
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::DEBUG) << this
         << " writev(" << m_fd << ", " << length << "): " << rc << " (" << error
         << ")";
@@ -161,7 +161,7 @@ FDStream::write(const void *buffer, size_t length)
         Scheduler::yieldTo();
         rc = ::write(m_fd, buffer, length);
     }
-    int error = errno;
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, rc < 0 ? Log::ERROR : Log::DEBUG) << this
         << " write(" << m_fd << ", " << length << "): " << rc << " (" << error
         << ")";
@@ -178,7 +178,7 @@ FDStream::seek(long long offset, Anchor anchor)
     SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     long long pos = lseek(m_fd, offset, (int)anchor);
-    int error = errno;
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, pos < 0 ? Log::ERROR : Log::VERBOSE) << this
         << " lseek(" << m_fd << ", " << offset << ", " << anchor << "): "
         << pos << " (" << error << ")";
@@ -194,7 +194,7 @@ FDStream::size()
     MORDOR_ASSERT(m_fd >= 0);
     struct stat statbuf;
     int rc = fstat(m_fd, &statbuf);
-    int error = errno;
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " fstat(" << m_fd << "): " << rc << " (" << error << ")";
     if (rc)
@@ -208,7 +208,7 @@ FDStream::truncate(long long size)
     SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     int rc = ftruncate(m_fd, size);
-    int error = errno;
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " ftruncate(" << m_fd << ", " << size << "): " << rc
         << " (" << error << ")";
@@ -222,7 +222,7 @@ FDStream::flush(bool flushParent)
     SchedulerSwitcher switcher(m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     int rc = fsync(m_fd);
-    int error = errno;
+    error_t error = lastError();
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " fsync(" << m_fd << "): " << rc << " (" << error << ")";
     if (rc)
