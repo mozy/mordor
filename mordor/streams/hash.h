@@ -47,10 +47,15 @@ class SHA0Stream : public HashStream
 {
 public:
     SHA0Stream(Stream::ptr parent, bool own = true);
+    SHA0Stream(Stream::ptr parent, const SHA_CTX &ctx, bool own = true)
+        : HashStream(parent, own)
+        , m_ctx(ctx) {}
 
     size_t hashSize() const;
     void hash(void *result, size_t length) const;
     void reset();
+
+    SHA_CTX ctx() const { return m_ctx; }
 
 protected:
     void updateHash(const void *buffer, size_t length);
