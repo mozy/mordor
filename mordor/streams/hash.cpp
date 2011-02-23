@@ -59,16 +59,16 @@ HashStream::hash() const
     return result;
 }
 
-SHA0Stream::SHA0Stream(Stream::ptr parent, bool own)
-: HashStream(parent, own)
-{
-    SHA_Init(&m_ctx);
-}
-
 size_t
-SHA0Stream::hashSize() const
+SHAStream::hashSize() const
 {
     return SHA_DIGEST_LENGTH;
+}
+
+SHA0Stream::SHA0Stream(Stream::ptr parent, bool own)
+: SHAStream(parent, own)
+{
+    SHA_Init(&m_ctx);
 }
 
 void
@@ -92,15 +92,9 @@ SHA0Stream::updateHash(const void *buffer, size_t length)
 }
 
 SHA1Stream::SHA1Stream(Stream::ptr parent, bool own)
-: HashStream(parent, own)
+: SHAStream(parent, own)
 {
     SHA1_Init(&m_ctx);
-}
-
-size_t
-SHA1Stream::hashSize() const
-{
-    return SHA_DIGEST_LENGTH;
 }
 
 void

@@ -43,43 +43,58 @@ protected:
     virtual void updateHash(const void *buffer, size_t length) = 0;
 };
 
-class SHA0Stream : public HashStream
+class SHAStream : public HashStream
+{
+public:
+    typedef boost::shared_ptr<SHAStream> ptr;
+
+protected:
+    SHAStream(Stream::ptr parent, bool own = true)
+        : HashStream(parent, own)
+    {}
+    SHAStream(Stream::ptr parent, const SHA_CTX &ctx, bool own = true)
+        : HashStream(parent, own),
+          m_ctx(ctx)
+    {}
+
+public:
+    size_t hashSize() const;
+    SHA_CTX ctx() const { return m_ctx; }
+
+protected:
+    SHA_CTX m_ctx;
+};
+
+class SHA0Stream : public SHAStream
 {
 public:
     SHA0Stream(Stream::ptr parent, bool own = true);
     SHA0Stream(Stream::ptr parent, const SHA_CTX &ctx, bool own = true)
-        : HashStream(parent, own)
-        , m_ctx(ctx) {}
+        : SHAStream(parent, ctx, own)
+    {}
 
-    size_t hashSize() const;
     using HashStream::hash;
     void hash(void *result, size_t length) const;
     void reset();
 
-    SHA_CTX ctx() const { return m_ctx; }
-
 protected:
     void updateHash(const void *buffer, size_t length);
-
-private:
-    SHA_CTX m_ctx;
 };
 
-class SHA1Stream : public HashStream
+class SHA1Stream : public SHAStream
 {
 public:
     SHA1Stream(Stream::ptr parent, bool own = true);
+    SHA1Stream(Stream::ptr parent, const SHA_CTX &ctx, bool own = true)
+        : SHAStream(parent, ctx, own)
+    {}
 
-    size_t hashSize() const;
     using HashStream::hash;
     void hash(void *result, size_t length) const;
     void reset();
 
 protected:
     void updateHash(const void *buffer, size_t length);
-
-private:
-    SHA_CTX m_ctx;
 };
 
 class MD5Stream : public HashStream
