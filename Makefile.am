@@ -103,6 +103,11 @@ if HAVE_POSTGRESQL
 		mordor/pq/result.h		\
 		mordor/pq/transaction.h
 endif
+if HAVE_LIBYAML
+	nobase_include_HEADERS+=		\
+		mordor/yaml.h
+endif
+
 
 lib_LTLIBRARIES=mordor/libmordor.la mordor/test/libmordortest.la
 
@@ -172,6 +177,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/workerpool.cpp			\
 	mordor/xml/xml_parser.cpp		\
 	mordor/zip.cpp
+
 mordor_libmordor_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h $(AM_CPPFLAGS)
 mordor_libmordor_la_LDFLAGS=			\
 	$(OPENSSL_LDFLAGS)			\
@@ -197,15 +203,27 @@ mordor_pq_libmordorpq_la_SOURCES=		\
 	mordor/pq/transaction.cpp
 
 mordor_pq_libmordorpq_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h $(AM_CPPFLAGS)
-mordor_pq_libmordorpq_la_LDFLAGS=			\
-	$(POSTGRESQL_LDFLAGS)
+mordor_pq_libmordorpq_la_LDFLAGS=$(POSTGRESQL_LDFLAGS)
 mordor_pq_libmordorpq_la_LIBADD=mordor/libmordor.la
+
+if HAVE_LIBYAML
+    lib_LTLIBRARIES+=mordor/libmordoryaml.la
+endif
+
+mordor_libmordoryaml_la_SOURCES=mordor/yaml.cpp
+mordor_libmordoryaml_la_LDFLAGS=$(LIBYAML)
+mordor_libmordoryaml_la_CPPFLAGS=-I$(top_srcdir) $(AM_CPPFLAGS)
+mordor_libmordoryaml_la_LIBADD=mordor/libmordor.la
 
 pkgconfigdir=$(libdir)/pkgconfig
 pkgconfig_DATA=mordor/libmordor.pc mordor/test/libmordortest.pc
 
 if HAVE_POSTGRESQL
-pkgconfig_DATA+=mordor/libmordorpq.pc
+	pkgconfig_DATA+=mordor/pq/libmordorpq.pc
+endif
+
+if HAVE_LIBYAML
+	pkgconfig_DATA+=mordor/libmordoryaml.pc
 endif
 
 SUFFIXES=.rl

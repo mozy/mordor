@@ -27,6 +27,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pqtests", "mordor\pq\tests\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordorpq", "mordor\pq\mordorpq.vcxproj", "{A5020D4B-0E75-4DF9-9EEC-501394520228}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordoryaml", "mordor\mordoryaml.vcxproj", "{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -123,6 +125,11 @@ Global
 		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Debug|x64.ActiveCfg = Debug|x64
 		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Release|Win32.ActiveCfg = Release|Win32
 		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Release|x64.ActiveCfg = Release|x64
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Debug|x64.ActiveCfg = Debug|x64
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Release|Win32.ActiveCfg = Release|Win32
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Release|Win32.Build.0 = Release|Win32
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
