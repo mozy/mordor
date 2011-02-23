@@ -29,6 +29,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordorpq", "mordor\pq\mordo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordoryaml", "mordor\mordoryaml.vcxproj", "{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordorprotobuf", "mordor\mordorprotobuf.vcxproj", "{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -130,6 +132,11 @@ Global
 		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Release|Win32.ActiveCfg = Release|Win32
 		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Release|Win32.Build.0 = Release|Win32
 		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Release|x64.ActiveCfg = Release|x64
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Debug|x64.ActiveCfg = Debug|x64
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Release|Win32.ActiveCfg = Release|Win32
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Release|Win32.Build.0 = Release|Win32
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

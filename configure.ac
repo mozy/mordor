@@ -21,6 +21,7 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 CHECK_RAGEL([mordor/uri.cpp], [6.0])
+AC_CHECK_PROG([PROTOC], [protoc], [protoc])
 
 # Checks for libraries.
 AC_SEARCH_LIBS([pthread_create], [pthread])
@@ -58,6 +59,16 @@ AS_IF([test "x$with_yaml" != xno],
 		fi
 		])],
 	[AM_CONDITIONAL([HAVE_LIBYAML], false)])
+AC_ARG_WITH([protobuf],
+	AS_HELP_STRING([--with-protobuf],
+		[Enable Protobuf parsing and serialization support @<:@default=check@:>@])],
+		[],
+		[with_protobuf=check])
+AS_IF([test "x$with_protobuf" = xyes],
+	[PKG_CHECK_MODULES([PROTOBUF], [protobuf])],
+	[test "x$with_protobuf" = xcheck],
+	[PKG_CHECK_MODULES([PROTOBUF], [protobuf], [], [true])])
+AM_CONDITIONAL([HAVE_PROTOBUF], [test x${PROTOBUF_CFLAGS} != x])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h])
@@ -86,6 +97,7 @@ AC_SUBST([pic_flag])
 
 AC_CONFIG_FILES([Makefile
                  mordor/libmordor.pc
+				 mordor/libmordorprotobuf.pc
 				 mordor/libmordoryaml.pc
                  mordor/pq/libmordorpq.pc
                  mordor/test/libmordortest.pc])

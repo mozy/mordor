@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PropertyPageSchema
+      Include="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml" />
+    <AvailableItemName
+      Include="Protoc">
+      <Targets>_Protoc</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+  <UsingTask
+    TaskName="Protoc"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  <Target
+    Name="_Protoc"
+    BeforeTargets="$(ProtocBeforeTargets)"
+    AfterTargets="$(ProtocAfterTargets)"
+    Condition="'@(Protoc)' != ''"
+    DependsOnTargets="$(ProtocDependsOn);ComputeProtocOutput"
+    Outputs="%(Protoc.Outputs)"
+    Inputs="%(Protoc.Identity);%(Protoc.AdditionalDependencies);$(MSBuildProjectFile)">
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <Protoc
+        Remove="@(Protoc)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <Protoc_tlog
+        Include="%(Protoc.Outputs)"
+        Condition="'%(Protoc.Outputs)' != '' and '%(Protoc.ExcludedFromBuild)' != 'true'">
+        <Source>@(Protoc, '|')</Source>
+      </Protoc_tlog>
+    </ItemGroup>
+    <Message
+      Importance="High"
+      Text="%(Protoc.ExecutionDescription)" />
+    <WriteLinesToFile
+      Condition="'@(Protoc_tlog)' != '' and '%(Protoc_tlog.ExcludedFromBuild)' != 'true'"
+      File="$(IntDir)$(ProjectName).write.1.tlog"
+      Lines="^%(Protoc_tlog.Source);@(Protoc_tlog-&gt;'%(Fullpath)')" />
+    <Protoc
+      Condition="'@(Protoc)' != '' and '%(Protoc.ExcludedFromBuild)' != 'true'"
+      CommandLineTemplate="%(Protoc.CommandLineTemplate)"
+      IncludePaths="%(Protoc.IncludePaths)"
+      CppOutDir="%(Protoc.CppOutDir)"
+      JavaOutDir="%(Protoc.JavaOutDir)"
+      PythonOutDir="%(Protoc.PythonOutDir)"
+      AdditionalOptions="%(Protoc.AdditionalOptions)"
+      Inputs="%(Protoc.Identity)" />
+  </Target>
+  <PropertyGroup>
+    <ComputeCompileInputsTargets>
+      $(ComputeCompileInputsTargets);
+      ComputeProtocOutput;
+      </ComputeCompileInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeProtocOutput"
+    Condition="'@(Protoc)' != ''">
+    <ItemGroup>
+      <ProtocDirsToMake
+        Condition="'@(Protoc)' != '' and '%(Protoc.ExcludedFromBuild)' != 'true'"
+        Include="%(Protoc.Outputs)" />
+      <ClCompile
+        Include="%(ProtocDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.cc'">
+        <DisableSpecificWarnings>4267;%(ClCompile.DisableSpecificWarnings)</DisableSpecificWarnings>
+      </ClCompile>
+    </ItemGroup>
+    <MakeDir
+      Directories="@(ProtocDirsToMake-&gt;'%(RootDir)%(Directory)')" />
+  </Target>
+</Project>

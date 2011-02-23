@@ -103,9 +103,11 @@ if HAVE_POSTGRESQL
 		mordor/pq/result.h		\
 		mordor/pq/transaction.h
 endif
+if HAVE_PROTOBUF
+	nobase_include_HEADERS+=mordor/protobuf.h
+endif
 if HAVE_LIBYAML
-	nobase_include_HEADERS+=		\
-		mordor/yaml.h
+	nobase_include_HEADERS+=mordor/yaml.h
 endif
 
 
@@ -206,6 +208,15 @@ mordor_pq_libmordorpq_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h $(AM_CPP
 mordor_pq_libmordorpq_la_LDFLAGS=$(POSTGRESQL_LDFLAGS)
 mordor_pq_libmordorpq_la_LIBADD=mordor/libmordor.la
 
+if HAVE_PROTOBUF
+    lib_LTLIBRARIES+=mordor/libmordorprotobuf.la
+endif
+
+mordor_libmordorprotobuf_la_SOURCES=mordor/protobuf.cpp
+mordor_libmordorprotobuf_la_LDFLAGS=$(PROTOBUF_LIBS)
+mordor_libmordorprotobuf_la_CPPFLAGS=-I$(top_srcdir) $(PROTOBUF_CFLAGS) $(AM_CPPFLAGS)
+mordor_libmordorprotobuf_la_LIBADD=mordor/libmordor.la
+
 if HAVE_LIBYAML
     lib_LTLIBRARIES+=mordor/libmordoryaml.la
 endif
@@ -220,6 +231,10 @@ pkgconfig_DATA=mordor/libmordor.pc mordor/test/libmordortest.pc
 
 if HAVE_POSTGRESQL
 	pkgconfig_DATA+=mordor/pq/libmordorpq.pc
+endif
+
+if HAVE_PROTOBUF
+	pkgconfig_DATA+=mordor/libmordorprotobuf.pc
 endif
 
 if HAVE_LIBYAML

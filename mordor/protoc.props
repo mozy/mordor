@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup
+    Condition="'$(ProtocBeforeTargets)' == '' and '$(ProtocAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <ProtocBeforeTargets>Midl</ProtocBeforeTargets>
+    <ProtocAfterTargets>CustomBuild</ProtocAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ProtocDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(ProtocDependsOn)</ProtocDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Protoc>
+      <CppOutDir>$(IntDir)</CppOutDir>
+      <CommandLineTemplate>protoc.exe [AllOptions] [AdditionalOptions] --error_format=msvs [inputs]</CommandLineTemplate>
+      <Outputs>%(CppOutDir)%(Filename).pb.cc;%(CppOutDir)%(Filename).pb.h</Outputs>
+      <ExecutionDescription>Compiling protobuf: [inputs]</ExecutionDescription>
+    </Protoc>
+  </ItemDefinitionGroup>
+</Project>
