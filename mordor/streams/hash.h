@@ -52,6 +52,7 @@ public:
         , m_ctx(ctx) {}
 
     size_t hashSize() const;
+    using HashStream::hash;
     void hash(void *result, size_t length) const;
     void reset();
 
@@ -70,6 +71,7 @@ public:
     SHA1Stream(Stream::ptr parent, bool own = true);
 
     size_t hashSize() const;
+    using HashStream::hash;
     void hash(void *result, size_t length) const;
     void reset();
 
@@ -86,6 +88,7 @@ public:
     MD5Stream(Stream::ptr parent, bool own = true);
 
     size_t hashSize() const;
+    using HashStream::hash;
     void hash(void *result, size_t length) const;
     void reset();
 
@@ -118,6 +121,7 @@ public:
     static std::vector<unsigned int> precomputeTable(unsigned int polynomial);
 
     size_t hashSize() const;
+    using HashStream::hash;
     void hash(void *result, size_t length) const;
     void reset();
 
