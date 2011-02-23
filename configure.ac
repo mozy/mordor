@@ -28,7 +28,7 @@ AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_SEARCH_LIBS([backtrace], [execinfo])
 AX_CHECK_OPENSSL
 AX_CHECK_ZLIB
-AX_BOOST_BASE([1.40])
+AX_BOOST_BASE([1.40],, [AC_ERROR([Missing boost headers (1.40+)])])
 AX_BOOST_PROGRAM_OPTIONS
 AX_BOOST_REGEX
 AX_BOOST_THREAD
