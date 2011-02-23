@@ -123,6 +123,13 @@ template <class T> Value load(T &t)
         MORDOR_THROW_EXCEPTION(std::invalid_argument("Invalid JSON"));
     return result;
 }
+/// Parse a string or Stream into a JSON::Value
+///
+/// Internally, this is overloaded for anything that RagelParser::run accepts
+/// so you can pass a const char *, std::string, Stream &, or Stream::ptr
+/// @throws std::invalid_argument on malformed JSON
+template <class T> Value parse(T &t)
+{ return load(t); }
 
 std::ostream &operator <<(std::ostream &os, const Value &json);
 
