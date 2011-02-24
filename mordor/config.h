@@ -218,6 +218,27 @@ private:
     }
 };
 
+class Timer;
+class TimerManager;
+class Scheduler;
+
+/// Creates a timer that is controlled by a string ConfigVar
+///
+/// The timer is automatically updated to use the current value of the
+/// ConfigVar, and the string is parsed with stringToMicroseconds from string.h
+boost::shared_ptr<Timer> associateTimerWithConfigVar(
+    TimerManager &timerManager,
+    boost::shared_ptr<ConfigVar<std::string> > configVar,
+    boost::function<void ()> dg);
+
+/// Associate a scheduler with a ConfigVar
+///
+/// Allows dynamically changing the number of threads associated with a
+/// scheduler.  Negative values are taken to mean a multiplier of the number
+/// of available processor cores.
+void associateSchedulerWithConfigVar(Scheduler &scheduler,
+    boost::shared_ptr<ConfigVar<int> > configVar);
+
 }
 
 #endif

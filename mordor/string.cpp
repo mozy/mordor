@@ -428,6 +428,70 @@ split(const std::string &str, const char *delims, size_t max)
     return result;
 }
 
+static bool endsWith(const std::string &string, const std::string &suffix)
+{
+    return string.size() >= suffix.size() &&
+        strnicmp(string.c_str() + string.size() - suffix.size(),
+            suffix.c_str(), suffix.size()) == 0;
+}
+
+namespace {
+struct Suffix
+{
+    std::string suffix;
+    unsigned long long multiplier;
+};
+}
+
+unsigned long long stringToMicroseconds(const std::string &string)
+{
+    static const Suffix suffixes[] = {
+        { "microseconds", 1ull },
+        { "us", 1ull },
+        { "milliseconds", 1000ull },
+        { "ms", 1000ull },
+        { "seconds", 1000000ull },
+        { "minutes", 60 * 1000000ull },
+        { "m", 60 * 1000000ull },
+        { "hours", 60 * 60 * 1000000ull },
+        { "h", 60 * 60 * 1000000ull },
+        { "days", 24 * 60 * 60 * 1000000ull },
+        { "d", 24 * 60 * 60 * 1000000ull },
+        // s needs to go at the bottom since we're just suffix matching, and it
+        // would give a false positive for "minutes", etc.
+        { "s", 1000000ull }
+    };
+
+    std::string copy(string);
+    unsigned long long multiplier = 1ull;
+
+    // Strip leading whitespace
+    while (copy.size() > 1 && copy[0] == ' ')
+        copy = copy.substr(1);
+    // Strip trailing whitespace
+    while (copy.size() > 1 && copy[copy.size() -1] == ' ')
+        copy.resize(copy.size() - 1);
+
+    for (size_t i = 0; i < sizeof(suffixes)/sizeof(suffixes[0]); ++i) {
+        if (endsWith(copy, suffixes[i].suffix)) {
+            multiplier = suffixes[i].multiplier;
+            copy.resize(copy.size() - suffixes[i].suffix.size());
+            break;
+        }
+    }
+
+    // Strip whitespace between the number and the units
+    while (copy.size() > 1 && copy[copy.size() -1] == ' ')
+        copy.resize(copy.size() - 1);
+
+    // If there's a decimal point, use floating point arithmetic
+    if (copy.find('.') != std::string::npos)
+        return (unsigned long long)(multiplier *
+            boost::lexical_cast<double>(copy));
+    else
+        return multiplier * boost::lexical_cast<unsigned long long>(copy);
+}
+
 #ifdef WINDOWS
 static DWORD g_wcFlags = WC_ERR_INVALID_CHARS;
 static DWORD g_mbFlags = MB_ERR_INVALID_CHARS;

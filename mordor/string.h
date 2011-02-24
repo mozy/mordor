@@ -52,6 +52,14 @@ void replace(std::string &str, const std::string &find, const std::string &repla
 std::vector<std::string> split(const std::string &str, char delim, size_t max = ~0);
 std::vector<std::string> split(const std::string &str, const char *delims, size_t max = ~0);
 
+/// Converts a human readable string to microseconds
+///
+/// String must be of the format "<value> [<units>]".
+/// Value can be integer or floating point.
+/// Units can be microseconds, milliseconds, seconds, minutes, hours, or days,
+/// or the abbreviation of it (us, ms, s, m, h, d), and if omitted implies us.
+unsigned long long stringToMicroseconds(const std::string &string);
+
 namespace detail
 {
     template <class T>

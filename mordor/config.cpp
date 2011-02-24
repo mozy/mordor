@@ -4,8 +4,12 @@
 
 #include <algorithm>
 
+#include <boost/thread/thread.hpp>
+
 #include "json.h"
+#include "scheduler.h"
 #include "string.h"
+#include "timer.h"
 #include "util.h"
 
 #ifdef WINDOWS
@@ -366,5 +370,49 @@ Config::monitorRegistry(IOManager &ioManager, HKEY hKey,
     return result;
 }
 #endif
+
+static bool verifyString(const std::string &string)
+{
+    stringToMicroseconds(string);
+    return true;
+}
+
+static void updateTimer(const std::string &string, Timer *timer)
+{
+    timer->reset(stringToMicroseconds(string), false);
+}
+
+Timer::ptr associateTimerWithConfigVar(TimerManager &timerManager,
+    ConfigVar<std::string>::ptr configVar, boost::function<void ()> dg)
+{
+    unsigned long long initialValue = stringToMicroseconds(configVar->val());
+    Timer::ptr result = timerManager.registerTimer(initialValue, dg, true);
+    configVar->beforeChange.connect(&verifyString);
+    configVar->onChange.connect(
+        ConfigVar<std::string>::on_change_signal_type::slot_type(
+            &updateTimer, _1, result.get()).track(result));
+    return result;
+}
+
+static bool verifyThreadCount(int value)
+{
+    return value != 0;
+}
+
+static void updateThreadCount(int value, Scheduler &scheduler)
+{
+    if (value < 0)
+        value = -value * boost::thread::hardware_concurrency();
+    scheduler.threadCount(value);
+}
+
+void associateSchedulerWithConfigVar(Scheduler &scheduler,
+    ConfigVar<int>::ptr configVar)
+{
+    configVar->beforeChange.connect(&verifyThreadCount);
+    configVar->onChange.connect(boost::bind(&updateThreadCount, _1,
+        boost::ref(scheduler)));
+    updateThreadCount(configVar->val(), scheduler);
+}
 
 }
