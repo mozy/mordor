@@ -17,6 +17,7 @@
 
 // Use more common names for functions
 // (cross-platform 64-bit, strip the underscores)
+#define atoll _atoi64
 #define strtoll _strtoi64
 #define strtoull _strtoui64
 #define strnicmp _strnicmp
