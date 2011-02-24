@@ -287,8 +287,12 @@ Socket::~Socket()
 #endif
     if (m_sock != -1) {
         int rc = ::closesocket(m_sock);
-        MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::INFO) << this
-            << " close(" << m_sock << "): (" << lastError() << ")";
+        if (rc) {
+            MORDOR_LOG_ERROR(g_log) << this << " close(" << m_sock << "): ("
+                << lastError() << ")";
+        } else {
+            MORDOR_LOG_INFO(g_log) << this << " close(" << m_sock << ")";
+        }
     }
 }
 
@@ -408,10 +412,13 @@ Socket::connect(const Address &to)
             // WTF, Windows!?
             if (error == ERROR_SEM_TIMEOUT)
                 error = WSAETIMEDOUT;
-            MORDOR_LOG_LEVEL(g_log, error ? Log::ERROR : Log::INFO) << this
-                << " ConnectEx(" << m_sock << ", " << to << "): (" << error << ")";
-            if (error)
+            if (error) {
+                MORDOR_LOG_ERROR(g_log) << this << " ConnectEx(" << m_sock
+                    << ", " << to << "): (" << error << ")";
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ConnectEx");
+            }
+            MORDOR_LOG_INFO(g_log) << this << " ConnectEx(" << m_sock << ", "
+                << to << ")";
             setOption(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
         } else {
 suckylsp:
@@ -537,9 +544,8 @@ Socket::listen(int backlog)
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::DEBUG) << this << " listen("
         << m_sock << ", " << backlog << "): " << rc << " (" << lastError()
         << ")";
-    if (rc) {
+    if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("listen");
-    }
 }
 
 Socket::ptr
@@ -566,13 +572,14 @@ Socket::accept(Socket &target)
     MORDOR_ASSERT(target.m_protocol == m_protocol);
     if (!m_ioManager) {
         socket_t newsock = ::accept(m_sock, NULL, NULL);
-        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::INFO)
-            << this << " accept(" << m_sock << "): " << newsock << " ("
-            << lastError() << ")";
         if (newsock == -1) {
+            MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): "
+                << newsock << " (" << lastError() << ")";
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("accept");
         }
         target.m_sock = newsock;
+        MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
+                << newsock << " (" << *target.remoteAddress() << ')';
     } else {
 #ifdef WINDOWS
         if (pAcceptEx) {
@@ -627,13 +634,11 @@ Socket::accept(Socket &target)
                     sizeof(SOCKADDR_STORAGE) + 16, &localAddr, &localAddrLen,
                     &remoteAddr, &remoteAddrLen);
             if (remoteAddr)
-                m_remoteAddress = Address::create(remoteAddr, remoteAddrLen);
+                target.m_remoteAddress = Address::create(remoteAddr, remoteAddrLen);
 
             std::ostringstream os;
-            if (remoteAddr)
-                os << " (" << *m_remoteAddress << ")";
             MORDOR_LOG_INFO(g_log) << this << " AcceptEx(" << m_sock << "): "
-                << target.m_sock << os.str();
+                << target.m_sock << " (" << *target.remoteAddress() << ')';
             target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
             target.m_ioManager->registerFile((HANDLE)target.m_sock);
             target.m_skipCompletionPortOnSuccess =
@@ -653,8 +658,6 @@ suckylsp:
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSAEventSelect");
             socket_t newsock = ::accept(m_sock, NULL, NULL);
             if (newsock != -1) {
-                MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
-                    << newsock;
                 // Worked first time
             } else if (lastError() == WSAEWOULDBLOCK) {
                 m_ioManager->registerEvent(m_hEvent);
@@ -688,11 +691,11 @@ suckylsp:
                     MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledReceive, "accept");
                 }
                 newsock = ::accept(m_sock, NULL, NULL);
-                MORDOR_LOG_LEVEL(g_log, lastError() ? Log::ERROR : Log::INFO)
-                    << this << " accept(" << m_sock << "): " << newsock << " ("
-                    << lastError() << ")";
-                if (newsock == -1)
+                if (newsock == -1) {
+                    MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock
+                        << "): " << newsock << " (" << lastError() << ")";
                     MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("accept");
+                }
             } else {
                 MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
                     << lastError() << ")";
@@ -707,6 +710,8 @@ suckylsp:
             if (target.m_sock != -1)
                 ::closesocket(target.m_sock);
             target.m_sock = newsock;
+            MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
+                << newsock << " (" << *target.remoteAddress() << ')';
             target.m_skipCompletionPortOnSuccess =
                 !!pSetFileCompletionNotificationModes((HANDLE)newsock,
                     FILE_SKIP_COMPLETION_PORT_ON_SUCCESS |
@@ -746,16 +751,18 @@ suckylsp:
                 error = errno;
             } while (newsock == -1 && error == EINTR);
         }
-        MORDOR_LOG_LEVEL(g_log, newsock == -1 ? Log::ERROR : Log::INFO)
-            << this << " accept(" << m_sock << "): " << newsock
-            << " (" << error << ")";
-        if (newsock == -1)
+        if (newsock == -1) {
+            MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): "
+                << newsock << " (" << error << ")";
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("accept");
+        }
         if (fcntl(newsock, F_SETFL, O_NONBLOCK) == -1) {
             ::close(newsock);
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
         }
         target.m_sock = newsock;
+        MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
+            << newsock << " (" << *target.remoteAddress() << ')';
 #endif
         target.m_isConnected = true;
         if (!target.m_onRemoteClose.empty())
