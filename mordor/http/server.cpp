@@ -406,6 +406,9 @@ void
 ServerRequest::finish()
 {
     if (m_responseState < COMPLETE) {
+        if (hasResponseBody())
+            MORDOR_LOG_WARNING(g_log) << m_conn << "-" << m_requestNumber
+                << " incomplete response";
         if (committed() && hasResponseBody()) {
             cancel();
             return;
