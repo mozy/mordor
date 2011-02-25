@@ -43,3 +43,4 @@ obj*
 stamp-h1
 Win32
 x64
+*.pc
