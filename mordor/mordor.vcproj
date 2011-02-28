@@ -345,15 +345,19 @@
 				>
 			</File>
 			<File
-				RelativePath=".\config.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\http\servlets\config.cpp"
 				>
 			</File>
 			<File
+				RelativePath=".\config.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\connection.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\crypto.cpp"
 				>
 			</File>
 			<File
@@ -739,11 +743,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\config.h"
+				RelativePath=".\http\servlets\config.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\servlets\config.h"
+				RelativePath=".\config.h"
 				>
 			</File>
 			<File
@@ -752,6 +756,10 @@
 			</File>
 			<File
 				RelativePath=".\coroutine.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\crypto.h"
 				>
 			</File>
 			<File
@@ -823,11 +831,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\http.h"
+				RelativePath=".\http\http.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\http.h"
+				RelativePath=".\streams\http.h"
 				>
 			</File>
 			<File
@@ -887,11 +895,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
+				RelativePath=".\xml\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.h"
+				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
@@ -927,11 +935,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\scheduler.h"
+				RelativePath=".\streams\scheduler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\scheduler.h"
+				RelativePath=".\scheduler.h"
 				>
 			</File>
 			<File
@@ -955,11 +963,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File

@@ -79,6 +79,7 @@ nobase_include_HEADERS=			\
 	mordor/streams/timeout.h	\
 	mordor/streams/transfer.h	\
 	mordor/streams/zlib.h		\
+	mordor/streams/crypto.h		\
 	mordor/string.h			\
 	mordor/test/antxmllistener.h	\
 	mordor/test/compoundlistener.h	\
@@ -172,6 +173,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/streams/throttle.cpp		\
 	mordor/streams/transfer.cpp		\
 	mordor/streams/zlib.cpp			\
+	mordor/streams/crypto.cpp		\
 	mordor/string.cpp			\
 	mordor/thread.cpp			\
 	mordor/timer.cpp			\
@@ -313,7 +315,8 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/transfer_stream.cpp		\
 	mordor/tests/uri.cpp				\
 	mordor/tests/xml.cpp				\
-	mordor/tests/zlib.cpp
+	mordor/tests/zlib.cpp				\
+	mordor/tests/crypto.cpp
 
 mordor_tests_run_tests_CPPFLAGS=-include mordor/pch.h $(AM_CPPFLAGS)
 mordor_tests_run_tests_LDADD=mordor/libmordor.la mordor/test/libmordortest.la \

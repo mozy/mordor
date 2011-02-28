@@ -358,6 +358,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\crypto.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\efs_stream.cpp"
 				>
 			</File>

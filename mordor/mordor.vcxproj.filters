@@ -212,6 +212,9 @@
     <ClCompile Include="http\servlets\config.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="streams\crypto.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h">
@@ -476,6 +479,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="http\servlets\config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="streams\crypto.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

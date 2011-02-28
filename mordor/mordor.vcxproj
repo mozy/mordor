@@ -123,6 +123,7 @@
     <ClCompile Include="http\connection.cpp" />
     <ClCompile Include="date_time.cpp" />
     <ClCompile Include="http\digest.cpp" />
+    <ClCompile Include="streams\crypto.cpp" />
     <ClCompile Include="streams\efs.cpp" />
     <ClCompile Include="eventloop.cpp" />
     <ClCompile Include="exception.cpp" />
@@ -201,6 +202,7 @@
     <ClInclude Include="http\connection.h" />
     <ClInclude Include="coroutine.h" />
     <ClInclude Include="date_time.h" />
+    <ClInclude Include="streams\crypto.h" />
     <ClInclude Include="streams\deflate.h" />
     <ClInclude Include="http\digest.h" />
     <ClInclude Include="streams\duplex.h" />
