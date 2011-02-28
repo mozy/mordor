@@ -24,7 +24,7 @@ void nop(const T &) {}
 /// object.
 template <class T>
 boost::shared_ptr<T> unmanagedPtr(T &t)
-{ return boost::shared_ptr<T>(&t, &nop<T>); }
+{ return boost::shared_ptr<T>(&t, &nop<T*>); }
 
 #ifdef OSX
 template <class T>
