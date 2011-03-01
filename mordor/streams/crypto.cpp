@@ -48,7 +48,7 @@ CryptoStream::~CryptoStream()
 
 void CryptoStream::close(CloseType type)
 {
-    if (!m_eof && (type == WRITE || type == BOTH)) {
+    if (!m_eof && (type == Stream::WRITE || type == BOTH)) {
         finalize();
         m_eof = true;
     }
