@@ -220,6 +220,26 @@ MORDOR_UNITTEST(Scheduler, parallelDo)
     MORDOR_TEST_ASSERT_EQUAL(total, 2);
 }
 
+MORDOR_UNITTEST(Scheduler, parallelDoFibersDone)
+{
+    WorkerPool pool(8u);
+
+    int total = 0;
+    std::vector<boost::function<void ()> > dgs;
+    std::vector<Fiber::ptr> fibers;
+    for (int i = 0; i < 8; ++i) {
+        dgs.push_back(boost::bind(&increment, boost::ref(total)));
+        fibers.push_back(Fiber::ptr(new Fiber(NULL)));
+    }
+
+    for (int i = 0; i < 5000; ++i) {
+        parallel_do(dgs, fibers);
+        for (size_t j = 0; j < dgs.size(); ++j)
+            // This should not assert about the fiber not being terminated
+            fibers[j]->reset();
+    }
+}
+
 static void exception()
 {
     MORDOR_THROW_EXCEPTION(OperationAbortedException());

@@ -91,6 +91,12 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs,
         scheduler->schedule(fibers[i]);
     }
     Scheduler::yieldTo();
+    // Make sure all fibers have actually exited, to avoid the caller
+    // immediately calling Fiber::reset, and the Fiber hasn't actually exited
+    // because it is running in a different thread.
+    for (size_t i = 0; i < dgs.size(); ++i)
+        while (fibers[i]->state() == Fiber::EXEC) Scheduler::yield();
+
     // Pass the first exception along
     // TODO: group exceptions?
     for (size_t i = 0; i < dgs.size(); ++i) {
