@@ -44,7 +44,7 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
 
     std::vector<Fiber::ptr> fibers;
     std::vector<boost::exception_ptr> exceptions;
-    fibers.resize(dgs.size());
+    fibers.reserve(dgs.size());
     exceptions.resize(dgs.size());
     for(size_t i = 0; i < dgs.size(); ++i) {
         Fiber::ptr f(new Fiber(boost::bind(&parallel_do_impl, dgs[i],
