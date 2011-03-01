@@ -879,7 +879,6 @@
 				GCC_VERSION = 4.2;
 				HEADER_SEARCH_PATHS = /usr/local/include;
 				INSTALL_PATH = /usr/local/lib;
-				OTHER_CFLAGS = "";
 				PREBINDING = NO;
 				PRODUCT_NAME = mordor;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
