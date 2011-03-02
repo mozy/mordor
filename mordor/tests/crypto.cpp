@@ -178,10 +178,13 @@ MORDOR_UNITTEST(CryptoStream, badKeyIvSize)
 
     MORDOR_TEST_ASSERT_EXCEPTION(crypto.reset(new CryptoStream(
         parent, EVP_aes_256_cbc(), keyString() + "bogus", ivString(), 
-        CryptoStream::WRITE, CryptoStream::ENCRYPT)), OpenSSLException);
+        CryptoStream::WRITE)), OpenSSLException);
     MORDOR_TEST_ASSERT_EXCEPTION(crypto.reset(new CryptoStream(
         parent, EVP_aes_256_cbc(), keyString(), ivString() + "bogus",
-        CryptoStream::WRITE, CryptoStream::ENCRYPT)), OpenSSLException);
+        CryptoStream::WRITE)), OpenSSLException);
+    MORDOR_TEST_ASSERT_EXCEPTION(crypto.reset(new CryptoStream(
+        parent, EVP_aes_256_ecb(), keyString(), ivString() + "bogus",
+        CryptoStream::WRITE)), OpenSSLException);
 }
 
 MORDOR_UNITTEST(CryptoStream, badPadding)
@@ -195,62 +198,76 @@ MORDOR_UNITTEST(CryptoStream, badPadding)
     MORDOR_TEST_ASSERT_EXCEPTION(transferStream(decryptor, sink), OpenSSLException);
 }
 
-MORDOR_UNITTEST(CryptoStream, weirdReadSize)
-{
-    Buffer plain;
-    plain.copyIn(plaintext, sizeof(plaintext));
-    Buffer cipher;
-    cipher.copyIn(ciphertext, sizeof(ciphertext));
-
-    MemoryStream::ptr src(new MemoryStream(plain));
-    Stream::ptr cryptor(
-        new CryptoStream(src, EVP_aes_256_cbc(), keyString(), ivString(), CryptoStream::READ, CryptoStream::ENCRYPT));
-    MemoryStream sink;
-
-    char buf[15];
-    size_t bytes;
-    while(0 != (bytes = cryptor->read(buf, sizeof(buf)))) {
-        sink.write(buf, bytes);
-    }
-
-    const Buffer &test = sink.buffer();
-    MORDOR_TEST_ASSERT(test == cipher);
-}
-
-void TestStreaming(long long test_bytes)
+// test the stream in all four modes of operation
+// hashDecR <- decR <- hashEncR <- encR <- hashOrig <- random
+// encW -> hashEncW -> decW -> hashDecW -> null
+void TestStreaming(long long test_bytes, const std::string &iv, size_t transferBlock = 0)
 {
     // read side
     Stream::ptr random(new RandomStream);
     Stream::ptr source(new LimitedStream(random, test_bytes));
     HashStream::ptr hashOrig(new MD5Stream(source));
-    Stream::ptr enc(
-        new CryptoStream(hashOrig, EVP_aes_256_cbc(), keyString(), ivString(), CryptoStream::READ, CryptoStream::ENCRYPT));
-    HashStream::ptr hashEnc(new MD5Stream(enc));
+    Stream::ptr encR(
+        new CryptoStream(hashOrig, EVP_aes_256_cbc(), keyString(), iv, CryptoStream::READ, CryptoStream::ENCRYPT));
+    HashStream::ptr hashEncR(new MD5Stream(encR));
+    Stream::ptr decR(
+        new CryptoStream(hashEncR, EVP_aes_256_cbc(), keyString(), iv, CryptoStream::READ, CryptoStream::DECRYPT));
+    HashStream::ptr hashDecR(new MD5Stream(decR));
 
     // write side
-    HashStream::ptr hashDec(new MD5Stream(NullStream::get_ptr()));
-    Stream::ptr dec(
-        new CryptoStream(hashDec, EVP_aes_256_cbc(), keyString(), ivString(), CryptoStream::WRITE, CryptoStream::DECRYPT));
+    HashStream::ptr hashDecW(new MD5Stream(NullStream::get_ptr()));
+    Stream::ptr decW(
+        new CryptoStream(hashDecW, EVP_aes_256_cbc(), keyString(), iv, CryptoStream::WRITE, CryptoStream::DECRYPT));
+    HashStream::ptr hashEncW(new MD5Stream(decW));
+    Stream::ptr encW(
+        new CryptoStream(hashEncW, EVP_aes_256_cbc(), keyString(), iv, CryptoStream::WRITE, CryptoStream::ENCRYPT));
 
     // do it
-    transferStream(hashEnc, dec);
-    dec->close();
+    if (transferBlock == 0) {
+        transferStream(hashDecR, encW);
+    } else {
+        std::vector<unsigned char> buf(transferBlock);
+        size_t bytes;
+        while(0 != (bytes = hashDecR->read(&buf[0], buf.size()))) {
+            encW->write(&buf[0], bytes);
+        }
+    }
+    encW->close();
+    decW->close();
 
     // make sure the decrypted data matches the original, and does _not_ match the encrypted
-    MORDOR_TEST_ASSERT(hashOrig->hash() == hashDec->hash());
-    MORDOR_TEST_ASSERT(hashOrig->hash() != hashEnc->hash());
+    // (because otherwise any non-mutating filter stream would pass this test...)
+    MORDOR_TEST_ASSERT(hashOrig->hash() != hashEncR->hash());
+    MORDOR_TEST_ASSERT(hashOrig->hash() == hashDecR->hash());
+    MORDOR_TEST_ASSERT(hashOrig->hash() != hashEncW->hash());
+    MORDOR_TEST_ASSERT(hashOrig->hash() == hashDecW->hash());
 }
 
 MORDOR_UNITTEST(CryptoStream, streaming)
 {
-    TestStreaming(0);
-    TestStreaming(1);
-    TestStreaming(15);
-    TestStreaming(16);
-    TestStreaming(17);
-    TestStreaming(1048575);
-    TestStreaming(1048576);
-    TestStreaming(1048577);
+    static const long long sizes[] = { 0, 1, 15, 16, 17, 131071, 131072, 131073 };
+    size_t nsizes = sizeof(sizes) / sizeof(sizes[0]);
+
+    for(size_t i = 0; i < nsizes; ++i) {
+        TestStreaming(sizes[i], ivString());
+        TestStreaming(sizes[i], CryptoStream::RANDOM_IV);
+    }
+}
+
+MORDOR_UNITTEST(CryptoStream, oddBufferSizes)
+{
+    static const long long file_sizes[] = { 0, 100, 4096 };
+    size_t nfilesizes = sizeof(file_sizes) / sizeof(file_sizes[0]);
+
+    static const size_t buffer_sizes[] = { 7, 16, 1000 };
+    size_t nbuffersizes = sizeof(buffer_sizes) / sizeof(buffer_sizes[0]);
+
+    for(size_t i = 0; i < nfilesizes; ++i) {
+        for(size_t j = 0; j < nbuffersizes; ++j) {
+            TestStreaming(file_sizes[i], ivString(), buffer_sizes[j]);
+            TestStreaming(file_sizes[i], CryptoStream::RANDOM_IV, buffer_sizes[j]);
+        }
+    }
 }
 
 MORDOR_UNITTEST(CryptoStream, inferDirection)
@@ -268,4 +285,123 @@ MORDOR_UNITTEST(CryptoStream, inferDirection)
     MORDOR_TEST_ASSERT(csw.supportsWrite());
 
     MORDOR_TEST_ASSERT_ASSERTED(CryptoStream(parent, EVP_aes_256_cbc(), keyString(), ivString()));
+}
+
+MORDOR_UNITTEST(CryptoStream, encryptRead_randomIV)
+{
+    Buffer plain;
+    plain.copyIn(plaintext, sizeof(plaintext));
+    MemoryStream::ptr src(new MemoryStream(plain));
+
+    // encrypt via read
+    CryptoStream enc(src, EVP_aes_256_cbc(), keyString(),
+        CryptoStream::RANDOM_IV, CryptoStream::READ, CryptoStream::ENCRYPT);
+    MemoryStream::ptr intermediate(new MemoryStream);
+    transferStream(enc, intermediate);
+    const Buffer &cipher = intermediate->buffer();
+    // the destination buffer should be the size of the ciphertext plus the size of the IV
+    // (we can't compare its contents to ciphertext because we used a random IV)
+    MORDOR_TEST_ASSERT_EQUAL(cipher.readAvailable(), sizeof(ciphertext) + 16);
+
+    // decrypt via write
+    intermediate->seek(0);
+    MemoryStream::ptr dst(new MemoryStream);
+    CryptoStream dec(dst, EVP_aes_256_cbc(), keyString(),
+        CryptoStream::RANDOM_IV, CryptoStream::WRITE, CryptoStream::DECRYPT);
+    transferStream(intermediate, dec);
+    dec.close();
+    const Buffer &decrypted = dst->buffer();
+
+    // make sure we got the original plaintext out
+    MORDOR_TEST_ASSERT(plain == decrypted);
+}
+
+MORDOR_UNITTEST(CryptoStream, encryptWrite_randomIV)
+{
+    Buffer plain;
+    plain.copyIn(plaintext, sizeof(plaintext));
+    MemoryStream::ptr src(new MemoryStream(plain));
+
+    // encrypt via write (just for fun, let CryptoStream infer defaults)
+    MemoryStream::ptr intermediate(new MemoryStream);
+    SingleplexStream::ptr spw(new SingleplexStream(intermediate, SingleplexStream::WRITE));
+    CryptoStream enc(spw, EVP_aes_256_cbc(), keyString());
+    transferStream(src, enc);
+    enc.close();
+    const Buffer &cipher = intermediate->buffer();
+    // the destination buffer should be the size of the ciphertext plus the size of the IV
+    // (we can't compare its contents to ciphertext because we used a random IV)
+    MORDOR_TEST_ASSERT_EQUAL(cipher.readAvailable(), sizeof(ciphertext) + 16);
+
+    // now decrypt via read (again, using a SingleplexStream so CryptoStream can infer read)
+    MemoryStream::ptr dst(new MemoryStream);
+    intermediate->seek(0);
+    SingleplexStream::ptr spr(new SingleplexStream(intermediate, SingleplexStream::READ));
+    CryptoStream dec(spr, EVP_aes_256_cbc(), keyString());
+    transferStream(dec, dst);
+    const Buffer &decrypted = dst->buffer();
+
+    // make sure we got the original plaintext out
+    MORDOR_TEST_ASSERT(plain == decrypted);
+}
+
+MORDOR_UNITTEST(CryptoStream, encryptRead_noIV)
+{
+    Buffer plain;
+    plain.copyIn(plaintext, sizeof(plaintext));
+    MemoryStream::ptr src(new MemoryStream(plain));
+
+    // encrypt via read
+    CryptoStream enc(src, EVP_aes_256_ecb(), keyString(),
+        std::string(), CryptoStream::READ, CryptoStream::ENCRYPT);
+    MemoryStream::ptr intermediate(new MemoryStream);
+    transferStream(enc, intermediate);
+    const Buffer &cipher = intermediate->buffer();
+    // the destination buffer should be the size as the reference ciphertext
+    // (the content is, of course, different, because we're in ECB mode)
+    MORDOR_TEST_ASSERT_EQUAL(cipher.readAvailable(), sizeof(ciphertext));
+
+    // decrypt via write
+    intermediate->seek(0);
+    MemoryStream::ptr dst(new MemoryStream);
+    CryptoStream dec(dst, EVP_aes_256_ecb(), keyString(),
+        std::string(), CryptoStream::WRITE, CryptoStream::DECRYPT);
+    transferStream(intermediate, dec);
+    dec.close();
+    const Buffer &decrypted = dst->buffer();
+
+    // make sure we got the original plaintext out
+    MORDOR_TEST_ASSERT(plain == decrypted);
+}
+
+MORDOR_UNITTEST(CryptoStream, encryptWrite_noIV)
+{
+    Buffer plain;
+    plain.copyIn(plaintext, sizeof(plaintext));
+    MemoryStream::ptr src(new MemoryStream(plain));
+
+    // encrypt via write (just for fun, let CryptoStream infer defaults)
+    MemoryStream::ptr intermediate(new MemoryStream);
+    SingleplexStream::ptr spw(new SingleplexStream(intermediate, SingleplexStream::WRITE));
+    CryptoStream enc(spw, EVP_aes_256_ecb(), keyString());
+    transferStream(src, enc);
+    enc.close();
+    //const Buffer &cipher = intermediate->buffer();
+    // the destination buffer should be the size as the reference ciphertext
+    // (the content is, of course, different, because we're in ECB mode)
+    // EDIT: in this mode, we're generating an IV of the size OpenSSL tells us
+    // and some versions of OpenSSL give a non-zero IV size in ECB mode
+    // so don't actually test this.
+    //MORDOR_TEST_ASSERT_EQUAL(cipher.readAvailable(), sizeof(ciphertext));
+
+    // now decrypt via read (again, using a SingleplexStream so CryptoStream can infer read)
+    MemoryStream::ptr dst(new MemoryStream);
+    intermediate->seek(0);
+    SingleplexStream::ptr spr(new SingleplexStream(intermediate, SingleplexStream::READ));
+    CryptoStream dec(spr, EVP_aes_256_ecb(), keyString());
+    transferStream(dec, dst);
+    const Buffer &decrypted = dst->buffer();
+
+    // make sure we got the original plaintext out
+    MORDOR_TEST_ASSERT(plain == decrypted);
 }

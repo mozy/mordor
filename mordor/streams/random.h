@@ -16,11 +16,14 @@ namespace Mordor {
 class RandomStream : public Stream
 {
 public:
+    typedef boost::shared_ptr<RandomStream> ptr;
+
     RandomStream();
     ~RandomStream();
 
     bool supportsRead() { return true; }
     size_t read(void *buffer, size_t length);
+    using Stream::read;
 
     bool supportsSeek() { return true; }
     long long seek(long long offset, Anchor anchor = BEGIN) { return 0; }
