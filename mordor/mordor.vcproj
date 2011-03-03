@@ -347,6 +347,38 @@
 			<File
 				RelativePath=".\http\servlets\config.cpp"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_config.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_config.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_config.obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\http_config.obj"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\config.cpp"
@@ -409,6 +441,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\http.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\http.cpp"
 				>
 				<FileConfiguration
@@ -443,10 +479,6 @@
 						ObjectFile="$(IntDir)\http_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\http\http.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\http\http_parser.cpp"
@@ -581,6 +613,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -615,10 +651,6 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\socket.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\socks.cpp"
@@ -935,11 +967,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\scheduler.h"
+				RelativePath=".\scheduler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\scheduler.h"
+				RelativePath=".\streams\scheduler.h"
 				>
 			</File>
 			<File
