@@ -38,7 +38,7 @@ AX_CHECK_COREFOUNDATION_FRAMEWORK
 AX_CHECK_SECURITY_FRAMEWORK
 AX_CHECK_SYSTEMCONFIGURATION_FRAMEWORK
 AX_LIB_POSTGRESQL
-AM_CONDITIONAL([HAVE_POSTGRESQL], [test x${POSTGRESQL_VERSION} != x])
+AM_CONDITIONAL([HAVE_POSTGRESQL], [test "x${POSTGRESQL_VERSION}" != x])
 AC_ARG_WITH(yaml,
 	[AS_HELP_STRING([--with-yaml=[[ARG]]],
 		[Enable YAML parsing support @<:@default=check@:>@])],
@@ -68,7 +68,7 @@ AS_IF([test "x$with_protobuf" = xyes],
 	[PKG_CHECK_MODULES([PROTOBUF], [protobuf])],
 	[test "x$with_protobuf" = xcheck],
 	[PKG_CHECK_MODULES([PROTOBUF], [protobuf], [], [true])])
-AM_CONDITIONAL([HAVE_PROTOBUF], [test x${PROTOBUF_CFLAGS} != x])
+AM_CONDITIONAL([HAVE_PROTOBUF], [test "x${PROTOBUF_CFLAGS}" != x])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h])
