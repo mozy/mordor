@@ -52,6 +52,8 @@
 #       define PPC
 #   elif defined(__arm__)
 #       define ARM
+#   elif defined(_MIPS_ARCH)
+#       define MIPS
 #   endif
 #endif
 
