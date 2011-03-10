@@ -35,6 +35,8 @@
 #   define UCONTEXT_FIBERS
 #elif defined(ARM)
 #   define UCONTEXT_FIBERS
+#elif defined(MIPS)
+#   define UCONTEXT_FIBERS
 #else
 #   error Platform not supported
 #endif
