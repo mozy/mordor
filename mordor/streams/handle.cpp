@@ -33,13 +33,12 @@ HandleStream::init(HANDLE hFile, IOManager *ioManager, Scheduler *scheduler,
     m_cancelRead = m_cancelWrite = false;
     m_ioManager = ioManager;
     m_scheduler = scheduler;
-    DWORD type = GetFileType(hFile);
-    if (type == FILE_TYPE_CHAR) {
+    m_type = GetFileType(hFile);
+    if (m_type == FILE_TYPE_CHAR) {
         m_ioManager = NULL;
         CONSOLE_SCREEN_BUFFER_INFO info;
-        if (!GetConsoleScreenBufferInfo(hFile, &info))
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetConsoleScreenBufferInfo");
-        m_maxOpSize = info.dwSize.X * info.dwSize.Y / 2;
+        if (GetConsoleScreenBufferInfo(hFile, &info))
+            m_maxOpSize = info.dwSize.X * info.dwSize.Y / 2;
     }
     if (m_ioManager) {
         try {
@@ -123,6 +122,8 @@ HandleStream::read(void *buffer, size_t length)
     Log::Level level = Log::DEBUG;
     if (!ret) {
         if (lastError() == ERROR_HANDLE_EOF) {
+        } else if (m_type == FILE_TYPE_PIPE && lastError() == ERROR_BROKEN_PIPE) {
+            ret = TRUE;
         } else if (m_ioManager) {
             if (lastError() == ERROR_IO_PENDING)
                 level = Log::TRACE;

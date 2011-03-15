@@ -5,10 +5,15 @@
 #include <boost/thread/mutex.hpp>
 
 #include "buffer.h"
+#include "file.h"
 #include "mordor/assert.h"
 #include "mordor/fiber.h"
 #include "mordor/scheduler.h"
 #include "stream.h"
+
+#ifdef OSX
+#include <crt_externs.h>
+#endif
 
 namespace Mordor {
 
@@ -327,6 +332,49 @@ boost::signals2::connection
 PipeStream::onRemoteClose(const boost::signals2::slot<void ()> &slot)
 {
     return m_onRemoteClose.connect(slot);
+}
+
+
+std::pair<NativeStream::ptr, NativeStream::ptr>
+anonymousPipe(IOManager *ioManager)
+{
+    std::pair<NativeStream::ptr, NativeStream::ptr> result;
+#ifdef WINDOWS
+    if (ioManager) {
+        // TODO: Implement overlapped I/O for this pipe with either a
+        // not-quite-anonymous pipe, or a socket pair
+        MORDOR_NOTREACHED();
+    } else {
+        HANDLE read = NULL, write = NULL;
+        if (!CreatePipe(&read, &write, NULL, 0))
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreatePipe");
+        try {
+            result.first.reset(new HandleStream(read));
+            result.second.reset(new HandleStream(write));
+        } catch (...) {
+            if (!result.first)
+                CloseHandle(read);
+            if (!result.second)
+                CloseHandle(write);
+            throw;
+        }
+    }
+#else
+    int fds[2];
+    if (pipe(fds))
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("pipe");
+    try {
+            result.first.reset(new FDStream(fds[0], ioManager));
+            result.second.reset(new FDStream(fds[1], ioManager));
+        } catch (...) {
+            if (!result.first)
+                close(fds[0]);
+            if (!result.second)
+                close(fds[1]);
+            throw;
+        }
+#endif
+    return result;
 }
 
 }
