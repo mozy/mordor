@@ -61,6 +61,7 @@ private:
     StreamBroker::weak_ptr m_weakParent;
 };
 
+
 class SocketStreamBroker : public StreamBroker
 {
 public:
@@ -71,13 +72,17 @@ public:
         : m_cancelled(false),
           m_ioManager(ioManager),
           m_scheduler(scheduler),
-          m_connectTimeout(~0ull)
+          m_connectTimeout(~0ull),
+          m_filterNetworkCallback(NULL)
     {}
 
     void connectTimeout(unsigned long long timeout) { m_connectTimeout = timeout; }
 
     boost::shared_ptr<Stream> getStream(const URI &uri);
     void cancelPending();
+
+    void networkFilterCallback(boost::function<void (boost::shared_ptr<Socket>)> fnCallback)
+    {  m_filterNetworkCallback = fnCallback; }
 
 private:
     boost::mutex m_mutex;
@@ -86,6 +91,8 @@ private:
     IOManager *m_ioManager;
     Scheduler *m_scheduler;
     unsigned long long m_connectTimeout;
+
+    boost::function<void (boost::shared_ptr<Socket>)> m_filterNetworkCallback;
 };
 
 class ConnectionBroker
@@ -368,6 +375,7 @@ struct RequestBrokerOptions
     RequestBrokerOptions() :
         ioManager(NULL),
         scheduler(NULL),
+        filterNetworksCB(NULL),
         handleRedirects(true),
         timerManager(NULL),
         connectTimeout(~0ull),
@@ -384,6 +392,7 @@ struct RequestBrokerOptions
     IOManager *ioManager;
     Scheduler *scheduler;
     boost::function<bool (size_t)> delayDg;
+    boost::function<void (boost::shared_ptr<Socket>)> filterNetworksCB;
     bool handleRedirects;
     TimerManager *timerManager;
     unsigned long long connectTimeout;

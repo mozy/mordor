@@ -31,6 +31,7 @@ createRequestBroker(const RequestBrokerOptions &options)
     SocketStreamBroker::ptr socketBroker(new SocketStreamBroker(options.ioManager,
         options.scheduler));
     socketBroker->connectTimeout(options.connectTimeout);
+    socketBroker->networkFilterCallback(options.filterNetworksCB);
 
     StreamBroker::ptr streamBroker = socketBroker;
     if (options.customStreamBrokerFilter) {
@@ -114,7 +115,8 @@ SocketStreamBroker::getStream(const URI &uri)
     Socket::ptr socket;
     for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
         it != addresses.end();
-        ) {
+        ) 
+    {
         if (m_ioManager)
             socket = (*it)->createSocket(*m_ioManager, SOCK_STREAM);
         else
@@ -130,6 +132,14 @@ SocketStreamBroker::getStream(const URI &uri)
         }
         socket->sendTimeout(m_connectTimeout);
         try {
+            // if we are filtering network connections, the callback will bind
+            // the socket to an approved network address
+            if (m_filterNetworkCallback != NULL)
+            {
+                // the callback function is responsible for exiting out by throwing
+                // an exception.
+                m_filterNetworkCallback(socket);
+            }
             socket->connect(*it);
             boost::mutex::scoped_lock lock(m_mutex);
             m_pending.erase(it2);
