@@ -478,6 +478,30 @@ HTTPStream::truncate(long long size)
 void
 HTTPStream::close(CloseType type)
 {
+    if ((type & WRITE) && m_sizeAdvice == 0ll) {
+        // If we weren't supposed to write anything, we shouldn't have written
+        // anything :)
+        MORDOR_ASSERT(!parent());
+        m_requestHeaders.requestLine.method = PUT;
+        m_requestHeaders.request.ifMatch.clear();
+        m_requestHeaders.request.ifRange = ETag();
+        m_requestHeaders.request.range.clear();
+        m_requestHeaders.request.ifNoneMatch.clear();
+        m_requestHeaders.general.transferEncoding.clear();
+        m_requestHeaders.entity.contentLength = 0;
+        m_requestHeaders.entity.contentRange = ContentRange();
+        ClientRequest::ptr request = m_requestBroker->request(m_requestHeaders);
+        switch (request->response().status.status) {
+            case OK:
+            case CREATED:
+                break;
+            default:
+                MORDOR_THROW_EXCEPTION(InvalidResponseException(m_writeRequest));
+        }
+        request->finish();
+        m_sizeAdvice = ~0ull;
+        return;
+    }
     if (parent() && (type & WRITE) && parent()->supportsWrite()) {
         parent()->close();
         parent(Stream::ptr());

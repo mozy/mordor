@@ -331,6 +331,9 @@ private:
             MORDOR_TEST_ASSERT_EQUAL(contentLength, 0ull);
             MORDOR_TEST_ASSERT_EQUAL(contentRange,
                 ContentRange(~0ull, ~0ull, 65536));
+        } else if (requestUri == "/writeZeroLength") {
+            MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);
+            MORDOR_TEST_ASSERT_EQUAL(contentLength, 0ull);
         } else {
             MORDOR_NOTREACHED();
         }
@@ -403,5 +406,13 @@ MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, truncate)
 {
     HTTPStream stream("http://localhost/truncate", requestBroker);
     stream.truncate(65536);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+}
+
+MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, writeZeroLength)
+{
+    HTTPStream stream("http://localhost/writeZeroLength", requestBroker);
+    stream.adviseSize(0);
+    stream.close();
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }

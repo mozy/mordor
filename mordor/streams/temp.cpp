@@ -49,6 +49,7 @@ TempStream::TempStream(const std::string &prefix, bool deleteOnClose,
         &tempfile[0]);
     if (len == 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetTempFileNameW");
+    tempfile.resize(len);
     init(tempfile, FileStream::READWRITE,
         (FileStream::CreateFlags)(FileStream::OPEN |
             (deleteOnClose ? FileStream::DELETE_ON_CLOSE : 0)),
