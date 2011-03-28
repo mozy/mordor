@@ -2,6 +2,7 @@
 
 #include "daemon.h"
 
+#include "config.h"
 #include "log.h"
 #include "main.h"
 
@@ -9,6 +10,8 @@ namespace Mordor {
 namespace Daemon {
 
 static Logger::ptr g_log = Log::lookup("mordor:daemon");
+
+static ConfigVar<bool>::ptr g_daemonize = Config::lookup("daemonize", false, "Force daemonize");
 
 boost::signals2::signal<void ()> onTerminate;
 boost::signals2::signal<void ()> onInterrupt;
@@ -369,7 +372,8 @@ int run(int argc, char **argv,
 #ifndef OSX
     // Check for being run from /etc/init.d or start-stop-daemon as a hint to
     // daemonize
-    if (shouldDaemonize(environ) || shouldDaemonizeDueToParent()) {
+    bool daemonize_from_commandline = g_daemonize->val();
+    if (shouldDaemonize(environ) || shouldDaemonizeDueToParent() || daemonize_from_commandline) {
         MORDOR_LOG_VERBOSE(g_log) << "Daemonizing";
         if (daemon(0, 0) == -1)
             return errno;
