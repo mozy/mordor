@@ -361,6 +361,16 @@ static bool shouldDaemonizeDueToParent()
     const char *parentEnviro = parentEnviron.c_str();
     return shouldDaemonize((char **)&parentEnviro);
 }
+
+static bool shouldDaemonizeDueToCmdLine(int argc, char **argv)
+{
+    for (int i=0; i < argc; i++) {
+        if (strcmp(argv[i], "--daemonize") == 0) {
+            return true;
+        }
+    }
+    return false;
+}
 #endif
 
 int run(int argc, char **argv,
@@ -368,8 +378,8 @@ int run(int argc, char **argv,
 {
 #ifndef OSX
     // Check for being run from /etc/init.d or start-stop-daemon as a hint to
-    // daemonize
-    if (shouldDaemonize(environ) || shouldDaemonizeDueToParent()) {
+    // daemonize, or --daemonize was explicitely given on the command line
+    if (shouldDaemonize(environ) || shouldDaemonizeDueToParent() || shouldDaemonizeDueToCmdLine(argc, argv)) {
         MORDOR_LOG_VERBOSE(g_log) << "Daemonizing";
         if (daemon(0, 0) == -1)
             return errno;
