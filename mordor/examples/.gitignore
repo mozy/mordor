@@ -2,7 +2,6 @@ cat
 echoserver
 iombench
 simpleclient
-simpleappserver
 tunnel
 udpstats
 wget
