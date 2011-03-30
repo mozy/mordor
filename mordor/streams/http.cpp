@@ -511,7 +511,7 @@ HTTPStream::close(CloseType type)
         if (m_writeException)
             Mordor::rethrow_exception(m_writeException);
         MORDOR_ASSERT(m_writeRequest);
-        switch (m_writeRequest->response().status.status) {
+        switch ((int)m_writeRequest->response().status.status) {
             case OK:
             case CREATED:
             case 207: // Partial Update OK, from http://www.hpl.hp.com/personal/ange/archives/archives-97/http-wg-archive/2530.html

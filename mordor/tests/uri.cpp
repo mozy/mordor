@@ -453,6 +453,7 @@ MORDOR_UNITTEST(URI, queryStringConvenience)
 {
     URI::QueryString qs;
     qs["a"] = "1";
+
     MORDOR_TEST_ASSERT_EQUAL(qs.size(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=1");
     qs.insert(std::make_pair("a", "2"));
@@ -468,15 +469,25 @@ MORDOR_UNITTEST(URI, queryStringConvenience)
     MORDOR_TEST_ASSERT_EQUAL(qs.size(), 3u);
     MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&b");
 
+    // Make sure we're using equal_range correctly (insert between existing elements)
+    qs["a2"] = "5";
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 4u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&a2=5&b");
+
     // Create a const reference, so we call the const version
     const URI::QueryString &qs2 = qs;
     // Does not create a new item
     MORDOR_TEST_ASSERT(qs2["c"].empty());
-    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 3u);
-    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&b");
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 4u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&a2=5&b");
 
     // Returns the first item, but keeps the rest
     MORDOR_TEST_ASSERT_EQUAL(qs2["a"], "3");
-    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 3u);
-    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&b");
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 4u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&a2=5&b");
+
+    // Does not create a new item (in between)
+    MORDOR_TEST_ASSERT(qs2["a3"].empty());
+    MORDOR_TEST_ASSERT_EQUAL(qs.size(), 4u);
+    MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&a2=5&b");
 }

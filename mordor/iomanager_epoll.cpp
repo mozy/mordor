@@ -28,7 +28,7 @@ enum epoll_ctl_op_t
 
 static std::ostream &operator <<(std::ostream &os, epoll_ctl_op_t op)
 {
-    switch (op) {
+    switch ((int)op) {
         case EPOLL_CTL_ADD:
             return os << "EPOLL_CTL_ADD";
         case EPOLL_CTL_MOD:
