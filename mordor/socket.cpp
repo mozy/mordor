@@ -96,6 +96,8 @@ static LPFN_ACCEPTEX pAcceptEx;
 static LPFN_GETACCEPTEXSOCKADDRS pGetAcceptExSockaddrs;
 static LPFN_CONNECTEX ConnectEx;
 
+static const size_t MAX_INTERFACE_BUFFER_SIZE = 131072;
+
 namespace {
 
 static struct Initializer {
@@ -1398,18 +1400,30 @@ Address::getInterfaceAddresses(int family)
     std::multimap<std::string, std::pair<Address::ptr, unsigned int> >
         result;
 #ifdef WINDOWS
-    char buf[15 * 1024];
-    IP_ADAPTER_ADDRESSES *addresses = (IP_ADAPTER_ADDRESSES *)buf;
-    ULONG size = sizeof(buf);
+    std::vector<char> buf(15 * 1024);
+    IP_ADAPTER_ADDRESSES *addresses = (IP_ADAPTER_ADDRESSES *)&buf[0];
+    ULONG size = (ULONG)buf.size();
     ULONG error = pGetAdaptersAddresses(AF_UNSPEC, 0, NULL, addresses, &size);
+    while (ERROR_BUFFER_OVERFLOW == error && buf.size() < MAX_INTERFACE_BUFFER_SIZE)
+    {
+        buf.resize(size);
+        addresses = (IP_ADAPTER_ADDRESSES *)&buf[0];
+        error = pGetAdaptersAddresses(AF_UNSPEC, 0, NULL, addresses, &size);
+    }
     if (error && error != ERROR_CALL_NOT_IMPLEMENTED)
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "GetAdaptersAddresses");
     // Either doesn't exist, or doesn't include netmask info to construct broadcast addr
     if (error == ERROR_CALL_NOT_IMPLEMENTED ||
         addresses->FirstUnicastAddress->Length < sizeof(IP_ADAPTER_UNICAST_ADDRESS_LH)) {
-        PIP_ADAPTER_INFO addresses2 = (PIP_ADAPTER_INFO)buf;
-        size = sizeof(buf);
+        PIP_ADAPTER_INFO addresses2 = (PIP_ADAPTER_INFO)&buf[0];
+        size = (ULONG)buf.size();
         error = GetAdaptersInfo(addresses2, &size);
+        while (ERROR_BUFFER_OVERFLOW == error && buf.size() < MAX_INTERFACE_BUFFER_SIZE)
+        {
+            buf.resize(size);
+            addresses2 = (PIP_ADAPTER_INFO)&buf[0];
+            error = GetAdaptersInfo(addresses2, &size);
+        }
         if (error)
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "PIP_ADAPTER_INFO");
         for (; addresses2; addresses2 = addresses2->Next) {
