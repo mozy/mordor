@@ -28,7 +28,7 @@ extern "C" int main(int argc, char *argv[])                                     
     LPWSTR *argvW = CommandLineToArgvW(lpCmdLineW, &localArgc);                 \
     if (!argvW)                                                                 \
         return GetLastError();                                                  \
-    char **argvUtf8 = CommandLineToUtf8(localArgc, argvW);                      \
+    char **argvUtf8 = ::Mordor::CommandLineToUtf8(localArgc, argvW);            \
     LocalFree(argvW);                                                           \
     if (!argvUtf8)                                                              \
         return GetLastError();                                                  \
