@@ -20,6 +20,7 @@ public:
     virtual void onAttributeValue(const std::string &value) {}
     virtual void onInnerText(const std::string &text) {}
     virtual void onReference(const std::string &reference) {}
+    virtual void onCData(const std::string &text) {}
 };
 
 class CallbackXMLParserEventHandler : public XMLParserEventHandler
