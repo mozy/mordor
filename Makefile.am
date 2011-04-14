@@ -347,6 +347,7 @@ noinst_PROGRAMS=			\
 	mordor/examples/echoserver	\
 	mordor/examples/iombench	\
 	mordor/examples/simpleappserver	\
+        mordor/examples/simpleclient	\
 	mordor/examples/tunnel		\
 	mordor/examples/udpstats	\
 	mordor/examples/wget
@@ -378,6 +379,13 @@ mordor_examples_iombench_LDADD=mordor/libmordor.la	\
 
 mordor_examples_simpleappserver_SOURCES=mordor/examples/simpleappserver.cpp
 mordor_examples_simpleappserver_LDADD=mordor/libmordor.la	\
+	$(CORESERVICES_FRAMEWORK_LIBS)		\
+	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
+	$(SECURITY_FRAMEWORK_LIBS)		\
+	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+
+mordor_examples_simpleclient_SOURCES=mordor/examples/simpleclient.cpp
+mordor_examples_simpleclient_LDADD=mordor/libmordor.la	\
 	$(CORESERVICES_FRAMEWORK_LIBS)		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
 	$(SECURITY_FRAMEWORK_LIBS)		\
