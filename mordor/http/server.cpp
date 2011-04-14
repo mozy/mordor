@@ -858,7 +858,8 @@ ServerRequest::responseDone()
 
 void
 respondError(ServerRequest::ptr request, Status status,
-    const std::string &message, bool closeConnection, bool clearETag)
+    const std::string &message, bool closeConnection,
+    bool clearContentType, bool clearETag)
 {
     MORDOR_ASSERT(!request->committed());
     request->response().status.status = status;
@@ -867,12 +868,14 @@ respondError(ServerRequest::ptr request, Status status,
     request->response().general.transferEncoding.clear();
     request->response().general.trailer.clear();
     request->response().entity.contentLength = message.size();
-    request->response().entity.contentType.type.clear();
+    if (clearContentType)
+        request->response().entity.contentType.type.clear();
     if (clearETag)
         request->response().response.eTag = ETag();
     if (!message.empty()) {
-        request->response().entity.contentType.type = "text";
-        request->response().entity.contentType.subtype = "plain";
+        if (clearContentType)
+            request->response().entity.contentType =
+                MediaType("text", "plain");
         if (request->request().requestLine.method == HEAD) {
             request->finish();
         } else {
