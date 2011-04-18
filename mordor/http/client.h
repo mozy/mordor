@@ -83,6 +83,16 @@ public:
     void doRequest();
     void ensureResponse();
 
+    // filters HTTP requests for display in the log
+    // default implementation hides HTTP Basic auth; derive and replace if you need
+    //  to hide any other information (keys, etc.)
+    struct LogFilter {
+        virtual std::string operator()(const RequestLine &requestLine); // for verbose
+        virtual std::string operator()(const Request &request);         // for debug/trace
+    };
+    // use a null pointer to restore the default log filter
+    static void setLogFilter(boost::shared_ptr<LogFilter> newLogFilter);
+
 private:
     void waitForRequest();
     void requestMultipartDone();
@@ -106,6 +116,7 @@ private:
     boost::weak_ptr<Stream> m_responseStream;
     boost::shared_ptr<Multipart> m_requestMultipart;
     boost::weak_ptr<Multipart> m_responseMultipart;
+    static boost::shared_ptr<LogFilter> msp_logFilter;
 };
 
 // Logically the entire response is unexpected
