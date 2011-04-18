@@ -43,13 +43,13 @@ TempStream::TempStream(const std::string &prefix, bool deleteOnClose,
     }
     std::wstring tempfile;
     tempfile.resize(MAX_PATH);
-    UINT len = GetTempFileNameW(wtempdir.c_str(),
+    UINT ret = GetTempFileNameW(wtempdir.c_str(),
         prefixW.c_str(),
         0,
         &tempfile[0]);
-    if (len == 0)
+    if (ret == 0)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetTempFileNameW");
-    tempfile.resize(len);
+    tempfile.resize(wcslen(tempfile.c_str()));
     init(tempfile, FileStream::READWRITE,
         (FileStream::CreateFlags)(FileStream::OPEN |
             (deleteOnClose ? FileStream::DELETE_ON_CLOSE : 0)),
