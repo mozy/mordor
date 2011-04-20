@@ -863,8 +863,8 @@
 				GCC_PREFIX_HEADER = mordor/pch.h;
 				GCC_VERSION = 4.2;
 				HEADER_SEARCH_PATHS = (
-					/usr/local/include,
 					"$(OPENSSL_ROOT)/include",
+					"$(BOOST_ROOT)/include",
 				);
 				INSTALL_PATH = /usr/local/lib;
 				PREBINDING = NO;
@@ -883,8 +883,8 @@
 				GCC_PREFIX_HEADER = mordor/pch.h;
 				GCC_VERSION = 4.2;
 				HEADER_SEARCH_PATHS = (
-					/usr/local/include,
 					"$(OPENSSL_ROOT)/include",
+					"$(BOOST_ROOT)/include",
 				);
 				INSTALL_PATH = /usr/local/lib;
 				PREBINDING = NO;
@@ -902,10 +902,7 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				HEADER_SEARCH_PATHS = (
-					/usr/local/include,
-					/opt/local/include,
-				);
+				HEADER_SEARCH_PATHS = "$(BOOST_ROOT)/include";
 				PREBINDING = NO;
 				PRODUCT_NAME = mordortest;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
@@ -919,10 +916,7 @@
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				HEADER_SEARCH_PATHS = (
-					/usr/local/include,
-					/opt/local/include,
-				);
+				HEADER_SEARCH_PATHS = "$(BOOST_ROOT)/include";
 				PREBINDING = NO;
 				PRODUCT_NAME = mordortest;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
