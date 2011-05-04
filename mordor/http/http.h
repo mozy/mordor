@@ -308,6 +308,11 @@ struct MediaType
     std::string type;
     std::string subtype;
     StringMap parameters;
+
+    bool operator== (const MediaType &rhs) const
+    { return type == rhs.type && subtype == rhs.subtype && parameters == rhs.parameters; }
+    bool operator!= (const MediaType &rhs) const
+    { return !(*this == rhs); }
 };
 
 typedef std::vector<std::pair<unsigned long long, unsigned long long> > RangeSet;
