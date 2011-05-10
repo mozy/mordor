@@ -279,7 +279,7 @@ IOManager::unregisterEvent(int fd, Event event)
     int op = newEvents ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
     epoll_event epevent;
     epevent.events = EPOLLET | newEvents;
-    epevent.data.fd = fd;
+    epevent.data.ptr = &state;
     int rc = epoll_ctl(m_epfd, op, fd, &epevent);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
@@ -321,7 +321,7 @@ IOManager::cancelEvent(int fd, Event event)
     int op = newEvents ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
     epoll_event epevent;
     epevent.events = EPOLLET | newEvents;
-    epevent.data.fd = fd;
+    epevent.data.ptr = &state;
     int rc = epoll_ctl(m_epfd, op, fd, &epevent);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
