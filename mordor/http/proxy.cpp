@@ -73,6 +73,8 @@ std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
         it != list.end();
         ++it) {
         std::string curProxy = *it;
+        if(curProxy.empty())
+            continue;
         std::string forScheme;
         size_t equals = curProxy.find('=');
         if (equals != std::string::npos) {
