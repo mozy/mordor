@@ -42,6 +42,12 @@ Result::column(const char *name) const
     return (size_t)PQfnumber(m_result.get(), name);
 }
 
+const char *
+Result::column(size_t index) const
+{
+    return PQfname(m_result.get(), (int)index);
+}
+
 Oid
 Result::getType(size_t column) const
 {
