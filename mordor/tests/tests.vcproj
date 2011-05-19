@@ -526,6 +526,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\util.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\xml.cpp"
 				>
 			</File>

@@ -10,6 +10,11 @@
 #include <CoreFoundation/CFBase.h>
 #endif
 
+#ifndef WINDOWS
+// VC2008 doesn't have this, so we'll do without
+#include <stdint.h>
+#endif
+
 namespace Mordor {
 
 template <class T>
@@ -71,6 +76,31 @@ private:
     T m_ref;
 };
 #endif
+
+#ifdef WINDOWS
+// create defined types for specific-sized integers
+typedef __int8 int8_t;
+typedef __int16 int16_t;
+typedef __int32 int32_t;
+typedef __int64 int64_t;
+typedef unsigned __int8 uint8_t;
+typedef unsigned __int16 uint16_t;
+typedef unsigned __int32 uint32_t;
+typedef unsigned __int64 uint64_t;
+#else
+// copy existing type definitions from stdint.h into Mordor namespace
+using ::int8_t;
+using ::int16_t;
+using ::int32_t;
+using ::int64_t;
+using ::uint8_t;
+using ::uint16_t;
+using ::uint32_t;
+using ::uint64_t;
+#endif
+
+// compute with 96 bit intermediate result: (a*b)/c 
+uint64_t muldiv64(uint64_t a, uint32_t b, uint64_t c);
 
 }
 

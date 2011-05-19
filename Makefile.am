@@ -178,6 +178,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/thread.cpp			\
 	mordor/timer.cpp			\
 	mordor/uri.cpp				\
+	mordor/util.cpp				\
 	mordor/workerpool.cpp			\
 	mordor/xml/xml_parser.cpp		\
 	mordor/zip.cpp
@@ -314,6 +315,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/timer.cpp				\
 	mordor/tests/transfer_stream.cpp		\
 	mordor/tests/uri.cpp				\
+	mordor/tests/util.cpp				\
 	mordor/tests/xml.cpp				\
 	mordor/tests/zlib.cpp				\
 	mordor/tests/crypto.cpp

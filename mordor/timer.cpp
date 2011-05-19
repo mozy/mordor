@@ -55,12 +55,12 @@ TimerManager::now()
     unsigned long long countUll = (unsigned long long)count.QuadPart;
     if (g_frequency == 0)
         g_frequency = queryFrequency();
-    return countUll * 1000000 / g_frequency;
+    return muldiv64(countUll, 1000000, g_frequency);
 #elif defined(OSX)
     unsigned long long absoluteTime = mach_absolute_time();
     if (g_timebase.denom == 0)
         g_timebase = queryTimebase();
-    return absoluteTime * g_timebase.numer / g_timebase.denom / 1000;
+    return muldiv64(absoluteTime, g_timebase.numer, (uint64_t)g_timebase.denom * 1000);
 #else
     struct timespec ts;
 

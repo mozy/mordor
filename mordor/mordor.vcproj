@@ -441,10 +441,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\http.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\http.cpp"
 				>
 				<FileConfiguration
@@ -479,6 +475,10 @@
 						ObjectFile="$(IntDir)\http_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\http\http.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\http\http_parser.cpp"
@@ -613,10 +613,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\socket.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -651,6 +647,10 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\socket.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\socks.cpp"
@@ -706,6 +706,10 @@
 			</File>
 			<File
 				RelativePath=".\uri.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\util.cpp"
 				>
 			</File>
 			<File
@@ -967,11 +971,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\scheduler.h"
+				RelativePath=".\streams\scheduler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\scheduler.h"
+				RelativePath=".\scheduler.h"
 				>
 			</File>
 			<File

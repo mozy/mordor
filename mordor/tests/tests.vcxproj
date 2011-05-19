@@ -229,6 +229,7 @@
     <ClCompile Include="transfer_stream.cpp" />
     <ClCompile Include="uri.cpp" />
     <ClCompile Include="unicode.cpp" />
+    <ClCompile Include="util.cpp" />
     <ClCompile Include="xml.cpp" />
     <ClCompile Include="zlib.cpp" />
   </ItemGroup>
