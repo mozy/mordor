@@ -133,3 +133,42 @@ MORDOR_UNITTEST(Timer, later)
     timer->cancel();
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
 }
+
+static unsigned long long fakeClock(unsigned long long &clock)
+{
+    return clock;
+}
+
+MORDOR_UNITTEST(Timer, rollover)
+{
+    // two minutes before the apocalypse
+    static unsigned long long clock = 0ULL - 120000000;
+    TimerManager::setClock(boost::bind(&fakeClock, boost::ref(clock)));
+    
+    int sequence = 0;
+    TimerManager manager;
+
+    // sanity check - test passage of time
+    Timer::ptr timer1 = manager.registerTimer(60000000,
+        boost::bind(&singleTimer, boost::ref(sequence), boost::ref(sequence)));
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 60000000ULL);
+    clock += 30000000;
+    manager.executeTimers();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);  // timer hasn't fired yet
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 30000000ULL); // timer is still 30 seconds out
+    
+    // now create a few more timers for good measure
+    Timer::ptr timer2 = manager.registerTimer(15000000,     // pre-rollover
+        boost::bind(&singleTimer, boost::ref(sequence), boost::ref(sequence)));
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 15000000ULL);
+    Timer::ptr timer3 = manager.registerTimer(180000000,    // post-rollover
+        boost::bind(&singleTimer, boost::ref(sequence), boost::ref(sequence)));
+    // nextTimer() would return 0 now, because timer3 appears to be in the past
+
+    clock += 120000000; // overflow!!
+    manager.executeTimers();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 3);  // all timers should have fired
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ULL);   // no timers left
+
+    TimerManager::setClock();
+}
