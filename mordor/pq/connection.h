@@ -80,6 +80,8 @@ public:
             SchedulerType *scheduler);
 
     public:
+        virtual CopyParams() {}
+
         /// Execute
         virtual boost::shared_ptr<Stream> operator()() = 0;
 
