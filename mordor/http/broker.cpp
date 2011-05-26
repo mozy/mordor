@@ -293,6 +293,8 @@ ConnectionCache::getConnectionViaProxyFromCache(const URI &uri, const URI &proxy
                 info->condition.wait();
                 if (info->lastFailedConnectionTimestamp <= start)
                     MORDOR_THROW_EXCEPTION(PriorConnectionFailedException());
+                if (m_closed)
+                    MORDOR_THROW_EXCEPTION(OperationAbortedException());
                 // We let go of the mutex, and the last connection may have
                 // disappeared
                 it = m_conns.find(endpoint);
