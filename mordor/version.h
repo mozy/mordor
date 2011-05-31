@@ -18,7 +18,9 @@
 
 #ifdef __APPLE__
 #   define OSX
-#   define BSD
+#   ifndef BSD
+#       define BSD
+#   endif
 #endif
 
 #ifdef __FreeBSD__
