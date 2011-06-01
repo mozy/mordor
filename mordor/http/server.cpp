@@ -106,18 +106,6 @@ ServerConnection::requestComplete(ServerRequest *request)
 void
 ServerConnection::responseComplete(ServerRequest *request)
 {
-    if (request->m_willClose) {
-        MORDOR_LOG_TRACE(g_log) << this << " closing";
-        try {
-            m_stream->close();
-        } catch (...) {
-            request->cancel();
-            throw;
-        }
-    } else {
-        MORDOR_LOG_TRACE(g_log) << this << " flushing";
-        m_stream->flush();
-    }
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
@@ -146,14 +134,28 @@ ServerConnection::responseComplete(ServerRequest *request)
                 return;
             }
         } else {
+            // Do not remove from m_pendingRequests until we finish flushing
+            // The next request can start before the flush completes, though
             if (request->m_requestState >= ServerRequest::COMPLETE)
                 scheduleNextRequest(request);
         }
         if (request->m_willClose) {
             m_priorResponseClosed = request->m_requestNumber;
+            MORDOR_LOG_TRACE(g_log) << this << " closing";
+        } else {
+            MORDOR_LOG_TRACE(g_log) << this << " flushing";
         }
     }
-
+    if (request->m_willClose) {
+        try {
+            m_stream->close();
+        } catch (...) {
+            request->cancel();
+            throw;
+        }
+    } else {
+        m_stream->flush();
+    }
     boost::mutex::scoped_lock lock(m_mutex);
     invariant();
     MORDOR_ASSERT(!m_pendingRequests.empty());
@@ -248,6 +250,15 @@ ServerRequest::ServerRequest(ServerConnection::ptr conn)
 ServerRequest::~ServerRequest()
 {
     cancel();
+#ifndef NDEBUG
+    MORDOR_ASSERT(m_conn);
+    boost::mutex::scoped_lock lock(m_conn->m_mutex);
+    MORDOR_ASSERT(std::find(m_conn->m_pendingRequests.begin(),
+        m_conn->m_pendingRequests.end(),
+        this) == m_conn->m_pendingRequests.end());
+    MORDOR_ASSERT(m_conn->m_waitingResponses.find(this) ==
+        m_conn->m_waitingResponses.end());
+#endif
 }
 
 bool
