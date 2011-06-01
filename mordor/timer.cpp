@@ -163,7 +163,8 @@ Timer::reset(unsigned long long us, bool fromNow)
 }
 
 TimerManager::TimerManager()
-: m_tickled(false)
+: m_tickled(false),
+  m_previousTime(0ull)
 {}
 
 TimerManager::~TimerManager()
@@ -222,16 +223,15 @@ TimerManager::detectClockRollover(unsigned long long nowUs)
     // We check this way because now() will not roll from 0xffff... to zero
     // since the underlying hardware counter doesn't count microseconds.
     // Use a threshold value so we don't overreact to minor clock jitter.
-    static unsigned long long previousTime = 0;
     bool rollover = false;
-    if (nowUs < previousTime && // check first in case the next line would underflow
-        nowUs < previousTime - g_clockRolloverThreshold->val())
+    if (nowUs < m_previousTime && // check first in case the next line would underflow
+        nowUs < m_previousTime - g_clockRolloverThreshold->val())
     {
         MORDOR_LOG_ERROR(g_log) << this << " clock has rolled back from "
-            << previousTime << " to " << nowUs << "; expiring all timers";
+            << m_previousTime << " to " << nowUs << "; expiring all timers";
         rollover = true;
     }
-    previousTime = nowUs;
+    m_previousTime = nowUs;
     return rollover;
 }
 
