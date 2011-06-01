@@ -11,6 +11,7 @@
 #include "log.h"
 #include "version.h"
 #include "util.h"
+#include "config.h"
 
 #ifdef OSX
  #include <mach/mach_time.h>
@@ -23,7 +24,16 @@
 
 namespace Mordor {
 
+boost::function<unsigned long long ()> TimerManager::ms_clockDg;
+
 static Logger::ptr g_log = Log::lookup("mordor:timer");
+
+// now() doesn't roll over at 0xffff...., because underlying hardware timers
+// do not count in microseconds; also, prevent clock anomalies from causing
+// timers that will never expire
+static ConfigVar<unsigned long long>::ptr g_clockRolloverThreshold =
+    Config::lookup<unsigned long long>("timer.clockrolloverthreshold", 5000000ULL,
+    "Expire all timers if the clock goes backward by >= this amount");
 
 #ifdef WINDOWS
 static unsigned long long queryFrequency()
@@ -48,6 +58,9 @@ mach_timebase_info_data_t g_timebase = queryTimebase();
 unsigned long long
 TimerManager::now()
 {
+    if (ms_clockDg)
+        return ms_clockDg();
+
 #ifdef WINDOWS
     LARGE_INTEGER count;
     if (!QueryPerformanceCounter(&count))
@@ -55,12 +68,12 @@ TimerManager::now()
     unsigned long long countUll = (unsigned long long)count.QuadPart;
     if (g_frequency == 0)
         g_frequency = queryFrequency();
-    return countUll * 1000000 / g_frequency;
+    return muldiv64(countUll, 1000000, g_frequency);
 #elif defined(OSX)
     unsigned long long absoluteTime = mach_absolute_time();
     if (g_timebase.denom == 0)
         g_timebase = queryTimebase();
-    return absoluteTime * g_timebase.numer / g_timebase.denom / 1000;
+    return muldiv64(absoluteTime, g_timebase.numer, (uint64_t)g_timebase.denom * 1000);
 #else
     struct timespec ts;
 
@@ -150,7 +163,8 @@ Timer::reset(unsigned long long us, bool fromNow)
 }
 
 TimerManager::TimerManager()
-: m_tickled(false)
+: m_tickled(false),
+  m_previousTime(0ull)
 {}
 
 TimerManager::~TimerManager()
@@ -201,6 +215,26 @@ TimerManager::nextTimer()
     return result;
 }
 
+bool
+TimerManager::detectClockRollover(unsigned long long nowUs)
+{
+    // If the time jumps backward, expire timers (rather than have them
+    // expire in the distant future or not at all).
+    // We check this way because now() will not roll from 0xffff... to zero
+    // since the underlying hardware counter doesn't count microseconds.
+    // Use a threshold value so we don't overreact to minor clock jitter.
+    bool rollover = false;
+    if (nowUs < m_previousTime && // check first in case the next line would underflow
+        nowUs < m_previousTime - g_clockRolloverThreshold->val())
+    {
+        MORDOR_LOG_ERROR(g_log) << this << " clock has rolled back from "
+            << m_previousTime << " to " << nowUs << "; expiring all timers";
+        rollover = true;
+    }
+    m_previousTime = nowUs;
+    return rollover;
+}
+
 std::vector<boost::function<void ()> >
 TimerManager::processTimers()
 {
@@ -209,13 +243,16 @@ TimerManager::processTimers()
     unsigned long long nowUs = now();
     {
         boost::mutex::scoped_lock lock(m_mutex);
-        if (m_timers.empty() || (*m_timers.begin())->m_next > nowUs)
+        if (m_timers.empty())
+            return result;
+        bool rollover = detectClockRollover(nowUs);
+        if (!rollover && (*m_timers.begin())->m_next > nowUs)
             return result;
         Timer nowTimer(nowUs);
         Timer::ptr nowTimerPtr(&nowTimer, &nop<Timer *>);
         // Find all timers that are expired
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
-            m_timers.lower_bound(nowTimerPtr);
+            rollover ? m_timers.end() : m_timers.lower_bound(nowTimerPtr);
         while (it != m_timers.end() && (*it)->m_next == nowUs ) ++it;
         // Copy to expired, remove from m_timers;
         expired.insert(expired.begin(), m_timers.begin(), it);
@@ -252,6 +289,12 @@ TimerManager::executeTimers()
         ++it) {
         (*it)();
     }
+}
+
+void
+TimerManager::setClock(boost::function<unsigned long long()> dg)
+{
+    ms_clockDg = dg;
 }
 
 bool

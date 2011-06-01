@@ -78,14 +78,25 @@ public:
     /// system clock is changed.
     static unsigned long long now();
 
+    /// replace the built-in clock
+    /// @param dg replacement function whose value will be returned by now()
+    /// omit the parameter to return to the default clock.
+    /// NOTE: as now() is static, this affects *all* TimerManager instances
+    static void setClock(boost::function<unsigned long long()> dg = NULL);
+
 protected:
     virtual void onTimerInsertedAtFront() {}
     std::vector<boost::function<void ()> > processTimers();
 
 private:
+    bool detectClockRollover(unsigned long long nowUs);
+
+private:
+    static boost::function<unsigned long long ()> ms_clockDg;
     std::set<Timer::ptr, Timer::Comparator> m_timers;
     boost::mutex m_mutex;
     bool m_tickled;
+    unsigned long long m_previousTime;
 };
 
 }

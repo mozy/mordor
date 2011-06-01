@@ -157,12 +157,12 @@ IOManager::IOManager(size_t threads, bool useCaller)
     MORDOR_ASSERT(m_tickleFds[1] > 0);
     epoll_event event;
     memset(&event, 0, sizeof(epoll_event));
-    event.events = EPOLLIN | EPOLLET;
+    event.events = EPOLLIN;
     event.data.fd = m_tickleFds[0];
     rc = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_ADD, " << m_tickleFds[0]
-        << ", EPOLLIN | EPOLLET): " << rc << " (" << lastError() << ")";
+        << ", EPOLLIN): " << rc << " (" << lastError() << ")";
     if (rc) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
@@ -272,7 +272,7 @@ IOManager::unregisterEvent(int fd, Event event)
     int op = newEvents ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
     epoll_event epevent;
     epevent.events = EPOLLET | newEvents;
-    epevent.data.fd = fd;
+    epevent.data.ptr = &state;
     int rc = epoll_ctl(m_epfd, op, fd, &epevent);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
@@ -314,7 +314,7 @@ IOManager::cancelEvent(int fd, Event event)
     int op = newEvents ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
     epoll_event epevent;
     epevent.events = EPOLLET | newEvents;
-    epevent.data.fd = fd;
+    epevent.data.ptr = &state;
     int rc = epoll_ctl(m_epfd, op, fd, &epevent);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "

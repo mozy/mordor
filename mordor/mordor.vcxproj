@@ -175,6 +175,7 @@
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="streams\transfer.cpp" />
     <ClCompile Include="streams\zlib.cpp" />
+    <ClCompile Include="util.cpp" />
     <ClCompile Include="workerpool.cpp" />
     <ClCompile Include="zip.cpp" />
   </ItemGroup>

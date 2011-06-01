@@ -440,6 +440,40 @@ ClientConnection::invariant() const
 #endif
 }
 
+std::string ClientRequest::LogFilter::operator()(const RequestLine &requestLine)
+{
+    std::ostringstream os;
+    os << requestLine;
+    return os.str();
+}
+
+std::string ClientRequest::LogFilter::operator()(const Request &request)
+{
+    std::ostringstream os;
+    bool basicAuth = (stricmp(request.request.authorization.scheme.c_str(), "Basic") == 0);
+    bool basicProxyAuth = (stricmp(request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0);
+    if (basicAuth || basicProxyAuth) {
+        Request censoredRequest(request);
+        if (basicAuth)
+            censoredRequest.request.authorization.base64 = "<hidden>";
+        if (basicProxyAuth)
+            censoredRequest.request.proxyAuthorization.base64 = "<hidden>";
+        os << censoredRequest;
+    } else {
+        os << request;
+    }
+    return os.str();
+}
+
+/* static */ boost::shared_ptr<ClientRequest::LogFilter> ClientRequest::msp_logFilter( new ClientRequest::LogFilter );
+
+void ClientRequest::setLogFilter(boost::shared_ptr<ClientRequest::LogFilter> newLogFilter)
+{
+    if (newLogFilter)
+        msp_logFilter = newLogFilter;
+    else
+        msp_logFilter.reset( new ClientRequest::LogFilter );
+}
 
 ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &request)
 : m_conn(conn),
@@ -916,22 +950,9 @@ ClientRequest::doRequest()
         os << m_request;
         std::string str = os.str();
         if (g_log->enabled(Log::DEBUG)) {
-            std::string webAuth, proxyAuth;
-            if (stricmp(m_request.request.authorization.scheme.c_str(), "Basic") == 0) {
-                webAuth = m_request.request.authorization.base64;
-                m_request.request.authorization.base64 = "<hidden>";
-            }
-            if (stricmp(m_request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0) {
-                proxyAuth = m_request.request.proxyAuthorization.base64;
-                m_request.request.proxyAuthorization.base64 = "<hidden>";
-            }
-            MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber<< " " << m_request;
-            if (!webAuth.empty())
-                m_request.request.authorization.base64 = webAuth;
-            if (!proxyAuth.empty())
-                m_request.request.proxyAuthorization.base64 = proxyAuth;
+            MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber<< " " << (*msp_logFilter)(m_request);
         } else {
-            MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_request.requestLine;
+            MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << (*msp_logFilter)(m_request.requestLine);
         }
         m_conn->m_stream->write(str.c_str(), str.size());
 

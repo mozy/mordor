@@ -30,6 +30,79 @@ namespace JSON {
 class Value;
 }
 
+
+/*
+Configuration Variables (ConfigVars) are a mechanism for configuring the
+behavior of Mordor at runtime (e.g. without requiring recompilation).
+It is a generic and useful mechanim, and software that uses Mordor can
+define and use its own set of ConfigVars.
+
+ConfigVars are stored in a singleton key-value table.
+
+Typical usages of Configuration Variables include:
+-Variables to adjust the level of logging (e.g. "log.debugmask")
+-Variables to control the frequency of periodic timers
+-Variables to enable experimental features or debugging tools
+
+The key name of a ConfigVar can only contain lower case letters
+and the "." separator.  When defined using an environmental variable
+upper case characters are converted to lower case, and the "_" character
+can be used in place of ".".
+
+The value of a ConfigVar has a specific type, e.g. string, integer or
+double.  To access the specific value it is necessary the use the correctly
+templated ConfigVar object.  e.g. ConfigVar<std::string> to read a string.
+For convenience the toString() and fromString() can be used to
+access the value in a general way, for example when iterating through all the
+configuration variables.
+
+A ConfigVar can only be defined once (via the templated version of
+Config::lookup()), and this typically happens at global scope in a source code
+file, with the result assigning to a global variable.
+
+for example:
+
+static ConfigVar<std::string>::ptr g_servername =
+    Config::lookup<std::string>("myapp.server",
+                                std::string("http://test.com"),
+                                "Main Server");
+
+Outside the source code where the ConfigVar is defined the variables can
+be read or written by performing a lookup using the non-templated version of
+Config::lookup()
+
+for example:
+
+static ConfigVarBase::ptr servername = Config::lookup("myapp.server");
+std::cout << servername.toString();
+
+To access the real value of a ConfigVar you would typically use a cast operation like this:
+
+ConfigVar<bool>::ptr boolVar = boost::dynamic_pointer_cast<ConfigVar<bool> >(Config::lookup('myapp.showui'))
+if (configVarPtr) {
+    bool b = boolVar->val();
+    ...
+}
+
+In this case the type specified must exactly match the type used when the
+ConfigVar was defined.
+
+In addition to programmatic access it is possible to override the default
+value of a ConfigVar using built in support for reading environmental
+variables (Config::loadFromEnvironment()), Windows registry settings
+(Config::loadFromRegistry()) etc.  These mechanisms are optional and must
+be explicitly called from the code that uses Mordor.  You could also easily
+extend this concept with your own code to read ConfigVars from ini files,
+Apple property lists, sql databases etc.
+
+Like any other global variable, ConfigVars should be used with some degree of
+constraint and common sense.  For example they make sense for things that
+are primarily adjusted only during testing, for example to point a client
+to a test server rather than a default server or to increase the frequency of
+a periodic operation.  But they should not be used as a replacement for clean
+APIs used during the regular software flow.
+*/
+
 class ConfigVarBase : public boost::noncopyable
 {
 public:
@@ -171,6 +244,7 @@ public:
 #endif
 
 public:
+    //Used to declare a ConfigVar.  A ConfigVar can only be declared once.
     template <class T>
     static typename ConfigVar<T>::ptr lookup(const std::string &name,
         const T &defaultValue, const std::string &description = "")
@@ -185,7 +259,11 @@ public:
         return v;
     }
 
+    //This signature of Lookup is used to perform a lookup for a
+    //previously declared ConfigVar
     static ConfigVarBase::ptr lookup(const std::string &name);
+
+    // Use to iterate all the ConfigVars
     static void visit(boost::function<void (ConfigVarBase::ptr)> dg);
 
     /// Load ConfigVars from command line arguments
@@ -197,6 +275,12 @@ public:
     /// @throws std::invalid_argument With what() == the name of the ConfigVar
     ///         if the value was not successfully set
     static void loadFromCommandLine(int &argc, char *argv[]);
+
+    // Update value of ConfigVars based on environmental variables.
+    // This is done by iterating the environmental looking for any that match
+    // the format KEY=VALUE for a previously declared ConfigVar.
+    // The key is automatically converted to lowercase, and "_" can be
+    // used in place of "."
     static void loadFromEnvironment();
     static void loadFromJSON(const JSON::Value &json);
 #ifdef WINDOWS
