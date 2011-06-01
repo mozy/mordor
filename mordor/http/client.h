@@ -88,6 +88,7 @@ public:
     // default implementation hides HTTP Basic auth; derive and replace if you need
     //  to hide any other information (keys, etc.)
     struct LogFilter {
+        virtual ~LogFilter() {}
         virtual std::string operator()(const RequestLine &requestLine); // for verbose
         virtual std::string operator()(const Request &request);         // for debug/trace
     };
