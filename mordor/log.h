@@ -280,6 +280,8 @@ private:
     Logger(const std::string &name, Logger::ptr parent);
 
 public:
+    ~Logger();
+
     /// @return If this logger is enabled at level
     bool enabled(Log::Level level);
     /// Set this logger to level

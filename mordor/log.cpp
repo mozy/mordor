@@ -423,6 +423,12 @@ Logger::Logger(const std::string &name, Logger::ptr parent)
   m_inheritSinks(true)
 {}
 
+Logger::~Logger()
+{
+    m_level = Log::NONE;
+    clearSinks();
+}
+
 bool
 Logger::enabled(Log::Level level)
 {
