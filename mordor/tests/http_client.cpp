@@ -2262,6 +2262,8 @@ static void scheduleRequestAndThrowDummyException(ClientConnection::ptr conn,
 }
 
 
+#ifndef HAVE_VALGRIND
+// failWhileFlushOtherWaiting test case causes valgrind crash, conditionally disable it
 MORDOR_UNITTEST(HTTPClient, failWhileFlushOtherWaiting)
 {
     WorkerPool pool;
@@ -2282,7 +2284,10 @@ MORDOR_UNITTEST(HTTPClient, failWhileFlushOtherWaiting)
     MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
     Scheduler::yield();
     MORDOR_ASSERT(excepted);
+    // reset onWrite callback to break the conn->testStream->conn reference cycle
+    testStream->onWrite(0, 0);
 }
+#endif
 
 
 MORDOR_UNITTEST(HTTPClient, failWhileRequestingOtherWaiting)
@@ -2306,6 +2311,8 @@ MORDOR_UNITTEST(HTTPClient, failWhileRequestingOtherWaiting)
     MORDOR_TEST_ASSERT_EXCEPTION(request->doRequest(), DummyException);
     Scheduler::yield();
     MORDOR_ASSERT(excepted);
+    // reset onWrite callback to break the conn->testStream->conn reference cycle
+    testStream->onWrite(0, 0);
 }
 
 MORDOR_UNITTEST(HTTPClient, failWhileFlushNoRequestBodyResponseHeaders)

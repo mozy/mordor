@@ -67,3 +67,9 @@
    fun:_ZN5boost9date_time16date_input_facetINS_9gregorian4dateEcSt19istreambuf_iteratorIcSt11char_traitsIcEEEC2ERKSsm
    fun:_ZN5boost9date_time16time_input_facetINS_10posix_time5ptimeEcSt19istreambuf_iteratorIcSt11char_traitsIcEEEC1ERKSsm
 }
+{
+   strftime
+   Memcheck:Cond
+   fun:__strftime_internal
+   fun:strftime_l
+}
