@@ -94,6 +94,7 @@ private:
     std::set<Timer::ptr, Timer::Comparator> m_timers;
     boost::mutex m_mutex;
     bool m_tickled;
+    unsigned long long m_previousTime;
 };
 
 }
