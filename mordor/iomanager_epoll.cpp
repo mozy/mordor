@@ -159,13 +159,6 @@ IOManager::IOManager(size_t threads, bool useCaller)
     memset(&event, 0, sizeof(epoll_event));
     event.events = EPOLLIN | EPOLLET;
     event.data.fd = m_tickleFds[0];
-    rc = fcntl(m_tickleFds[0], F_SETFL, O_NONBLOCK);
-    if (rc == -1) {
-        close(m_tickleFds[0]);
-        close(m_tickleFds[1]);
-        close(m_epfd);
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
-    }
     rc = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_ADD, " << m_tickleFds[0]
@@ -374,11 +367,9 @@ IOManager::idle()
             epoll_event &event = events[i];
             if (event.data.fd == m_tickleFds[0]) {
                 unsigned char dummy;
-                int rc2;
-                while((rc2 = read(m_tickleFds[0], &dummy, 1)) == 1) {
-                    MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
-                }
-                MORDOR_VERIFY(rc2 < 0 && errno == EAGAIN);
+                int rc2 = read(m_tickleFds[0], &dummy, 1);
+                MORDOR_VERIFY(rc2 == 1);
+                MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
                 continue;
             }
 
