@@ -265,7 +265,8 @@ IOManager::idle()
             if ((int)event.ident == m_tickleFds[0]) {
                 unsigned char dummy;
                 MORDOR_VERIFY(read(m_tickleFds[0], &dummy, 1) == 1);
-                MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
+                MORDOR_LOG_VERBOSE(g_log) << this << " received tickle (" << event.data
+                    << " remaining)";
                 continue;
             }
 
