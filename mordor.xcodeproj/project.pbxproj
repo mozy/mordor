@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		34CCCE4F13982DC900E6BDBA /* compoundlistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 34CCCE4D13982DC900E6BDBA /* compoundlistener.cpp */; };
+		34CCCE5013982DC900E6BDBA /* compoundlistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 34CCCE4D13982DC900E6BDBA /* compoundlistener.cpp */; };
+		34CCCE5113982DC900E6BDBA /* compoundlistener.h in Headers */ = {isa = PBXBuildFile; fileRef = 34CCCE4E13982DC900E6BDBA /* compoundlistener.h */; };
+		34CCCE5213982DC900E6BDBA /* compoundlistener.h in Headers */ = {isa = PBXBuildFile; fileRef = 34CCCE4E13982DC900E6BDBA /* compoundlistener.h */; };
 		3CAB29B5112B347400607AEE /* json.rl in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB271E112B096700607AEE /* json.rl */; };
 		3CAB29B6112B347400607AEE /* http_parser.rl in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB270E112B096700607AEE /* http_parser.rl */; settings = {COMPILER_FLAGS = http; }; };
 		3CAB29B7112B347400607AEE /* xml_parser.rl in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB27A1112B096700607AEE /* xml_parser.rl */; settings = {COMPILER_FLAGS = xml; }; };
@@ -100,6 +104,8 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXFileReference section */
+		34CCCE4D13982DC900E6BDBA /* compoundlistener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = compoundlistener.cpp; sourceTree = "<group>"; };
+		34CCCE4E13982DC900E6BDBA /* compoundlistener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = compoundlistener.h; sourceTree = "<group>"; };
 		3CAB26D5112B096700607AEE /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		3CAB26D6112B096700607AEE /* anymap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = anymap.h; sourceTree = "<group>"; };
 		3CAB26D7112B096700607AEE /* assert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = assert.cpp; sourceTree = "<group>"; };
@@ -586,6 +592,8 @@
 		3CAB2771112B096700607AEE /* test */ = {
 			isa = PBXGroup;
 			children = (
+				34CCCE4D13982DC900E6BDBA /* compoundlistener.cpp */,
+				34CCCE4E13982DC900E6BDBA /* compoundlistener.h */,
 				E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */,
 				E2DE14B211E67ADD00D9622F /* antxmllistener.h */,
 				3CAB2773112B096700607AEE /* stdoutlistener.cpp */,
@@ -661,6 +669,7 @@
 				C32025C011F949CF00E09E5A /* parallel.h in Headers */,
 				C32025C211F949CF00E09E5A /* workerpool.h in Headers */,
 				C32854BF120A1E750079C4A2 /* thread.h in Headers */,
+				34CCCE5113982DC900E6BDBA /* compoundlistener.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -668,6 +677,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				34CCCE5213982DC900E6BDBA /* compoundlistener.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -803,6 +813,7 @@
 				61AA83C6120A18D600D7B56B /* filter.cpp in Sources */,
 				61AA83C7120A18D600D7B56B /* singleplex.cpp in Sources */,
 				3F4296F01385DADC007EC0C7 /* util.cpp in Sources */,
+				34CCCE4F13982DC900E6BDBA /* compoundlistener.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -813,6 +824,7 @@
 				E2DE14B611E67AFF00D9622F /* stdoutlistener.cpp in Sources */,
 				E2DE14B811E67AFF00D9622F /* test.cpp in Sources */,
 				E2DE14B311E67ADD00D9622F /* antxmllistener.cpp in Sources */,
+				34CCCE5013982DC900E6BDBA /* compoundlistener.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
