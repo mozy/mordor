@@ -42,6 +42,13 @@ nobase_include_HEADERS=			\
 	mordor/main.h			\
 	mordor/parallel.h		\
 	mordor/predef.h			\
+	mordor/protobuf.h		\
+	mordor/pq/connection.h		\
+	mordor/pq/connectionpool.h	\
+	mordor/pq/exception.h		\
+	mordor/pq/preparedstatement.h	\
+	mordor/pq/result.h		\
+	mordor/pq/transaction.h		\
 	mordor/ragel.h			\
 	mordor/scheduler.h		\
 	mordor/semaphore.h		\
@@ -93,24 +100,8 @@ nobase_include_HEADERS=			\
 	mordor/version.h		\
 	mordor/workerpool.h		\
 	mordor/xml/parser.h		\
+	mordor/yaml.h			\
 	mordor/zip.h
-
-if HAVE_POSTGRESQL
-	nobase_include_HEADERS+=		\
-		mordor/pq/connection.h		\
-		mordor/pq/connectionpool.h	\
-		mordor/pq/exception.h		\
-		mordor/pq/preparedstatement.h	\
-		mordor/pq/result.h		\
-		mordor/pq/transaction.h
-endif
-if HAVE_PROTOBUF
-	nobase_include_HEADERS+=mordor/protobuf.h
-endif
-if HAVE_LIBYAML
-	nobase_include_HEADERS+=mordor/yaml.h
-endif
-
 
 lib_LTLIBRARIES=mordor/libmordor.la mordor/test/libmordortest.la
 
