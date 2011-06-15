@@ -771,7 +771,7 @@ RetryRequestBroker::request(Request &requestHeaders, bool forceNewConnection,
             continue;
         } catch (PriorConnectionFailedException &ex) {
             const ExceptionSource *source = boost::get_error_info<errinfo_source>(ex);
-            if (!source || *source != HTTP)
+            if (!source || (*source != HTTP && *source != CONNECTION))
                 throw;
             if (m_delayDg && !m_delayDg(*retries + 1))
                 throw;
