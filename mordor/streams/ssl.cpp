@@ -438,8 +438,9 @@ SSLStream::flush(bool flushParent)
     char *writeBuf;
     size_t toWrite = BIO_get_mem_data(m_writeBio, &writeBuf);
     m_writeBuffer.copyIn(writeBuf, toWrite);
-    int dummy = BIO_reset(m_writeBio);
-    dummy = 0;
+    if (BIO_reset(m_writeBio) != 1)
+      MORDOR_LOG_TRACE(g_log) << this << " BIO_reset failed ??";
+
     if (m_writeBuffer.readAvailable() == 0)
         return;
 
