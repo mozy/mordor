@@ -1186,7 +1186,7 @@ bool ifMatch(ServerRequest::ptr request, const ETag &eTag)
             if (getOrHead)
                 request->response().response.eTag = eTag;
             respondError(request, getOrHead ? NOT_MODIFIED : PRECONDITION_FAILED,
-                std::string(), false, !getOrHead);
+                std::string(), false, true, !getOrHead);
             return false;
         }
     } else {
@@ -1207,7 +1207,7 @@ bool ifMatch(ServerRequest::ptr request, const ETag &eTag)
                 request->response().response.eTag = eTag;
             respondError(request,
                 getOrHead ? NOT_MODIFIED : PRECONDITION_FAILED, std::string(),
-                false, !getOrHead);
+                false, true, !getOrHead);
             return false;
         }
     }
