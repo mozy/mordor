@@ -39,7 +39,7 @@ private:
         };
 
         EventContext &contextForEvent(Event event);
-        bool triggerEvent(Event event, size_t &pendingEventCount);
+        bool triggerEvent(Event event, size_t *pendingEventCount = NULL);
 
         int m_fd;
         EventContext m_in, m_out, m_close;

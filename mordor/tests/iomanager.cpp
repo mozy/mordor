@@ -4,6 +4,7 @@
 
 #include "mordor/iomanager.h"
 #include "mordor/sleep.h"
+#include "mordor/streams/pipe.h"
 #include "mordor/test/test.h"
 
 using namespace Mordor;
@@ -56,5 +57,21 @@ MORDOR_UNITTEST(IOManager, lotsOfTickles)
             ioManager.tickle();
         // Let the tickles drain
         sleep(ioManager, 250000ull);
+    }
+}
+
+static void writeOne(Stream::ptr stream)
+{
+    MORDOR_TEST_ASSERT_EQUAL(stream->write("t", 1u), 1u);
+}
+
+MORDOR_UNITTEST(IOManager, rapidClose)
+{
+    IOManager ioManager(2);
+    for (int i = 0; i < 10000; ++i) {
+        std::pair<Stream::ptr, Stream::ptr> pipes = anonymousPipe(&ioManager);
+        ioManager.schedule(boost::bind(&writeOne, pipes.second));
+        char buffer;
+        MORDOR_TEST_ASSERT_EQUAL(pipes.first->read(&buffer, 1u), 1u);
     }
 }

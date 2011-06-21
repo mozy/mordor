@@ -120,20 +120,22 @@ IOManager::AsyncState::contextForEvent(Event event)
 }
 
 bool
-IOManager::AsyncState::triggerEvent(Event event, size_t &pendingEventCount)
+IOManager::AsyncState::triggerEvent(Event event, size_t *pendingEventCount)
 {
     if (!(m_events & event))
         return false;
     m_events = (Event)(m_events & ~event);
-    atomicDecrement(pendingEventCount);
-    EventContext &context = contextForEvent(event);
-    if (context.dg)
-        context.scheduler->schedule(context.dg);
-    else
-        context.scheduler->schedule(context.fiber);
-    context.scheduler = NULL;
-    context.fiber.reset();
-    context.dg = NULL;
+    if (pendingEventCount) {
+        atomicDecrement(*pendingEventCount);
+        EventContext &context = contextForEvent(event);
+        if (context.dg)
+            context.scheduler->schedule(context.dg);
+        else
+            context.scheduler->schedule(context.fiber);
+        context.scheduler = NULL;
+        context.fiber.reset();
+        context.dg = NULL;
+    }
     return true;
 }
 
@@ -322,7 +324,7 @@ IOManager::cancelEvent(int fd, Event event)
         << " (" << lastError() << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-    state.triggerEvent(event, m_pendingEventCount);
+    state.triggerEvent(event, &m_pendingEventCount);
     return true;
 }
 
@@ -384,14 +386,14 @@ IOManager::idle()
                 event.events |= EPOLLIN | EPOLLOUT;
 
             bool triggered = false;
-            if (event.events & EPOLLIN)
-                triggered = state.triggerEvent(READ, m_pendingEventCount);
-            if (event.events & EPOLLOUT)
-                triggered = triggered ||
-                    state.triggerEvent(WRITE, m_pendingEventCount);
-            if (event.events & EPOLLRDHUP)
-                triggered = triggered ||
-                    state.triggerEvent(CLOSE, m_pendingEventCount);
+            uint32_t toTrigger = event.events;
+            uint32_t oldEvents = event.events;
+            if (toTrigger & EPOLLIN)
+                triggered = state.triggerEvent(READ);
+            if (toTrigger & EPOLLOUT)
+                triggered = triggered || state.triggerEvent(WRITE);
+            if (toTrigger & EPOLLRDHUP)
+                triggered = triggered || state.triggerEvent(CLOSE);
 
             // Nothing was triggered, probably because a prior cancelEvent call
             // (probably on a different thread) already triggered it, so no
@@ -408,6 +410,14 @@ IOManager::idle()
                 << " (" << lastError() << ")";
             if (rc2)
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+
+            state.m_events = (Event)oldEvents;
+            if (toTrigger & EPOLLIN)
+                state.triggerEvent(READ, &m_pendingEventCount);
+            if (toTrigger & EPOLLOUT)
+                state.triggerEvent(WRITE, &m_pendingEventCount);
+            if (toTrigger & EPOLLRDHUP)
+                state.triggerEvent(CLOSE, &m_pendingEventCount);
         }
         try {
             Fiber::yield();
