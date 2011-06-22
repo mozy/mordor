@@ -27,6 +27,8 @@ static ConfigVar<std::string>::ptr g_httpProxy =
     Config::lookup("http.proxy", std::string(),
     "HTTP Proxy Server");
 
+static Logger::ptr proxyLog = Log::lookup("mordor:http:proxy");
+
 std::vector<URI> proxyFromConfig(const URI &uri)
 {
     return proxyFromList(uri, g_httpProxy->val());
@@ -237,6 +239,11 @@ ProxyCache::autoDetectProxy(const URI &uri, const std::string &pacScript)
     if (pWinHttpGetProxyForUrl(m_hHttpSession, toUtf16(uri.toString()).c_str(),
         &options, &proxyInfo)) {
         return proxyFromProxyInfo(uri, proxyInfo);
+    }
+    else
+    {
+        error_t error = Mordor::lastError();
+        MORDOR_LOG_ERROR(proxyLog) << "WinHttpGetProxyForUrl: (" << error << ") : " << uri.toString() << " : " <<  pacScript ;
     }
     return result;
 }
