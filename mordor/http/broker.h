@@ -78,6 +78,7 @@ public:
 
     void connectTimeout(unsigned long long timeout) { m_connectTimeout = timeout; }
 
+    // Resolve the uri to its IP address, create a socket, then connect
     boost::shared_ptr<Stream> getStream(const URI &uri);
     void cancelPending();
 
@@ -87,7 +88,7 @@ public:
 private:
     boost::mutex m_mutex;
     bool m_cancelled;
-    std::list<boost::shared_ptr<Socket> > m_pending;
+    std::list<boost::shared_ptr<Socket> > m_pending; // Multiple connections may be attempted when getaddrinfo returns multiple addresses
     IOManager *m_ioManager;
     Scheduler *m_scheduler;
     unsigned long long m_connectTimeout;
@@ -110,6 +111,20 @@ public:
 
 struct PriorConnectionFailedException : virtual Exception {};
 
+// The ConnectionCache holds all connections associated with a RequestBroker.
+// This is not a global cache of all connections - each RequestBroker instance
+// will have its own.
+//
+// It permits a single RequestBroker to maintain multiple connections to
+// multiple servers at the same time.  Connections are held active in this cache
+// so that multiple requests can be performed over a single connection and
+// the cache will take care of automatically reopening connections after they
+// close when a new request arrives.
+// It understands how to use proxies, but relies on the caller provided callback
+// to determine the proxy rules for each request.
+//
+// Although exposed by createRequestBroker(), normal clients will not manipulate
+// the ConnectionCache directly, apart from calling abortConnections or closeIdleConnections
 class ConnectionCache : public ConnectionBroker
 {
 public:
@@ -131,7 +146,10 @@ public:
           m_sslCtx(NULL)
     {}
 
+    // Specify the maximum number of seperate connections to allow to a specific host (or proxy)
+    // at a time
     void connectionsPerHost(size_t connections) { m_connectionsPerHost = connections; }
+
     void httpReadTimeout(unsigned long long timeout) { m_httpReadTimeout = timeout; }
     void httpWriteTimeout(unsigned long long timeout) { m_httpWriteTimeout = timeout; }
     void idleTimeout(unsigned long long timeout) { m_idleTimeout = timeout; }
@@ -140,21 +158,34 @@ public:
     void sslCtx(SSL_CTX *ctx) { m_sslCtx = ctx; }
     void verifySslCertificate(bool verify) { m_verifySslCertificate = verify; }
     void verifySslCertificateHost(bool verify) { m_verifySslCertificateHost = verify; }
-    // Required to support any proxies
+
+    // Proxy support requires this callback.  It is expected to return an
+    // array of candidate Proxy servers to handle the requested URI.
+    // If none are returned the request will be performed directly
     void proxyForURI(boost::function<std::vector<URI> (const URI &)> proxyForURIDg)
     { m_proxyForURIDg = proxyForURIDg; }
+
     // Required to support HTTPS proxies
     void proxyRequestBroker(boost::shared_ptr<RequestBroker> broker)
     { m_proxyBroker = broker; }
 
-    std::pair<boost::shared_ptr<ClientConnection>, bool>
+    // Get the connection associated with a URI.  An existing one may be reused,
+    // or a new one established.
+    std::pair<boost::shared_ptr<ClientConnection>, bool /*is proxy connection*/>
         getConnection(const URI &uri, bool forceNewConnection = false);
 
     void closeIdleConnections();
+
+    // Cancel all connections, even the active ones.
+    // Clients should expect OperationAbortedException, and PriorRequestFailedException
+    // to be thrown if requests are active
     void abortConnections();
 
 private:
     typedef std::list<boost::shared_ptr<ClientConnection> > ConnectionList;
+
+    // Tracks active connections to a particular host
+    // e.g. there might be 5 active connections to http://example.com
     struct ConnectionInfo
     {
         ConnectionInfo(FiberMutex &mutex)
@@ -166,6 +197,10 @@ private:
         FiberCondition condition;
         unsigned long long lastFailedConnectionTimestamp;
     };
+
+    // Table of active connections for each scheme+host
+    // e.g. if a single RequestBroker is connected to two servers at the same time
+    // or doing both http and https requests then this will contain multiple entries
     typedef std::map<URI, boost::shared_ptr<ConnectionInfo> > CachedConnectionMap;
 
 private:
@@ -193,11 +228,14 @@ private:
     boost::shared_ptr<RequestBroker> m_proxyBroker;
 };
 
+// Mock object useful for unit tests.  Rather than
+// making a real network call, each request will be
+// processed directly by the provided callback
 class MockConnectionBroker : public ConnectionBroker
 {
 private:
     typedef std::map<URI, boost::shared_ptr<ClientConnection> >
-        ConnectionCache;
+        ConnectionCache; // warning - not the same as class ConnectionCache
 public:
     MockConnectionBroker(boost::function<void (const URI &uri,
             boost::shared_ptr<ServerRequest>)> dg,
@@ -209,7 +247,7 @@ public:
           m_writeTimeout(writeTimeout)
     {}
 
-    std::pair<boost::shared_ptr<ClientConnection>, bool>
+    std::pair<boost::shared_ptr<ClientConnection>, bool /*is proxy connection*/>
         getConnection(const URI &uri, bool forceNewConnection = false);
 
 private:
@@ -219,6 +257,10 @@ private:
     unsigned long long m_readTimeout, m_writeTimeout;
 };
 
+// Abstract base-class for all the RequestBroker objects.
+// RequestBrokers are typically instantiated by calling createRequestBroker().
+// RequestBrokers abstract the actual network connection. Reusing a connection
+// for multiple requests is achieved by reusing a RequestBroker.
 class RequestBroker
 {
 public:
@@ -228,15 +270,31 @@ public:
 public:
     virtual ~RequestBroker() {}
 
+    // Perform a request.  The caller should prepare the requestHeaders
+    // as much as they like, and the chain of RequestBrokerFilters will
+    // also potentially make further adjustments
+    //
+    // Tip: Typically the full URI for the destination should be set in
+    // requestHeaders.requestLine.uri, even though the scheme and authority are
+    // not sent in the first line of the HTTP request. Also fill in
+    // the requestHeaders.request.host.
     virtual boost::shared_ptr<ClientRequest> request(Request &requestHeaders,
         bool forceNewConnection = false,
         boost::function<void (boost::shared_ptr<ClientRequest>)> bodyDg = NULL)
         = 0;
 };
 
+// RequestBrokerFilter is the base class for filter request brokers,
+// which exist in a chain leading to the BaseRequestBroker.
+// Each derived class can implement special logic in the request()
+// method and then call request on the next element in the chain (its parent).
+// A filter can stop a request by throwing an exception.
 class RequestBrokerFilter : public RequestBroker
 {
 public:
+    // When created a RequestBrokerFilter is inserted at the
+    // beginning of a chain of RequestBrokers, with the parent being the
+    // next broker in the chain
     RequestBrokerFilter(RequestBroker::ptr parent,
         RequestBroker::weak_ptr weakParent = RequestBroker::weak_ptr())
         : m_parent(parent),
@@ -266,6 +324,8 @@ enum ExceptionSource
 };
 typedef boost::error_info<struct tag_source, ExceptionSource > errinfo_source;
 
+// The BaseRequestBroker is the final broker in a chain of requestbrokers
+// and sends the fully prepared request to its ConnectionBroker to be performed
 class BaseRequestBroker : public RequestBroker
 {
 public:
@@ -353,6 +413,7 @@ private:
     bool m_handle301, m_handle302, m_handle307;
 };
 
+// Takes care of filling in the User-Agent header
 class UserAgentRequestBroker : public RequestBrokerFilter
 {
 public:
@@ -370,6 +431,12 @@ private:
     ProductAndCommentList m_userAgent;
 };
 
+// When creating a new RequestBroker this structure is used to
+// defines the configuration of a chain of requestBrokers
+// and associated services.  The most common configuration options
+// are exposed here, but further custom RequestBroker behavior
+// can be achieved by directly creating RequestBrokerFilter objects
+// and adding them to the chain
 struct RequestBrokerOptions
 {
     RequestBrokerOptions() :
@@ -391,32 +458,62 @@ struct RequestBrokerOptions
 
     IOManager *ioManager;
     Scheduler *scheduler;
-    boost::function<bool (size_t)> delayDg;
+
+    // When specified a RetryRequestBroker will be installed.  If a request fails
+    // the callback will be called with the current retry count. If the callback
+    // returns false then no further retries are attempted.
+    boost::function<bool (size_t /*retry count*/)> delayDg;
+
+    // Callback to call directly before a socket connection happens.
+    // Implementation should throw an exception if it wants to prevent the connection
     boost::function<void (boost::shared_ptr<Socket>)> filterNetworksCB;
-    bool handleRedirects;
-    TimerManager *timerManager;
+
+    bool handleRedirects; // Whether to add a RedirectRequestBroker to the chain of RequestBrokers
+    TimerManager *timerManager; // When not specified the iomanager will be used
+
+    // Optional timeout values (ns)
     unsigned long long connectTimeout;
     unsigned long long sslConnectReadTimeout;
     unsigned long long sslConnectWriteTimeout;
     unsigned long long httpReadTimeout;
     unsigned long long httpWriteTimeout;
     unsigned long long idleTimeout;
+
+    // Callback to find proxy for an URI, see ConnectionCache::proxyForURI
     boost::function<std::vector<URI> (const URI &)> proxyForURIDg;
+
     /// Required to enable https proxy support
     RequestBroker::ptr proxyRequestBroker;
+
+    // When specified these callbacks will be invoked to add authorization to the
+    // request.  An alternative is to add the BasicAuth header before
+    // calling RequestBroker::request (see HTTP::BasicAuth::authorize())
     boost::function<bool (const URI &,
             boost::shared_ptr<ClientRequest> /* priorRequest = ClientRequest::ptr() */,
             std::string & /* scheme */, std::string & /* realm */,
             std::string & /* username */, std::string & /* password */,
             size_t /* attempts */)>
             getCredentialsDg, getProxyCredentialsDg;
+
+
+    // When specified the provided object will be installed as a filter
+    // in front of the SocketStreamBroker
     StreamBrokerFilter::ptr customStreamBrokerFilter;
+
     SSL_CTX *sslCtx;
     bool verifySslCertificate;
     bool verifySslCertificateHost;
+
+    // When specified a UserAgentRequestBroker will take care of adding
+    // the User-Agent header to each request
     ProductAndCommentList userAgent;
 };
 
+// Factory method to create a chain of request broker objects based on the
+// the specified configuration options.  It also creates and returns a
+// shared pointer to the request's new ConnectionCache.
+// clients do not typically work directly with the ConnectionCache, except to
+// shut down connections with ConnectionCache::abortConnections
 std::pair<RequestBroker::ptr, ConnectionCache::ptr>
     createRequestBroker(const RequestBrokerOptions &options = RequestBrokerOptions());
 

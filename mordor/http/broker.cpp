@@ -115,7 +115,7 @@ SocketStreamBroker::getStream(const URI &uri)
     Socket::ptr socket;
     for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
         it != addresses.end();
-        ) 
+        )
     {
         if (m_ioManager)
             socket = (*it)->createSocket(*m_ioManager, SOCK_STREAM);
@@ -270,6 +270,11 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
 std::pair<ClientConnection::ptr, bool>
 ConnectionCache::getConnectionViaProxyFromCache(const URI &uri, const URI &proxy)
 {
+    // Check if an existing connection exists to the requested URI
+    // that should be reused.
+    // When proxy is specified this looks for a connection
+    // to the proxy uri instead
+
     bool proxied = proxy.schemeDefined() && proxy.scheme() == "http";
     const URI &endpoint = proxied ? proxy : uri;
     CachedConnectionMap::iterator it = m_conns.find(endpoint);
@@ -315,6 +320,9 @@ std::pair<ClientConnection::ptr, bool>
 ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
     FiberMutex::ScopedLock &lock)
 {
+    // Create a new Connection to the requested URI, using
+    // the proxy if specified
+
     std::string proxyScheme;
     if (proxy.schemeDefined())
         proxyScheme = proxy.scheme();
