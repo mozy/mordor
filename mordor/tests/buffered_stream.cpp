@@ -2,9 +2,11 @@
 
 #include "mordor/streams/memory.h"
 #include "mordor/streams/buffered.h"
+#include "mordor/streams/pipe.h"
 #include "mordor/streams/singleplex.h"
 #include "mordor/streams/test.h"
 #include "mordor/test/test.h"
+#include "mordor/workerpool.h"
 
 using namespace Mordor;
 using namespace Mordor::Test;
@@ -503,4 +505,38 @@ MORDOR_UNITTEST(BufferedStream, partiallyBufferedReadRawBuffer)
     MORDOR_TEST_ASSERT_EQUAL((const char *)buffer, "01");
     MORDOR_TEST_ASSERT_EQUAL(stream->read(buffer, 2), 2u);
     MORDOR_TEST_ASSERT_EQUAL((const char *)buffer, "23");
+}
+
+static const size_t A_LOT_OF_ITERATIONS = 5000u;
+
+static void readALot(Stream::ptr stream)
+{
+    unsigned char buffer;
+    for (size_t i = 0; i < A_LOT_OF_ITERATIONS; ++i)
+        MORDOR_TEST_ASSERT_EQUAL(stream->read(&buffer, 1u), 1u);
+}
+
+static void writeALot(Stream::ptr stream)
+{
+    for (size_t i = 0; i < A_LOT_OF_ITERATIONS; ++i) {
+        MORDOR_TEST_ASSERT_EQUAL(stream->write("t", 1u), 1u);
+        stream->flush(false);
+    }
+}
+
+// This test is to confirm a crash in BufferedStream::flush on a full duplex
+// stream where flush (a write operation) is accessing m_readBuffer (a read
+// operation)
+MORDOR_UNITTEST(BufferedStream, flushFullDuplexStream)
+{
+    WorkerPool pool(2);
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream(2u);
+    pipes.first.reset(new BufferedStream(pipes.first));
+    pipes.second.reset(new BufferedStream(pipes.second));
+
+    pool.schedule(boost::bind(&readALot, pipes.first));
+    pool.schedule(boost::bind(&writeALot, pipes.first));
+    pool.schedule(boost::bind(&readALot, pipes.second));
+    pool.schedule(boost::bind(&writeALot, pipes.second));
+    pool.stop();
 }
