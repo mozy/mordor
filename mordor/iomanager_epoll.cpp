@@ -387,7 +387,7 @@ IOManager::idle()
 
             bool triggered = false;
             uint32_t toTrigger = event.events;
-            uint32_t oldEvents = event.events;
+            uint32_t oldEvents = state.m_events;
             if (toTrigger & EPOLLIN)
                 triggered = state.triggerEvent(READ);
             if (toTrigger & EPOLLOUT)
