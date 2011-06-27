@@ -20,7 +20,9 @@ FDStream::FDStream()
 : m_ioManager(NULL),
   m_scheduler(NULL),
   m_fd(-1),
-  m_own(false)
+  m_own(false),
+  m_cancelledRead(false),
+  m_cancelledWrite(false)
 {}
 
 void
@@ -31,6 +33,7 @@ FDStream::init(int fd, IOManager *ioManager, Scheduler *scheduler, bool own)
     m_scheduler = scheduler;
     m_fd = fd;
     m_own = own;
+    m_cancelledRead = m_cancelledWrite = false;
     if (m_ioManager) {
         if (fcntl(m_fd, F_SETFL, O_NONBLOCK)) {
             error_t error = lastError();
@@ -72,6 +75,8 @@ FDStream::close(CloseType type)
 size_t
 FDStream::read(Buffer &buffer, size_t length)
 {
+    if (m_ioManager && m_cancelledRead)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
     SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     if (length > 0xfffffffe)
@@ -83,6 +88,8 @@ FDStream::read(Buffer &buffer, size_t length)
             << "): " << rc << " (EAGAIN)";
         m_ioManager->registerEvent(m_fd, IOManager::READ);
         Scheduler::yieldTo();
+        if (m_cancelledRead)
+            MORDOR_THROW_EXCEPTION(OperationAbortedException());
         rc = readv(m_fd, &iovs[0], iovs.size());
     }
     error_t error = lastError();
@@ -98,6 +105,8 @@ FDStream::read(Buffer &buffer, size_t length)
 size_t
 FDStream::read(void *buffer, size_t length)
 {
+    if (m_ioManager && m_cancelledRead)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
     SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     if (length > 0xfffffffe)
@@ -108,6 +117,8 @@ FDStream::read(void *buffer, size_t length)
             << "): " << rc << " (EAGAIN)";
         m_ioManager->registerEvent(m_fd, IOManager::READ);
         Scheduler::yieldTo();
+        if (m_cancelledRead)
+            MORDOR_THROW_EXCEPTION(OperationAbortedException());
         rc = ::read(m_fd, buffer, length);
     }
     error_t error = lastError();
@@ -119,9 +130,19 @@ FDStream::read(void *buffer, size_t length)
     return rc;
 }
 
+void
+FDStream::cancelRead()
+{
+    m_cancelledRead = true;
+    if (m_ioManager)
+        m_ioManager->cancelEvent(m_fd, IOManager::WRITE);
+}
+
 size_t
 FDStream::write(const Buffer &buffer, size_t length)
 {
+    if (m_ioManager && m_cancelledWrite)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
     SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     if (length > 0xfffffffe)
@@ -133,6 +154,8 @@ FDStream::write(const Buffer &buffer, size_t length)
             << "): " << rc << " (EAGAIN)";
         m_ioManager->registerEvent(m_fd, IOManager::WRITE);
         Scheduler::yieldTo();
+        if (m_cancelledWrite)
+            MORDOR_THROW_EXCEPTION(OperationAbortedException());
         rc = writev(m_fd, &iovs[0], iovs.size());
     }
     error_t error = lastError();
@@ -149,6 +172,8 @@ FDStream::write(const Buffer &buffer, size_t length)
 size_t
 FDStream::write(const void *buffer, size_t length)
 {
+    if (m_ioManager && m_cancelledWrite)
+        MORDOR_THROW_EXCEPTION(OperationAbortedException());
     SchedulerSwitcher switcher(m_ioManager ? NULL : m_scheduler);
     MORDOR_ASSERT(m_fd >= 0);
     if (length > 0xfffffffe)
@@ -159,6 +184,8 @@ FDStream::write(const void *buffer, size_t length)
             << "): " << rc << " (EAGAIN)";
         m_ioManager->registerEvent(m_fd, IOManager::WRITE);
         Scheduler::yieldTo();
+        if (m_cancelledWrite)
+            MORDOR_THROW_EXCEPTION(OperationAbortedException());
         rc = ::write(m_fd, buffer, length);
     }
     error_t error = lastError();
@@ -170,6 +197,14 @@ FDStream::write(const void *buffer, size_t length)
     if (rc < 0)
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "write");
     return rc;
+}
+
+void
+FDStream::cancelWrite()
+{
+    m_cancelledWrite = true;
+    if (m_ioManager)
+        m_ioManager->cancelEvent(m_fd, IOManager::WRITE);
 }
 
 long long

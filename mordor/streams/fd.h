@@ -33,8 +33,10 @@ public:
     void close(CloseType type = BOTH);
     size_t read(Buffer &buffer, size_t length);
     size_t read(void *buffer, size_t length);
+    void cancelRead();
     size_t write(const Buffer &buffer, size_t length);
     size_t write(const void *buffer, size_t length);
+    void cancelWrite();
     long long seek(long long offset, Anchor anchor);
     long long size();
     void truncate(long long size);
@@ -46,7 +48,7 @@ private:
     IOManager *m_ioManager;
     Scheduler *m_scheduler;
     int m_fd;
-    bool m_own;
+    bool m_own, m_cancelledRead, m_cancelledWrite;
 };
 
 typedef FDStream NativeStream;
