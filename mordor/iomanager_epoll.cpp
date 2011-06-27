@@ -120,7 +120,8 @@ IOManager::AsyncState::contextForEvent(Event event)
 }
 
 bool
-IOManager::AsyncState::triggerEvent(Event event, size_t *pendingEventCount)
+IOManager::AsyncState::triggerEvent(Event event, size_t *pendingEventCount,
+    Fiber::ptr *fiber, boost::function<void ()> *dg)
 {
     if (!(m_events & event))
         return false;
@@ -133,8 +134,8 @@ IOManager::AsyncState::triggerEvent(Event event, size_t *pendingEventCount)
         else
             context.scheduler->schedule(context.fiber);
         context.scheduler = NULL;
-        context.fiber.reset();
-        context.dg = NULL;
+        fiber->swap(context.fiber);
+        dg->swap(context.dg);
     }
     return true;
 }
@@ -324,7 +325,10 @@ IOManager::cancelEvent(int fd, Event event)
         << " (" << lastError() << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-    state.triggerEvent(event, &m_pendingEventCount);
+    Fiber::ptr fiber;
+    boost::function<void ()> dg;
+    state.triggerEvent(event, &m_pendingEventCount, &fiber, &dg);
+    lock2.unlock();
     return true;
 }
 
@@ -411,13 +415,22 @@ IOManager::idle()
             if (rc2)
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
 
+            Fiber::ptr readFiber, writeFiber, closeFiber;
+            boost::function<void ()> readDg, writeDg, closeDg;
             state.m_events = (Event)oldEvents;
             if (toTrigger & EPOLLIN)
-                state.triggerEvent(READ, &m_pendingEventCount);
+                state.triggerEvent(READ, &m_pendingEventCount, &readFiber,
+                    &readDg);
             if (toTrigger & EPOLLOUT)
-                state.triggerEvent(WRITE, &m_pendingEventCount);
+                state.triggerEvent(WRITE, &m_pendingEventCount, &writeFiber,
+                    &writeDg);
             if (toTrigger & EPOLLRDHUP)
-                state.triggerEvent(CLOSE, &m_pendingEventCount);
+                state.triggerEvent(CLOSE, &m_pendingEventCount, &closeFiber,
+                    &closeDg);
+            // Make sure that the mutex is unlocked prior to the fiber/dg
+            // destructing, which may trigger a call to cancelEvent, causing
+            // a deadlock
+            lock2.unlock();
         }
         try {
             Fiber::yield();

@@ -39,7 +39,9 @@ private:
         };
 
         EventContext &contextForEvent(Event event);
-        bool triggerEvent(Event event, size_t *pendingEventCount = NULL);
+        bool triggerEvent(Event event, size_t *pendingEventCount = NULL,
+            boost::shared_ptr<Fiber> *fiber = NULL,
+            boost::function<void ()> *dg = NULL);
 
         int m_fd;
         EventContext m_in, m_out, m_close;
