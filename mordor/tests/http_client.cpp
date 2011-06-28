@@ -1,5 +1,9 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
+#ifdef HAVE_VALGRIND_VALGRIND_H
+#include <valgrind/valgrind.h>
+#endif
+
 #include <boost/bind.hpp>
 
 #include "mordor/fiber.h"
@@ -2262,10 +2266,13 @@ static void scheduleRequestAndThrowDummyException(ClientConnection::ptr conn,
 }
 
 
-#ifndef HAVE_VALGRIND
-// failWhileFlushOtherWaiting test case causes valgrind crash, conditionally disable it
 MORDOR_UNITTEST(HTTPClient, failWhileFlushOtherWaiting)
 {
+#ifdef HAVE_VALGRIND_VALGRIND_H
+    if (RUNNING_ON_VALGRIND)
+        throw TestSkippedException();
+#endif
+
     WorkerPool pool;
 
     MemoryStream::ptr requestStream(new MemoryStream());
@@ -2287,7 +2294,6 @@ MORDOR_UNITTEST(HTTPClient, failWhileFlushOtherWaiting)
     // reset onWrite callback to break the conn->testStream->conn reference cycle
     testStream->onWrite(0, 0);
 }
-#endif
 
 
 MORDOR_UNITTEST(HTTPClient, failWhileRequestingOtherWaiting)
