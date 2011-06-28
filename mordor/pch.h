@@ -1,6 +1,10 @@
 #ifndef __MORDOR_PCH_H__
 #define __MORDOR_PCH_H__
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include "version.h"
 
 #include "predef.h"
@@ -124,7 +128,7 @@
 #include <openssl/ssl.h>
 #include <zlib.h>
 
-#if defined(VALGRIND) && (defined(LINUX) || defined (OSX))
+#ifdef HAVE_VALGRIND_VALGRIND_H
 #include <valgrind/valgrind.h>
 #endif
 

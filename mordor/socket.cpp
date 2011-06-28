@@ -1646,6 +1646,7 @@ IPAddress::create(const char *address, unsigned short port)
 
 IPv4Address::IPv4Address(unsigned int address, unsigned short port)
 {
+    memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_port = byteswapOnLittleEndian(port);
     sin.sin_addr.s_addr = byteswapOnLittleEndian(address);

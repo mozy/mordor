@@ -6,7 +6,7 @@ AC_INIT([libmordor],[1.3.0])
 AM_INIT_AUTOMAKE
 LT_INIT([disable-static])
 AC_CONFIG_SRCDIR([mordor/fiber.cpp])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADERS([autoconfig.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_SUBST([LIBMORDOR_SO_VERSION], [1:0:0])
@@ -71,7 +71,7 @@ AS_IF([test "x$with_protobuf" = xyes],
 AM_CONDITIONAL([HAVE_PROTOBUF], [test "x${PROTOBUF_CFLAGS}" != x])
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h])
+AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h valgrind/valgrind.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_ASSERT
