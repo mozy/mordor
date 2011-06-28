@@ -280,11 +280,16 @@ SSLStream::close(CloseType type)
                         << boost::errinfo_api_function("SSL_shutdown");
                 }
                 if (result == 0) {
+                    // Transport EOF without close notify
+                    MORDOR_LOG_WARNING(g_log) << this << " SSL_shutdown(" << m_ssl.get()
+                        << "): " << result << " (" << error << ")";
+                    break;
+                } else {
+                    // Received more SSL data after sending close notify
                     MORDOR_LOG_WARNING(g_log) << this << " SSL_shutdown(" << m_ssl.get()
                         << "): " << result << " (" << error << ")";
                     break;
                 }
-                MORDOR_NOTREACHED();
             case SSL_ERROR_SSL:
                 {
                     MORDOR_ASSERT(hasOpenSSLError());
