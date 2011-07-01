@@ -7,8 +7,11 @@
 #ifdef WINDOWS
 #include <winhttp.h>
 #elif defined (OSX)
+#include <queue>
+#include <boost/thread.hpp>
 #include <SystemConfiguration/SystemConfiguration.h>
 #include "mordor/util.h"
+#include "mordor/http/broker.h"
 #endif
 
 namespace Mordor {
@@ -62,6 +65,7 @@ class ProxyCache
 {
 public:
     ProxyCache(boost::shared_ptr<RequestBroker> requestBroker);
+    ~ProxyCache();
 
     std::vector<URI> proxyFromSystemConfiguration(const URI &uri);
 
@@ -69,6 +73,28 @@ private:
     ScopedCFRef<SCDynamicStoreRef> m_dynamicStore;
 	boost::shared_ptr<RequestBroker> m_requestBroker;
     std::map<URI, ScopedCFRef<CFStringRef> > m_cachedScripts;
+
+    struct PacMessage {
+        ScopedCFRef<CFStringRef> pacScript;
+        ScopedCFRef<CFURLRef> targeturl;
+        ScopedCFRef<CFArrayRef> result;
+        bool processed;
+    };
+
+    boost::thread m_pacThread;
+    boost::condition_variable m_pacCond;
+    boost::mutex m_pacMut;
+    std::queue<PacMessage*> m_pacQueue;
+    bool m_pacThreadCancelled;
+
+    void runPacWorker();
+
+    std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
+        RequestBroker::ptr requestBroker,
+        std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts);
+    std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl,
+        RequestBroker::ptr requestBroker,
+        std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts);
 };
 #endif
 

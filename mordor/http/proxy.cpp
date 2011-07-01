@@ -18,6 +18,7 @@
 #include "mordor/streams/limited.h"
 #include "mordor/streams/memory.h"
 #include "mordor/streams/transfer.h"
+#include "mordor/sleep.h"
 #endif
 
 namespace Mordor {
@@ -265,16 +266,24 @@ ProxyCache::proxyFromUserSettings(const URI &uri)
 }
 #elif defined(OSX)
 ProxyCache::ProxyCache(RequestBroker::ptr requestBroker)
-    : m_requestBroker(requestBroker)
+    : m_requestBroker(requestBroker),
+      m_pacThreadCancelled(false)
 {
     m_dynamicStore = SCDynamicStoreCreate(NULL, NULL, NULL, NULL);
 }
 
-static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
-    RequestBroker::ptr requestBroker,
-    std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts);
+ProxyCache::~ProxyCache()
+{
+    // Shut down the PAC worker thread
+    {
+        boost::mutex::scoped_lock lk(m_pacMut);
+        m_pacThreadCancelled = true;
+    }
+    m_pacCond.notify_one();
+    m_pacThread.join();
+}
 
-static std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl,
+std::vector<URI> ProxyCache::proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl,
     RequestBroker::ptr requestBroker,
     std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts)
 {
@@ -323,7 +332,41 @@ static std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl,
     return result;
 }
 
-static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
+// Worker thread that handles PAC evaluation. This has to be done in a 
+// separate, fiber-free thread or the underlying JavaScript VM used in 
+// CFNetworkCopyProxiesForAutoConfigurationScript will crash trying to 
+// perform garbage collection.
+void ProxyCache::runPacWorker()
+{
+    while(true) {
+        boost::mutex::scoped_lock lk(m_pacMut);
+        
+        while(m_pacQueue.empty() && !m_pacThreadCancelled)
+            m_pacCond.wait(lk);
+        
+        if(m_pacThreadCancelled)
+            return;
+        
+        while(!m_pacQueue.empty()) {
+            struct PacMessage *msg = m_pacQueue.front();
+            m_pacQueue.pop();
+            
+            lk.unlock();
+            
+            CFErrorRef error;
+            ScopedCFRef<CFArrayRef> proxies = 
+                CFNetworkCopyProxiesForAutoConfigurationScript(
+                    msg->pacScript, msg->targeturl, &error);
+            
+            lk.lock();
+            
+            msg->result = proxies;
+            msg->processed = true;
+        }
+    }
+}
+
+std::vector<URI> ProxyCache::proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
     RequestBroker::ptr requestBroker,
     std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts)
 {
@@ -375,14 +418,41 @@ static std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
                 kCFStringEncodingUTF8, true);
             cachedScripts[uri] = pacScript;
         }
-        ScopedCFRef<CFErrorRef> error;
-        ScopedCFRef<CFArrayRef> pacProxies =
-            CFNetworkCopyProxiesForAutoConfigurationScript(pacScript, targeturl,
-            &error);
-        if (!pacProxies)
+        
+        // Start the PAC worker thread if not already running
+        // by checking to see if the thread is "Not-a-Thread"
+        if(boost::thread::id() == m_pacThread.get_id()) {
+            m_pacThread = boost::thread(&ProxyCache::runPacWorker, this);
+            MORDOR_LOG_DEBUG(proxyLog) << "PAC worker thread id : " << m_pacThread.get_id();
+        }
+        
+        // Evaluate the PAC in the fiber-free worker thread so that
+        // we don't crash due to the JavaScript VM's garbage collection.
+        struct PacMessage msg;
+        {
+            boost::mutex::scoped_lock lk(m_pacMut);
+            msg.pacScript = pacScript;
+            msg.targeturl = targeturl;
+            msg.result = NULL;
+            msg.processed = false;
+            m_pacQueue.push(&msg);
+        }
+        
+        // Notify the worker thread that there is a new message in the queue
+        m_pacCond.notify_one();
+        
+        // Wake up periodically to see if our PAC message has been processed
+        while(true) {
+            boost::mutex::scoped_lock lk(m_pacMut);
+            if(msg.processed)
+                break;
+            lk.unlock();
+            Mordor::sleep(1000);
+        }
+        
+        if(!msg.result)
             return result;
-        return proxyFromCFArray(pacProxies, targeturl, requestBroker,
-            cachedScripts);
+        return proxyFromCFArray(msg.result, targeturl, requestBroker, cachedScripts);
     } catch (...) {
         return result;
     }
@@ -408,7 +478,8 @@ ProxyCache::proxyFromSystemConfiguration(const URI &uri)
         proxySettings);
     if (!proxies)
         return result;
-    return proxyFromCFArray(proxies, cfurl, m_requestBroker, m_cachedScripts);
+    return proxyFromCFArray(proxies, cfurl, m_requestBroker,
+        m_cachedScripts);
 }
 #endif
 
