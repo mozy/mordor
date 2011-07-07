@@ -53,12 +53,29 @@ public:
     ProxyCache(const std::string &userAgent = std::string());
     ~ProxyCache();
 
+    // Use the user's global proxy settings (which may specify a
+    // proxy server, url to a configuration script or autodetection)
     std::vector<URI> proxyFromUserSettings(const URI &uri);
+
+    // Determine the Proxy URIs, if any, to use to reach the specified uri
+    // If no pacScript url is specified the system will attempt to autodetect one
     std::vector<URI> autoDetectProxy(const URI &uri,
         const std::string &pacScript = std::string());
 
+    bool resetDetectionResultCache() {
+        // Depending on the settings the proxyFromUserSettings() method
+        // may attempt to autodetect a proxy.
+        // This autodetection can be slow, so the results are cached.
+        // This method should be called if network configuration changes are
+        // detected to force a new discovery
+        m_bAutoProxyFailed = false;
+        m_autoConfigUrl.clear();
+    }
+
 private:
     HINTERNET m_hHttpSession;
+    std::string m_autoConfigUrl; // Autodetected pac Script, if any
+    bool m_bAutoProxyFailed;
 };
 #elif defined (OSX)
 class ProxyCache

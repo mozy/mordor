@@ -380,6 +380,15 @@ MORDOR_RUNTIME_LINK_DEFINITION(WinHttpGetProxyForUrl, BOOL, WINAPI,
     return FALSE;
 }
 
+MORDOR_RUNTIME_LINK_DEFINITION(WinHttpDetectAutoProxyConfigUrl, BOOL, WINAPI,
+    (DWORD dwAutoDetectFlags, LPWSTR *ppwstrAutoConfigUrl),
+    (dwAutoDetectFlags, ppwstrAutoConfigUrl),
+    L"winhttp.dll")
+{
+    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+    return FALSE;
+}
+
 MORDOR_RUNTIME_LINK_DEFINITION(WinHttpOpen, HINTERNET, WINAPI,
     (LPCWSTR pszAgentW, DWORD dwAccessType, LPCWSTR pszProxyW, LPCWSTR pszProxyBypassW, DWORD dwFlags),
     (pszAgentW, dwAccessType, pszProxyW, pszProxyBypassW, dwFlags),

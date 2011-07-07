@@ -196,7 +196,30 @@ getUserProxySettings()
     return result;
 }
 
+// Use WPAD protocol to search for proxy configuration file (e.g. a pac script)
+static std::string
+autoDetectConfigUrl()
+{
+    std::string url;
+    PWSTR autoConfigUrl = NULL;
+    if (pWinHttpDetectAutoProxyConfigUrl(
+            WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A,
+            &autoConfigUrl
+            )) {
+        if (autoConfigUrl) {
+            url = toUtf8(autoConfigUrl);
+            GlobalFree((HGLOBAL)autoConfigUrl);
+        }
+    } else {
+        // This is expected on any system where autodetect is enabled but no proxy is present
+        MORDOR_LOG_DEBUG(proxyLog) << "WinHttpDetectAutoProxyConfigUrl found no proxy (" << Mordor::lastError() << ")";
+    }
+    return url;
+}
+
+
 ProxyCache::ProxyCache(const std::string &userAgent)
+    : m_bAutoProxyFailed(false)
 {
     m_hHttpSession = pWinHttpOpen(toUtf16(userAgent).c_str(),
         WINHTTP_ACCESS_TYPE_NO_PROXY,
@@ -254,8 +277,18 @@ ProxyCache::proxyFromUserSettings(const URI &uri)
 {
     ProxySettings settings = getUserProxySettings();
     std::vector<URI> result, temp;
-    if (settings.autoDetect)
-        result = autoDetectProxy(uri);
+    if (settings.autoDetect && !m_bAutoProxyFailed) {
+        if (m_autoConfigUrl.empty()) {
+            m_autoConfigUrl = autoDetectConfigUrl();
+        }
+        if (m_autoConfigUrl.empty()) {
+            // Detection may take a long time to fail on some networks
+            // that have no proxy, so avoid calling it again
+            m_bAutoProxyFailed = true;
+        } else {
+            result = autoDetectProxy(uri, m_autoConfigUrl);
+        }
+    }
     if (!settings.pacScript.empty()) {
         temp = autoDetectProxy(uri, settings.pacScript);
         result.insert(result.end(), temp.begin(), temp.end());
@@ -332,34 +365,34 @@ std::vector<URI> ProxyCache::proxyFromCFArray(CFArrayRef proxies, CFURLRef targe
     return result;
 }
 
-// Worker thread that handles PAC evaluation. This has to be done in a 
-// separate, fiber-free thread or the underlying JavaScript VM used in 
-// CFNetworkCopyProxiesForAutoConfigurationScript will crash trying to 
+// Worker thread that handles PAC evaluation. This has to be done in a
+// separate, fiber-free thread or the underlying JavaScript VM used in
+// CFNetworkCopyProxiesForAutoConfigurationScript will crash trying to
 // perform garbage collection.
 void ProxyCache::runPacWorker()
 {
     while(true) {
         boost::mutex::scoped_lock lk(m_pacMut);
-        
+
         while(m_pacQueue.empty() && !m_pacThreadCancelled)
             m_pacCond.wait(lk);
-        
+
         if(m_pacThreadCancelled)
             return;
-        
+
         while(!m_pacQueue.empty()) {
             struct PacMessage *msg = m_pacQueue.front();
             m_pacQueue.pop();
-            
+
             lk.unlock();
-            
+
             CFErrorRef error;
-            ScopedCFRef<CFArrayRef> proxies = 
+            ScopedCFRef<CFArrayRef> proxies =
                 CFNetworkCopyProxiesForAutoConfigurationScript(
                     msg->pacScript, msg->targeturl, &error);
-            
+
             lk.lock();
-            
+
             msg->result = proxies;
             msg->processed = true;
         }
@@ -418,14 +451,14 @@ std::vector<URI> ProxyCache::proxyFromPacScript(CFURLRef cfurl, CFURLRef targetu
                 kCFStringEncodingUTF8, true);
             cachedScripts[uri] = pacScript;
         }
-        
+
         // Start the PAC worker thread if not already running
         // by checking to see if the thread is "Not-a-Thread"
         if(boost::thread::id() == m_pacThread.get_id()) {
             m_pacThread = boost::thread(&ProxyCache::runPacWorker, this);
             MORDOR_LOG_DEBUG(proxyLog) << "PAC worker thread id : " << m_pacThread.get_id();
         }
-        
+
         // Evaluate the PAC in the fiber-free worker thread so that
         // we don't crash due to the JavaScript VM's garbage collection.
         struct PacMessage msg;
@@ -437,10 +470,10 @@ std::vector<URI> ProxyCache::proxyFromPacScript(CFURLRef cfurl, CFURLRef targetu
             msg.processed = false;
             m_pacQueue.push(&msg);
         }
-        
+
         // Notify the worker thread that there is a new message in the queue
         m_pacCond.notify_one();
-        
+
         // Wake up periodically to see if our PAC message has been processed
         while(true) {
             boost::mutex::scoped_lock lk(m_pacMut);
@@ -449,7 +482,7 @@ std::vector<URI> ProxyCache::proxyFromPacScript(CFURLRef cfurl, CFURLRef targetu
             lk.unlock();
             Mordor::sleep(1000);
         }
-        
+
         if(!msg.result)
             return result;
         return proxyFromCFArray(msg.result, targeturl, requestBroker, cachedScripts);
