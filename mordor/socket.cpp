@@ -1647,6 +1647,7 @@ static int pinet_pton(int af, const char *src, void *dst)
 
 IPv4Address::IPv4Address(const char *address, unsigned short port)
 {
+    memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_port = byteswapOnLittleEndian(port);
     int result = pinet_pton(AF_INET, address, &sin.sin_addr);
