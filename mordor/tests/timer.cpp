@@ -3,6 +3,7 @@
 #include <boost/bind.hpp>
 
 #include "mordor/timer.h"
+#include "mordor/workerpool.h"
 #include "mordor/test/test.h"
 
 using namespace Mordor;
@@ -171,4 +172,135 @@ MORDOR_UNITTEST(Timer, rollover)
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ULL);   // no timers left
 
     TimerManager::setClock();
+}
+
+namespace {
+// anonymous namespace so that the class is only visible in this compiling unit
+class TestTimerClass
+{
+public:
+    typedef boost::shared_ptr<TestTimerClass> ptr;
+    typedef boost::weak_ptr<TestTimerClass> weak_ptr;
+
+public:
+    TestTimerClass(int &i) : m_i(i) {}
+    ~TestTimerClass() { ++m_i; }
+    void timedOut(int expected) {
+        ++m_i;
+        MORDOR_TEST_ASSERT_EQUAL(m_i, expected);
+    }
+
+private:
+    int& m_i;
+};
+
+
+class TestTimerManager : public TimerManager
+{
+public:
+    std::vector<boost::function<void ()> > getExpiredTimers()
+    {
+        return processTimers();
+    }
+};
+
+}
+
+MORDOR_UNITTEST(Timer, timerConditonValid)
+{
+    TimerManager manager;
+    int sequence = 0;
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    TestTimerClass::ptr tester(new TestTimerClass(sequence));
+
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    Timer::ptr timer = manager.registerConditionTimer(0,
+        boost::bind(&TestTimerClass::timedOut, tester.get(), 1),
+        tester);
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0ull);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    manager.executeTimers();
+    // TestTimerClass::timedOut is executed
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    tester.reset();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
+}
+
+MORDOR_UNITTEST(Timer, timerConditonInvalid)
+{
+    TimerManager manager;
+    int sequence = 0;
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    TestTimerClass::ptr tester(new TestTimerClass(sequence));
+
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    Timer::ptr timer = manager.registerConditionTimer(0,
+        boost::bind(&TestTimerClass::timedOut, tester.get(), 123456),
+        tester);
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0ull);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    tester.reset();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    manager.executeTimers();
+    // TestTimerClass::timedOut is NOT executed
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+}
+
+MORDOR_UNITTEST(Timer, workerPoolConditionValid)
+{
+    TestTimerManager manager;
+    int sequence = 0;
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    TestTimerClass::ptr tester(new TestTimerClass(sequence));
+
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    Timer::ptr timer = manager.registerConditionTimer(0,
+        boost::bind(&TestTimerClass::timedOut, tester.get(), 1),
+        tester);
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0ull);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    std::vector<boost::function<void ()> > dgs = manager.getExpiredTimers();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    MORDOR_TEST_ASSERT_EQUAL(dgs.size(), 1u);
+    MORDOR_TEST_ASSERT(dgs.begin() != dgs.end());
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    // Use WorkerPool to execute the timers which is the IOManager behavior
+    WorkerPool pool;
+    pool.schedule(dgs.begin(), dgs.end());
+    pool.stop();
+    // TestTimerClass::timedOut is executed
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    tester.reset();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
+}
+
+MORDOR_UNITTEST(Timer, workerPoolConditonInvalid)
+{
+    TestTimerManager manager;
+    int sequence = 0;
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    TestTimerClass::ptr tester(new TestTimerClass(sequence));
+
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    Timer::ptr timer = manager.registerConditionTimer(0,
+        boost::bind(&TestTimerClass::timedOut, tester.get(), 123456),
+        tester);
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 0ull);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    std::vector<boost::function<void ()> > dgs = manager.getExpiredTimers();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    MORDOR_TEST_ASSERT_EQUAL(dgs.size(), 1u);
+    MORDOR_TEST_ASSERT(dgs.begin() != dgs.end());
+    MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), ~0ull);
+    tester.reset();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    // Use WorkerPool to execute the timers which is the IOManager behavior
+    WorkerPool pool;
+    pool.schedule(dgs.begin(), dgs.end());
+    pool.stop();
+    // TestTimerClass::timedOut is NOT executed
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }

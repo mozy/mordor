@@ -35,6 +35,9 @@ static ConfigVar<unsigned long long>::ptr g_clockRolloverThreshold =
     Config::lookup<unsigned long long>("timer.clockrolloverthreshold", 5000000ULL,
     "Expire all timers if the clock goes backward by >= this amount");
 
+static void
+stubOnTimer(boost::weak_ptr<void> weakCond, boost::function<void ()> dg);
+
 #ifdef WINDOWS
 static unsigned long long queryFrequency()
 {
@@ -193,6 +196,29 @@ TimerManager::registerTimer(unsigned long long us, boost::function<void ()> dg,
     if (atFront)
         onTimerInsertedAtFront();
     return result;
+}
+
+Timer::ptr
+TimerManager::registerConditionTimer(unsigned long long us,
+    boost::function<void ()> dg,
+    boost::weak_ptr<void> weakCond,
+    bool recurring)
+{
+    return registerTimer(us,
+        boost::bind(stubOnTimer, weakCond, dg),
+        recurring);
+}
+
+static void
+stubOnTimer(
+    boost::weak_ptr<void> weakCond, boost::function<void ()> dg)
+{
+    if (weakCond.lock()) {
+        dg();
+    }
+    else {
+        MORDOR_LOG_DEBUG(g_log) << " Conditionally skip in stubOnTimer!";
+    }
 }
 
 unsigned long long
