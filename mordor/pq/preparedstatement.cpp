@@ -197,7 +197,7 @@ PreparedStatement::execute()
         if (m_scheduler) {
             api = "PQsendQueryParams";
             if (!PQsendQueryParams(conn, m_command.c_str(),
-                nParams, paramTypes, params, paramLengths, paramFormats, 1))
+                nParams, paramTypes, params, paramLengths, paramFormats, m_resultFormat))
                 throwException(conn);
             flush(conn, m_scheduler);
             next.reset(nextResult(conn, m_scheduler), &PQclear);
@@ -223,7 +223,7 @@ PreparedStatement::execute()
         {
             api = "PQexecParams";
             result.reset(PQexecParams(conn, m_command.c_str(),
-                nParams, paramTypes, params, paramLengths, paramFormats, 1),
+                nParams, paramTypes, params, paramLengths, paramFormats, m_resultFormat),
                 &PQclear);
         }
     } else {
@@ -257,7 +257,7 @@ PreparedStatement::execute()
         {
             api = "PQexecPrepared";
             result.reset(PQexecPrepared(conn, m_name.c_str(),
-                nParams, params, paramLengths, paramFormats, 1),
+                nParams, params, paramLengths, paramFormats, m_resultFormat),
                 &PQclear);
         }
     }
