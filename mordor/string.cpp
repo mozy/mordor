@@ -130,6 +130,12 @@ sha1(const std::string &data)
 }
 
 std::string
+sha256(const std::string &data)
+{
+    return hexstringFromData(sha256sum(data).c_str(), SHA256_DIGEST_LENGTH);
+}
+
+std::string
 md5sum(const void *data, size_t len)
 {
     MD5_CTX ctx;
@@ -163,6 +169,24 @@ std::string
 sha1sum(const std::string &data)
 {
     return sha1sum(data.c_str(), data.size());
+}
+
+std::string
+sha256sum(const void *data, size_t len)
+{
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, data, len);
+    std::string result;
+    result.resize(SHA256_DIGEST_LENGTH);
+    SHA256_Final((unsigned char*)&result[0], &ctx);
+    return result;
+}
+
+std::string
+sha256sum(const std::string &data)
+{
+    return sha256sum(data.c_str(), data.size());
 }
 
 struct xorStruct

@@ -26,11 +26,14 @@ std::string base64encode(const void *data, size_t len);
 // Returns result in hex
 std::string md5(const std::string &data);
 std::string sha1(const std::string &data);
+std::string sha256(const std::string &data);
 // Returns result in blob
 std::string md5sum(const std::string &data);
 std::string md5sum(const void *data, size_t len);
 std::string sha1sum(const std::string &data);
 std::string sha1sum(const void *data, size_t len);
+std::string sha256sum(const std::string &data);
+std::string sha256sum(const void *data, size_t len);
 std::string hmacMd5(const std::string &text, const std::string &key);
 std::string hmacSha1(const std::string &text, const std::string &key);
 
