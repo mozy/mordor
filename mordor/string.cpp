@@ -129,11 +129,13 @@ sha1(const std::string &data)
     return hexstringFromData(sha1sum(data).c_str(), SHA_DIGEST_LENGTH);
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x0090800fL
 std::string
 sha256(const std::string &data)
 {
     return hexstringFromData(sha256sum(data).c_str(), SHA256_DIGEST_LENGTH);
 }
+#endif
 
 std::string
 md5sum(const void *data, size_t len)
@@ -171,6 +173,7 @@ sha1sum(const std::string &data)
     return sha1sum(data.c_str(), data.size());
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x0090800fL
 std::string
 sha256sum(const void *data, size_t len)
 {
@@ -188,6 +191,7 @@ sha256sum(const std::string &data)
 {
     return sha256sum(data.c_str(), data.size());
 }
+#endif
 
 struct xorStruct
 {
