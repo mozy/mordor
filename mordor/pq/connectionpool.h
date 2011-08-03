@@ -9,6 +9,7 @@
 
 namespace Mordor {
 
+template <class T> class ConfigVar;
 class IOManager;
 
 namespace PQ {
@@ -37,6 +38,9 @@ private:
     FiberCondition m_condition;
     size_t m_total;
 };
+
+void associateConnectionPoolWithConfigVar(ConnectionPool &pool,
+    boost::shared_ptr<ConfigVar<size_t> > configVar);
 
 }}
 
