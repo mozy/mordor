@@ -1053,8 +1053,13 @@ void
 Socket::setOption(int level, int option, const void *value, size_t len)
 {
     if (setsockopt(m_sock, level, option, (const char*)value, (socklen_t)len)) {
+        error_t error = lastError();
+        MORDOR_LOG_ERROR(g_log) << this << " setsockopt(" << m_sock << ", "
+            << level << ", " << option << "): (" << error << ")";
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("setsockopt");
     }
+    MORDOR_LOG_DEBUG(g_log) << this << " setsockopt(" << m_sock << ", "
+        << level << ", " << option << "): 0";
 }
 
 void
