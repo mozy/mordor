@@ -2,6 +2,7 @@
 
 #include "daemon.h"
 
+#include "exception.h"
 #include "log.h"
 #include "main.h"
 
@@ -377,12 +378,38 @@ int run(int argc, char **argv,
     boost::function<int (int, char **)> daemonMain)
 {
 #ifndef OSX
+    std::string pidfile;
     // Check for being run from /etc/init.d or start-stop-daemon as a hint to
     // daemonize, or --daemonize was explicitely given on the command line
     if (shouldDaemonize(environ) || shouldDaemonizeDueToParent() || shouldDaemonizeDueToCmdLine(argc, argv)) {
-        MORDOR_LOG_VERBOSE(g_log) << "Daemonizing";
-        if (daemon(0, 0) == -1)
+        const char *pidfileEnv = getenv("PIDFILE");
+        if (pidfileEnv)
+            pidfile = pidfileEnv;
+        if (pidfile.empty()) {
+            const char *process = argv[0];
+            const char *slash = strchr(process, '/');
+            while (slash) {
+                process = slash + 1;
+                slash = strchr(process, '/');
+            }
+            std::ostringstream os;
+            os << "/var/run/" << process << ".pid";
+            pidfile = os.str();
+        }
+        int fd = open(pidfile.c_str(), O_CREAT | O_TRUNC | O_WRONLY);
+        if (fd < 0) {
+            std::cerr << "Unable to open " << pidfile << ": " << lastError() << std::endl;
             return errno;
+        }
+        if (daemon(0, 0) == -1) {
+            close(fd);
+            return errno;
+        }
+        MORDOR_LOG_VERBOSE(g_log) << "Daemonizing; writing pid " << getpid() << " to " << pidfile;
+        std::string pid = boost::lexical_cast<std::string>(getpid());
+        pid.append(1, '\n');
+        write(fd, pid.c_str(), pid.size());
+        close(fd);
     }
 #endif
 
@@ -390,19 +417,39 @@ int run(int argc, char **argv,
     // ourselves
     sigset_t mask = blockedSignals();
     int rc = pthread_sigmask(SIG_BLOCK, &mask, NULL);
-    if (rc != 0)
-        return errno;
+    if (rc != 0) {
+        rc = errno;
+        goto cleanup;
+    }
 
     // Create the thread that will handle signals for us
     pthread_t signal_thread_id;
     rc = pthread_create(&signal_thread_id, NULL, &signal_thread, NULL);
-    if (rc != 0)
-        return errno;
+    if (rc != 0) {
+        rc = errno;
+        goto cleanup;
+    }
 
+#ifndef OSX
+    try {
+#endif
     // Run the daemon's main
     MORDOR_LOG_INFO(g_log) << "Starting daemon";
     rc = daemonMain(argc, argv);
     MORDOR_LOG_INFO(g_log) << "Daemon stopped";
+
+#ifndef OSX
+    } catch (...) {
+        if (!pidfile.empty())
+            unlink(pidfile.c_str());
+        throw;
+    }
+cleanup:
+    if (!pidfile.empty())
+        unlink(pidfile.c_str());
+#else
+cleanup:
+#endif
     return rc;
 }
 #endif
