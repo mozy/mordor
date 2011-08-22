@@ -236,7 +236,7 @@ SSLStream::close(CloseType type)
                 }
                 if (result == 0)
                     break;
-                MORDOR_NOTREACHED();
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SSL_shutdown");
             case SSL_ERROR_SSL:
                 {
                     MORDOR_ASSERT(hasOpenSSLError());
@@ -284,7 +284,7 @@ SSLStream::close(CloseType type)
                         << "): " << result << " (" << error << ")";
                     break;
                 }
-                MORDOR_NOTREACHED();
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SSL_shutdown");
             case SSL_ERROR_SSL:
                 {
                     MORDOR_ASSERT(hasOpenSSLError());
@@ -342,7 +342,7 @@ SSLStream::read(void *buffer, size_t length)
                         << " (" << error << ")";
                     return 0;
                 }
-                MORDOR_NOTREACHED();
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SSL_read");
             case SSL_ERROR_SSL:
                 {
                     MORDOR_ASSERT(hasOpenSSLError());
@@ -415,7 +415,7 @@ SSLStream::write(const void *buffer, size_t length)
                         << " (" << error << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
-                MORDOR_NOTREACHED();
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SSL_write");
             case SSL_ERROR_SSL:
                 {
                     MORDOR_ASSERT(hasOpenSSLError());
@@ -496,7 +496,7 @@ SSLStream::accept()
                         << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
-                MORDOR_NOTREACHED();
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SSL_accept");
             case SSL_ERROR_SSL:
                 {
                     MORDOR_ASSERT(hasOpenSSLError());
@@ -552,7 +552,7 @@ SSLStream::connect()
                         << ")";
                     MORDOR_THROW_EXCEPTION(UnexpectedEofException());
                 }
-                MORDOR_NOTREACHED();
+                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SSL_connect");
             case SSL_ERROR_SSL:
                 {
                     MORDOR_ASSERT(hasOpenSSLError());
