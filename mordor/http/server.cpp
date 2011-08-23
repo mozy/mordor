@@ -243,7 +243,11 @@ ServerRequest::ServerRequest(ServerConnection::ptr conn)
   m_responseState(PENDING),
   m_willClose(false),
   m_pipeline(false)
-{}
+{
+    std::ostringstream os;
+    os << m_conn << "-" << m_requestNumber;
+    m_context = os.str();
+}
 
 ServerRequest::~ServerRequest()
 {
@@ -372,7 +376,7 @@ ServerRequest::cancel()
 {
     if (m_requestState >= COMPLETE && m_responseState >= COMPLETE)
         return;
-    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber << " aborting";
+    MORDOR_LOG_TRACE(g_log) << m_context << " aborting";
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
     m_conn->invariant();
     if (m_requestState < COMPLETE)
@@ -396,7 +400,7 @@ ServerRequest::finish()
 {
     if (m_responseState < COMPLETE) {
         if (hasResponseBody())
-            MORDOR_LOG_WARNING(g_log) << m_conn << "-" << m_requestNumber
+            MORDOR_LOG_WARNING(g_log) << m_context
                 << " incomplete response";
         if (committed() && hasResponseBody()) {
             cancel();
@@ -463,14 +467,13 @@ ServerRequest::doRequest()
                 proxyAuth = m_request.request.proxyAuthorization.base64;
                 m_request.request.proxyAuthorization.base64 = "<hidden>";
             }
-            MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " "
-                << m_request;
+            MORDOR_LOG_DEBUG(g_log) << m_context << " " << m_request;
             if (!webAuth.empty())
                 m_request.request.authorization.base64 = webAuth;
             if (!proxyAuth.empty())
                 m_request.request.proxyAuthorization.base64 = proxyAuth;
         } else {
-            MORDOR_LOG_VERBOSE(g_log) << m_conn << "-" << m_requestNumber
+            MORDOR_LOG_VERBOSE(g_log) << m_context
                 << " " << m_request.requestLine;
         }
 
@@ -577,8 +580,7 @@ ServerRequest::doRequest()
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity,
             m_request.requestLine.method, INVALID, false)) {
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
-                << " no request body";
+            MORDOR_LOG_TRACE(g_log) << m_context << " no request body";
             m_conn->requestComplete(this);
         } else {
             m_requestState = BODY;
@@ -591,7 +593,7 @@ ServerRequest::doRequest()
     } catch (Assertion &) {
          if (m_requestState == ERROR || m_responseState == ERROR)
             throw;
-        MORDOR_LOG_ERROR(g_log) << m_conn << "-" << m_requestNumber
+        MORDOR_LOG_ERROR(g_log) << m_context
             << " Unexpected exception: "
             << boost::current_exception_diagnostic_information();
         if (m_responseState < COMPLETE) {
@@ -611,7 +613,7 @@ ServerRequest::doRequest()
     } catch (...) {
         if (m_requestState == ERROR || m_responseState == ERROR)
             return;
-        MORDOR_LOG_ERROR(g_log) << m_conn << "-" << m_requestNumber
+        MORDOR_LOG_ERROR(g_log) << m_context
             << " Unexpected exception: "
             << boost::current_exception_diagnostic_information();
         if (m_responseState < COMPLETE) {
@@ -723,12 +725,10 @@ ServerRequest::commit()
             m_responseState = WAITING;
             MORDOR_VERIFY(m_conn->m_waitingResponses.insert(this).second);
             wait = true;
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
-                << " waiting to respond";
+            MORDOR_LOG_TRACE(g_log) << m_context << " waiting to respond";
         } else {
             m_responseState = HEADERS;
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
-                << " responding";
+            MORDOR_LOG_TRACE(g_log) << m_context << " responding";
             if (m_willClose) {
                 m_conn->m_priorResponseClosed = m_requestNumber;
                 m_conn->scheduleAllWaitingResponses();
@@ -743,8 +743,7 @@ ServerRequest::commit()
         Scheduler::yieldTo();
         m_scheduler = NULL;
         m_fiber.reset();
-        MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
-            << " responding";
+        MORDOR_LOG_TRACE(g_log) << m_context << " responding";
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
@@ -767,18 +766,15 @@ ServerRequest::commit()
         os << m_response;
         std::string str = os.str();
         if (g_log->enabled(Log::DEBUG)) {
-            MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " "
-                << str;
+            MORDOR_LOG_DEBUG(g_log) << m_context << " " << str;
         } else {
-            MORDOR_LOG_VERBOSE(g_log) << m_conn << "-" << m_requestNumber
-                << " " << m_response.status;
+            MORDOR_LOG_VERBOSE(g_log) << m_context << " " << m_response.status;
         }
         m_conn->m_stream->write(str.c_str(), str.size());
 
         if (!Connection::hasMessageBody(m_response.general, m_response.entity,
             m_request.requestLine.method, m_response.status.status, false)) {
-            MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
-                << " no response body";
+            MORDOR_LOG_TRACE(g_log) << m_context << " no response body";
             responseDone();
         } else {
             m_responseState = BODY;
@@ -797,8 +793,7 @@ ServerRequest::commit()
 void
 ServerRequest::requestDone()
 {
-    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
-        << " request complete";
+    MORDOR_LOG_TRACE(g_log) << m_context << " request complete";
     m_requestStream.reset();
     if (!m_request.general.transferEncoding.empty()) {
         // Read and parse the trailer
@@ -809,8 +804,7 @@ ServerRequest::requestDone()
             throw std::runtime_error("Error parsing trailer");
         }
         MORDOR_ASSERT(parser.complete());
-        MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " "
-            << m_requestTrailer;
+        MORDOR_LOG_DEBUG(g_log) << m_context << " " << m_requestTrailer;
     }
     m_conn->requestComplete(this);
 }
@@ -825,8 +819,7 @@ ServerRequest::responseMultipartDone()
 void
 ServerRequest::responseDone()
 {
-    MORDOR_LOG_TRACE(g_log) << m_conn << "-" << m_requestNumber
-        << " response complete";
+    MORDOR_LOG_TRACE(g_log) << m_context << " response complete";
     if (m_responseStream && m_responseStream->supportsSize() && m_responseStream->supportsTell())
         MORDOR_ASSERT(m_responseStream->size() == m_responseStream->tell());
     m_responseStream.reset();
@@ -835,15 +828,13 @@ ServerRequest::responseDone()
         std::ostringstream os;
         os << m_responseTrailer << "\r\n";
         std::string str = os.str();
-        MORDOR_LOG_DEBUG(g_log) << m_conn << "-" << m_requestNumber << " "
-            << str;
+        MORDOR_LOG_DEBUG(g_log) << m_context << " " << str;
         m_conn->m_stream->write(str.c_str(), str.size());
     }
-    MORDOR_LOG_INFO(g_log) << m_conn << "-" << m_requestNumber << " "
+    MORDOR_LOG_INFO(g_log) << m_context << " "
         << m_request.requestLine << " " << m_response.status.status;
     m_conn->responseComplete(this);
 }
-
 
 void
 respondError(ServerRequest::ptr request, Status status,
