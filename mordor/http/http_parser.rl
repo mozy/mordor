@@ -318,6 +318,11 @@ unquote(const std::string &str)
         m_temp1 = std::string(mark, fpc - mark);
         // Don't NULL out here; could be base64 later
     }
+    
+    action save_parameter_attribute_unquote {
+        m_temp1 = unquote(mark, fpc - mark);
+        // Don't NULL out here; could be base64 later
+    }
 
     action save_parameter_value {
         (*m_parameters)[m_temp1] = unquote(mark, fpc - mark);
