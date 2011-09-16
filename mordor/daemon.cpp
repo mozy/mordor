@@ -396,7 +396,7 @@ int run(int argc, char **argv,
             os << "/var/run/" << process << ".pid";
             pidfile = os.str();
         }
-        int fd = open(pidfile.c_str(), O_CREAT | O_TRUNC | O_WRONLY);
+        int fd = open(pidfile.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0644);
         if (fd < 0) {
             std::cerr << "Unable to open " << pidfile << ": " << lastError() << std::endl;
             return errno;
@@ -408,7 +408,13 @@ int run(int argc, char **argv,
         MORDOR_LOG_VERBOSE(g_log) << "Daemonizing; writing pid " << getpid() << " to " << pidfile;
         std::string pid = boost::lexical_cast<std::string>(getpid());
         pid.append(1, '\n');
-        write(fd, pid.c_str(), pid.size());
+        int rc = write(fd, pid.c_str(), pid.size());
+        if (rc != (int)pid.size()) {
+            std::cerr << "Unable to write to pidfile " << pidfile << ": "
+                << lastError() << std::endl;
+            close(fd);
+            return errno;
+        }
         close(fd);
     }
 #endif
