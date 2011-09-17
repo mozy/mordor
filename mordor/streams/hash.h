@@ -52,8 +52,16 @@ protected:
     SHAStream(Stream::ptr parent, bool own = true)
         : HashStream(parent, own)
     {}
-    SHAStream(Stream::ptr parent, const SHA_CTX &ctx, bool own = true)
-        : HashStream(parent, own),
+};
+
+class SHA0or1Stream : public SHAStream
+{
+protected:
+    SHA0or1Stream(Stream::ptr parent, bool own = true)
+        : SHAStream(parent, own)
+    {}
+    SHA0or1Stream(Stream::ptr parent, const SHA_CTX &ctx, bool own = true)
+        : SHAStream(parent, own),
           m_ctx(ctx)
     {}
 
@@ -65,12 +73,12 @@ protected:
     SHA_CTX m_ctx;
 };
 
-class SHA0Stream : public SHAStream
+class SHA0Stream : public SHA0or1Stream
 {
 public:
     SHA0Stream(Stream::ptr parent, bool own = true);
     SHA0Stream(Stream::ptr parent, const SHA_CTX &ctx, bool own = true)
-        : SHAStream(parent, ctx, own)
+        : SHA0or1Stream(parent, ctx, own)
     {}
 
     using HashStream::hash;
@@ -81,12 +89,12 @@ protected:
     void updateHash(const void *buffer, size_t length);
 };
 
-class SHA1Stream : public SHAStream
+class SHA1Stream : public SHA0or1Stream
 {
 public:
     SHA1Stream(Stream::ptr parent, bool own = true);
     SHA1Stream(Stream::ptr parent, const SHA_CTX &ctx, bool own = true)
-        : SHAStream(parent, ctx, own)
+        : SHA0or1Stream(parent, ctx, own)
     {}
 
     using HashStream::hash;
@@ -96,6 +104,28 @@ public:
 protected:
     void updateHash(const void *buffer, size_t length);
 };
+
+class SHA256Stream : public SHAStream
+{
+public:
+    SHA256Stream(Stream::ptr parent, bool own = true);
+    SHA256Stream(Stream::ptr parent, const SHA256_CTX &ctx, bool own = true)
+        : SHAStream(parent, own)
+	, m_ctx(ctx)
+    {}
+
+    using HashStream::hash;
+    void hash(void *result, size_t length) const;
+    void reset();
+
+public:
+    size_t hashSize() const;
+    SHA256_CTX ctx() const { return m_ctx; }
+
+protected:
+    SHA256_CTX m_ctx;
+    void updateHash(const void *buffer, size_t length);
+ };
 
 class MD5Stream : public HashStream
 {

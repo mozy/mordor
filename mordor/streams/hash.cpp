@@ -60,13 +60,13 @@ HashStream::hash() const
 }
 
 size_t
-SHAStream::hashSize() const
+SHA0or1Stream::hashSize() const
 {
     return SHA_DIGEST_LENGTH;
 }
 
 SHA0Stream::SHA0Stream(Stream::ptr parent, bool own)
-: SHAStream(parent, own)
+: SHA0or1Stream(parent, own)
 {
     SHA_Init(&m_ctx);
 }
@@ -92,7 +92,7 @@ SHA0Stream::updateHash(const void *buffer, size_t length)
 }
 
 SHA1Stream::SHA1Stream(Stream::ptr parent, bool own)
-: SHAStream(parent, own)
+: SHA0or1Stream(parent, own)
 {
     SHA1_Init(&m_ctx);
 }
@@ -115,6 +115,38 @@ void
 SHA1Stream::updateHash(const void *buffer, size_t length)
 {
     SHA1_Update(&m_ctx, buffer, length);
+}
+
+SHA256Stream::SHA256Stream(Stream::ptr parent, bool own)
+: SHAStream(parent, own)
+{
+    SHA256_Init(&m_ctx);
+}
+
+void
+SHA256Stream::hash(void *result, size_t length) const
+{
+    MORDOR_ASSERT(length == SHA256_DIGEST_LENGTH);
+    SHA256_CTX copy(m_ctx);
+    SHA256_Final((unsigned char *)result, &copy);
+}
+
+void
+SHA256Stream::reset()
+{
+    SHA256_Init(&m_ctx);
+}
+
+size_t
+SHA256Stream::hashSize() const
+{
+    return SHA256_DIGEST_LENGTH;
+}
+
+void
+SHA256Stream::updateHash(const void *buffer, size_t length)
+{
+    SHA256_Update(&m_ctx, buffer, length);
 }
 
 MD5Stream::MD5Stream(Stream::ptr parent, bool own)
