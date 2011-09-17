@@ -313,6 +313,8 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
 void
 Fiber::entryPoint()
 {
+    // This function never returns, so take care that smart pointers (or other resources)
+    // are properly released.
     ptr cur = getThis();
     MORDOR_ASSERT(cur);
     if (cur->m_yielder) {
@@ -346,6 +348,8 @@ Fiber::entryPoint()
 void
 Fiber::exitPoint(Fiber::ptr &cur, State targetState)
 {
+    // This function never returns, so take care that smart pointers (or other resources)
+    // are properly released.
     Fiber::ptr outer;
     Fiber *rawPtr = NULL;
     if (!cur->m_terminateOuter.expired() && !cur->m_outer) {
@@ -372,6 +376,7 @@ Fiber::exitPoint(Fiber::ptr &cur, State targetState)
         outer.reset();
         rawPtr->yieldTo(false, targetState);
     } else {
+        outer.reset();
         fiber_switchContext(&rawPtr->m_sp, rawPtr->m_outer->m_sp);
     }
 }

@@ -49,6 +49,7 @@ struct CountStatistic : Statistic
     void increment() { atomicIncrement(count); }
     void decrement() { atomicDecrement(count); }
     void add(value_type value) { atomicAdd(count, value); }
+    void merge(const CountStatistic<T> &stat) { add(stat.count); }
 };
 
 template <class T>
@@ -69,6 +70,7 @@ struct SumStatistic : Statistic
     { return os << sum; }
 
     void add(value_type value) { atomicAdd(sum, value); }
+    void merge(const SumStatistic<T> &stat) { add(stat.sum); }
 };
 
 template <class T>
@@ -96,6 +98,8 @@ struct MinStatistic : Statistic
                 break;
         } while (value != (oldval = atomicCompareAndSwap(minimum, value, oldval)));
     }
+
+    void merge(const MinStatistic<T> &stat) { update(stat.minimum); }
 };
 
 
@@ -123,6 +127,8 @@ struct MaxStatistic : Statistic
                 break;
         } while (value != (oldval = atomicCompareAndSwap(maximum, value, oldval)));
     }
+
+    void merge(const MaxStatistic<T> &stat) { update(stat.maximum); }
 };
 
 template <class T>
@@ -171,6 +177,12 @@ struct AverageStatistic : Statistic
             return NULL;
         MORDOR_NOTREACHED();
     }
+
+    void merge(const AverageStatistic<T> &stat)
+    {
+        count.merge(stat.count);
+        sum.merge(stat.sum);
+    }
 };
 
 template <class T>
@@ -208,6 +220,13 @@ struct AverageMinMaxStatistic : AverageStatistic<T>
             return AverageStatistic<T>::begin();
         else
             return AverageStatistic<T>::next(previous);
+    }
+
+    void merge(const AverageMinMaxStatistic<T> &stat)
+    {
+        minimum.merge(stat.minimum);
+        maximum.merge(stat.maximum);
+        AverageStatistic<T>::merge(stat);
     }
 };
 

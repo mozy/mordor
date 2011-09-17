@@ -21,6 +21,16 @@ namespace HTTP
     class ResponseParser;
 }
 
+// The URI class parses and creates Uniform Resource Identifiers,
+// for example an address to a webpage or for a REST webservice.
+//
+// This is an example URI showing the terminology for the different
+// components (see also RFC 3986)
+//
+//       http://example.com:8042/over/there?name=ferret#nose
+//       \__/   \______________/\_________/ \_________/ \__/
+//        |            |            |            |        |
+//     scheme      authority       path        query   fragment
 struct URI
 {
     friend class URIParser;
@@ -39,9 +49,15 @@ struct URI
         CharacterClass charClass = UNRESERVED);
 
     URI();
+
+    // Initialize the URI by parsing the provided uri string
+    // Warning: Some incomplete urls will not be interpreted the way you might expect
+    // For example "www.example.com" will be intrepreted as a path with no authority.
+    // But with the more complete "http://www.example.com" it is recognized as the host
     URI(const std::string& uri);
     URI(const char *uri);
     URI(const Buffer &uri);
+
     URI(const URI &uri);
 
     URI& operator=(const std::string& uri);
@@ -50,11 +66,14 @@ struct URI
 
     void reset();
 
+    // e.g. "http", "https"
     std::string scheme() const { MORDOR_ASSERT(m_schemeDefined); return m_scheme; }
     void scheme(const std::string& s) { m_schemeDefined = true; m_scheme = s; }
     bool schemeDefined() const { return m_schemeDefined; }
     void schemeDefined(bool d) { if (!d) m_scheme.clear(); m_schemeDefined = d; }
 
+    // The Authority section of an URI contains the userinfo, host and port,
+    // e.g. "username:password@example.com:8042" or "example.com"
     struct Authority
     {
         Authority();
@@ -179,6 +198,9 @@ struct URI
     };
     Path path;
 
+    // QueryString represents key/value arguments that appear after the ? in a URI, e.g. ?type=animal&name=narwhal
+    // A common way to build the query portion of an URI is to use an instance of this class
+    // to set all the key/value pairs, then call URI::query(const QueryString &).
     class QueryString : public std::multimap<std::string, std::string, caseinsensitiveless>
     {
     public:
@@ -187,6 +209,7 @@ struct URI
         QueryString(Stream &stream) { *this = stream; }
         QueryString(boost::shared_ptr<Stream> stream) { *this = *stream; }
 
+        // Produce the URL encoded string representation suitable for use in the URI
         std::string toString() const;
 
         QueryString &operator =(const std::string &string);
@@ -206,18 +229,29 @@ struct URI
         std::string operator[](const std::string &key) const;
     };
 
+    // Retrieve a copy of the query portion of the URI (decoded)
     std::string query() const;
+
+    // Retrieve a copy of the query portion of the URI
     QueryString queryString() const { MORDOR_ASSERT(m_queryDefined); return QueryString(m_query); }
+
+    //Set the URI's query based on a preformated string, e.g. "type=animal&name=narwhal"
+    //This method takes care of the url encoding
     void query(const std::string &q);
+
+    //Set the URI's query based on the provided QueryString object
     void query(const QueryString &q) { m_queryDefined = true; m_query = q.toString(); }
     bool queryDefined() const { return m_queryDefined; }
     void queryDefined(bool d) { if (!d) m_query.clear(); m_queryDefined = d; }
 
+    // A fragment in an URI is the portion appearing after the "#",
+    // e.g. in https://example.com/wiki/page#MySection the fragment is "MySection"
     std::string fragment() const { MORDOR_ASSERT(m_fragmentDefined); return m_fragment; }
     void fragment(const std::string& f) { m_fragmentDefined = true; m_fragment = f; }
     bool fragmentDefined() const { return m_fragmentDefined; }
     void fragmentDefined(bool d) { if (!d) m_fragment.clear(); m_fragmentDefined = d; }
 
+    // Returns false if the URI contains no information at all
     bool isDefined() const { return m_schemeDefined || authority.hostDefined() ||
         !path.isEmpty() || m_queryDefined || m_fragmentDefined; }
 

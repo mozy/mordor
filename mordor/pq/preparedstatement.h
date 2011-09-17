@@ -28,18 +28,25 @@ struct Skip {};
 class PreparedStatement
 {
     friend class Connection;
+public:
+    enum ResultFormat {
+        TEXT   = 0,
+        BINARY = 1
+    };
+
 private:
     PreparedStatement(boost::shared_ptr<PGconn> conn,
         const std::string &command, const std::string &name,
-        SchedulerType *scheduler)
+        SchedulerType *scheduler, ResultFormat format = BINARY)
         : m_conn(conn),
           m_command(command),
           m_name(name),
-          m_scheduler(scheduler)
+          m_scheduler(scheduler),
+          m_resultFormat(format)
     {}
 
 public:
-    PreparedStatement() {}
+    PreparedStatement(): m_resultFormat(BINARY) {}
 
     void bind(size_t param, const Null &);
     void bind(size_t param, const char *value);
@@ -156,6 +163,7 @@ private:
     std::string m_command;
     std::string m_name;
     SchedulerType *m_scheduler;
+    ResultFormat m_resultFormat;
     std::vector<Oid> m_paramTypes;
     std::vector<std::string> m_paramValues;
     std::vector<const char *> m_params;

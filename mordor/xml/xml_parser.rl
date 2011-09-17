@@ -43,14 +43,17 @@ using namespace Mordor;
 
     action attrib_value
     {
-        m_handler.onAttributeValue(std::string(mark, fpc-mark));
-        mark = NULL;
+        if (fpc != mark) {
+            m_handler.onAttributeValue(std::string(mark, fpc-mark));
+            mark = NULL;
+        }
     }
 
     EntityValue = '"' ([^%&"] | PEReference | Reference)* '"' |
                   "'" ([^%&'] | PEReference | Reference)* '"';
-    AttValue = '"' ([^<&"] | Reference)* >mark %attrib_value '"' |
-               "'" ([^<&'] | Reference)* >mark %attrib_value "'";
+
+    AttValue = '"' [^"<]* >mark %attrib_value '"' |
+               "'" [^'<]* >mark %attrib_value "'" ;
     SystemLiteral = ('"' [^"]* '"') | ("'" [^']* "'");
     PubidChar = ' ' | '\r' | '\n' | [a-zA-Z0-9] | ['()+,./:=?;!*#@$_%] | '-';
     PubidLiteral = '"' PubidChar* '"' | "'" (PubidChar* -- "'") "'";

@@ -10,6 +10,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/weak_ptr.hpp>
 
 namespace Mordor {
 
@@ -66,6 +67,16 @@ public:
 
     virtual Timer::ptr registerTimer(unsigned long long us,
         boost::function<void ()> dg, bool recurring = false);
+
+    /// Conditionally execute the dg callback function only when weakCond is
+    /// still in valid status, which means, the original object managed by the
+    /// shared_ptr is not destroyed
+    /// NOTE: this interface can't be called in class constructor while passing
+    ///  a shared_ptr/weak_ptr of itself.
+    Timer::ptr registerConditionTimer(unsigned long long us,
+        boost::function<void ()> dg,
+        boost::weak_ptr<void> weakCond,
+        bool recurring = false);
 
     /// @return How long until the next timer expires; ~0ull if no timers
     unsigned long long nextTimer();

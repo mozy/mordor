@@ -214,7 +214,7 @@ PGresult *nextResult(PGconn *conn, SchedulerType *scheduler)
 #endif
 
 PreparedStatement
-Connection::prepare(const std::string &command, const std::string &name)
+Connection::prepare(const std::string &command, const std::string &name, PreparedStatement::ResultFormat resultFormat)
 {
     if (!name.empty()) {
 #ifdef WINDOWS
@@ -237,7 +237,7 @@ Connection::prepare(const std::string &command, const std::string &name)
             }
             MORDOR_LOG_VERBOSE(g_log) << m_conn.get() << " PQsendPrepare(\""
                 << name << "\", \"" << command << "\")";
-            return PreparedStatement(m_conn, std::string(), name, m_scheduler);
+            return PreparedStatement(m_conn, std::string(), name, m_scheduler, resultFormat);
         } else
 #endif
         {
@@ -252,10 +252,10 @@ Connection::prepare(const std::string &command, const std::string &name)
                 throwException(result.get());
             MORDOR_LOG_VERBOSE(g_log) << m_conn.get() << " PQprepare(\"" << name
                 << "\", \"" << command << "\")";
-            return PreparedStatement(m_conn, std::string(), name, m_scheduler);
+            return PreparedStatement(m_conn, std::string(), name, m_scheduler, resultFormat);
         }
     } else {
-        return PreparedStatement(m_conn, command, name, m_scheduler);
+        return PreparedStatement(m_conn, command, name, m_scheduler, resultFormat);
     }
 }
 

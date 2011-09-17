@@ -519,6 +519,13 @@ ClientRequest::hasRequestBody() const
 Stream::ptr
 ClientRequest::requestStream()
 {
+    if (m_requestState == ERROR) {
+        if (m_conn->m_priorResponseClosed <= m_requestNumber)
+            MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+        else
+            MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
+    }
+
     if (m_requestStream) {
         MORDOR_ASSERT(m_request.entity.contentType.type != "multipart");
         return m_requestStream;

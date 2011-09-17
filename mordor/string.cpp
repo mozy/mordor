@@ -227,6 +227,17 @@ hmacSha1(const std::string &text, const std::string &key)
         (text, key);
 }
 
+std::string
+hmacSha256(const std::string &text, const std::string &key)
+{
+    return hmac<SHA256_CTX,
+        &SHA256_Init,
+        &SHA256_Update,
+        &SHA256_Final,
+        SHA256_CBLOCK, SHA256_DIGEST_LENGTH>
+        (text, key);
+}
+
 void
 hexstringFromData(const void *data, size_t len, char *output)
 {

@@ -37,7 +37,7 @@ public:
     /// server.  Statements prepared on the server msut have unique names
     /// (per-connection)
     PreparedStatement prepare(const std::string &command,
-        const std::string &name = std::string());
+        const std::string &name = std::string(), PreparedStatement::ResultFormat = PreparedStatement::BINARY);
     /// Create a PreparedStatement object representing a previously prepared
     /// statement on the server
     PreparedStatement find(const std::string &name);

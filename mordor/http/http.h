@@ -133,6 +133,10 @@ std::string unquote(const char *str, size_t size);
 std::string unquote(const std::string &str);
 boost::posix_time::ptime parseHttpDate(const char *str, size_t size);
 
+// Mordor uses the following datastrutures to represent the standard contents
+// of HTTP headers in a C++-friendly fashion.  These are used to build and
+// parse HTTP requests and responses.
+
 struct Version
 {
     Version() : major(~0), minor(~0) {}
@@ -381,6 +385,7 @@ struct AcceptValueWithParameters
 
 typedef std::vector<AcceptValueWithParameters> AcceptListWithParameters;
 
+// First line of a HTTP Request, e.g. "GET /events/1196798 HTTP/1.1"
 struct RequestLine
 {
     RequestLine() : method(GET) {}
@@ -390,6 +395,8 @@ struct RequestLine
     Version ver;
 };
 
+
+// First line of an HTTP Response, e.g. "HTTP/1.1 200 OK"
 struct StatusLine
 {
     StatusLine() : status(OK) {}
@@ -398,6 +405,12 @@ struct StatusLine
     std::string reason;
     Version ver;
 };
+
+// Each member of the following structures contains the parsed value
+// of a standard HTTP header of approximately the same name.
+// e.g. GeneralHeaders::connection contains the "Connection" header
+// and RequestHeaders::acceptCharset contains the "Accept-Charset" header
+// (see http://en.wikipedia.org/wiki/List_of_HTTP_header_fields)
 
 struct GeneralHeaders
 {
@@ -443,12 +456,17 @@ struct EntityHeaders
 {
     EntityHeaders() : contentLength(~0ull) {}
 
-    std::vector<std::string> contentEncoding;
-    unsigned long long contentLength;
-    ContentRange contentRange;
-    MediaType contentType;
-    boost::posix_time::ptime expires;
-    boost::posix_time::ptime lastModified;
+    std::vector<std::string> contentEncoding; // "Content-Encoding"
+    unsigned long long contentLength;         // "Content-Length"
+    ContentRange contentRange;                // "Content-Range"
+    MediaType contentType;                    // "Content-Type"
+    boost::posix_time::ptime expires;         // "Expires"
+    boost::posix_time::ptime lastModified;    // "Last-Modified"
+
+    // All non-standard headers are stored in this map.
+    // Typically these headers use the naming convention "X-...",
+    // for example "X-Meta", "X-ObjectID" but that is not manditory.
+    // This is also the structure to set any Cookie
     StringMap extension;
 };
 
@@ -458,8 +476,6 @@ struct Request
     GeneralHeaders general;
     RequestHeaders request;
     EntityHeaders entity;
-
-    std::string toString() const;
 };
 
 struct Response
@@ -468,8 +484,6 @@ struct Response
     GeneralHeaders general;
     ResponseHeaders response;
     EntityHeaders entity;
-
-    std::string toString() const;
 };
 
 bool isAcceptable(const ChallengeList &list, const std::string &scheme);
@@ -504,6 +518,10 @@ std::ostream& operator<<(std::ostream& os, const GeneralHeaders &g);
 std::ostream& operator<<(std::ostream& os, const RequestHeaders &r);
 std::ostream& operator<<(std::ostream& os, const ResponseHeaders &r);
 std::ostream& operator<<(std::ostream& os, const EntityHeaders &e);
+
+// These operators are used to convert the Request and Response
+// structures, as filled in by a Client or Server, into the real
+// HTTP string format that is sent "over the wire"
 std::ostream& operator<<(std::ostream& os, const Request &r);
 std::ostream& operator<<(std::ostream& os, const Response &r);
 

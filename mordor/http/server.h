@@ -86,6 +86,11 @@ public:
     void cancel();
     void finish();
 
+    /// Context
+    ///
+    /// Context of the ServerRequest
+    const std::string & context() const { return m_context; }
+
 private:
     void doRequest();
     void commit();
@@ -106,6 +111,7 @@ private:
     bool m_willClose, m_pipeline;
     boost::shared_ptr<Stream> m_requestStream, m_responseStream;
     boost::shared_ptr<Multipart> m_requestMultipart, m_responseMultipart;
+    std::string m_context;
 };
 
 /// Individual connection to an HTTP server

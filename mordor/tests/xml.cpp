@@ -4,6 +4,7 @@
 
 #include "mordor/xml/parser.h"
 #include "mordor/test/test.h"
+#include "mordor/string.h"
 
 using namespace Mordor;
 
@@ -13,6 +14,46 @@ static void callback(std::string &value, int &called,
     value.append(string);
     ++called;
 }
+
+static void reference(std::string &value, int &called,
+                              const std::string &string)
+{
+    // When processing inner text a special callback is invoked for xml
+    // references
+    if (string == "&amp;")
+        value.append("&");
+    else if (string == "&gt;")
+        value.append(">");
+    else if (string == "&lt;")
+        value.append("<");
+    else if (string == "&quot;")
+        value.append("\"");
+    else if (string == "&apos;")
+        value.append("\'");
+    else
+        // Real code should also look for character references like “&#38;”
+        MORDOR_NOTREACHED();
+
+    ++called;
+}
+
+static void handlereferencecallback(std::string &value, int &called,
+                              const std::string &string)
+{
+    // A full Attribute value is passed, which may contain xml references
+    std::string rawstring(string);
+
+    replace(rawstring, "&amp;", "&");
+    replace(rawstring, "&gt;", ">" );
+    replace(rawstring, "&lt;", "<" );
+    replace(rawstring, "&quot;", "\"");
+    replace(rawstring, "&apos;", "\'");
+    // Should also look for character references like “&#38;”
+
+    value.append(rawstring);
+    ++called;
+}
+
 
 static void emptyTag(int &called)
 {
@@ -63,19 +104,122 @@ MORDOR_UNITTEST(XMLParser, references)
         NULL,
         NULL,
         boost::bind(&callback, boost::ref(text), boost::ref(called), _1),
-        boost::bind(&callback, boost::ref(text), boost::ref(called), _1));
+        boost::bind(&reference, boost::ref(text), boost::ref(called), _1));
     XMLParser parser(handler);
     parser.run("<root>sometext&amp;somemoretext</root>");
     MORDOR_ASSERT(parser.final());
     MORDOR_ASSERT(!parser.error());
     MORDOR_TEST_ASSERT_EQUAL(called, 3);
-    MORDOR_TEST_ASSERT_EQUAL(text, "sometext&amp;somemoretext");
+    MORDOR_TEST_ASSERT_EQUAL(text, "sometext&somemoretext");
 
     text.clear();
     called = 0;
-    parser.run("<path>/Users/test1/Public/C:\\abc\\n&apos;&amp;.txt1</path>");
+    parser.run("<path>/Users/test1/Public/&lt;C:\\abc\\n&apos;&amp;.txt1</path>");
     MORDOR_ASSERT(parser.final());
     MORDOR_ASSERT(!parser.error());
-    MORDOR_TEST_ASSERT_EQUAL(called, 4);
-    MORDOR_TEST_ASSERT_EQUAL(text, "/Users/test1/Public/C:\\abc\\n&apos;&amp;.txt1");
+    MORDOR_TEST_ASSERT_EQUAL(called, 6);
+    MORDOR_TEST_ASSERT_EQUAL(text, "/Users/test1/Public/<C:\\abc\\n'&.txt1");
+
+    text.clear();
+    called = 0;
+    parser.run("<p>&quot;&amp;</p>");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT_EQUAL(called, 2);
+    MORDOR_TEST_ASSERT_EQUAL(text, "\"&");
 }
+
+MORDOR_UNITTEST(XMLParser, attribute)
+{
+    std::string key, value;
+    int calledKey = 0, calledVal = 0;
+    CallbackXMLParserEventHandler handler(
+        NULL,
+        NULL,
+        NULL,
+        boost::bind(&callback, boost::ref(key), boost::ref(calledKey), _1),
+        boost::bind(&handlereferencecallback, boost::ref(value), boost::ref(calledVal), _1));
+    XMLParser parser(handler);
+
+    parser.run("<mykey query=\"mymail\"/>");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT_EQUAL(calledKey, 1);
+    MORDOR_TEST_ASSERT_EQUAL(key, "query");
+    MORDOR_TEST_ASSERT_EQUAL(calledVal, 1);
+    MORDOR_TEST_ASSERT_EQUAL(value, "mymail");
+
+    key.clear(); value.clear();
+    calledKey = 0; calledVal = 0;
+    parser.run("<mykey qry=\"&quot;mymail&apos;\"/>");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT_EQUAL(calledKey, 1);
+    MORDOR_TEST_ASSERT_EQUAL(key, "qry");
+    MORDOR_TEST_ASSERT_EQUAL(calledVal, 1);
+    MORDOR_TEST_ASSERT_EQUAL(value, "\"mymail\'");
+
+    key.clear(); value.clear();
+    calledKey = 0; calledVal = 0;
+    parser.run("<mykey a=\'&quot;\"\' b=\"foo's\"/>");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT_EQUAL(calledKey, 2);
+    MORDOR_TEST_ASSERT_EQUAL(key, "ab");  // The test callback concatenates them together
+    MORDOR_TEST_ASSERT_EQUAL(calledVal, 2);
+    MORDOR_TEST_ASSERT_EQUAL(value, "\"\"foo's");
+
+    // A more complex real life XML
+    key.clear(); value.clear();
+    parser.run("<folder id=\"3\" i4ms=\"692002\" ms=\"456229\" name=\"Trash\" n=\"38\" l=\"1\"><search id=\"384010\" sortBy=\"dateDesc\" query=\"(to:(foo) tag:&quot;mymail&quot;\" name=\"inbox my mail\" l=\"3\" /></folder>");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+    MORDOR_ASSERT(!key.empty());
+    MORDOR_ASSERT(!value.empty());
+}
+
+const char * xml_typical =
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\t"
+"<NamedObject type='file' deleted='false'>\n"
+"     <id>/sync/1/path/x.y.txt</id>"
+"     <versionId>1310496040</versionId>"
+"\t<Version deleted='false'>"
+"\t\t<versionId>1310496040</versionId>"
+"<size>8</size>"
+"<stime>Tue, 12 Jul 2011 18:40:40 GMT</stime>\r\n"
+"<fileAttributes archive='true' not_content_indexed='true' />"
+"</Version>"
+"</NamedObject>";
+
+MORDOR_UNITTEST(XMLParser, parsedocument)
+{
+    // Confirm that a full xml with random white space and
+    // typical elements can be parsed.
+    XMLParserEventHandler defaulthandler;
+    XMLParser parser(defaulthandler);
+    parser.run(xml_typical);
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+}
+
+#if 0
+// Disabled until comment support fixed
+MORDOR_UNITTEST(XMLParser, parsecomment)
+{
+    XMLParserEventHandler defaulthandler;
+    XMLParser parser(defaulthandler);
+
+    parser.run("<!-- a comment -->");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+
+    parser.run("foo <!-- bar --> baz <!-- qox --> blurb");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+
+    parser.run("<![CDATA[ <!-- OMGWTFBBQ ]]>Shoulda used a <!-- real parser -->");
+    MORDOR_ASSERT(parser.final());
+    MORDOR_ASSERT(!parser.error());
+}
+#endif
+
