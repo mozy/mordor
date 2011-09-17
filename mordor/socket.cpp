@@ -5,6 +5,7 @@
 #include <boost/bind.hpp>
 
 #include "assert.h"
+#include "config.h"
 #include "fiber.h"
 #include "iomanager.h"
 #include "string.h"
@@ -28,6 +29,13 @@
 #endif
 
 namespace Mordor {
+
+#ifdef WINDOWS
+static ConfigVar<bool>::ptr g_useConnectEx =
+        Config::lookup("socket.useconnectex", true, "Use WinSock2 ConnectEx API when available");
+static ConfigVar<bool>::ptr g_useAcceptEx =
+        Config::lookup("socket.useacceptex", true, "Use WinSock2 AcceptEx API when available");
+#endif
 
 namespace {
 enum Family
@@ -182,7 +190,7 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
     // lenient
     MORDOR_ASSERT(type != 0);
 #ifdef WINDOWS
-    if (pAcceptEx && m_ioManager) {
+    if (pAcceptEx && g_useAcceptEx->val() && m_ioManager) {
         m_sock = socket(family, type, protocol);
         MORDOR_LOG_LEVEL(g_log, m_sock == -1 ? Log::ERROR : Log::DEBUG) << this
             << " socket(" << (Family)family << ", " << (Type)type << ", "
@@ -329,7 +337,7 @@ Socket::connect(const Address &to)
         MORDOR_LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to << ")";
     } else {
 #ifdef WINDOWS
-        if (ConnectEx) {
+        if (ConnectEx && g_useConnectEx->val()) {
             if (!m_localAddress) {
                 // need to be bound, even to ADDR_ANY, before calling ConnectEx
                 switch (m_family) {
@@ -559,7 +567,7 @@ void
 Socket::accept(Socket &target)
 {
 #ifdef WINDOWS
-    if (m_ioManager) {
+    if (pAcceptEx && g_useAcceptEx->val() && m_ioManager) {
         MORDOR_ASSERT(target.m_sock != -1);
     } else {
         MORDOR_ASSERT(target.m_sock == -1);
@@ -581,7 +589,7 @@ Socket::accept(Socket &target)
                 << newsock << " (" << *target.remoteAddress() << ')';
     } else {
 #ifdef WINDOWS
-        if (pAcceptEx) {
+        if (pAcceptEx && g_useAcceptEx->val()) {
             m_ioManager->registerEvent(&m_receiveEvent);
             unsigned char addrs[sizeof(SOCKADDR_STORAGE) * 2 + 16];
             DWORD bytes;
@@ -1063,7 +1071,7 @@ Socket::cancelAccept()
     if (m_cancelledReceive)
         return;
     m_cancelledReceive = ERROR_OPERATION_ABORTED;
-    if (pAcceptEx) {
+    if (pAcceptEx && g_useAcceptEx->val()) {
         m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
     }
     if (m_hEvent && m_scheduler && m_fiber) {
@@ -1084,7 +1092,7 @@ Socket::cancelConnect()
     if (m_cancelledSend)
         return;
     m_cancelledSend = ERROR_OPERATION_ABORTED;
-    if (ConnectEx) {
+    if (ConnectEx && g_useConnectEx->val()) {
         m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
     }
     if (m_hEvent && m_scheduler && m_fiber) {
