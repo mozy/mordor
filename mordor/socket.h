@@ -94,7 +94,6 @@ public:
     void listen(int backlog = SOMAXCONN);
 
     Socket::ptr accept();
-    void accept(Socket &target);
     void shutdown(int how = SHUT_RDWR);
 
     void getOption(int level, int option, void *result, size_t *len);
@@ -154,6 +153,7 @@ private:
     size_t doIO(iovec *buffers, size_t length, int &flags, Address *address = NULL);
     static void callOnRemoteClose(weak_ptr self);
     void registerForRemoteClose();
+    void accept(Socket &target);
 
 #ifdef WINDOWS
     // For WSAEventSelect

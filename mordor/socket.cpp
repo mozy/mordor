@@ -466,20 +466,19 @@ suckylsp:
                         << ", " << to << "): (" << m_cancelledSend << ")";
                     MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "connect");
                 }
-                ::connect(m_sock, to.name(), to.nameLen());
-                error_t error = lastError();
-                // Windows 2000 is funny this way
-                if (error == WSAEINVAL) {
-                    ::connect(m_sock, to.name(), to.nameLen());
-                    error = GetLastError();
-                }
-                if (error == WSAEISCONN)
-                    error = ERROR_SUCCESS;
+                // get the result of the connect operation
+                WSANETWORKEVENTS events;
+                if (0 != WSAEnumNetworkEvents(m_sock, NULL, &events))
+                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSAEnumNetworkEvents");
+                // fall back to general socket error if no connect error recorded
+                error_t error = (events.lNetworkEvents & FD_CONNECT) ?
+                    events.iErrorCode[FD_CONNECT_BIT] :
+                    getOption<int>(SOL_SOCKET, SO_ERROR);
                 MORDOR_LOG_LEVEL(g_log, error ? Log::ERROR : Log::INFO)
                     << this << " connect(" << m_sock << ", " << to
                     << "): (" << error << ")";
                 if (error)
-                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("connect");
+                    MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "connect");
             } else {
                 MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", "
                     << to << "): (" << lastError() << ")";
