@@ -60,6 +60,8 @@ MORDOR_UNITTEST(IOManager, lotsOfTickles)
     }
 }
 
+// Windows doesn't support asynchronous anonymous pipes yet
+#ifndef WINDOWS
 static void writeOne(Stream::ptr stream)
 {
     MORDOR_TEST_ASSERT_EQUAL(stream->write("t", 1u), 1u);
@@ -75,3 +77,4 @@ MORDOR_UNITTEST(IOManager, rapidClose)
         MORDOR_TEST_ASSERT_EQUAL(pipes.first->read(&buffer, 1u), 1u);
     }
 }
+#endif
