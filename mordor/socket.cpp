@@ -3,14 +3,12 @@
 #include "socket.h"
 
 #include <boost/bind.hpp>
-#include <boost/thread/once.hpp>
 
 #include "assert.h"
 #include "fiber.h"
 #include "iomanager.h"
 #include "string.h"
 #include "version.h"
-#include "config.h"
 
 #ifdef WINDOWS
 #include <mswsock.h>
@@ -30,13 +28,6 @@
 #endif
 
 namespace Mordor {
-
-#ifdef WINDOWS
-static ConfigVar<bool>::ptr g_useConnectEx =
-        Config::lookup("socket.useconnectex", true, "Use WinSock2 ConnectEx API when available");
-static ConfigVar<bool>::ptr g_useAcceptEx =
-        Config::lookup("socket.useacceptex", true, "Use WinSock2 AcceptEx API when available");
-#endif
 
 namespace {
 enum Family
@@ -101,58 +92,9 @@ std::ostream &operator <<(std::ostream &os, Protocol protocol)
 
 #ifdef WINDOWS
 
-static LPFN_ACCEPTEX pAcceptEx = 0;
-static LPFN_GETACCEPTEXSOCKADDRS pGetAcceptExSockaddrs = 0;
-static LPFN_CONNECTEX ConnectEx = 0;
-static boost::once_flag extendedFuncInitFlag = BOOST_ONCE_INIT;
-
-void initExtendedFunctions()
-{
-    if (g_useConnectEx->val() || g_useAcceptEx->val())
-    {
-        socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
-        DWORD bytes = 0;
-
-        if (g_useAcceptEx->val()) {
-            GUID acceptExGuid = WSAID_ACCEPTEX;
-            WSAIoctl(sock,
-                        SIO_GET_EXTENSION_FUNCTION_POINTER,
-                        &acceptExGuid,
-                        sizeof(GUID),
-                        &pAcceptEx,
-                        sizeof(LPFN_ACCEPTEX),
-                        &bytes,
-                        NULL,
-                        NULL);
-
-            GUID getAcceptExSockaddrsGuid = WSAID_GETACCEPTEXSOCKADDRS;
-            WSAIoctl(sock,
-                        SIO_GET_EXTENSION_FUNCTION_POINTER,
-                        &getAcceptExSockaddrsGuid,
-                        sizeof(GUID),
-                        &pGetAcceptExSockaddrs,
-                        sizeof(LPFN_GETACCEPTEXSOCKADDRS),
-                        &bytes,
-                        NULL,
-                        NULL);
-        }
-
-        if (g_useConnectEx->val()) {
-            GUID connectExGuid = WSAID_CONNECTEX;
-            WSAIoctl(sock,
-                        SIO_GET_EXTENSION_FUNCTION_POINTER,
-                        &connectExGuid,
-                        sizeof(GUID),
-                        &ConnectEx,
-                        sizeof(LPFN_CONNECTEX),
-                        &bytes,
-                        NULL,
-                        NULL);
-        }
-
-        closesocket(sock);
-    }
-}
+static LPFN_ACCEPTEX pAcceptEx;
+static LPFN_GETACCEPTEXSOCKADDRS pGetAcceptExSockaddrs;
+static LPFN_CONNECTEX ConnectEx;
 
 namespace {
 
@@ -161,6 +103,43 @@ static struct Initializer {
     {
         WSADATA wd;
         WSAStartup(MAKEWORD(2,2), &wd);
+
+        socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
+        DWORD bytes = 0;
+
+        GUID acceptExGuid = WSAID_ACCEPTEX;
+        WSAIoctl(sock,
+                 SIO_GET_EXTENSION_FUNCTION_POINTER,
+                 &acceptExGuid,
+                 sizeof(GUID),
+                 &pAcceptEx,
+                 sizeof(LPFN_ACCEPTEX),
+                 &bytes,
+                 NULL,
+                 NULL);
+
+        GUID getAcceptExSockaddrsGuid = WSAID_GETACCEPTEXSOCKADDRS;
+        WSAIoctl(sock,
+                 SIO_GET_EXTENSION_FUNCTION_POINTER,
+                 &getAcceptExSockaddrsGuid,
+                 sizeof(GUID),
+                 &pGetAcceptExSockaddrs,
+                 sizeof(LPFN_GETACCEPTEXSOCKADDRS),
+                 &bytes,
+                 NULL,
+                 NULL);
+
+        GUID connectExGuid = WSAID_CONNECTEX;
+        WSAIoctl(sock,
+                 SIO_GET_EXTENSION_FUNCTION_POINTER,
+                 &connectExGuid,
+                 sizeof(GUID),
+                 &ConnectEx,
+                 sizeof(LPFN_CONNECTEX),
+                 &bytes,
+                 NULL,
+                 NULL);
+        closesocket(sock);
     }
     ~Initializer()
     {
@@ -203,8 +182,6 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
     // lenient
     MORDOR_ASSERT(type != 0);
 #ifdef WINDOWS
-    boost::call_once(&initExtendedFunctions, extendedFuncInitFlag);
-
     if (pAcceptEx && m_ioManager) {
         m_sock = socket(family, type, protocol);
         MORDOR_LOG_LEVEL(g_log, m_sock == -1 ? Log::ERROR : Log::DEBUG) << this
@@ -225,9 +202,6 @@ Socket::Socket(int family, int type, int protocol)
   m_isConnected(false),
   m_isRegisteredForRemoteClose(false)
 {
-#ifdef WINDOWS
-    boost::call_once(&initExtendedFunctions, extendedFuncInitFlag);
-#endif
     // Windows accepts type == 0 as implying SOCK_STREAM; other OS's aren't so
     // lenient
     MORDOR_ASSERT(type != 0);
@@ -262,9 +236,6 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
   m_isConnected(false),
   m_isRegisteredForRemoteClose(false)
 {
-#ifdef WINDOWS
-    boost::call_once(&initExtendedFunctions, extendedFuncInitFlag);
-#endif
     // Windows accepts type == 0 as implying SOCK_STREAM; other OS's aren't so
     // lenient
     MORDOR_ASSERT(type != 0);
@@ -495,19 +466,20 @@ suckylsp:
                         << ", " << to << "): (" << m_cancelledSend << ")";
                     MORDOR_THROW_EXCEPTION_FROM_ERROR_API(m_cancelledSend, "connect");
                 }
-                // get the result of the connect operation
-                WSANETWORKEVENTS events;
-                if (0 != WSAEnumNetworkEvents(m_sock, NULL, &events))
-                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSAEnumNetworkEvents");
-                // fall back to general socket error if no connect error recorded
-                error_t error = (events.lNetworkEvents & FD_CONNECT) ?
-                    events.iErrorCode[FD_CONNECT_BIT] :
-                    getOption<int>(SOL_SOCKET, SO_ERROR);
+                ::connect(m_sock, to.name(), to.nameLen());
+                error_t error = lastError();
+                // Windows 2000 is funny this way
+                if (error == WSAEINVAL) {
+                    ::connect(m_sock, to.name(), to.nameLen());
+                    error = GetLastError();
+                }
+                if (error == WSAEISCONN)
+                    error = ERROR_SUCCESS;
                 MORDOR_LOG_LEVEL(g_log, error ? Log::ERROR : Log::INFO)
                     << this << " connect(" << m_sock << ", " << to
                     << "): (" << error << ")";
                 if (error)
-                    MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "connect");
+                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("connect");
             } else {
                 MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", "
                     << to << "): (" << lastError() << ")";
@@ -588,7 +560,7 @@ void
 Socket::accept(Socket &target)
 {
 #ifdef WINDOWS
-    if (pAcceptEx && m_ioManager) {
+    if (m_ioManager) {
         MORDOR_ASSERT(target.m_sock != -1);
     } else {
         MORDOR_ASSERT(target.m_sock == -1);
