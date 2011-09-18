@@ -330,9 +330,10 @@ static bool shouldDaemonize(char **enviro)
         return false;
     std::string parent;
     for (const char *env = *enviro; *env; env += strlen(env) + 1) {
+        if (strncmp(env, "_=", 2) != 0 &&
+            strncmp(env, "SUDO_COMMAND=", 13) != 0)
+          continue;
         const char *equals = strchr(env, '=');
-        if (equals != env + 1 || *env != '_')
-            continue;
         parent = equals + 1;
         break;
     }
