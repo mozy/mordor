@@ -1070,8 +1070,12 @@ ClientRequest::ensureResponse()
 
             bool close = false;
             StringSet &connection = m_response.general.connection;
+            StringSet &proxyConnection = m_response.general.proxyConnection; // NON-STANDARD!!!
+
             if (m_response.status.ver == Version(1, 0)) {
-                if (connection.find("Keep-Alive") == connection.end())
+                // When using a HTTP 1.0 proxy server then Keep-Alive may come via the Proxy-Connection header
+                // instead of more standard "Connection"
+                if (connection.find("Keep-Alive") == connection.end() && proxyConnection.find("Keep-Alive") == proxyConnection.end())
                     close = true;
             } else if (m_response.status.ver == Version(1, 1)) {
                 if (connection.find("close") != connection.end())
@@ -1079,8 +1083,7 @@ ClientRequest::ensureResponse()
             } else {
                 MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
             }
-            // NON-STANDARD!!!
-            StringSet &proxyConnection = m_response.general.proxyConnection;
+
             if (proxyConnection.find("close") != proxyConnection.end())
                 close = true;
 
