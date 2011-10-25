@@ -273,7 +273,12 @@
     <ClInclude Include="zip.h" />
   </ItemGroup>
   <ItemGroup>
-    <Ragel Include="http\http_parser.rl" />
+    <Ragel Include="http\http_parser.rl">
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">http</IncludePaths>
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">http</IncludePaths>
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">http</IncludePaths>
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Release|x64'">http</IncludePaths>
+    </Ragel>
     <Ragel Include="json.rl" />
     <Ragel Include="uri.rl" />
     <Ragel Include="xml\xml_parser.rl" />
