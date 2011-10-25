@@ -441,6 +441,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\http.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\http.cpp"
 				>
 				<FileConfiguration
@@ -475,10 +479,6 @@
 						ObjectFile="$(IntDir)\http_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\http\http.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\http\http_parser.cpp"
@@ -526,6 +526,10 @@
 			</File>
 			<File
 				RelativePath=".\http\oauth.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\http\oauth2.cpp"
 				>
 			</File>
 			<File
@@ -613,6 +617,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\socket.cpp"
 				>
 				<FileConfiguration
@@ -647,10 +655,6 @@
 						ObjectFile="$(IntDir)\socket_stream.obj"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\socket.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\socks.cpp"
@@ -927,15 +931,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\http\oauth2.h"
+				>
+			</File>
+			<File
 				RelativePath=".\parallel.h"
 				>
 			</File>
 			<File
-				RelativePath=".\xml\parser.h"
+				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
+				RelativePath=".\xml\parser.h"
 				>
 			</File>
 			<File
@@ -971,11 +979,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\scheduler.h"
+				RelativePath=".\scheduler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\scheduler.h"
+				RelativePath=".\streams\scheduler.h"
 				>
 			</File>
 			<File
@@ -999,11 +1007,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\socket.h"
+				RelativePath=".\socket.h"
 				>
 			</File>
 			<File
-				RelativePath=".\socket.h"
+				RelativePath=".\streams\socket.h"
 				>
 			</File>
 			<File
