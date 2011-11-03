@@ -83,15 +83,19 @@ public:
     void doRequest();
     void ensureResponse();
 
-    // filters HTTP requests for display in the log
-    // default implementation hides HTTP Basic auth; derive and replace if you need
-    //  to hide any other information (keys, etc.)
-    struct LogFilter {
-        virtual std::string operator()(const RequestLine &requestLine); // for verbose
-        virtual std::string operator()(const Request &request);         // for debug/trace
+    // derive from this to customize request/response logging
+    struct RequestLogger {
+        // default implementation logs request (>=DEBUG) or request.requestline (VERBOSE),
+        // censoring HTTP Basic auth
+        virtual void logRequest(size_t connectionNum, long long requestNum, const Request &request, bool censorBasicAuth = true);
+
+        // default implementation logs response (>=DEBUG) or response.status (VERBOSE);
+        // derivations are welcome to examine the request also
+        virtual void logResponse(size_t connectionNum, long long requestNum, const Request &request, const Response &response);
     };
-    // use a null pointer to restore the default log filter
-    static void setLogFilter(boost::shared_ptr<LogFilter> newLogFilter);
+
+    // use a null pointer to restore the default logger
+    static void setRequestLogger(boost::shared_ptr<RequestLogger> newRequestLogger);
 
 private:
     void waitForRequest();
@@ -116,7 +120,7 @@ private:
     boost::weak_ptr<Stream> m_responseStream;
     boost::shared_ptr<Multipart> m_requestMultipart;
     boost::weak_ptr<Multipart> m_responseMultipart;
-    static boost::shared_ptr<LogFilter> msp_logFilter;
+    static boost::shared_ptr<RequestLogger> msp_requestLogger;
 };
 
 // Logically the entire response is unexpected

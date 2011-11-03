@@ -438,39 +438,45 @@ ClientConnection::invariant() const
 #endif
 }
 
-std::string ClientRequest::LogFilter::operator()(const RequestLine &requestLine)
+void ClientRequest::RequestLogger::logRequest(size_t connNum, long long requestNum, const Request &request, bool censorBasicAuth)
 {
-    std::ostringstream os;
-    os << requestLine;
-    return os.str();
-}
-
-std::string ClientRequest::LogFilter::operator()(const Request &request)
-{
-    std::ostringstream os;
-    bool basicAuth = (stricmp(request.request.authorization.scheme.c_str(), "Basic") == 0);
-    bool basicProxyAuth = (stricmp(request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0);
-    if (basicAuth || basicProxyAuth) {
-        Request censoredRequest(request);
-        if (basicAuth)
-            censoredRequest.request.authorization.base64 = "<hidden>";
-        if (basicProxyAuth)
-            censoredRequest.request.proxyAuthorization.base64 = "<hidden>";
-        os << censoredRequest;
+    if (g_log->enabled(Log::DEBUG)) {
+        std::ostringstream os;
+        bool basicAuth = censorBasicAuth ? (stricmp(request.request.authorization.scheme.c_str(), "Basic") == 0) : false;
+        bool basicProxyAuth = censorBasicAuth ? (stricmp(request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0) : false;
+        if (basicAuth || basicProxyAuth) {
+            Request censoredRequest(request);
+            if (basicAuth)
+                censoredRequest.request.authorization.base64 = "<hidden>";
+            if (basicProxyAuth)
+                censoredRequest.request.proxyAuthorization.base64 = "<hidden>";
+            os << censoredRequest;
+        } else {
+            os << request;
+        }
+        MORDOR_LOG_DEBUG(g_log) << connNum << "-" << requestNum << " " << os.str();
     } else {
-        os << request;
+        MORDOR_LOG_VERBOSE(g_log) << connNum << "-" << requestNum << " " << request.requestLine;
     }
-    return os.str();
 }
 
-/* static */ boost::shared_ptr<ClientRequest::LogFilter> ClientRequest::msp_logFilter( new ClientRequest::LogFilter );
-
-void ClientRequest::setLogFilter(boost::shared_ptr<ClientRequest::LogFilter> newLogFilter)
+void ClientRequest::RequestLogger::logResponse(size_t connNum, long long requestNum, const Request &request, const Response &response)
 {
-    if (newLogFilter)
-        msp_logFilter = newLogFilter;
+    if (g_log->enabled(Log::DEBUG)) {
+        MORDOR_LOG_DEBUG(g_log) << connNum << "-" << requestNum << " " << response;
+    } else {
+        MORDOR_LOG_VERBOSE(g_log) << connNum << "-" << requestNum << " " << response.status;
+    }
+}
+
+/* static */ boost::shared_ptr<ClientRequest::RequestLogger> ClientRequest::msp_requestLogger( new ClientRequest::RequestLogger );
+
+void ClientRequest::setRequestLogger(boost::shared_ptr<ClientRequest::RequestLogger> newRequestLogger)
+{
+    if (newRequestLogger)
+        msp_requestLogger = newRequestLogger;
     else
-        msp_logFilter.reset( new ClientRequest::LogFilter );
+        msp_requestLogger.reset( new ClientRequest::RequestLogger );
 }
 
 ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &request)
@@ -954,11 +960,7 @@ ClientRequest::doRequest()
         std::ostringstream os;
         os << m_request;
         std::string str = os.str();
-        if (g_log->enabled(Log::DEBUG)) {
-            MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber<< " " << (*msp_logFilter)(m_request);
-        } else {
-            MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << (*msp_logFilter)(m_request.requestLine);
-        }
+        msp_requestLogger->logRequest(m_conn->m_connectionNumber, m_requestNumber, m_request);
         m_conn->m_stream->write(str.c_str(), str.size());
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID, false)) {
@@ -1062,11 +1064,7 @@ ClientRequest::ensureResponse()
                 MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
             if (!parser.complete())
                 MORDOR_THROW_EXCEPTION(IncompleteMessageHeaderException());
-            if (g_log->enabled(Log::DEBUG)) {
-                MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_response;
-            } else {
-                MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_response.status;
-            }
+            msp_requestLogger->logResponse(m_conn->m_connectionNumber, m_requestNumber, m_request, m_response);
 
             bool close = false;
             StringSet &connection = m_response.general.connection;
