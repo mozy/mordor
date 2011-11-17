@@ -7,6 +7,17 @@
 
 namespace Mordor {
 
+/* NOTE:
+ *  In current implementation, BufferedStream inherits parent stream's
+ *  read-write thread-safe ability only when parent stream is seekless.
+ * Problem:
+ *  When parent stream is seekable, read() operation will operate both
+ *  m_readBuffer and m_writeBuffer, and so does write(). Read-write
+ *  thread-safe ability can't be held anymore inside BufferedStream itself.
+ * TODO:
+ *  enhance the implementaton to allow BufferedStream inherits parent stream's
+ *  read-write thread-safe ability also for seekable stream.
+ */
 class BufferedStream : public FilterStream
 {
 public:

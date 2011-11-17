@@ -224,21 +224,18 @@ Buffer::operator =(const Buffer &copy)
 size_t
 Buffer::readAvailable() const
 {
-    invariant();
     return m_readAvailable;
 }
 
 size_t
 Buffer::writeAvailable() const
 {
-    invariant();
     return m_writeAvailable;
 }
 
 size_t
 Buffer::segments() const
 {
-    invariant();
     return m_segments.size();
 }
 

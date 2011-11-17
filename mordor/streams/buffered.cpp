@@ -144,7 +144,7 @@ BufferedStream::flushWrite(size_t length)
     {
         size_t result;
         try {
-            if (m_readBuffer.readAvailable() && supportsSeek()) {
+            if (supportsSeek() && m_readBuffer.readAvailable()) {
                 parent()->seek(-(long long)m_readBuffer.readAvailable(), CURRENT);
                 m_readBuffer.clear();
             }
@@ -260,7 +260,7 @@ void
 BufferedStream::flush(bool flushParent)
 {
     while (m_writeBuffer.readAvailable()) {
-        if (m_readBuffer.readAvailable() && supportsSeek()) {
+        if (supportsSeek() && m_readBuffer.readAvailable()) {
             parent()->seek(-(long long)m_readBuffer.readAvailable(), CURRENT);
             m_readBuffer.clear();
         }
