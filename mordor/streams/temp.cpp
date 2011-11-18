@@ -4,6 +4,7 @@
 
 #include "mordor/config.h"
 #include "mordor/string.h"
+#include "mordor/log.h"
 
 namespace Mordor {
 
@@ -11,6 +12,35 @@ static ConfigVar<std::string>::ptr g_tempDir = Config::lookup(
     "mordor.tempdir",
     std::string(""),
     "Temporary directory (blank for system default)");
+
+static Logger::ptr g_log = Log::lookup("mordor:streams");
+
+#ifdef WINDOWS
+static bool EnsureFolderExist(const std::wstring & wtempdir)
+{
+    size_t backslash = 1;
+    error_t error;
+    std::wstring currentFolder;
+    while ((backslash = wtempdir.find_first_of(L'\\', backslash + 1)) != std::wstring::npos) {
+        currentFolder = wtempdir.substr(0, backslash);
+        CreateDirectoryW(currentFolder.c_str(), NULL);
+        error = lastError();
+        if (error != ERROR_ALREADY_EXISTS && error != ERROR_SUCCESS) {
+            MORDOR_LOG_ERROR(g_log) << "Fail to create folder (" << wtempdir.c_str() << "), LastError:" << error;
+            return false;
+        }
+    }
+    CreateDirectoryW(&wtempdir[0], NULL);
+    error = lastError();
+    if (error == ERROR_ALREADY_EXISTS || error == ERROR_SUCCESS) {
+        return true;
+    } else {
+        MORDOR_LOG_ERROR(g_log) << "Fail to create folder (" << wtempdir.c_str() << "), LastError:" << error;
+        return false;
+    }
+
+}
+#endif
 
 TempStream::TempStream(const std::string &prefix, bool deleteOnClose,
                        IOManager *ioManager, Scheduler *scheduler)
@@ -43,12 +73,29 @@ TempStream::TempStream(const std::string &prefix, bool deleteOnClose,
     }
     std::wstring tempfile;
     tempfile.resize(MAX_PATH);
+
     UINT ret = GetTempFileNameW(wtempdir.c_str(),
         prefixW.c_str(),
         0,
         &tempfile[0]);
-    if (ret == 0)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetTempFileNameW");
+    error_t error;
+    if (ret == 0) {
+        //corner case, so call logic here only when GetTempFileNameW fails.
+        error = lastError();
+        if (GetFileAttributesW(wtempdir.c_str()) == INVALID_FILE_ATTRIBUTES && EnsureFolderExist(wtempdir)) {
+            MORDOR_LOG_INFO(g_log) << "try one more time of GetTempFileNameW";
+            ret = GetTempFileNameW(wtempdir.c_str(),
+                prefixW.c_str(),
+                0,
+                &tempfile[0]);
+            error = lastError();
+        }
+        if (ret == 0) {
+            MORDOR_LOG_ERROR(g_log) << "GetTempFileNameW(" << wtempdir.c_str() << "," << prefixW.c_str() << ") fails with LastError:" << error;
+            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetTempFileNameW");
+        }
+
+    }
     tempfile.resize(wcslen(tempfile.c_str()));
     init(tempfile, FileStream::READWRITE,
         (FileStream::CreateFlags)(FileStream::OPEN |
