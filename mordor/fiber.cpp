@@ -27,6 +27,9 @@ static AverageMinMaxStatistic<unsigned int> &g_statAlloc =
 static AverageMinMaxStatistic<unsigned int> &g_statFree=
     Statistics::registerStatistic("fiber.freestack",
     AverageMinMaxStatistic<unsigned int>("us"));
+static volatile unsigned int g_cntFibers = 0; // Active fibers
+static MaxStatistic<unsigned int> &g_statMaxFibers=Statistics::registerStatistic("fiber.max",
+    MaxStatistic<unsigned int>());
 
 static void fiber_switchContext(void **oldsp, void *newsp);
 
@@ -88,6 +91,7 @@ static std::vector<bool> & g_flsIndices()
 
 Fiber::Fiber()
 {
+    g_statMaxFibers.update(atomicIncrement(g_cntFibers));
     MORDOR_ASSERT(!t_fiber);
     m_state = EXEC;
     m_stack = NULL;
@@ -107,6 +111,7 @@ Fiber::Fiber()
 
 Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
 {
+    g_statMaxFibers.update(atomicIncrement(g_cntFibers));
     stacksize += g_pagesize - 1;
     stacksize -= stacksize % g_pagesize;
     m_dg = dg;
@@ -124,6 +129,7 @@ Fiber::Fiber(boost::function<void ()> dg, size_t stacksize)
 
 Fiber::~Fiber()
 {
+    atomicDecrement(g_cntFibers);
     if (!m_stack || m_stack == m_sp) {
         // Thread entry fiber
         MORDOR_ASSERT(!m_dg);
