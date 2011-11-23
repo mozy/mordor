@@ -18,8 +18,21 @@ MORDOR_SUITE_INVARIANT(Scheduler)
     MORDOR_TEST_ASSERT(!Scheduler::getThis());
 }
 
-static void doNothing()
-{
+
+namespace {
+    static void doNothing() { }
+
+    void throwException() { throw Exception(); }
+
+    void runOrException(int &i, int expectedValue, bool throwException)
+    {
+        MORDOR_LOG_DEBUG(::Mordor::Log::root()) << "set value: " << expectedValue;
+        if (throwException)
+            throw Exception();
+        else
+            i = expectedValue;
+    }
+
 }
 
 // Stop can be called multiple times without consequence
@@ -418,4 +431,36 @@ MORDOR_UNITTEST(Scheduler, spreadTheLoadWhileStopping)
     }
     // Make sure we hit every thread
     MORDOR_TEST_ASSERT_ABOUT_EQUAL(threads.size(), 8u, 2u);
+}
+
+MORDOR_UNITTEST(Scheduler, tolerantException)
+{
+    WorkerPool pool;
+    pool.schedule(throwException);
+    MORDOR_TEST_ASSERT_ANY_EXCEPTION(pool.stop());
+}
+
+MORDOR_UNITTEST(Scheduler, tolerantExceptionInBatch)
+{
+    WorkerPool pool(1, true, 10); // batchSize set to 10
+    std::vector<int> values(3);
+    std::vector<boost::function<void ()> > dgs;
+    dgs.push_back(boost::bind(runOrException, boost::ref(values[0]), 1, false));
+    dgs.push_back(boost::bind(runOrException, boost::ref(values[1]), 2, true));
+    dgs.push_back(boost::bind(runOrException, boost::ref(values[2]), 3, false));
+    pool.schedule(dgs.begin(), dgs.end());
+
+    MORDOR_TEST_ASSERT_EQUAL(values[0], 0);
+    MORDOR_TEST_ASSERT_EQUAL(values[1], 0);
+    MORDOR_TEST_ASSERT_EQUAL(values[2], 0);
+
+    // executing the jobs
+    MORDOR_TEST_ASSERT_ANY_EXCEPTION(pool.stop());
+    pool.stop();
+
+    MORDOR_TEST_ASSERT_EQUAL(values[0], 1);
+    MORDOR_TEST_ASSERT_EQUAL(values[1], 0);
+    // even though the 2nd is exceptioned,
+    // the 3rd one should still have chance to get executed
+    MORDOR_TEST_ASSERT_EQUAL(values[2], 3);
 }

@@ -426,6 +426,18 @@ Scheduler::run()
                 } catch (...) {
                     MORDOR_LOG_FATAL(Log::root())
                         << boost::current_exception_diagnostic_information();
+                    {
+                        boost::mutex::scoped_lock lock(m_mutex);
+                        std::vector<FiberAndThread>::iterator it2 = it;
+                        // push all un-executed fibers back to m_fibers
+                        while (++it2 != batch.end()) {
+                            m_fibers.push_back(*it2);
+                        }
+                        batch.clear();
+                        // decrease the activeCount as this thread is in exception
+                        isActive = false;
+                        --m_activeThreadCount;
+                    }
                     throw;
                 }
             }
