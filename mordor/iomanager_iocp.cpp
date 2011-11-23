@@ -411,6 +411,7 @@ IOManager::idle()
                 std::vector<boost::function<void ()> > expired = processTimers();
                 if (!expired.empty()) {
                     schedule(expired.begin(), expired.end());
+                    expired.clear();
                     try {
                         Fiber::yield();
                     } catch (OperationAbortedException &) {
@@ -423,6 +424,7 @@ IOManager::idle()
         }
         std::vector<boost::function<void ()> > expired = processTimers();
         schedule(expired.begin(), expired.end());
+        expired.clear();
 
 #ifndef NDEBUG
         boost::mutex::scoped_lock lock(m_mutex, boost::defer_lock_t());
