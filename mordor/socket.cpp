@@ -104,55 +104,6 @@ std::ostream &operator <<(std::ostream &os, Protocol protocol)
 static LPFN_ACCEPTEX pAcceptEx = 0;
 static LPFN_GETACCEPTEXSOCKADDRS pGetAcceptExSockaddrs = 0;
 static LPFN_CONNECTEX ConnectEx = 0;
-static boost::once_flag extendedFuncInitFlag = BOOST_ONCE_INIT;
-
-void initExtendedFunctions()
-{
-    if (g_useConnectEx->val() || g_useAcceptEx->val())
-    {
-        socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
-        DWORD bytes = 0;
-
-        if (g_useAcceptEx->val()) {
-            GUID acceptExGuid = WSAID_ACCEPTEX;
-            WSAIoctl(sock,
-                        SIO_GET_EXTENSION_FUNCTION_POINTER,
-                        &acceptExGuid,
-                        sizeof(GUID),
-                        &pAcceptEx,
-                        sizeof(LPFN_ACCEPTEX),
-                        &bytes,
-                        NULL,
-                        NULL);
-
-            GUID getAcceptExSockaddrsGuid = WSAID_GETACCEPTEXSOCKADDRS;
-            WSAIoctl(sock,
-                        SIO_GET_EXTENSION_FUNCTION_POINTER,
-                        &getAcceptExSockaddrsGuid,
-                        sizeof(GUID),
-                        &pGetAcceptExSockaddrs,
-                        sizeof(LPFN_GETACCEPTEXSOCKADDRS),
-                        &bytes,
-                        NULL,
-                        NULL);
-        }
-
-        if (g_useConnectEx->val()) {
-            GUID connectExGuid = WSAID_CONNECTEX;
-            WSAIoctl(sock,
-                        SIO_GET_EXTENSION_FUNCTION_POINTER,
-                        &connectExGuid,
-                        sizeof(GUID),
-                        &ConnectEx,
-                        sizeof(LPFN_CONNECTEX),
-                        &bytes,
-                        NULL,
-                        NULL);
-        }
-
-        closesocket(sock);
-    }
-}
 
 namespace {
 
@@ -161,6 +112,43 @@ static struct Initializer {
     {
         WSADATA wd;
         WSAStartup(MAKEWORD(2,2), &wd);
+        socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
+        DWORD bytes = 0;
+
+        GUID acceptExGuid = WSAID_ACCEPTEX;
+        WSAIoctl(sock,
+                    SIO_GET_EXTENSION_FUNCTION_POINTER,
+                    &acceptExGuid,
+                    sizeof(GUID),
+                    &pAcceptEx,
+                    sizeof(LPFN_ACCEPTEX),
+                    &bytes,
+                    NULL,
+                    NULL);
+
+        GUID getAcceptExSockaddrsGuid = WSAID_GETACCEPTEXSOCKADDRS;
+        WSAIoctl(sock,
+                    SIO_GET_EXTENSION_FUNCTION_POINTER,
+                    &getAcceptExSockaddrsGuid,
+                    sizeof(GUID),
+                    &pGetAcceptExSockaddrs,
+                    sizeof(LPFN_GETACCEPTEXSOCKADDRS),
+                    &bytes,
+                    NULL,
+                    NULL);
+
+        GUID connectExGuid = WSAID_CONNECTEX;
+        WSAIoctl(sock,
+                    SIO_GET_EXTENSION_FUNCTION_POINTER,
+                    &connectExGuid,
+                    sizeof(GUID),
+                    &ConnectEx,
+                    sizeof(LPFN_CONNECTEX),
+                    &bytes,
+                    NULL,
+                    NULL);
+
+        closesocket(sock);
     }
     ~Initializer()
     {
@@ -203,9 +191,9 @@ Socket::Socket(IOManager *ioManager, int family, int type, int protocol, int ini
     // lenient
     MORDOR_ASSERT(type != 0);
 #ifdef WINDOWS
-    boost::call_once(&initExtendedFunctions, extendedFuncInitFlag);
-
-    if (pAcceptEx && m_ioManager) {
+    m_useAcceptEx = g_useAcceptEx->val();   //remember the setting for the entire life of the socket
+    m_useConnectEx = g_useConnectEx->val(); //in case it is changed in the registry
+    if (m_useAcceptEx && pAcceptEx && m_ioManager) {
         m_sock = socket(family, type, protocol);
         MORDOR_LOG_LEVEL(g_log, m_sock == -1 ? Log::ERROR : Log::DEBUG) << this
             << " socket(" << (Family)family << ", " << (Type)type << ", "
@@ -226,7 +214,8 @@ Socket::Socket(int family, int type, int protocol)
   m_isRegisteredForRemoteClose(false)
 {
 #ifdef WINDOWS
-    boost::call_once(&initExtendedFunctions, extendedFuncInitFlag);
+    m_useAcceptEx = g_useAcceptEx->val();   //remember the setting for the entire life of the socket
+    m_useConnectEx = g_useConnectEx->val(); //in case it is changed in the registry
 #endif
     // Windows accepts type == 0 as implying SOCK_STREAM; other OS's aren't so
     // lenient
@@ -263,7 +252,8 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
   m_isRegisteredForRemoteClose(false)
 {
 #ifdef WINDOWS
-    boost::call_once(&initExtendedFunctions, extendedFuncInitFlag);
+    m_useAcceptEx = g_useAcceptEx->val();   //remember the setting for the entire life of the socket
+    m_useConnectEx = g_useConnectEx->val(); //in case it is changed in the registry
 #endif
     // Windows accepts type == 0 as implying SOCK_STREAM; other OS's aren't so
     // lenient
@@ -348,6 +338,7 @@ Socket::bind(Address::ptr addr)
 void
 Socket::connect(const Address &to)
 {
+
     MORDOR_ASSERT(to.family() == m_family);
     if (!m_ioManager) {
         if (::connect(m_sock, to.name(), to.nameLen())) {
@@ -358,7 +349,7 @@ Socket::connect(const Address &to)
         MORDOR_LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to << ")";
     } else {
 #ifdef WINDOWS
-        if (ConnectEx) {
+        if (m_useConnectEx && ConnectEx) {
             if (!m_localAddress) {
                 // need to be bound, even to ADDR_ANY, before calling ConnectEx
                 switch (m_family) {
@@ -431,6 +422,7 @@ Socket::connect(const Address &to)
                     timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
                         &IOManager::cancelEvent, m_ioManager, (HANDLE)m_sock, &m_sendEvent));
                 Scheduler::yieldTo();
+
                 if (timeout)
                     timeout->cancel();
             }
@@ -482,6 +474,7 @@ suckylsp:
                         boost::bind(&Socket::cancelIo, this,
                             boost::ref(m_cancelledSend), WSAETIMEDOUT));
                 Scheduler::yieldTo();
+
                 m_fiber.reset();
                 m_scheduler = NULL;
                 if (timeout)
@@ -588,7 +581,7 @@ void
 Socket::accept(Socket &target)
 {
 #ifdef WINDOWS
-    if (pAcceptEx && m_ioManager) {
+    if (m_useAcceptEx && pAcceptEx && m_ioManager) {
         MORDOR_ASSERT(target.m_sock != -1);
     } else {
         MORDOR_ASSERT(target.m_sock == -1);
@@ -610,7 +603,7 @@ Socket::accept(Socket &target)
                 << newsock << " (" << *target.remoteAddress() << ')';
     } else {
 #ifdef WINDOWS
-        if (pAcceptEx) {
+        if (m_useAcceptEx && pAcceptEx) {
             m_ioManager->registerEvent(&m_receiveEvent);
             unsigned char addrs[sizeof(SOCKADDR_STORAGE) * 2 + 16];
             DWORD bytes;
@@ -657,7 +650,7 @@ Socket::accept(Socket &target)
             }
             sockaddr *localAddr = NULL, *remoteAddr = NULL;
             INT localAddrLen, remoteAddrLen;
-            if (pGetAcceptExSockaddrs)
+            if (m_useAcceptEx && pGetAcceptExSockaddrs)
                 pGetAcceptExSockaddrs(addrs, 0, sizeof(SOCKADDR_STORAGE) + 16,
                     sizeof(SOCKADDR_STORAGE) + 16, &localAddr, &localAddrLen,
                     &remoteAddr, &remoteAddrLen);
@@ -1092,7 +1085,7 @@ Socket::cancelAccept()
     if (m_cancelledReceive)
         return;
     m_cancelledReceive = ERROR_OPERATION_ABORTED;
-    if (pAcceptEx) {
+    if (m_useAcceptEx && pAcceptEx) {
         m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
     }
     if (m_hEvent && m_scheduler && m_fiber) {
@@ -1113,7 +1106,7 @@ Socket::cancelConnect()
     if (m_cancelledSend)
         return;
     m_cancelledSend = ERROR_OPERATION_ABORTED;
-    if (ConnectEx) {
+    if (m_useConnectEx && ConnectEx) {
         m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
     }
     if (m_hEvent && m_scheduler && m_fiber) {
