@@ -144,6 +144,12 @@ public:
     /// Change the number of threads in this scheduler
     void threadCount(size_t threads);
 
+    const std::vector<boost::shared_ptr<Thread> >& threads() const
+    {
+        return m_threads;
+    }
+
+    tid_t rootThreadId() const { return m_rootThread; }
 protected:
     /// Derived classes can query stopping() to see if the Scheduler is trying
     /// to stop, and should return from the idle Fiber as soon as possible.
