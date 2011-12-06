@@ -178,6 +178,7 @@
     <ClCompile Include="streams\zlib.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="workerpool.cpp" />
+    <ClCompile Include="xml\dom_parser.cpp" />
     <ClCompile Include="zip.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -238,6 +239,7 @@
     <ClInclude Include="thread.h" />
     <ClInclude Include="workerpool.h" />
     <ClInclude Include="xml\parser.h" />
+    <ClInclude Include="xml\dom_parser.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="streams\pipe.h" />
     <ClInclude Include="predef.h" />

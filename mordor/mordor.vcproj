@@ -721,6 +721,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\xml\dom_parser.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\xml\xml_parser.cpp"
 				>
 			</File>
@@ -940,6 +944,10 @@
 			</File>
 			<File
 				RelativePath=".\http\parser.h"
+				>
+			</File>
+			<File
+				RelativePath=".\xml\dom_parser.h"
 				>
 			</File>
 			<File

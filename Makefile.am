@@ -180,6 +180,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/uri.cpp				\
 	mordor/util.cpp				\
 	mordor/workerpool.cpp			\
+	mordor/xml/dom_parser.cpp		\
 	mordor/xml/xml_parser.cpp		\
 	mordor/zip.cpp
 
