@@ -19,8 +19,12 @@ MORDOR_UNITTEST(EFSStream, basic)
         FileStream file("dummy.efs", FileStream::WRITE, FileStream::OVERWRITE_OR_CREATE);
         file.write("cody", 4);
     }
-    if (!EncryptFileW(L"dummy.efs"))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("EncryptFileW");
+    if (!EncryptFileW(L"dummy.efs")) {
+        DWORD error = GetLastError();
+        MORDOR_LOG_INFO(Mordor::Log::root()) << "EncryptFileW failed with code " << error;
+        DeleteFileW(L"dummy.efs");
+        throw TestSkippedException();
+    }
     Buffer b, b2;
     {
         EFSStream efs("dummy.efs", true);
@@ -52,8 +56,12 @@ MORDOR_UNITTEST(EFSStream, seek)
             FileStream out("dummy3.efs", FileStream::WRITE, FileStream::OVERWRITE_OR_CREATE);
             transferStream(r, out, 100000);
         }
-        if (!EncryptFileW(L"dummy3.efs"))
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("EncryptFileW");
+        if (!EncryptFileW(L"dummy3.efs")) {
+            DWORD error = GetLastError();
+            MORDOR_LOG_INFO(Mordor::Log::root()) << "EncryptFileW failed with code " << error;
+            DeleteFileW(L"dummy3.efs");
+            throw TestSkippedException();
+        }
 
         // now open for reading
         EFSStream efsr("dummy3.efs", true);
