@@ -95,15 +95,14 @@ nobase_include_HEADERS=			\
 	mordor/xml/parser.h		\
 	mordor/zip.h
 
-if HAVE_POSTGRESQL
-	nobase_include_HEADERS+=		\
-		mordor/pq/connection.h		\
-		mordor/pq/connectionpool.h	\
-		mordor/pq/exception.h		\
-		mordor/pq/preparedstatement.h	\
-		mordor/pq/result.h		\
-		mordor/pq/transaction.h
-endif
+nobase_include_HEADERS+=		\
+	mordor/pq/connection.h		\
+	mordor/pq/connectionpool.h	\
+	mordor/pq/exception.h		\
+	mordor/pq/preparedstatement.h	\
+	mordor/pq/result.h		\
+	mordor/pq/transaction.h
+
 if HAVE_PROTOBUF
 	nobase_include_HEADERS+=mordor/protobuf.h
 endif
