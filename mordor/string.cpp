@@ -40,6 +40,10 @@ base64decode(const std::string &src)
                 continue;
             }
 
+            // padding with "=" only
+            if (padding > 0)
+                return "";
+
             int val = 0;
             if(*ptr >= 'A' && *ptr <= 'Z')
                 val = *ptr - 'A';
@@ -52,7 +56,7 @@ base64decode(const std::string &src)
             else if(*ptr == '/')
                 val = 63;
             else
-                return "";
+                return ""; // invalid character
 
             packed = (packed << 6) | val;
         }
