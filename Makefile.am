@@ -93,6 +93,7 @@ nobase_include_HEADERS=			\
 	mordor/version.h		\
 	mordor/workerpool.h		\
 	mordor/xml/parser.h		\
+	mordor/xml/dom_parser.h		\
 	mordor/zip.h
 
 nobase_include_HEADERS+=		\
