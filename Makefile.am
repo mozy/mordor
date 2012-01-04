@@ -102,15 +102,9 @@ nobase_include_HEADERS+=		\
 	mordor/pq/exception.h		\
 	mordor/pq/preparedstatement.h	\
 	mordor/pq/result.h		\
-	mordor/pq/transaction.h
-
-if HAVE_PROTOBUF
-	nobase_include_HEADERS+=mordor/protobuf.h
-endif
-if HAVE_LIBYAML
-	nobase_include_HEADERS+=mordor/yaml.h
-endif
-
+	mordor/pq/transaction.h \
+	mordor/protobuf.h \
+	mordor/yaml.h
 
 lib_LTLIBRARIES=mordor/libmordor.la mordor/test/libmordortest.la
 
