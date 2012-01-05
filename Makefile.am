@@ -297,6 +297,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/json.cpp				\
 	mordor/tests/log.cpp				\
 	mordor/tests/memory_stream.cpp			\
+	mordor/tests/notify_stream.cpp			\
 	mordor/tests/oauth.cpp				\
 	mordor/tests/pipe_stream.cpp			\
 	mordor/tests/scheduler.cpp			\
