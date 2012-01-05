@@ -41,7 +41,14 @@ nobase_include_HEADERS=			\
 	mordor/log.h			\
 	mordor/main.h			\
 	mordor/parallel.h		\
+	mordor/pq/connection.h		\
+	mordor/pq/connectionpool.h	\
+	mordor/pq/exception.h		\
+	mordor/pq/preparedstatement.h	\
+	mordor/pq/result.h		\
+	mordor/pq/transaction.h		\
 	mordor/predef.h			\
+	mordor/protobuf.h 		\
 	mordor/ragel.h			\
 	mordor/scheduler.h		\
 	mordor/semaphore.h		\
@@ -94,17 +101,8 @@ nobase_include_HEADERS=			\
 	mordor/workerpool.h		\
 	mordor/xml/parser.h		\
 	mordor/xml/dom_parser.h		\
+	mordor/yaml.h			\
 	mordor/zip.h
-
-nobase_include_HEADERS+=		\
-	mordor/pq/connection.h		\
-	mordor/pq/connectionpool.h	\
-	mordor/pq/exception.h		\
-	mordor/pq/preparedstatement.h	\
-	mordor/pq/result.h		\
-	mordor/pq/transaction.h \
-	mordor/protobuf.h \
-	mordor/yaml.h
 
 lib_LTLIBRARIES=mordor/libmordor.la mordor/test/libmordortest.la
 

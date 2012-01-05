@@ -45,3 +45,4 @@ Win32
 x64
 *.pc
 xcuserdata
+test-results/
