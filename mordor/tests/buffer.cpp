@@ -733,6 +733,18 @@ MORDOR_UNITTEST(Buffer, findStringFalsePositiveAcrossMultipleSegments)
     MORDOR_TEST_ASSERT_EQUAL(b.find("000011"), 4);
 }
 
+MORDOR_UNITTEST(Buffer, toString)
+{
+    Buffer b;
+    MORDOR_TEST_ASSERT(b.toString().empty());
+    b.copyIn("hello");
+    MORDOR_TEST_ASSERT_EQUAL(b.toString(), "hello");
+    b.copyIn("world");
+    MORDOR_TEST_ASSERT_EQUAL(b.toString(), "helloworld");
+    b.consume(3);
+    MORDOR_TEST_ASSERT_EQUAL(b.toString(), "loworld");
+}
+
 MORDOR_UNITTEST(Buffer, reserve0)
 {
     Buffer b;

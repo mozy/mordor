@@ -743,6 +743,18 @@ Buffer::find(const std::string &string, size_t length) const
 }
 
 std::string
+Buffer::toString() const
+{
+    if (m_readAvailable == 0)
+        return std::string();
+
+    std::string result;
+    result.resize(m_readAvailable);
+    copyOut(&result[0], result.size());
+    return result;
+}
+
+std::string
 Buffer::getDelimited(char delimiter, bool eofIsDelimiter, bool includeDelimiter)
 {
     ptrdiff_t offset = find(delimiter, ~0);
