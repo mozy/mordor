@@ -203,7 +203,7 @@ Buffer::Buffer(const std::string &string)
 {
     m_readAvailable = m_writeAvailable = 0;
     m_writeIt = m_segments.end();
-    copyIn(string.c_str(), string.size());
+    copyIn(string);
 }
 
 Buffer::Buffer(const void *data, size_t length)
@@ -631,6 +631,12 @@ Buffer::copyIn(const void *data, size_t length)
     }
 
     MORDOR_ASSERT(readAvailable() >= length);
+}
+
+void
+Buffer::copyIn(const std::string &string)
+{
+    return copyIn(string.c_str(), string.size());
 }
 
 void

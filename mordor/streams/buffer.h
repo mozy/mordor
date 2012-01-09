@@ -95,6 +95,7 @@ public:
 
     void copyIn(const Buffer& buf, size_t length = ~0);
     void copyIn(const char* string);
+    void copyIn(const std::string &string);
     void copyIn(const void* data, size_t length);
 
     void copyOut(Buffer &buffer, size_t length) const

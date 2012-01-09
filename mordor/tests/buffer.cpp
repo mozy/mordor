@@ -18,6 +18,29 @@ MORDOR_UNITTEST(Buffer, copyInString)
     MORDOR_TEST_ASSERT(b == "hello");
 }
 
+MORDOR_UNITTEST(Buffer, copyInStdString)
+{
+    Buffer b;
+    std::string str("abc\0def", 7);
+    b.copyIn(str);
+    MORDOR_TEST_ASSERT_EQUAL(b.readAvailable(), 7u);
+    MORDOR_TEST_ASSERT_EQUAL(b.writeAvailable(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b.segments(), 1u);
+    MORDOR_TEST_ASSERT(b == str);
+}
+
+MORDOR_UNITTEST(Buffer, copyInStdString2)
+{
+    Buffer b;
+    std::ostringstream os;
+    os << "hello" << '\0' << "world" << '\0' << '\x0a';
+    b.copyIn(os.str());
+    MORDOR_TEST_ASSERT_EQUAL(b.readAvailable(), 13u);
+    MORDOR_TEST_ASSERT_EQUAL(b.writeAvailable(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b.segments(), 1u);
+    MORDOR_TEST_ASSERT(b == os.str());
+}
+
 MORDOR_UNITTEST(Buffer, copyInOtherBuffer)
 {
     Buffer b1, b2("hello");
