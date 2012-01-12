@@ -61,11 +61,11 @@ base64decode(const std::string &src)
             packed = (packed << 6) | val;
         }
         if (i != 4)
-            MORDOR_ASSERT(false);
+            return "";
         if (padding > 0 && ptr != end)
-            MORDOR_ASSERT(false);
+            return "";
         if (padding > 2)
-            MORDOR_ASSERT(false);
+            return "";
 
         *writeBuf++ = (char)((packed >> 16) & 0xff);
         if(padding != 2)
