@@ -20,9 +20,11 @@ class ExceptionStream : public Stream
 public:
     ExceptionStream() {}
 
+    using Stream::read;
     virtual size_t read(Buffer &buffer, size_t length)
     { MORDOR_THROW_EXCEPTION(ReadException()); }
 
+    using Stream::write;
     virtual size_t write(const Buffer &buffer, size_t length)
     { MORDOR_THROW_EXCEPTION(WriteException()); }
 

@@ -2,7 +2,6 @@
 #define __MORDOR_HTTP_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include <string.h>
 #include <map>
 #include <set>
 #include <stdexcept>

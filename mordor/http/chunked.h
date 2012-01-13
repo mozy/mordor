@@ -33,7 +33,9 @@ public:
     ChunkedStream(Stream::ptr parent, bool own = true);
 
     void close(CloseType type = BOTH);
+    using MutatingFilterStream::read;
     size_t read(Buffer &b, size_t len);
+    using MutatingFilterStream::write;
     size_t write(const Buffer &b, size_t len);
 
 private:

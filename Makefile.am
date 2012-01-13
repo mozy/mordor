@@ -344,8 +344,11 @@ noinst_PROGRAMS=			\
 	mordor/examples/iombench	\
 	mordor/examples/simpleappserver	\
 	mordor/examples/tunnel		\
-	mordor/examples/udpstats	\
-	mordor/examples/wget
+	mordor/examples/udpstats
+
+if BOOST_PROGRAM_OPTIONS
+noinst_PROGRAMS += mordor/examples/wget
+endif
 
 mordor_examples_cat_SOURCES=mordor/examples/cat.cpp
 mordor_examples_cat_LDADD=mordor/libmordor.la	\

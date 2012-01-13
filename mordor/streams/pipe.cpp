@@ -30,8 +30,10 @@ public:
     bool supportsWrite() { return true; }
 
     void close(CloseType type = BOTH);
+    using Stream::read;
     size_t read(Buffer &b, size_t len);
     void cancelRead();
+    using Stream::write;
     size_t write(const Buffer &b, size_t len);
     void cancelWrite();
     void flush(bool flushParent = true);

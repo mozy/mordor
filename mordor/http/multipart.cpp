@@ -130,6 +130,7 @@ public:
           m_boundary(boundary)
     {}
 
+    using MutatingFilterStream::read;
     size_t read(Buffer &b, size_t len)
     {
         ptrdiff_t boundary = parent()->find(m_boundary, len, false);

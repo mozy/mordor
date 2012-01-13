@@ -38,7 +38,9 @@ public:
           m_timerManager(NULL)
     {}
 
+    using FilterStream::read;
     size_t read(Buffer &b, size_t len);
+    using FilterStream::write;
     size_t write(const Buffer &b, size_t len);
 
 private:

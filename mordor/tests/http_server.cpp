@@ -366,6 +366,7 @@ public:
     bool supportsSeek() { return m_seekable; }
     bool supportsSize() { return m_sizeable; }
 
+    using FilterStream::read;
     size_t read(Buffer &buffer, size_t length)
     { return parent()->read(buffer, length); }
 

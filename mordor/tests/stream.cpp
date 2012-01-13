@@ -10,6 +10,7 @@ namespace {
 class NoStream : public Stream
 {
     bool supportsRead() { return true; }
+    using Stream::read;
     size_t read(Buffer &buffer, size_t length) { return 0; }
 };
 

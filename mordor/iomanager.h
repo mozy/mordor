@@ -10,6 +10,8 @@
 #include "iomanager_epoll.h"
 #elif defined(BSD)
 #include "iomanager_kqueue.h"
+#else
+#error Unsupported Platform
 #endif
 
 #endif

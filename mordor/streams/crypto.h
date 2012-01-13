@@ -50,7 +50,9 @@ public:
     bool supportsSize() { return false; }
 
     void close(CloseType type = BOTH);
+    using MutatingFilterStream::read;
     size_t read(Buffer &buffer, size_t len);
+    using MutatingFilterStream::write;
     size_t write(const Buffer &buffer, size_t len);
 
 private:

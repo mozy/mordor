@@ -103,3 +103,4 @@ AC_CONFIG_FILES([Makefile
                  mordor/pq/libmordorpq.pc
                  mordor/test/libmordortest.pc])
 AC_OUTPUT
+

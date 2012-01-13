@@ -18,6 +18,7 @@ public:
     bool supportsTell() { return true; }
     bool supportsSize() { return m_size != -1ll; }
 
+    using Stream::read;
     size_t read(Buffer &buffer, size_t length);
 
     long long seek(long long offset, Anchor anchor = BEGIN);

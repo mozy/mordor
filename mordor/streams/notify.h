@@ -40,6 +40,7 @@ public:
             notifyOnClose();
     }
 
+    using FilterStream::read;
     size_t read(Buffer &b, size_t len)
     {
         size_t result;
@@ -57,6 +58,7 @@ public:
         return result;
     }
 
+    using FilterStream::write;
     size_t write(const Buffer &b, size_t len)
     {
         try {

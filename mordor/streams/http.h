@@ -52,7 +52,9 @@ public:
 
     void close(CloseType type = BOTH);
 
+    using FilterStream::read;
     size_t read(Buffer &buffer, size_t length);
+    using FilterStream::write;
     size_t write(const Buffer &buffer, size_t length);
     long long seek(long long offset, Anchor anchor = BEGIN);
     long long size();

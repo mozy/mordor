@@ -59,6 +59,7 @@ public:
             parent()->close(type);
     }
 
+    using FilterStream::read;
     size_t read(Buffer &b, size_t len)
     {
         size_t result = parent()->read(b, len);
@@ -70,6 +71,7 @@ public:
         return result;
     }
 
+    using FilterStream::write;
     size_t write(const Buffer &b, size_t len)
     {
         size_t result = parent()->write(b, len);
