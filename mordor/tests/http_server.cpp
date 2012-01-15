@@ -266,6 +266,39 @@ MORDOR_UNITTEST(HTTPServer, pipelineResponseWaits)
     MORDOR_TEST_ASSERT_LESS_THAN(timeStamp2, timeStamp1);
 }
 
+static void pipelineExceptions(const URI &uri, ServerRequest::ptr request)
+{
+    static bool answeredTwo = false;
+    request->processNextRequest();
+    if (request->request().requestLine.uri == "/one") {
+        while (!answeredTwo) {
+            Scheduler::yield();
+        }
+        MORDOR_THROW_EXCEPTION(DummyException());
+    }
+    if (request->request().requestLine.uri == "/two") {
+        answeredTwo = true;
+    }
+    respondError(request, OK);
+}
+
+MORDOR_UNITTEST(HTTPServer, pipelineResponseException)
+{
+    WorkerPool pool;
+    MockConnectionBroker server(&pipelineExceptions);
+    ClientConnection::ptr connection =
+        server.getConnection("http://localhost/").first;
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/one";
+
+    ClientRequest::ptr request1 = connection->request(requestHeaders);
+    request1->doRequest();
+    requestHeaders.requestLine.uri = "/two";
+    ClientRequest::ptr request2 = connection->request(requestHeaders);
+    request2->doRequest();
+}
+
 static void respondToTwo(TestStream::ptr testOutput, Fiber::ptr &fiber,
     int &sequence)
 {

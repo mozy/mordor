@@ -390,8 +390,8 @@ ServerRequest::cancel()
     std::list<ServerRequest *>::iterator it =
         std::find(m_conn->m_pendingRequests.begin(),
             m_conn->m_pendingRequests.end(), this);
-    MORDOR_ASSERT(it != m_conn->m_pendingRequests.end());
-    m_conn->m_pendingRequests.erase(it);
+    if (it != m_conn->m_pendingRequests.end())
+        m_conn->m_pendingRequests.erase(it);
     m_conn->scheduleAllWaitingResponses();
 }
 
@@ -438,6 +438,7 @@ ServerRequest::doRequest()
             unsigned long long consumed = parser.run(m_conn->m_stream);
             if (consumed == 0 && !parser.error() && !parser.complete()) {
                 // EOF
+                MORDOR_LOG_TRACE(g_log) << m_conn << " No more request";
                 cancel();
                 return;
             }
@@ -590,6 +591,9 @@ ServerRequest::doRequest()
     } catch (OperationAbortedException &) {
         // Do nothing (this occurs when a pipelined request fails because a
         // prior request closed the connection)
+    } catch (PriorRequestFailedException &) {
+        MORDOR_LOG_ERROR(g_log) << m_context << " Prior request failed since: "
+            << m_conn << "-" << m_conn->m_priorRequestFailed;
     } catch (Assertion &) {
          if (m_requestState == ERROR || m_responseState == ERROR)
             throw;
@@ -747,12 +751,12 @@ ServerRequest::commit()
         // Check for problems that occurred while we were waiting
         boost::mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
-        MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
-        MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
         if (m_conn->m_priorRequestFailed <= m_requestNumber)
             MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
         else if (m_conn->m_priorResponseClosed <= m_requestNumber)
             MORDOR_THROW_EXCEPTION(ConnectionVoluntarilyClosedException());
+        MORDOR_ASSERT(!m_conn->m_pendingRequests.empty());
+        MORDOR_ASSERT(m_conn->m_pendingRequests.front() == this);
         if (m_willClose) {
             m_conn->m_priorResponseClosed = m_requestNumber;
             m_conn->scheduleAllWaitingResponses();
