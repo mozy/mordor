@@ -1,5 +1,8 @@
 // Copyright (c) 2010 - Mozy, Inc.
 
+#include "assert.h"
+#include "fiber.h"
+#include "scheduler.h"
 #include "thread.h"
 
 #ifdef LINUX
@@ -70,6 +73,22 @@ struct Context {
 };
 }
 #endif
+
+Thread::Bookmark::Bookmark()
+    : m_scheduler(Scheduler::getThis())
+    , m_tid(gettid())
+{}
+
+void
+Thread::Bookmark::switchTo()
+{
+    if (gettid() == m_tid)
+        return;
+    MORDOR_ASSERT(m_scheduler);
+    m_scheduler->schedule(Fiber::getThis(), m_tid);
+    Scheduler::yieldTo();
+    MORDOR_ASSERT(m_tid == gettid());
+}
 
 // The object of this function is to start a new thread running dg, and store
 // that thread's id in m_tid.  Each platform is a little bit different, but
