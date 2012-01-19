@@ -58,23 +58,22 @@ static void rethrowException(WorkerPool &poolA, WorkerPool &poolB)
     } catch (...) {
         // still in poolA
         MORDOR_TEST_ASSERT_EQUAL(gettid(), mainTid);
-        Thread::Bookmark mark;  // line A
         // do something that might switch or not switch thread
         // in this test case, it does switch to a different thread
         doSomething(poolB);
         MORDOR_TEST_ASSERT_NOT_EQUAL(mainTid, gettid());
         // switch back
-        mark.switchTo();        // line B
-        MORDOR_TEST_ASSERT_EQUAL(gettid(), mainTid);
         // rethrow the exception without any issue
-        // if comment out line A & B, this `throw' can't be caught any more
+        // if we do not handle exception stack, this `throw' can't be caught any
+        // more, and C++ runtime terminates the program.
         throw;
     }
 }
 }
 
-MORDOR_UNITTEST(Thread, bookMarkExceptionRethrow)
+MORDOR_UNITTEST(Thread, exceptionRethrow)
 {
     WorkerPool poolA(1, true), poolB(1, false);
     MORDOR_TEST_ASSERT_EXCEPTION(rethrowException(poolA, poolB), DummyException);
+    poolA.switchTo();
 }

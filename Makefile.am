@@ -9,6 +9,7 @@ nobase_include_HEADERS=			\
 	mordor/atomic.h			\
 	mordor/config.h			\
 	mordor/coroutine.h		\
+	mordor/cxa_exception.h	\
 	mordor/daemon.h			\
 	mordor/date_time.h		\
 	mordor/endian.h			\
@@ -109,6 +110,7 @@ lib_LTLIBRARIES=mordor/libmordor.la mordor/test/libmordortest.la
 mordor_libmordor_la_SOURCES=			\
 	mordor/assert.cpp			\
 	mordor/config.cpp			\
+	mordor/cxa_exception.cpp	\
 	mordor/daemon.cpp			\
 	mordor/date_time.cpp			\
 	mordor/exception.cpp			\

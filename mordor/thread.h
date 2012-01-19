@@ -38,6 +38,13 @@ public:
     /// the same thread id later.
     /// @pre The process must be running with available scheduler, otherwise
     /// it is not possible to switch execution between threads with bookmark.
+    /// @note Bookmark was designed to address the issue where we failed to
+    /// rethrow an exception in catch block, because GCC C++ runtime saves the
+    /// exception stack in a pthread TLS variable. and swapcontext(3) does not
+    /// take care of TLS. but developer needs to be more aware of underlying
+    /// thread using thread bookmark, so we developed another way to fix this
+    /// problem. thus bookmark only serve as a way which allow user to stick
+    /// to a native thread.
     class Bookmark
     {
     public:

@@ -31,8 +31,6 @@ static volatile unsigned int g_cntFibers = 0; // Active fibers
 static MaxStatistic<unsigned int> &g_statMaxFibers=Statistics::registerStatistic("fiber.max",
     MaxStatistic<unsigned int>());
 
-static void fiber_switchContext(void **oldsp, void *newsp);
-
 #ifdef SETJMP_FIBERS
 #ifdef OSX
 #define setjmp _setjmp
@@ -206,7 +204,7 @@ Fiber::call()
     setThis(this);
     m_outer = cur;
     m_state = m_exception ? EXCEPT : EXEC;
-    fiber_switchContext(&cur->m_sp, m_sp);
+    cur->switchContext(this);
     setThis(cur.get());
     MORDOR_ASSERT(cur->m_yielder);
     m_outer.reset();
@@ -244,7 +242,7 @@ Fiber::yield()
     MORDOR_ASSERT(cur->m_outer);
     cur->m_outer->m_yielder = cur;
     cur->m_outer->m_yielderNextState = Fiber::HOLD;
-    fiber_switchContext(&cur->m_sp, cur->m_outer->m_sp);
+    cur->switchContext(cur->m_outer.get());
     if (cur->m_yielder) {
         cur->m_yielder->m_state = cur->m_yielderNextState;
         cur->m_yielder.reset();
@@ -285,7 +283,7 @@ Fiber::yieldTo(bool yieldToCallerOnTerminate, State targetState)
     Fiber *curp = cur.get();
     // Relinguish our reference
     cur.reset();
-    fiber_switchContext(&curp->m_sp, m_sp);
+    curp->switchContext(this);
 #ifdef NATIVE_WINDOWS_FIBERS
     if (targetState == TERM)
         return Fiber::ptr();
@@ -375,7 +373,7 @@ Fiber::exitPoint(Fiber::ptr &cur, State targetState)
         rawPtr->yieldTo(false, targetState);
     } else {
         outer.reset();
-        fiber_switchContext(&rawPtr->m_sp, rawPtr->m_outer->m_sp);
+        rawPtr->switchContext(rawPtr->m_outer.get());
     }
 }
 
@@ -435,28 +433,28 @@ Fiber::freeStack()
 #endif
 }
 
+void
+Fiber::switchContext(Fiber *to)
+{
 #ifdef NATIVE_WINDOWS_FIBERS
-static void
-fiber_switchContext(void **oldsp, void *newsp)
-{
-    SwitchToFiber(newsp);
-}
-#elif defined(UCONTEXT_FIBERS)
-static void
-fiber_switchContext(void **oldsp, void *newsp)
-{
-    if (swapcontext(*(ucontext_t**)oldsp, (ucontext_t*)newsp))
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("swapcontext");
-}
-#elif defined(SETJMP_FIBERS)
-static void
-fiber_switchContext(void **oldsp, void *newsp)
-{
-    if (!setjmp(**(jmp_buf**)oldsp))
-         longjmp(*(jmp_buf*)newsp, 1);
-}
-#endif
+    SwitchToFiber(to->m_sp);
 
+#elif defined(UCONTEXT_FIBERS)
+#  if defined(CXXABIV1_EXCEPTION)
+    this->m_eh.swap(to->m_eh);
+#  endif
+    if (swapcontext((ucontext_t*)(this->m_sp), (ucontext_t*)to->m_sp))
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("swapcontext");
+
+#elif defined(SETJMP_FIBERS)
+    if (!setjmp(*(jmp_buf*)this->m_sp)) {
+#  if defined(CXXABIV1_EXCEPTION)
+        this->m_eh.swap(to->m_eh);
+#  endif
+        longjmp(*(jmp_buf*)to->m_sp, 1);
+    }
+#endif
+}
 
 void
 Fiber::initStack()
