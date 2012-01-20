@@ -49,7 +49,7 @@ static void doSomething(WorkerPool &pool)
 
 static void rethrowException(WorkerPool &poolA, WorkerPool &poolB)
 {
-    tid_t mainTid;
+    tid_t mainTid = 0;
     try {
         // execute in poolA
         poolA.switchTo();

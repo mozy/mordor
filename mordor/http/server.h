@@ -90,6 +90,7 @@ public:
     ///
     /// Context of the ServerRequest
     const std::string & context() const { return m_context; }
+    unsigned long long requestNumber() const { return m_requestNumber; }
 
 private:
     void doRequest();
