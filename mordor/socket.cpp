@@ -792,8 +792,7 @@ Socket::shutdown(int how)
         m_ioManager->unregisterEvent(m_hEvent);
         WSAEventSelect(m_sock, m_hEvent, 0);
 #else
-        if (m_isRegisteredForRemoteClose)
-            m_ioManager->unregisterEvent(m_sock, IOManager::CLOSE);
+        m_ioManager->unregisterEvent(m_sock, IOManager::CLOSE);
 #endif
         m_isRegisteredForRemoteClose = false;
     }
