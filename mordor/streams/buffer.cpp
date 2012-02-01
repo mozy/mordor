@@ -559,11 +559,14 @@ Buffer::writeBuffer(size_t length, bool coalesce)
 }
 
 void
-Buffer::copyIn(const Buffer &buffer, size_t length)
+Buffer::copyIn(const Buffer &buffer, size_t length, size_t pos)
 {
+    if (pos > buffer.readAvailable())
+        MORDOR_THROW_EXCEPTION(std::out_of_range("position out of range"));
+
     if (length == (size_t)~0)
-        length = buffer.readAvailable();
-    MORDOR_ASSERT(buffer.readAvailable() >= length);
+        length = buffer.readAvailable() - pos;
+    MORDOR_ASSERT(buffer.readAvailable() >= length + pos);
     invariant();
     if (length == 0)
         return;
@@ -575,28 +578,37 @@ Buffer::copyIn(const Buffer &buffer, size_t length)
         invariant();
     }
 
-    std::list<Segment>::const_iterator it;
-    for (it = buffer.m_segments.begin(); it != buffer.m_segments.end(); ++it) {
-        size_t toConsume = (std::min)(it->readAvailable(), length);
+    std::list<Segment>::const_iterator it = buffer.m_segments.begin();
+    while (pos != 0 && it != buffer.m_segments.end()) {
+        if (pos < it->readAvailable())
+            break;
+        pos -= it->readAvailable();
+        ++it;
+    }
+    MORDOR_ASSERT(it != buffer.m_segments.end());
+    for (; it != buffer.m_segments.end(); ++it) {
+        size_t toConsume = (std::min)(it->readAvailable() - pos, length);
         if (m_readAvailable != 0 && it == buffer.m_segments.begin()) {
             std::list<Segment>::iterator previousIt = m_writeIt;
             --previousIt;
-            if ((unsigned char *)previousIt->readBuffer().start() +
-                previousIt->readBuffer().length() == it->readBuffer().start() &&
+            if ((char *)previousIt->readBuffer().start() +
+                previousIt->readBuffer().length() == (char *)it->readBuffer().start() + pos &&
                 previousIt->m_data.m_array.get() == it->m_data.m_array.get()) {
                 MORDOR_ASSERT(previousIt->writeAvailable() == 0);
                 previousIt->extend(toConsume);
                 m_readAvailable += toConsume;
                 length -= toConsume;
+                pos = 0;
                 if (length == 0)
                     break;
                 continue;
             }
         }
-        Segment newSegment = Segment(it->readBuffer().slice(0, toConsume));
+        Segment newSegment = Segment(it->readBuffer().slice(pos, toConsume));
         m_segments.insert(m_writeIt, newSegment);
         m_readAvailable += toConsume;
         length -= toConsume;
+        pos = 0;
         if (length == 0)
             break;
     }
@@ -646,16 +658,27 @@ Buffer::copyIn(const char *string)
 }
 
 void
-Buffer::copyOut(void *buffer, size_t length) const
+Buffer::copyOut(void *buffer, size_t length, size_t pos) const
 {
-    MORDOR_ASSERT(length <= readAvailable());
+    if (length == 0)
+        return;
+
+    MORDOR_ASSERT(length + pos <= readAvailable());
     unsigned char *next = (unsigned char*)buffer;
-    std::list<Segment>::const_iterator it;
-    for (it = m_segments.begin(); it != m_segments.end(); ++it) {
-        size_t todo = (std::min)(length, it->readAvailable());
-        memcpy(next, it->readBuffer().start(), todo);
+    std::list<Segment>::const_iterator it = m_segments.begin();
+    while (pos != 0 && it != m_segments.end()) {
+        if (pos < it->readAvailable())
+            break;
+        pos -= it->readAvailable();
+        ++it;
+    }
+    MORDOR_ASSERT(it != m_segments.end());
+    for (; it != m_segments.end(); ++it) {
+        size_t todo = (std::min)(length, it->readAvailable() - pos);
+        memcpy(next, (char *)it->readBuffer().start() + pos, todo);
         next += todo;
         length -= todo;
+        pos = 0;
         if (length == 0)
             break;
     }

@@ -93,14 +93,14 @@ public:
     std::vector<iovec> writeBuffers(size_t length = ~0);
     iovec writeBuffer(size_t length, bool reallocate);
 
-    void copyIn(const Buffer& buf, size_t length = ~0);
+    void copyIn(const Buffer& buf, size_t length = ~0, size_t pos = 0);
     void copyIn(const char* string);
     void copyIn(const std::string &string);
     void copyIn(const void* data, size_t length);
 
-    void copyOut(Buffer &buffer, size_t length) const
-    { buffer.copyIn(*this, length); }
-    void copyOut(void* buffer, size_t length) const;
+    void copyOut(Buffer &buffer, size_t length, size_t pos = 0) const
+    { buffer.copyIn(*this, length, pos); }
+    void copyOut(void* buffer, size_t length, size_t pos = 0) const;
 
     ptrdiff_t find(char delimiter, size_t length = ~0) const;
     ptrdiff_t find(const std::string &string, size_t length = ~0) const;
