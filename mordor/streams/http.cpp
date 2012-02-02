@@ -237,15 +237,28 @@ HTTPStream::read(Buffer &buffer, size_t length)
     size_t localRetries = 0;
     size_t *retries = mp_retries ? mp_retries : &localRetries;
     while (true) {
+        // remember previous retry count
+        size_t prevRetries = *retries;
+        bool new_request = !parent();
         start(length);
 
         MORDOR_ASSERT(parent());
         try {
-            size_t result = parent()->read(buffer, length);
-            m_pos += result;
-            m_readRequested -= result;
-            *retries = 0;
-            return result;
+            try {
+                size_t result = parent()->read(buffer, length);
+                m_pos += result;
+                m_readRequested -= result;
+                if (result > 0)
+                    *retries = 0;   // only do this if we've made progress
+                return result;
+            } catch(...) {
+                // if this was a new request, RetryRequestBroker reset the retry count to 0
+                // undo this, so we don't get stuck in an infinite retry loop if the server
+                // consistently hangs up on us immediately after 200 OK
+                if (new_request)
+                    *retries = prevRetries;
+                throw;
+            }
         } catch (SocketException &) {
             parent(Stream::ptr());
             if (!m_delayDg || !m_delayDg(++*retries))
