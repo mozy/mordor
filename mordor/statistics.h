@@ -312,7 +312,7 @@ public:
         } else {
             T *stat = dynamic_cast<T *>(it->second.second.get());
             MORDOR_ASSERT(stat);
-            return *stat;
+            return stat;
         }
     }
 
