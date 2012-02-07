@@ -2,8 +2,11 @@
 #define __MORDOR_SERVICE_H__
 // Copyright (c) 2010 - Mozy, Inc.
 
-#include <vector>
 #include <string>
+#ifdef POSIX
+#include <sys/types.h>
+#endif
+#include <vector>
 
 #include <boost/function.hpp>
 #include <boost/signals2/signal.hpp>
@@ -54,17 +57,31 @@ namespace Daemon {
 ///       On Linux, run attempts to automagically determine if it needs to
 ///       daemonize by seeing if it is being run directly from an script in
 ///       /etc/init.d, or by start-stop-daemon (Debian)
+/// @note If enableWatchdog is true, the daemonMain will be run in a forked
+///       process, the parent process will restart it whenever it dies.
+///       onChildProcessExit is also provided to empower user to stop restarting
+///       and quit when necessary. (works for POSIX only)
 /// @note In all cases, the signals are invoked on a thread separate from
 ///       the thread daemonMain is called on, or any that it created
 /// @note run should be called *exactly* once, since the signals are global
 ///       for the process
-int run(int argc, char **argv, boost::function<int (int, char **)> daemonMain);
+int run(int argc, char **argv, boost::function<int (int, char **)> daemonMain,
+        bool enableWatchdog = false);
 
 extern boost::signals2::signal<void ()> onTerminate;
 extern boost::signals2::signal<void ()> onInterrupt;
 extern boost::signals2::signal<void ()> onReload;
 extern boost::signals2::signal<void ()> onPause;
 extern boost::signals2::signal<void ()> onContinue;
+#ifdef POSIX
+/// Works together with watchdog, callback whenever child process exits.
+/// Watchdog will check the return value to restart child (if false) or
+/// just shutdown the program (if true).
+/// @note If this function is not hooked, watchdog will by default repeatly
+///       restart child process whenever it exits. If one-shot running is
+///       expected, please set enableWatchdog = false in run.
+extern boost::function<bool (pid_t, int)> onChildProcessExit;
+#endif
 
 }}
 

@@ -205,7 +205,7 @@ static BOOL WINAPI HandlerRoutine(DWORD dwCtrlType)
 }
 
 int run(int argc, char **argv,
-    boost::function<int (int, char **)> daemonMain)
+    boost::function<int (int, char **)> daemonMain, bool)
 {
     SERVICE_TABLE_ENTRYW ServiceStartTable[] = {
         { L"", &ServiceMain },
@@ -231,6 +231,8 @@ int run(int argc, char **argv,
 
 #include <errno.h>
 #include <signal.h>
+#include <sys/wait.h>
+boost::function<bool (pid_t, int)> onChildProcessExit;
 
 static sigset_t blockedSignals()
 {
@@ -363,21 +365,11 @@ static bool shouldDaemonizeDueToParent()
 }
 #endif
 
-int run(int argc, char **argv,
-    boost::function<int (int, char **)> daemonMain)
+// running user specified main
+static int startMain(int argc, char** argv,
+        boost::function<int (int, char**)> userMain)
 {
-#ifndef OSX
-    // Check for being run from /etc/init.d or start-stop-daemon as a hint to
-    // daemonize
-    if (shouldDaemonize(environ) || shouldDaemonizeDueToParent()) {
-        MORDOR_LOG_VERBOSE(g_log) << "Daemonizing";
-        if (daemon(0, 0) == -1)
-            return errno;
-    }
-#endif
-
-    // Mask signals from other threads so we can handle them
-    // ourselves
+    // Mask signals from other threads so we can handle them ourselves
     sigset_t mask = blockedSignals();
     int rc = pthread_sigmask(SIG_BLOCK, &mask, NULL);
     if (rc != 0)
@@ -390,10 +382,71 @@ int run(int argc, char **argv,
         return errno;
 
     // Run the daemon's main
-    MORDOR_LOG_INFO(g_log) << "Starting daemon";
-    rc = daemonMain(argc, argv);
-    MORDOR_LOG_INFO(g_log) << "Daemon stopped";
+    MORDOR_LOG_INFO(g_log) << "Starting main in daemon";
+    rc = userMain(argc, argv);
+    MORDOR_LOG_INFO(g_log) << "Main stopped in daemon";
     return rc;
+}
+
+// start main in a forked process and monitor it, restart it in case
+// it dies abnormally.
+static int watchdog(int argc, char** argv,
+        boost::function<int (int, char**)> userMain)
+{
+    for (;;) {
+        pid_t pid = fork();
+        switch (pid) {
+        case -1:
+            MORDOR_LOG_ERROR(g_log) << "Unable to fork(2): " << errno;
+            return errno;
+        case 0:
+            MORDOR_LOG_INFO(g_log) << "Child #" << getpid() << " started";
+            return startMain(argc, argv, userMain);
+        default:
+            MORDOR_LOG_INFO(g_log) << "Watchdog starts monitoring child #" << pid;
+            int status;
+            if (waitpid(pid, &status, 0) == -1) {
+                MORDOR_LOG_ERROR(g_log) << "Failed to waitpid(2): " << errno;
+                return errno;
+            }
+            MORDOR_LOG_INFO(g_log) << "Child #" << pid << " dies with status:"
+                                   << status;
+            bool done = false;
+            // check if program wish to quit
+            if (!onChildProcessExit.empty()) {
+                done = onChildProcessExit(pid, status);
+                MORDOR_LOG_INFO(g_log) << "onChildProcessExit returns " << done;
+            } else {
+                MORDOR_LOG_INFO(g_log) << "onChildProcessExit is not set, "
+                                       << "restart child by default";
+            }
+            if (done) {
+                MORDOR_LOG_INFO(g_log) << "Watchdog stopped";
+                break;
+            }
+        }
+    }
+}
+
+int run(int argc, char **argv,
+    boost::function<int (int, char **)> daemonMain,
+    bool enableWatchdog)
+{
+#ifndef OSX
+    // Check for being run from /etc/init.d or start-stop-daemon as a hint to
+    // daemonize
+    if (shouldDaemonize(environ) || shouldDaemonizeDueToParent()) {
+        MORDOR_LOG_VERBOSE(g_log) << "Daemonizing";
+        if (daemon(0, 0) == -1)
+            return errno;
+    }
+#endif
+
+    if (enableWatchdog) {
+        return watchdog(argc, argv, daemonMain);
+    } else {
+        return startMain(argc, argv, daemonMain);
+    }
 }
 #endif
 
