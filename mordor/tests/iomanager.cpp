@@ -5,6 +5,8 @@
 #include "mordor/future.h"
 #include "mordor/iomanager.h"
 #include "mordor/test/test.h"
+#include "mordor/thread.h"
+#include "mordor/version.h"
 
 using namespace Mordor;
 using namespace Mordor::Test;
@@ -103,4 +105,68 @@ MORDOR_UNITTEST(IOManager, timerRefCountExpired)
     IOManager manager;
     manager.schedule(boost::bind(testTimerExpired, boost::ref(manager)));
     manager.dispatch();
+}
+
+static void
+busyFiber(int &sequence)
+{
+    // this function will keep the scheduler busy (no idle)
+    while (true) {
+        --sequence;
+        if (sequence <= 0)
+            break;
+        MORDOR_LOG_INFO(Mordor::Log::root()) << " sequence: " << sequence;
+        Scheduler::yield();
+    }
+}
+
+static void
+switchThreadFiber(int &sequence, tid_t tidA, tid_t tidB)
+{
+    // this function will switch itself to anther thread and continue
+    while (true) {
+        if (sequence <= 0)
+            return;
+        tid_t otherTid = (gettid() == tidA) ? tidB : tidA;
+        Scheduler::getThis()->schedule(Fiber::getThis(), otherTid);
+        Scheduler::yieldTo();
+    }
+}
+
+MORDOR_UNITTEST(IOManager, tickleDeadlock)
+{
+    IOManager manager(2, true);
+    tid_t tidA = manager.rootThreadId();
+    tid_t tidB = 0;
+    {
+        const std::vector<boost::shared_ptr<Thread> > threads =
+            manager.threads();
+        MORDOR_TEST_ASSERT_EQUAL(threads.size(), 1U);
+        tidB = threads[0]->tid();
+    }
+    MORDOR_TEST_ASSERT_NOT_EQUAL(tidA, tidB);
+    // there are >2 tickles each time the busyFiber get running.
+    // sequence initial value will control how long the case will run
+#ifdef LINUX
+    // pipe buffer is 64K on Linux 2.6.x kernel
+    int sequence = 32768;
+#elif defined(OSX)
+    // MAC pipe buffer is 8K by default
+    int sequence = 8192;
+#else
+    // Other platform, sanity check with a small number
+    int sequence = 4096;
+#endif
+
+    // schedule a busy fiber
+    manager.schedule(boost::bind(busyFiber, boost::ref(sequence)));
+    // schedule aditional two fibers to ensure that each thread will get
+    // get at least one fiber to execute at anytime, no chance to idle.
+    manager.schedule(boost::bind(switchThreadFiber,
+                                 boost::ref(sequence), tidA, tidB),
+                     tidA);
+    manager.schedule(boost::bind(switchThreadFiber,
+                                 boost::ref(sequence), tidA, tidB),
+                     tidB);
+    manager.stop();
 }
