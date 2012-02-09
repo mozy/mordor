@@ -297,9 +297,10 @@ MORDOR_UNITTEST(Scheduler, parallelForEachLessThanParallelism)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
 }
 
-static void checkEqualStop5(int x, int &sequence)
+static void checkEqualStop5(int x, int &sequence, bool expectOrdered)
 {
-    MORDOR_TEST_ASSERT_EQUAL(x, sequence);
+    if (expectOrdered)
+        MORDOR_TEST_ASSERT_EQUAL(x, sequence);
     if (++sequence >= 5)
         MORDOR_THROW_EXCEPTION(OperationAbortedException());
 }
@@ -312,13 +313,12 @@ MORDOR_UNITTEST(Scheduler, parallelForEachStopShort)
     int sequence = 1;
     MORDOR_TEST_ASSERT_EXCEPTION(
     parallel_foreach(&values[0], &values[10], boost::bind(
-        &checkEqualStop5, _1, boost::ref(sequence)), 4),
+        &checkEqualStop5, _1, boost::ref(sequence), true), 4),
         OperationAbortedException);
     // 5 <= sequence < 10 (we told it to stop at five, it's undefined how many
     // more got executed, because of other threads (on a single thread it's
     // deterministically 5))
-    MORDOR_TEST_ASSERT_GREATER_THAN_OR_EQUAL(sequence, 5);
-    MORDOR_TEST_ASSERT_LESS_THAN(sequence, 10);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 5);
 }
 
 MORDOR_UNITTEST(Scheduler, parallelForEachStopShortParallel)
@@ -329,7 +329,7 @@ MORDOR_UNITTEST(Scheduler, parallelForEachStopShortParallel)
     int sequence = 1;
     MORDOR_TEST_ASSERT_EXCEPTION(
     parallel_foreach(&values[0], &values[10], boost::bind(
-        &checkEqualStop5, _1, boost::ref(sequence)), 4),
+        &checkEqualStop5, _1, boost::ref(sequence), false), 4),
         OperationAbortedException);
     // 5 <= sequence < 10 (we told it to stop at five, it's undefined how many
     // more got executed, because of other threads (on a single thread it's
