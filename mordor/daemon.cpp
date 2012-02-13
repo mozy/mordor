@@ -422,7 +422,7 @@ static int watchdog(int argc, char** argv,
             }
             if (done) {
                 MORDOR_LOG_INFO(g_log) << "Watchdog stopped";
-                break;
+                return 0;
             }
         }
     }
