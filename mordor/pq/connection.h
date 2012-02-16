@@ -144,7 +144,7 @@ public:
     const PGconn *conn() const { return m_conn.get(); }
 
 private:
-    const std::string &m_conninfo;
+    std::string m_conninfo;
     SchedulerType *m_scheduler;
     boost::shared_ptr<PGconn> m_conn;
 };
