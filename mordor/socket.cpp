@@ -1630,10 +1630,12 @@ IPAddress::lookup(const std::string &host, int family, int type, int protocol,
             protocol);
     std::vector<ptr> result;
     result.reserve(addrResult.size());
-    for(unsigned int i = 0; i < addrResult.size(); ++i) {
-        ptr addr = boost::dynamic_pointer_cast<IPAddress>(addrResult[i]);
-        if(addr) {
-            addr->port(port);
+    for (std::vector<Address::ptr>::const_iterator it(addrResult.begin());
+         it != addrResult.end();
+         ++it) {
+        ptr addr = boost::dynamic_pointer_cast<IPAddress>(*it);
+        if (addr) {
+            if (port >= 0) addr->port(port);
             result.push_back(addr);
         }
     }
