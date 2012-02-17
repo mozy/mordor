@@ -239,6 +239,10 @@ public:
     typedef boost::shared_ptr<IPAddress> ptr;
 
 public:
+    static std::vector<ptr>
+        lookup(const std::string& host, int family = AF_UNSPEC,
+            int type = 0, int protocol = 0, int port = 0);
+
     /// Create an IPAddress from a numeric string
     /// @note port should be provided in native-endian format
     /// @note std::invalid_argument may be thrown if it is an IPv6 address and

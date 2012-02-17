@@ -1622,6 +1622,24 @@ bool Address::operator!=(const Address &rhs) const
     return !(*this == rhs);
 }
 
+std::vector<IPAddress::ptr>
+IPAddress::lookup(const std::string &host, int family, int type, int protocol,
+                  int port)
+{
+    std::vector<Address::ptr> addrResult = Address::lookup(host, family, type,
+            protocol);
+    std::vector<ptr> result;
+    result.reserve(addrResult.size());
+    for(unsigned int i = 0; i < addrResult.size(); ++i) {
+        ptr addr = boost::dynamic_pointer_cast<IPAddress>(addrResult[i]);
+        if(addr) {
+            addr->port(port);
+            result.push_back(addr);
+        }
+    }
+    return result;
+}
+
 IPAddress::ptr
 IPAddress::clone()
 {
