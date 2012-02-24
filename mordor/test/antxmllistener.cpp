@@ -118,6 +118,7 @@ AntXMLListener::testAsserted(const std::string &suite, const std::string &test,
         testInfo.exceptionMessage = assertion.what();
         replace(testInfo.exceptionMessage, "&", "&amp;");
         replace(testInfo.exceptionMessage, "\"", "&quot;");
+        replace(testInfo.exceptionMessage, '\0', "&#00;");
         testInfo.exceptionDetails = boost::current_exception_diagnostic_information();
     }
 }
@@ -153,6 +154,7 @@ static std::string sanitize(std::string string, bool cdata = true)
 {
     replace(string, '&', "&amp;");
     replace(string, '<', "&lt;");
+    replace(string, '\0', "&#00;");
     if (!cdata)
         replace(string, '\"', "&quot;");
     return string;
