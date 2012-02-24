@@ -213,10 +213,10 @@ static void
 stubOnTimer(
     boost::weak_ptr<void> weakCond, boost::function<void ()> dg)
 {
-    if (weakCond.lock()) {
+    boost::shared_ptr<void> temp = weakCond.lock();
+    if (temp) {
         dg();
-    }
-    else {
+    } else {
         MORDOR_LOG_DEBUG(g_log) << " Conditionally skip in stubOnTimer!";
     }
 }
