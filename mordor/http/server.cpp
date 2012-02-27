@@ -728,6 +728,8 @@ ServerRequest::commit()
         if (request != this) {
             m_responseState = WAITING;
             MORDOR_VERIFY(m_conn->m_waitingResponses.insert(this).second);
+            m_scheduler = Scheduler::getThis();
+            m_fiber = Fiber::getThis();
             wait = true;
             MORDOR_LOG_TRACE(g_log) << m_context << " waiting to respond";
         } else {
@@ -742,8 +744,6 @@ ServerRequest::commit()
     // If we weren't the first response in the queue, wait for someone
     // else to schedule us
     if (wait) {
-        m_scheduler = Scheduler::getThis();
-        m_fiber = Fiber::getThis();
         Scheduler::yieldTo();
         m_scheduler = NULL;
         m_fiber.reset();
