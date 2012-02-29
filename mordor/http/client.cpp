@@ -164,7 +164,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         request->m_scheduler = NULL;
         request->m_fiber.reset();
     }
-    bool close = false;
+    Stream::CloseType closetype = Stream::NONE;
     if (flush) {
         // Take a trip through the Scheduler, trying to let someone else
         // attempt to pipeline
@@ -185,6 +185,8 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         if (flush) {
             flush = false;
             try {
+                if (!m_allowNewRequests)
+                    closetype = Stream::WRITE;
                 MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " flushing";
                 m_stream->flush();
             } catch (...) {
@@ -202,7 +204,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
             if (m_priorResponseClosed <= request->m_requestNumber ||
                 m_priorResponseFailed <= request->m_requestNumber) {
                 MORDOR_ASSERT(m_pendingRequests.empty());
-                close = true;
+                closetype = Stream::BOTH;
                 lock.unlock();
                 MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " closing";
             }
@@ -222,10 +224,12 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
                 m_timeoutStream->readTimeout(m_readTimeout);
         }
     }
-    if (close) {
-        try {
-            m_stream->close();
-        } catch (...) {
+    if (closetype != Stream::NONE) {
+        if (closetype == Stream::BOTH || m_stream->supportsHalfClose()) {
+            try {
+                m_stream->close(closetype);
+            } catch (...) {
+            }
         }
     }
 }
