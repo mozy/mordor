@@ -171,7 +171,7 @@ protected:
     virtual void tickle() = 0;
 
     bool hasWorkToDo();
-    bool hasIdleThreads() const { return m_idleThreadCount != 0; }
+    virtual bool hasIdleThreads() const { return m_idleThreadCount != 0; }
 
 private:
     void yieldTo(bool yieldToCallerOnTerminate);
