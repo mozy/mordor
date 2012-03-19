@@ -510,7 +510,7 @@ std::ostream &operator<<(std::ostream &os, const ChallengeList &l)
 std::ostream& operator<<(std::ostream& os, const KeyValueWithParameters &v)
 {
     MORDOR_ASSERT(!v.key.empty());
-    os << v.key;
+    os << quote(v.key);
     if (!v.value.empty())
         os << "=" << quote(v.value)
             << serializeStringMapWithOptionalValue(v.parameters);
