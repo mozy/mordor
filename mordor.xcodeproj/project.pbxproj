@@ -87,6 +87,10 @@
 		E2DE14B311E67ADD00D9622F /* antxmllistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */; };
 		E2DE14B611E67AFF00D9622F /* stdoutlistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2773112B096700607AEE /* stdoutlistener.cpp */; };
 		E2DE14B811E67AFF00D9622F /* test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2775112B096700607AEE /* test.cpp */; };
+		E3B2FD27151A908800E87F0F /* cxa_exception.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3B2FD25151A908800E87F0F /* cxa_exception.cpp */; };
+		E3B2FD28151A908800E87F0F /* cxa_exception.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E3B2FD25151A908800E87F0F /* cxa_exception.cpp */; };
+		E3B2FD29151A908800E87F0F /* cxa_exception.h in Headers */ = {isa = PBXBuildFile; fileRef = E3B2FD26151A908800E87F0F /* cxa_exception.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		E3B2FD2A151A908800E87F0F /* cxa_exception.h in Headers */ = {isa = PBXBuildFile; fileRef = E3B2FD26151A908800E87F0F /* cxa_exception.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		EA9919FA142946E60069FD05 /* crypto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EA9919F9142946E60069FD05 /* crypto.cpp */; };
 		EA9919FE142946FC0069FD05 /* crypto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EA9919FC142946FC0069FD05 /* crypto.cpp */; };
 		EA9919FF142946FC0069FD05 /* crypto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EA9919FC142946FC0069FD05 /* crypto.cpp */; };
@@ -329,6 +333,8 @@
 		E2DE14A811E67AB400D9622F /* libmordortest.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmordortest.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = antxmllistener.cpp; sourceTree = "<group>"; };
 		E2DE14B211E67ADD00D9622F /* antxmllistener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = antxmllistener.h; sourceTree = "<group>"; };
+		E3B2FD25151A908800E87F0F /* cxa_exception.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cxa_exception.cpp; sourceTree = "<group>"; };
+		E3B2FD26151A908800E87F0F /* cxa_exception.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cxa_exception.h; sourceTree = "<group>"; };
 		EA9919F9142946E60069FD05 /* crypto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = crypto.cpp; sourceTree = "<group>"; };
 		EA9919FC142946FC0069FD05 /* crypto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = crypto.cpp; sourceTree = "<group>"; };
 		EA9919FD142946FC0069FD05 /* crypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = crypto.h; sourceTree = "<group>"; };
@@ -418,6 +424,8 @@
 				3CAB26DD112B096700607AEE /* date_time.cpp */,
 				3CAB26DE112B096700607AEE /* date_time.h */,
 				3CAB26DF112B096700607AEE /* endian.h */,
+				E3B2FD25151A908800E87F0F /* cxa_exception.cpp */,
+				E3B2FD26151A908800E87F0F /* cxa_exception.h */,
 				3CAB26E0112B096700607AEE /* examples */,
 				3CAB26F1112B096700607AEE /* exception.cpp */,
 				3CAB26F2112B096700607AEE /* exception.h */,
@@ -682,6 +690,7 @@
 				C32854BF120A1E750079C4A2 /* thread.h in Headers */,
 				34CCCE5113982DC900E6BDBA /* compoundlistener.h in Headers */,
 				EA991A00142946FC0069FD05 /* crypto.h in Headers */,
+				E3B2FD29151A908800E87F0F /* cxa_exception.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -691,6 +700,7 @@
 			files = (
 				34CCCE5213982DC900E6BDBA /* compoundlistener.h in Headers */,
 				EA991A01142946FC0069FD05 /* crypto.h in Headers */,
+				E3B2FD2A151A908800E87F0F /* cxa_exception.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -828,6 +838,7 @@
 				3F4296F01385DADC007EC0C7 /* util.cpp in Sources */,
 				34CCCE4F13982DC900E6BDBA /* compoundlistener.cpp in Sources */,
 				EA9919FE142946FC0069FD05 /* crypto.cpp in Sources */,
+				E3B2FD27151A908800E87F0F /* cxa_exception.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -841,6 +852,7 @@
 				34CCCE5013982DC900E6BDBA /* compoundlistener.cpp in Sources */,
 				EA9919FA142946E60069FD05 /* crypto.cpp in Sources */,
 				EA9919FF142946FC0069FD05 /* crypto.cpp in Sources */,
+				E3B2FD28151A908800E87F0F /* cxa_exception.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
