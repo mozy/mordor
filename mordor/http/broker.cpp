@@ -606,8 +606,8 @@ MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
         ClientConnection::ptr client(
             new ClientConnection(pipes.first, m_timerManager));
         if (m_timerManager) {
-            client->readTimeout(m_readTimeout);
-            client->writeTimeout(m_writeTimeout);
+            client->readTimeout(m_httpReadTimeout);
+            client->writeTimeout(m_httpWriteTimeout);
         }
         ServerConnection::ptr server(
             new ServerConnection(pipes.second, boost::bind(m_dg,
