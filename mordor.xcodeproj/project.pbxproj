@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		24BDA181151D1D7D00E0A646 /* oauth2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 24BDA17F151D1D7D00E0A646 /* oauth2.cpp */; };
+		24BDA182151D1D7D00E0A646 /* oauth2.h in Headers */ = {isa = PBXBuildFile; fileRef = 24BDA180151D1D7D00E0A646 /* oauth2.h */; };
 		34CCCE4F13982DC900E6BDBA /* compoundlistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 34CCCE4D13982DC900E6BDBA /* compoundlistener.cpp */; };
 		34CCCE5013982DC900E6BDBA /* compoundlistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 34CCCE4D13982DC900E6BDBA /* compoundlistener.cpp */; };
 		34CCCE5113982DC900E6BDBA /* compoundlistener.h in Headers */ = {isa = PBXBuildFile; fileRef = 34CCCE4E13982DC900E6BDBA /* compoundlistener.h */; };
@@ -113,6 +115,8 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXFileReference section */
+		24BDA17F151D1D7D00E0A646 /* oauth2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = oauth2.cpp; sourceTree = "<group>"; };
+		24BDA180151D1D7D00E0A646 /* oauth2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = oauth2.h; sourceTree = "<group>"; };
 		34CCCE4D13982DC900E6BDBA /* compoundlistener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = compoundlistener.cpp; sourceTree = "<group>"; };
 		34CCCE4E13982DC900E6BDBA /* compoundlistener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = compoundlistener.h; sourceTree = "<group>"; };
 		3CAB26D5112B096700607AEE /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
@@ -505,6 +509,8 @@
 		3CAB26F5112B096700607AEE /* http */ = {
 			isa = PBXGroup;
 			children = (
+				24BDA17F151D1D7D00E0A646 /* oauth2.cpp */,
+				24BDA180151D1D7D00E0A646 /* oauth2.h */,
 				3CAB26F6112B096700607AEE /* .gitignore */,
 				3CAB26F7112B096700607AEE /* auth.cpp */,
 				3CAB26F8112B096700607AEE /* auth.h */,
@@ -691,6 +697,7 @@
 				34CCCE5113982DC900E6BDBA /* compoundlistener.h in Headers */,
 				EA991A00142946FC0069FD05 /* crypto.h in Headers */,
 				E3B2FD29151A908800E87F0F /* cxa_exception.h in Headers */,
+				24BDA182151D1D7D00E0A646 /* oauth2.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -839,6 +846,7 @@
 				34CCCE4F13982DC900E6BDBA /* compoundlistener.cpp in Sources */,
 				EA9919FE142946FC0069FD05 /* crypto.cpp in Sources */,
 				E3B2FD27151A908800E87F0F /* cxa_exception.cpp in Sources */,
+				24BDA181151D1D7D00E0A646 /* oauth2.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
