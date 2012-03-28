@@ -82,6 +82,7 @@
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>-Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -111,6 +112,7 @@
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>-Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -138,6 +140,7 @@
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>-Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -170,6 +173,7 @@
       <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles>mordor/pch.h</ForcedIncludeFiles>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>-Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libeay32.lib;%(AdditionalDependencies)</AdditionalDependencies>
