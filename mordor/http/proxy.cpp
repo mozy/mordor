@@ -219,6 +219,7 @@ autoDetectConfigUrl()
 
 
 ProxyCache::ProxyCache(const std::string &userAgent)
+    : m_bAutoProxyFailed(false)
 {
     m_hHttpSession = pWinHttpOpen(toUtf16(userAgent).c_str(),
         WINHTTP_ACCESS_TYPE_NO_PROXY,
@@ -235,38 +236,12 @@ ProxyCache::~ProxyCache()
         pWinHttpCloseHandle(m_hHttpSession);
 }
 
-boost::mutex m_proxiesMutex;
-bool ProxyCache::m_bAutoProxyFailed = false;
-std::string ProxyCache::m_autoConfigUrl; // Autodetected pac Script, if any
-std::set<std::string> ProxyCache::m_invalidProxies;
-
-
-void
-ProxyCache::resetDetectionResultCache()
-{
-    boost::mutex::scoped_lock lk(m_proxiesMutex);
-    m_bAutoProxyFailed = false;
-    m_autoConfigUrl.clear();
-    m_invalidProxies.clear();
-}
-
 std::vector<URI>
 ProxyCache::autoDetectProxy(const URI &uri, const std::string &pacScript)
 {
     std::vector<URI> result;
     if (!m_hHttpSession)
         return result;
-
-    {
-        boost::mutex::scoped_lock lk(m_proxiesMutex);
-        if (!pacScript.empty())
-        {
-           if (m_invalidProxies.find(pacScript) != m_invalidProxies.end())
-                return result;
-        } else if (m_bAutoProxyFailed) {
-                return result;
-        }
-    }
 
     WINHTTP_PROXY_INFO proxyInfo;
     WINHTTP_AUTOPROXY_OPTIONS options;
@@ -293,13 +268,6 @@ ProxyCache::autoDetectProxy(const URI &uri, const std::string &pacScript)
     {
         error_t error = Mordor::lastError();
         MORDOR_LOG_ERROR(proxyLog) << "WinHttpGetProxyForUrl: (" << error << ") : " << uri.toString() << " : " <<  pacScript ;
-        {
-            boost::mutex::scoped_lock lk(m_proxiesMutex);
-            if (pacScript.empty())
-                m_bAutoProxyFailed = true;
-            else
-                m_invalidProxies.insert(pacScript);
-        }
     }
     return result;
 }
@@ -309,28 +277,17 @@ ProxyCache::proxyFromUserSettings(const URI &uri)
 {
     ProxySettings settings = getUserProxySettings();
     std::vector<URI> result, temp;
-    bool currentAutoProxyFailed;
-    std::string currentAutoConfigUrl;
-    {
-        boost::mutex::scoped_lock lk(m_proxiesMutex);
-        currentAutoProxyFailed = m_bAutoProxyFailed;
-        currentAutoConfigUrl = m_autoConfigUrl;
-    }
-    if (settings.autoDetect && !currentAutoProxyFailed) {
-        if (currentAutoConfigUrl.empty()) {
-            std::string newAutoConfigUrl = autoDetectConfigUrl();
-            {
-                boost::mutex::scoped_lock lk(m_proxiesMutex);
-                m_autoConfigUrl = newAutoConfigUrl;
-                currentAutoConfigUrl = newAutoConfigUrl;
-                // Detection may take a long time to fail on some networks
-                // that have no proxy, so avoid calling it again
-                m_bAutoProxyFailed = m_autoConfigUrl.empty();
-                currentAutoProxyFailed = m_bAutoProxyFailed;
-            }
+    if (settings.autoDetect && !m_bAutoProxyFailed) {
+        if (m_autoConfigUrl.empty()) {
+            m_autoConfigUrl = autoDetectConfigUrl();
         }
-        if (!currentAutoProxyFailed)
-            result = autoDetectProxy(uri, currentAutoConfigUrl);
+        if (m_autoConfigUrl.empty()) {
+            // Detection may take a long time to fail on some networks
+            // that have no proxy, so avoid calling it again
+            m_bAutoProxyFailed = true;
+        } else {
+            result = autoDetectProxy(uri, m_autoConfigUrl);
+        }
     }
     if (!settings.pacScript.empty()) {
         temp = autoDetectProxy(uri, settings.pacScript);
