@@ -4,9 +4,9 @@
 namespace Mordor
 {
 
-// muldiv64() was adapted from 
+// muldiv64() was adapted from
 // http://www.virtualbox.org/browser/trunk/src/VBox/Devices/muldiv64.c?rev=1
-// 
+//
 // the following copyright notice applies:
 /*
  * QEMU System Emulator
