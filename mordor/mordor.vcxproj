@@ -81,6 +81,8 @@
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">mordor/pch.h</ForcedIncludeFiles>
       <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</MultiProcessorCompilation>
       <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MultiProcessorCompilation>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Zm200 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
@@ -95,6 +97,8 @@
       <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</MultiProcessorCompilation>
       <MinimalRebuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</MinimalRebuild>
       <MinimalRebuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</MinimalRebuild>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Zm200 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -103,6 +107,7 @@
     <ClCompile Include="http\auth.cpp" />
     <ClCompile Include="http\basic.cpp" />
     <ClCompile Include="http\broker.cpp" />
+    <ClCompile Include="http\oauth2.cpp" />
     <ClCompile Include="http\servlet.cpp" />
     <ClCompile Include="http\servlets\config.cpp">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)config_servlet.obj</ObjectFileName>
@@ -177,6 +182,7 @@
     <ClCompile Include="streams\zlib.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="workerpool.cpp" />
+    <ClCompile Include="xml\dom_parser.cpp" />
     <ClCompile Include="zip.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -188,6 +194,7 @@
     <ClInclude Include="http\basic.h" />
     <ClInclude Include="http\broker.h" />
     <ClInclude Include="factory.h" />
+    <ClInclude Include="http\oauth2.h" />
     <ClInclude Include="http\servlet.h" />
     <ClInclude Include="http\servlets\config.h" />
     <ClInclude Include="main.h" />
@@ -236,6 +243,7 @@
     <ClInclude Include="thread.h" />
     <ClInclude Include="workerpool.h" />
     <ClInclude Include="xml\parser.h" />
+    <ClInclude Include="xml\dom_parser.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="streams\pipe.h" />
     <ClInclude Include="predef.h" />
@@ -271,7 +279,12 @@
     <ClInclude Include="zip.h" />
   </ItemGroup>
   <ItemGroup>
-    <Ragel Include="http\http_parser.rl" />
+    <Ragel Include="http\http_parser.rl">
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">http</IncludePaths>
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">http</IncludePaths>
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">http</IncludePaths>
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Release|x64'">http</IncludePaths>
+    </Ragel>
     <Ragel Include="json.rl" />
     <Ragel Include="uri.rl" />
     <Ragel Include="xml\xml_parser.rl" />

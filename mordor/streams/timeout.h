@@ -32,7 +32,9 @@ public:
     unsigned long long writeTimeout() const { return m_writeTimeout; }
     void writeTimeout(unsigned long long writeTimeout);
 
+    using FilterStream::read;
     size_t read(Buffer &buffer, size_t length);
+    using FilterStream::write;
     size_t write(const Buffer &buffer, size_t length);
 
 private:

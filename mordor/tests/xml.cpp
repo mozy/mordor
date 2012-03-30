@@ -2,7 +2,7 @@
 
 #include <boost/bind.hpp>
 
-#include "mordor/xml/parser.h"
+#include "mordor/xml/dom_parser.h"
 #include "mordor/test/test.h"
 #include "mordor/string.h"
 
@@ -201,6 +201,67 @@ MORDOR_UNITTEST(XMLParser, parsedocument)
     MORDOR_ASSERT(parser.final());
     MORDOR_ASSERT(!parser.error());
 }
+
+MORDOR_UNITTEST(XMLParser, domParser)
+{
+    DOM::XMLParser parser;
+    DOM::Document::ptr doc = parser.loadDocument(
+        "<?xml version='1.0' encoding='UTF-8'?>\n"
+        "<root><children>\n"
+        "<child>  this is child1\n</child>\n"
+        "<child>this is child2</child>\n"
+        "<empty id=\"1\" attr1=\"one\" attr2='two' />\n"
+        "<tag>tag text<subtag>  &quot;some &amp; some&quot;  </subtag></tag>\n"
+        "</children></root>");
+
+    DOM::Element *root = (DOM::Element *)doc->getElementsByTagName("root")[0];
+
+    MORDOR_TEST_ASSERT_EQUAL("root", root->nodeName());
+    DOM::NodeList l = root->getElementsByTagName("child");
+    MORDOR_TEST_ASSERT_EQUAL(2u, l.size());
+    MORDOR_TEST_ASSERT_EQUAL("this is child1", l[0]->text());
+    MORDOR_TEST_ASSERT_EQUAL("this is child1", l[0]->firstChild()->nodeValue());
+    MORDOR_TEST_ASSERT_EQUAL("this is child2", l[1]->text());
+
+    DOM::Node *children = root->firstChild();
+    MORDOR_TEST_ASSERT_EQUAL(DOM::ELEMENT, children->nodeType());
+    MORDOR_TEST_ASSERT_EQUAL("children", children->nodeName());
+    MORDOR_TEST_ASSERT_EQUAL(4u, children->childNodes().size());
+
+    DOM::Element *empty = (DOM::Element *)children->childNodes()[2];
+    MORDOR_TEST_ASSERT_EQUAL("empty", empty->nodeName());
+    MORDOR_TEST_ASSERT_EQUAL(DOM::ELEMENT, empty->nodeType());
+    MORDOR_TEST_ASSERT_EQUAL("", empty->text());
+    MORDOR_TEST_ASSERT_EQUAL("1", empty->id);
+    MORDOR_TEST_ASSERT_EQUAL("one", empty->attribute("attr1"));
+    MORDOR_TEST_ASSERT_EQUAL("two", empty->attribute("attr2"));
+    MORDOR_TEST_ASSERT_EQUAL(true, empty->hasAttribute("attr2"));
+    MORDOR_TEST_ASSERT_EQUAL(false, empty->hasAttribute("attr3"));
+
+    DOM::Element *node = doc->getElementById("1");
+    MORDOR_TEST_ASSERT_EQUAL(empty, node);
+    MORDOR_TEST_ASSERT_EQUAL((DOM::Element *)NULL, doc->getElementById("haha"));
+
+    DOM::Node *tag = children->childNodes()[3];
+    MORDOR_TEST_ASSERT_EQUAL(DOM::ELEMENT, tag->nodeType());
+    MORDOR_TEST_ASSERT_EQUAL("tag", tag->nodeName());
+    MORDOR_TEST_ASSERT_EQUAL("tag text", tag->text());
+    MORDOR_TEST_ASSERT_EQUAL("tag text", tag->firstChild()->nodeValue());
+
+    DOM::NodeList subtags = ((DOM::Element *)tag)->getElementsByTagName("subtag");
+    MORDOR_TEST_ASSERT_EQUAL(1u, subtags.size());
+    MORDOR_TEST_ASSERT_EQUAL("\"some & some\"", subtags[0]->text());
+}
+
+MORDOR_UNITTEST(XMLParser, domParserInvalid)
+{
+    DOM::XMLParser parser;
+    MORDOR_TEST_ASSERT_EXCEPTION(parser.loadDocument(
+        "<?xml version='1.0' encoding='UTF-8'?>\n"
+        "<root<children>\"somesome\n"),
+        std::invalid_argument);
+}
+
 
 #if 0
 // Disabled until comment support fixed

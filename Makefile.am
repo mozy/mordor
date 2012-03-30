@@ -9,6 +9,7 @@ nobase_include_HEADERS=			\
 	mordor/atomic.h			\
 	mordor/config.h			\
 	mordor/coroutine.h		\
+	mordor/cxa_exception.h	\
 	mordor/daemon.h			\
 	mordor/date_time.h		\
 	mordor/endian.h			\
@@ -41,14 +42,14 @@ nobase_include_HEADERS=			\
 	mordor/log.h			\
 	mordor/main.h			\
 	mordor/parallel.h		\
-	mordor/predef.h			\
-	mordor/protobuf.h		\
 	mordor/pq/connection.h		\
 	mordor/pq/connectionpool.h	\
 	mordor/pq/exception.h		\
 	mordor/pq/preparedstatement.h	\
 	mordor/pq/result.h		\
 	mordor/pq/transaction.h		\
+	mordor/predef.h			\
+	mordor/protobuf.h		\
 	mordor/ragel.h			\
 	mordor/scheduler.h		\
 	mordor/semaphore.h		\
@@ -99,6 +100,7 @@ nobase_include_HEADERS=			\
 	mordor/util.h			\
 	mordor/version.h		\
 	mordor/workerpool.h		\
+	mordor/xml/dom_parser.h		\
 	mordor/xml/parser.h		\
 	mordor/yaml.h			\
 	mordor/zip.h
@@ -108,6 +110,7 @@ lib_LTLIBRARIES=mordor/libmordor.la mordor/test/libmordortest.la
 mordor_libmordor_la_SOURCES=			\
 	mordor/assert.cpp			\
 	mordor/config.cpp			\
+	mordor/cxa_exception.cpp	\
 	mordor/daemon.cpp			\
 	mordor/date_time.cpp			\
 	mordor/exception.cpp			\
@@ -171,6 +174,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/uri.cpp				\
 	mordor/util.cpp				\
 	mordor/workerpool.cpp			\
+	mordor/xml/dom_parser.cpp		\
 	mordor/xml/xml_parser.cpp		\
 	mordor/zip.cpp
 
@@ -293,6 +297,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/json.cpp				\
 	mordor/tests/log.cpp				\
 	mordor/tests/memory_stream.cpp			\
+	mordor/tests/notify_stream.cpp			\
 	mordor/tests/oauth.cpp				\
 	mordor/tests/pipe_stream.cpp			\
 	mordor/tests/scheduler.cpp			\
@@ -342,8 +347,11 @@ noinst_PROGRAMS=			\
 	mordor/examples/simpleappserver	\
         mordor/examples/simpleclient	\
 	mordor/examples/tunnel		\
-	mordor/examples/udpstats	\
-	mordor/examples/wget
+	mordor/examples/udpstats
+
+if BOOST_PROGRAM_OPTIONS
+noinst_PROGRAMS += mordor/examples/wget
+endif
 
 mordor_examples_cat_SOURCES=mordor/examples/cat.cpp
 mordor_examples_cat_LDADD=mordor/libmordor.la	\

@@ -2,11 +2,16 @@
 
 #include "mordor/streams/memory.h"
 #include "mordor/streams/buffered.h"
+#include "mordor/streams/null.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/singleplex.h"
 #include "mordor/streams/test.h"
 #include "mordor/test/test.h"
+#include "mordor/thread.h"
 #include "mordor/workerpool.h"
+#include "mordor/streams/singleplex.h"
+#include "mordor/streams/test.h"
+#include "mordor/test/test.h"
 
 using namespace Mordor;
 using namespace Mordor::Test;
@@ -539,4 +544,70 @@ MORDOR_UNITTEST(BufferedStream, flushFullDuplexStream)
     pool.schedule(boost::bind(&readALot, pipes.second));
     pool.schedule(boost::bind(&writeALot, pipes.second));
     pool.stop();
+}
+
+namespace
+{
+    void doWrite(Stream::ptr stream, size_t totalSize)
+    {
+        size_t write = 0;
+        char data[4096] = {0};
+        while (write < totalSize) {
+            int writeSize = rand() % 2048 + 2048;
+            write += stream->write(&data, writeSize);
+        }
+    }
+
+    void doRead(Stream::ptr stream, size_t totalSize)
+    {
+        size_t read = 0;
+        char data[4096] = {0};
+        while(read < totalSize) {
+            int readSize = rand() % 2048 + 2048;
+            stream->read(&data, readSize);
+            read += readSize;
+        }
+    }
+
+    void parallelReadWrite(Stream::ptr stream)
+    {
+        size_t totalSize = 16 * 1024 * 1024ull; // 16MB
+        boost::shared_ptr<Thread> writeThread(new Thread(boost::bind(doWrite, stream, totalSize)));
+        boost::shared_ptr<Thread> readThread(new Thread(boost::bind(doRead, stream, totalSize)));
+        writeThread->join();
+        readThread->join();
+    }
+
+    class SeeklessStream : public FilterStream
+    {
+    public:
+        SeeklessStream(Stream::ptr parent, bool own=true) : FilterStream(parent, own) {}
+        bool supportsSeek() { return false; }
+        size_t read(Buffer &buffer, size_t length) { return parent()->read(buffer, length); }
+        size_t read(void *buffer, size_t length) { return parent()->read(buffer, length); }
+        size_t write(const Buffer &buffer, size_t length) { return parent()->write(buffer, length); }
+        size_t write(const void *buffer, size_t length) { return parent()->write(buffer, length); }
+    };
+}
+
+MORDOR_UNITTEST(BufferedStream, parallelReadWriteNullStream)
+{
+    // NullStream is a read-write thread-safe stream
+    parallelReadWrite(NullStream::get_ptr());
+}
+
+/* Comment out because BufferedStream is not read-write thread-safe currently for seekable stream
+MORDOR_UNITTEST(BufferedStream, parallelReadWriteBufferedStream)
+{
+    // wrapping with BufferedStream, it is no longer read-write thread-safe
+    parallelReadWrite(Stream::ptr(new BufferedStream(NullStream::get_ptr())));
+}
+*/
+
+MORDOR_UNITTEST(BufferedStream, parallelReadWriteSeeklessStream)
+{
+    // wrapping with BufferedStream, it is still read-write thread-safe
+    // as long as parent stream is seekless
+    parallelReadWrite(Stream::ptr(new BufferedStream(
+        Stream::ptr(new SeeklessStream(NullStream::get_ptr())))));
 }

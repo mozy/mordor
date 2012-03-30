@@ -24,9 +24,9 @@ namespace HTTP {
 std::pair<RequestBroker::ptr, ConnectionCache::ptr>
 createRequestBroker(const RequestBrokerOptions &options)
 {
-    TimerManager *timerManager = options.timerManager;
+    TimerManager *timerManager = const_cast<TimerManager*>(options.timerManager);
     if (options.ioManager && !timerManager)
-        timerManager = options.ioManager;
+        timerManager = const_cast<IOManager*>(options.ioManager);
 
     SocketStreamBroker::ptr socketBroker(new SocketStreamBroker(options.ioManager,
         options.scheduler));

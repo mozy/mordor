@@ -62,12 +62,12 @@ MORDOR_SUITE_INVARIANT(Socket)
 
 MORDOR_UNITTEST(Socket, acceptTimeout)
 {
-    IOManager ioManager;
+    IOManager ioManager(2, true);
     Connection conns = establishConn(ioManager);
-    conns.listen->receiveTimeout(100000);
+    conns.listen->receiveTimeout(200000);
     unsigned long long start = TimerManager::now();
     MORDOR_TEST_ASSERT_EXCEPTION(conns.listen->accept(), TimedOutException);
-    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 100000, TimerManager::now(), 50000);
+    MORDOR_TEST_ASSERT_ABOUT_EQUAL(start + 200000, TimerManager::now(), 100000);
     MORDOR_TEST_ASSERT_EXCEPTION(conns.listen->accept(), TimedOutException);
 }
 

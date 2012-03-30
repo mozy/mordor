@@ -144,6 +144,12 @@ public:
     /// Change the number of threads in this scheduler
     void threadCount(size_t threads);
 
+    const std::vector<boost::shared_ptr<Thread> >& threads() const
+    {
+        return m_threads;
+    }
+
+    tid_t rootThreadId() const { return m_rootThread; }
 protected:
     /// Derived classes can query stopping() to see if the Scheduler is trying
     /// to stop, and should return from the idle Fiber as soon as possible.
@@ -165,6 +171,7 @@ protected:
     virtual void tickle() = 0;
 
     bool hasWorkToDo();
+    virtual bool hasIdleThreads() const { return m_idleThreadCount != 0; }
 
 private:
     void yieldTo(bool yieldToCallerOnTerminate);
@@ -189,7 +196,7 @@ private:
     boost::shared_ptr<Fiber> m_rootFiber;
     boost::shared_ptr<Fiber> m_callingFiber;
     std::vector<boost::shared_ptr<Thread> > m_threads;
-    size_t m_threadCount, m_activeThreadCount;
+    size_t m_threadCount, m_activeThreadCount, m_idleThreadCount;
     bool m_stopping;
     bool m_autoStop;
     size_t m_batchSize;

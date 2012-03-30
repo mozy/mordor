@@ -4,6 +4,7 @@
 
 #include <boost/bind.hpp>
 
+#include "atomic.h"
 #include "assert.h"
 #include "fiber.h"
 
@@ -16,6 +17,7 @@ ThreadLocalStorage<Fiber *> Scheduler::t_fiber;
 
 Scheduler::Scheduler(size_t threads, bool useCaller, size_t batchSize)
     : m_activeThreadCount(0),
+      m_idleThreadCount(0),
       m_stopping(true),
       m_autoStop(false),
       m_batchSize(batchSize)
@@ -426,6 +428,18 @@ Scheduler::run()
                 } catch (...) {
                     MORDOR_LOG_FATAL(Log::root())
                         << boost::current_exception_diagnostic_information();
+                    {
+                        boost::mutex::scoped_lock lock(m_mutex);
+                        std::vector<FiberAndThread>::iterator it2 = it;
+                        // push all un-executed fibers back to m_fibers
+                        while (++it2 != batch.end()) {
+                            m_fibers.push_back(*it2);
+                        }
+                        batch.clear();
+                        // decrease the activeCount as this thread is in exception
+                        isActive = false;
+                        --m_activeThreadCount;
+                    }
                     throw;
                 }
             }
@@ -444,7 +458,9 @@ Scheduler::run()
             return;
         }
         MORDOR_LOG_DEBUG(g_log) << this << " idling";
+        atomicIncrement(m_idleThreadCount);
         idleFiber->call();
+        atomicDecrement(m_idleThreadCount);
     }
 }
 

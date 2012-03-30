@@ -39,7 +39,9 @@ public:
     { m_onFlush = dg; }
 
     void close(CloseType type = BOTH);
+    using FilterStream::read;
     size_t read(Buffer &b, size_t len);
+    using FilterStream::write;
     size_t write(const Buffer &b, size_t len);
     void flush(bool flushParent = true);
 

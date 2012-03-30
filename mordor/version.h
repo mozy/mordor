@@ -12,7 +12,7 @@
 #   define CYGWIN
 #endif
 
-#ifdef linux
+#if defined(linux) || defined(__linux__)
 #   define LINUX
 #endif
 

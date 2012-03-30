@@ -178,6 +178,9 @@ private:
     Scheduler *m_scheduler;
 
     AsyncEvent m_sendEvent, m_receiveEvent;
+    bool m_useAcceptEx;         //Cache the values in case they are changed in the registry at
+    bool m_useConnectEx;        //runtime
+
 #endif
     bool m_isConnected, m_isRegisteredForRemoteClose;
     boost::signals2::signal<void ()> m_onRemoteClose;

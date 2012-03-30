@@ -1719,8 +1719,10 @@ public:
         : FilterStream(parent)
     {}
 
+    using FilterStream::read;
     size_t read(Buffer &buffer, size_t length)
     { return parent()->read(buffer, length); }
+    using FilterStream::write;
     size_t write(const Buffer &buffer, size_t length)
     { return parent()->write(buffer, length); }
 

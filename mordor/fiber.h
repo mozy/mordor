@@ -52,6 +52,8 @@
 #include <setjmp.h>
 #endif
 
+#include "cxa_exception.h"
+
 namespace Mordor {
 
 /// Cooperative Thread
@@ -170,6 +172,8 @@ private:
     void freeStack();
     void initStack();
 
+    void switchContext(Fiber *toFiber);
+
 private:
     boost::function<void ()> m_dg;
     void *m_stack, *m_sp;
@@ -184,6 +188,9 @@ private:
 #endif
 #if (defined(LINUX) || defined(OSX))
     int m_valgrindStackId;
+#endif
+#ifdef CXXABIV1_EXCEPTION
+    ExceptionStack m_eh;
 #endif
     State m_state, m_yielderNextState;
     ptr m_outer, m_yielder;

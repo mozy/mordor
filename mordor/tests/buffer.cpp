@@ -18,6 +18,29 @@ MORDOR_UNITTEST(Buffer, copyInString)
     MORDOR_TEST_ASSERT(b == "hello");
 }
 
+MORDOR_UNITTEST(Buffer, copyInStdString)
+{
+    Buffer b;
+    std::string str("abc\0def", 7);
+    b.copyIn(str);
+    MORDOR_TEST_ASSERT_EQUAL(b.readAvailable(), 7u);
+    MORDOR_TEST_ASSERT_EQUAL(b.writeAvailable(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b.segments(), 1u);
+    MORDOR_TEST_ASSERT(b == str);
+}
+
+MORDOR_UNITTEST(Buffer, copyInStdString2)
+{
+    Buffer b;
+    std::ostringstream os;
+    os << "hello" << '\0' << "world" << '\0' << '\x0a';
+    b.copyIn(os.str());
+    MORDOR_TEST_ASSERT_EQUAL(b.readAvailable(), 13u);
+    MORDOR_TEST_ASSERT_EQUAL(b.writeAvailable(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b.segments(), 1u);
+    MORDOR_TEST_ASSERT(b == os.str());
+}
+
 MORDOR_UNITTEST(Buffer, copyInOtherBuffer)
 {
     Buffer b1, b2("hello");
@@ -36,6 +59,30 @@ MORDOR_UNITTEST(Buffer, copyInPartial)
     MORDOR_TEST_ASSERT_EQUAL(b1.writeAvailable(), 0u);
     MORDOR_TEST_ASSERT_EQUAL(b1.segments(), 1u);
     MORDOR_TEST_ASSERT(b1 == "hel");
+}
+
+MORDOR_UNITTEST(Buffer, copyInOffset)
+{
+    Buffer b1, b2("hello world");
+    b1.copyIn(b2, 7, 2);
+    MORDOR_TEST_ASSERT_EQUAL(b1.readAvailable(), 7u);
+    MORDOR_TEST_ASSERT_EQUAL(b1.writeAvailable(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b1.segments(), 1u);
+    MORDOR_TEST_ASSERT(b1 == "llo wor");
+}
+
+MORDOR_UNITTEST(Buffer, copyInOffsetMultiSegments)
+{
+    Buffer b1, b2;
+    b2.copyIn("hello\n");
+    b2.copyIn("foo\n");
+    b2.copyIn("bar\n");
+    MORDOR_TEST_ASSERT_EQUAL(b2.segments(), 3u);
+    b1.copyIn(b2, 5, 7);
+    MORDOR_TEST_ASSERT_EQUAL(b1.readAvailable(), 5u);
+    MORDOR_TEST_ASSERT_EQUAL(b1.writeAvailable(), 0u);
+    MORDOR_TEST_ASSERT_EQUAL(b1.segments(), 2u);
+    MORDOR_TEST_ASSERT(b1 == "oo\nba");
 }
 
 MORDOR_UNITTEST(Buffer, copyInStringToReserved)
@@ -146,6 +193,15 @@ MORDOR_UNITTEST(Buffer, copyInMergePlus)
     MORDOR_TEST_ASSERT_EQUAL(b1.readAvailable(), 6u);
     MORDOR_TEST_ASSERT_EQUAL(b1.segments(), 2u);
     MORDOR_TEST_ASSERT(b1 == "hellow");
+}
+
+MORDOR_UNITTEST(Buffer, copyOutOffset)
+{
+    Buffer b("hello world");
+    std::string out;
+    out.resize(7);
+    b.copyOut(&out[0], 7, 2);
+    MORDOR_TEST_ASSERT(out == "llo wor");
 }
 
 MORDOR_UNITTEST(Buffer, noSplitOnTruncate)
@@ -731,6 +787,18 @@ MORDOR_UNITTEST(Buffer, findStringFalsePositiveAcrossMultipleSegments)
     MORDOR_TEST_ASSERT_EQUAL(b.segments(), 5u);
 
     MORDOR_TEST_ASSERT_EQUAL(b.find("000011"), 4);
+}
+
+MORDOR_UNITTEST(Buffer, toString)
+{
+    Buffer b;
+    MORDOR_TEST_ASSERT(b.toString().empty());
+    b.copyIn("hello");
+    MORDOR_TEST_ASSERT_EQUAL(b.toString(), "hello");
+    b.copyIn("world");
+    MORDOR_TEST_ASSERT_EQUAL(b.toString(), "helloworld");
+    b.consume(3);
+    MORDOR_TEST_ASSERT_EQUAL(b.toString(), "loworld");
 }
 
 MORDOR_UNITTEST(Buffer, reserve0)

@@ -27,8 +27,38 @@ typedef pthread_t tid_t;
 inline tid_t emptytid() { return (tid_t)-1; }
 tid_t gettid();
 
+class Scheduler;
+
 class Thread : boost::noncopyable
 {
+public:
+    /// thread bookmark
+    ///
+    /// bookmark current thread id and scheduler, allow to switch back to
+    /// the same thread id later.
+    /// @pre The process must be running with available scheduler, otherwise
+    /// it is not possible to switch execution between threads with bookmark.
+    /// @note Bookmark was designed to address the issue where we failed to
+    /// rethrow an exception in catch block, because GCC C++ runtime saves the
+    /// exception stack in a pthread TLS variable. and swapcontext(3) does not
+    /// take care of TLS. but developer needs to be more aware of underlying
+    /// thread using thread bookmark, so we developed another way to fix this
+    /// problem. thus bookmark only serve as a way which allow user to stick
+    /// to a native thread.
+    class Bookmark
+    {
+    public:
+        Bookmark();
+        /// switch to bookmark's tid
+        void switchTo();
+        /// bookmark's tid
+        tid_t tid() const { return m_tid; }
+
+    private:
+        Scheduler *m_scheduler;
+        tid_t m_tid;
+    };
+
 public:
     Thread(boost::function<void ()> dg, const char *name = NULL);
     ~Thread();

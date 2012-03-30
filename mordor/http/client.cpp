@@ -166,7 +166,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         request->m_scheduler = NULL;
         request->m_fiber.reset();
     }
-    bool close = false;
+    Stream::CloseType closetype = Stream::NONE;
     if (flush) {
         // Take a trip through the Scheduler, trying to let someone else
         // attempt to pipeline
@@ -187,6 +187,8 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
         if (flush) {
             flush = false;
             try {
+                if (!m_allowNewRequests)
+                    closetype = Stream::WRITE;
                 MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " flushing";
                 m_stream->flush();
             } catch (...) {
@@ -204,7 +206,7 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
             if (m_priorResponseClosed <= request->m_requestNumber ||
                 m_priorResponseFailed <= request->m_requestNumber) {
                 MORDOR_ASSERT(m_pendingRequests.empty());
-                close = true;
+                closetype = Stream::BOTH;
                 lock.unlock();
                 MORDOR_LOG_TRACE(g_log) << m_connectionNumber << " closing";
             }
@@ -224,10 +226,12 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
                 m_timeoutStream->readTimeout(m_readTimeout);
         }
     }
-    if (close) {
-        try {
-            m_stream->close();
-        } catch (...) {
+    if (closetype != Stream::NONE) {
+        if (closetype == Stream::BOTH || m_stream->supportsHalfClose()) {
+            try {
+                m_stream->close(closetype);
+            } catch (...) {
+            }
         }
     }
 }
@@ -440,39 +444,45 @@ ClientConnection::invariant() const
 #endif
 }
 
-std::string ClientRequest::LogFilter::operator()(const RequestLine &requestLine)
+void ClientRequest::RequestLogger::logRequest(size_t connNum, long long requestNum, const Request &request, bool censorBasicAuth)
 {
-    std::ostringstream os;
-    os << requestLine;
-    return os.str();
-}
-
-std::string ClientRequest::LogFilter::operator()(const Request &request)
-{
-    std::ostringstream os;
-    bool basicAuth = (stricmp(request.request.authorization.scheme.c_str(), "Basic") == 0);
-    bool basicProxyAuth = (stricmp(request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0);
-    if (basicAuth || basicProxyAuth) {
-        Request censoredRequest(request);
-        if (basicAuth)
-            censoredRequest.request.authorization.base64 = "<hidden>";
-        if (basicProxyAuth)
-            censoredRequest.request.proxyAuthorization.base64 = "<hidden>";
-        os << censoredRequest;
+    if (g_log->enabled(Log::DEBUG)) {
+        std::ostringstream os;
+        bool basicAuth = censorBasicAuth ? (stricmp(request.request.authorization.scheme.c_str(), "Basic") == 0) : false;
+        bool basicProxyAuth = censorBasicAuth ? (stricmp(request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0) : false;
+        if (basicAuth || basicProxyAuth) {
+            Request censoredRequest(request);
+            if (basicAuth)
+                censoredRequest.request.authorization.base64 = "<hidden>";
+            if (basicProxyAuth)
+                censoredRequest.request.proxyAuthorization.base64 = "<hidden>";
+            os << censoredRequest;
+        } else {
+            os << request;
+        }
+        MORDOR_LOG_DEBUG(g_log) << connNum << "-" << requestNum << " " << os.str();
     } else {
-        os << request;
+        MORDOR_LOG_VERBOSE(g_log) << connNum << "-" << requestNum << " " << request.requestLine;
     }
-    return os.str();
 }
 
-/* static */ boost::shared_ptr<ClientRequest::LogFilter> ClientRequest::msp_logFilter( new ClientRequest::LogFilter );
-
-void ClientRequest::setLogFilter(boost::shared_ptr<ClientRequest::LogFilter> newLogFilter)
+void ClientRequest::RequestLogger::logResponse(size_t connNum, long long requestNum, const Request &request, const Response &response)
 {
-    if (newLogFilter)
-        msp_logFilter = newLogFilter;
+    if (g_log->enabled(Log::DEBUG)) {
+        MORDOR_LOG_DEBUG(g_log) << connNum << "-" << requestNum << " " << response;
+    } else {
+        MORDOR_LOG_VERBOSE(g_log) << connNum << "-" << requestNum << " " << response.status;
+    }
+}
+
+/* static */ boost::shared_ptr<ClientRequest::RequestLogger> ClientRequest::msp_requestLogger( new ClientRequest::RequestLogger );
+
+void ClientRequest::setRequestLogger(boost::shared_ptr<ClientRequest::RequestLogger> newRequestLogger)
+{
+    if (newRequestLogger)
+        msp_requestLogger = newRequestLogger;
     else
-        msp_logFilter.reset( new ClientRequest::LogFilter );
+        msp_requestLogger.reset( new ClientRequest::RequestLogger );
 }
 
 ClientRequest::ClientRequest(ClientConnection::ptr conn, const Request &request)
@@ -956,11 +966,7 @@ ClientRequest::doRequest()
         std::ostringstream os;
         os << m_request;
         std::string str = os.str();
-        if (g_log->enabled(Log::DEBUG)) {
-            MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber<< " " << (*msp_logFilter)(m_request);
-        } else {
-            MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << (*msp_logFilter)(m_request.requestLine);
-        }
+        msp_requestLogger->logRequest(m_conn->m_connectionNumber, m_requestNumber, m_request);
         m_conn->m_stream->write(str.c_str(), str.size());
 
         if (!Connection::hasMessageBody(m_request.general, m_request.entity, requestLine.method, INVALID, false)) {
@@ -1064,16 +1070,16 @@ ClientRequest::ensureResponse()
                 MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
             if (!parser.complete())
                 MORDOR_THROW_EXCEPTION(IncompleteMessageHeaderException());
-            if (g_log->enabled(Log::DEBUG)) {
-                MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_response;
-            } else {
-                MORDOR_LOG_VERBOSE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_response.status;
-            }
+            msp_requestLogger->logResponse(m_conn->m_connectionNumber, m_requestNumber, m_request, m_response);
 
             bool close = false;
             StringSet &connection = m_response.general.connection;
+            StringSet &proxyConnection = m_response.general.proxyConnection; // NON-STANDARD!!!
+
             if (m_response.status.ver == Version(1, 0)) {
-                if (connection.find("Keep-Alive") == connection.end())
+                // When using a HTTP 1.0 proxy server then Keep-Alive may come via the Proxy-Connection header
+                // instead of more standard "Connection"
+                if (connection.find("Keep-Alive") == connection.end() && proxyConnection.find("Keep-Alive") == proxyConnection.end())
                     close = true;
             } else if (m_response.status.ver == Version(1, 1)) {
                 if (connection.find("close") != connection.end())
@@ -1081,8 +1087,7 @@ ClientRequest::ensureResponse()
             } else {
                 MORDOR_THROW_EXCEPTION(BadMessageHeaderException());
             }
-            // NON-STANDARD!!!
-            StringSet &proxyConnection = m_response.general.proxyConnection;
+
             if (proxyConnection.find("close") != proxyConnection.end())
                 close = true;
 

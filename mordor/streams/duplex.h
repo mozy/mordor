@@ -48,11 +48,13 @@ public:
         if (type & WRITE)
             m_writeParent.reset();
     }
+    using Stream::read;
     size_t read(Buffer &b, size_t len)
     {
         if (!m_readParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         return m_readParent->read(b, len);
     }
+    using Stream::write;
     size_t write(const Buffer &b, size_t len)
     {
         if (!m_writeParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());

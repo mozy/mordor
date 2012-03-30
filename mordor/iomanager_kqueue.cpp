@@ -259,6 +259,7 @@ IOManager::idle()
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
         std::vector<boost::function<void ()> > expired = processTimers();
         schedule(expired.begin(), expired.end());
+        expired.clear();
 
         for(int i = 0; i < rc; ++i) {
             struct kevent &event = events[i];
@@ -331,6 +332,10 @@ IOManager::idle()
 void
 IOManager::tickle()
 {
+    if (!hasIdleThreads()) {
+        MORDOR_LOG_VERBOSE(g_log) << this << " 0 idle thread, no tickle.";
+        return;
+    }
     int rc = write(m_tickleFds[1], "T", 1);
     MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
         << rc << " (" << lastError() << ")";

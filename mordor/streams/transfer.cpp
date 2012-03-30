@@ -5,6 +5,7 @@
 #include <boost/bind.hpp>
 
 #include "mordor/assert.h"
+#include "mordor/config.h"
 #include "mordor/fiber.h"
 #include "mordor/parallel.h"
 #include "mordor/streams/buffer.h"
@@ -13,6 +14,10 @@
 
 namespace Mordor {
 
+static ConfigVar<size_t>::ptr g_chunkSize =
+    Config::lookup("transferstream.chunksize",
+                   (size_t)65536,
+                   "transfer chunk size.");
 static Logger::ptr g_log = Log::lookup("mordor:stream:transfer");
 
 static void readOne(Stream &src, Buffer *&buffer, size_t len, size_t &result)
@@ -41,7 +46,7 @@ unsigned long long transferStream(Stream &src, Stream &dst,
     MORDOR_ASSERT(dst.supportsWrite());
     Buffer buf1, buf2;
     Buffer *readBuffer, *writeBuffer;
-    size_t chunkSize = 65536;
+    size_t chunkSize = g_chunkSize->val();
     size_t todo;
     size_t readResult;
     unsigned long long totalRead = 0;

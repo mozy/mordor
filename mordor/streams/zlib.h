@@ -76,7 +76,9 @@ public:
     bool supportsTruncate() { return false; }
 
     void close(CloseType type = BOTH);
+    using MutatingFilterStream::read;
     size_t read(Buffer &b, size_t len);
+    using MutatingFilterStream::write;
     size_t write(const Buffer &b, size_t len);
     void flush(bool flushParent = true);
 

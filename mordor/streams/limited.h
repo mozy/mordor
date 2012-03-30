@@ -25,7 +25,9 @@ public:
     bool supportsSize() { return true; }
     bool supportsTruncate() { return false; }
 
+    using MutatingFilterStream::read;
     size_t read(Buffer &b, size_t len);
+    using MutatingFilterStream::write;
     size_t write(const Buffer &b, size_t len);
     long long seek(long long offset, Anchor anchor = BEGIN);
     long long size();

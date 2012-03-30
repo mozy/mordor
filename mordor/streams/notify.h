@@ -4,7 +4,9 @@
 
 #include <boost/function.hpp>
 
-#include "filter.h"
+#include "mordor/assert.h"
+#include "mordor/exception.h"
+#include "mordor/streams/filter.h"
 
 namespace Mordor {
 
@@ -28,37 +30,45 @@ public:
             if (ownsParent())
                 parent()->close(type);
         } catch (...) {
+            boost::exception_ptr exception(boost::current_exception());
             if (notifyOnException)
                 notifyOnException();
-            throw;
+            Mordor::rethrow_exception(exception);
+            MORDOR_NOTREACHED();
         }
         if (notifyOnClose)
             notifyOnClose();
     }
 
+    using FilterStream::read;
     size_t read(Buffer &b, size_t len)
     {
         size_t result;
         try {
             result = parent()->read(b, len);
         } catch(...) {
+            boost::exception_ptr exception(boost::current_exception());
             if (notifyOnException)
                 notifyOnException();
-            throw;
+            Mordor::rethrow_exception(exception);
+            MORDOR_NOTREACHED();
         }
         if (result == 0 && notifyOnEof)
             notifyOnEof();
         return result;
     }
 
+    using FilterStream::write;
     size_t write(const Buffer &b, size_t len)
     {
         try {
             return parent()->write(b, len);
         } catch(...) {
+            boost::exception_ptr exception(boost::current_exception());
             if (notifyOnException)
                 notifyOnException();
-            throw;
+            Mordor::rethrow_exception(exception);
+            MORDOR_NOTREACHED();
         }
     }
 
@@ -67,9 +77,11 @@ public:
         try {
             parent()->flush(flushParent);
         } catch(...) {
+            boost::exception_ptr exception(boost::current_exception());
             if (notifyOnException)
                 notifyOnException();
-            throw;
+            Mordor::rethrow_exception(exception);
+            MORDOR_NOTREACHED();
         }
         if (notifyOnFlush)
             notifyOnFlush();

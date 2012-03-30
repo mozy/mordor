@@ -234,7 +234,7 @@ template <class T, class U>
 struct ThroughputStatistic : Statistic
 {
     AverageMinMaxStatistic<T> size;
-    AverageMinMaxStatistic<T> time;
+    AverageMinMaxStatistic<U> time;
 
     ThroughputStatistic(const char *sumunits = NULL, const char *timeunits = NULL, const char *countunits = NULL)
         : size(sumunits, countunits),
@@ -312,7 +312,7 @@ public:
         } else {
             T *stat = dynamic_cast<T *>(it->second.second.get());
             MORDOR_ASSERT(stat);
-            return *stat;
+            return stat;
         }
     }
 
