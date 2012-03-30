@@ -42,7 +42,7 @@ base64decode(const std::string &src)
 
             // padding with "=" only
             if (padding > 0)
-                return "";
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("src"));
 
             int val = 0;
             if(*ptr >= 'A' && *ptr <= 'Z')
@@ -56,16 +56,16 @@ base64decode(const std::string &src)
             else if(*ptr == '/')
                 val = 63;
             else
-                return ""; // invalid character
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("src")); // invalid character
 
             packed = (packed << 6) | val;
         }
         if (i != 4)
-            return "";
+            MORDOR_THROW_EXCEPTION(std::invalid_argument("src"));
         if (padding > 0 && ptr != end)
-            return "";
+            MORDOR_THROW_EXCEPTION(std::invalid_argument("src"));
         if (padding > 2)
-            return "";
+            MORDOR_THROW_EXCEPTION(std::invalid_argument("src"));
 
         *writeBuf++ = (char)((packed >> 16) & 0xff);
         if(padding != 2)
