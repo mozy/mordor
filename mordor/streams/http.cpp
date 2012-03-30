@@ -515,8 +515,10 @@ HTTPStream::close(CloseType type)
         m_sizeAdvice = ~0ull;
         return;
     }
-    if (parent() && (type & WRITE) && parent()->supportsWrite()) {
+    if (parent()) {
         parent()->close();
+    }
+    if (parent() && (type & WRITE) && parent()->supportsWrite()) {
         parent(Stream::ptr());
         m_writeFuture.reset();
         m_writeFuture2.signal();
