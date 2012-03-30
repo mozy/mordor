@@ -201,6 +201,7 @@
     <ClCompile Include="fibersync.cpp" />
     <ClCompile Include="fls.cpp" />
     <ClCompile Include="future.cpp" />
+    <ClCompile Include="hash_stream.cpp" />
     <ClCompile Include="hmac.cpp" />
     <ClCompile Include="http_parser.cpp" />
     <ClCompile Include="http_client.cpp" />

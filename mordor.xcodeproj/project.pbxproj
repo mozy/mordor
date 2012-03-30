@@ -281,6 +281,7 @@
 		3CAB277E112B096700607AEE /* fibers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fibers.cpp; sourceTree = "<group>"; };
 		3CAB277F112B096700607AEE /* fibersync.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fibersync.cpp; sourceTree = "<group>"; };
 		3CAB2780112B096700607AEE /* fls.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fls.cpp; sourceTree = "<group>"; };
+		0EC278D31526562700F8AC65 /* hash_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hash_stream.cpp; sourceTree = "<group>"; };
 		3CAB2781112B096700607AEE /* hmac.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hmac.cpp; sourceTree = "<group>"; };
 		3CAB2782112B096700607AEE /* http.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = http.cpp; sourceTree = "<group>"; };
 		3CAB2783112B096700607AEE /* iomanager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iomanager.cpp; sourceTree = "<group>"; };
@@ -642,6 +643,7 @@
 				3CAB277E112B096700607AEE /* fibers.cpp */,
 				3CAB277F112B096700607AEE /* fibersync.cpp */,
 				3CAB2780112B096700607AEE /* fls.cpp */,
+				0EC278D31526562700F8AC65 /* hash_stream.cpp */,
 				3CAB2781112B096700607AEE /* hmac.cpp */,
 				3CAB2782112B096700607AEE /* http.cpp */,
 				3CAB2783112B096700607AEE /* iomanager.cpp */,

@@ -287,6 +287,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/file_stream.cpp			\
 	mordor/tests/fls.cpp				\
 	mordor/tests/future.cpp				\
+	mordor/tests/hash_stream.cpp			\
 	mordor/tests/hmac.cpp				\
 	mordor/tests/http_client.cpp			\
 	mordor/tests/http_parser.cpp			\

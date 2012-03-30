@@ -386,6 +386,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\hash_stream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\hmac.cpp"
 				>
 			</File>

@@ -45,6 +45,9 @@
     <ClCompile Include="future.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="hash_stream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="hmac.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
