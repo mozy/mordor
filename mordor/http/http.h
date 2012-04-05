@@ -100,6 +100,7 @@ enum Status
     UNSUPPORTED_MEDIA_TYPE           = 415,
     REQUESTED_RANGE_NOT_SATISFIABLE  = 416,
     EXPECTATION_FAILED               = 417,
+    PRECONDITION_REQUIRED            = 428,
 
     INTERNAL_SERVER_ERROR            = 500,
     NOT_IMPLEMENTED                  = 501,
