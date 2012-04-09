@@ -300,6 +300,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/notify_stream.cpp			\
 	mordor/tests/oauth.cpp				\
 	mordor/tests/pipe_stream.cpp			\
+	mordor/tests/ragel.cpp				\
 	mordor/tests/scheduler.cpp			\
 	mordor/tests/socket.cpp				\
 	mordor/tests/ssl_stream.cpp			\

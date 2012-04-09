@@ -474,6 +474,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ragel.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\run_tests.cpp"
 				>
 			</File>

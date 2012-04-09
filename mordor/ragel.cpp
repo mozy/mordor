@@ -52,7 +52,9 @@ RagelParser::run(const Buffer& buffer)
             MORDOR_ASSERT(final() || error());
             return total;
         }
-        if (error() || complete())
+        if (complete())
+            break;
+        if (error())
             return total;
     }
     run(NULL, 0, true);
@@ -66,10 +68,9 @@ RagelParser::run(Stream &stream)
     init();
     Buffer buffer;
     bool inferredComplete = false;
-    while (!error() && !complete() && !inferredComplete) {
+    while (!error() && !inferredComplete) {
         // TODO: limit total amount read
-        size_t read = stream.read(buffer, 65536);
-        if (read == 0) {
+        if (complete() || stream.read(buffer, 65536) == 0) {
             run(NULL, 0, true);
             break;
         } else {

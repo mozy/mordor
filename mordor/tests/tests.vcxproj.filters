@@ -72,6 +72,9 @@
     <ClCompile Include="pipe_stream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ragel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="run_tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
