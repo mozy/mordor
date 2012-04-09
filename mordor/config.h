@@ -244,13 +244,18 @@ public:
 #endif
 
 public:
-    //Used to declare a ConfigVar.  A ConfigVar can only be declared once.
+    /// Declare a ConfigVar
+    ///
+    /// @note A ConfigVar can only be declared once.
+    /// @throws std::invalid_argument With what() == the name of the ConfigVar
+    ///         if the value is not valid.
     template <class T>
     static typename ConfigVar<T>::ptr lookup(const std::string &name,
         const T &defaultValue, const std::string &description = "")
     {
-        MORDOR_ASSERT(name.find_first_not_of("abcdefghijklmnopqrstuvwxyz.")
-            == std::string::npos);
+        if (name.find_first_not_of("abcdefghijklmnopqrstuvwxyz.") !=
+            std::string::npos)
+            MORDOR_THROW_EXCEPTION(std::invalid_argument(name));
 
         MORDOR_ASSERT(vars().find(name) == vars().end());
         typename ConfigVar<T>::ptr v(new ConfigVar<T>(name, defaultValue,
