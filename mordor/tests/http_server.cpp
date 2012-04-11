@@ -535,7 +535,7 @@ static void doRespondStream(RequestBroker &requestBroker, bool head,
         requestHeaders.request.range.push_back(std::make_pair(0ull, 0ull));
         requestHeaders.request.range.push_back(std::make_pair(2ull, 3ull));
         request = requestBroker.request(requestHeaders);
-        MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+        MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, PARTIAL_CONTENT);
         MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentType.type,
             "multipart");
         MORDOR_TEST_ASSERT_EQUAL(request->response().entity.contentType.subtype,
