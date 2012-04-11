@@ -966,6 +966,7 @@ respondStream(ServerRequest::ptr request, Stream &response)
             request->response().entity.contentType.subtype = "byteranges";
             request->response().entity.contentType.parameters["boundary"] =
                 Multipart::randomBoundary();
+            request->response().status.status = PARTIAL_CONTENT;
             unsigned long long currentPos = 0;
 
             if (request->request().requestLine.method != HEAD) {
