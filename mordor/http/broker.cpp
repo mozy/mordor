@@ -51,6 +51,7 @@ createRequestBroker(const RequestBrokerOptions &options)
     connectionCache->proxyRequestBroker(options.proxyRequestBroker);
     connectionCache->verifySslCertificate(options.verifySslCertificate);
     connectionCache->verifySslCertificateHost(options.verifySslCertificateHost);
+    connectionCache->connectionsPerHost(options.connectionsPerHost);
 
     RequestBroker::ptr requestBroker(new BaseRequestBroker(
         boost::static_pointer_cast<ConnectionBroker>(connectionCache)));

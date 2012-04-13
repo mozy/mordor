@@ -451,6 +451,7 @@ struct RequestBrokerOptions
         httpReadTimeout(~0ull),
         httpWriteTimeout(~0ull),
         idleTimeout(~0ull),
+        connectionsPerHost(1u),
         sslCtx(NULL),
         verifySslCertificate(false),
         verifySslCertificateHost(true)
@@ -478,6 +479,7 @@ struct RequestBrokerOptions
     unsigned long long httpReadTimeout;
     unsigned long long httpWriteTimeout;
     unsigned long long idleTimeout;
+    size_t connectionsPerHost;
 
     // Callback to find proxy for an URI, see ConnectionCache::proxyForURI
     boost::function<std::vector<URI> (const URI &)> proxyForURIDg;
