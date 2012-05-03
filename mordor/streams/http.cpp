@@ -560,7 +560,7 @@ HTTPStream::clearParent()
         m_writeFuture.reset();
         m_writeFuture2.signal();
         m_writeFuture.wait();
-        MORDOR_ASSERT(!m_abortWrite);
+        MORDOR_ASSERT(!m_writeInProgress);
     }
     parent(Stream::ptr());
 }
