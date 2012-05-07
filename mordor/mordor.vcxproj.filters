@@ -310,6 +310,9 @@
     <ClInclude Include="streams\hash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="streams\hashfwd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="http\http.h">
       <Filter>Header Files</Filter>
     </ClInclude>

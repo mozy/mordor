@@ -67,6 +67,7 @@ nobase_include_HEADERS=			\
 	mordor/streams/filter.h		\
 	mordor/streams/gzip.h		\
 	mordor/streams/hash.h		\
+	mordor/streams/hashfwd.h	\
 	mordor/streams/http.h		\
 	mordor/streams/limited.h	\
 	mordor/streams/memory.h		\

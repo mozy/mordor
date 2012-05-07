@@ -10,6 +10,7 @@
 #include "assert.h"
 #include "filter.h"
 #include "buffer.h"
+#include "hashfwd.h"
 
 namespace Mordor {
 
@@ -46,27 +47,6 @@ protected:
     virtual void updateHash(const void *buffer, size_t length) = 0;
 };
 
-enum HASH_TYPE
-{
-    MD5    = 0,
-#ifndef OPENSSL_NO_SHA0
-    SHA0   = 1,
-#endif
-#ifndef OPENSSL_NO_SHA1
-    SHA1   = 2,
-#endif
-#ifndef OPENSSL_NO_SHA256
-    SHA224 = 3,
-    SHA256 = 4,
-#endif
-    SHA384 = 5,
-#ifndef OPENSSL_NO_SHA512
-    SHA512 = 6,
-#endif
-};
-
-namespace {
-// templated hash stream in anonymous namespace
 template<HASH_TYPE H> struct HashOps {};
 
 #ifndef OPENSSL_NO_SHA0
@@ -194,8 +174,6 @@ private:
 protected:
     ctx_type m_ctx;
 };
-
-} // end of anonymous namespace
 
 #ifndef OPENSSL_NO_SHA0
 typedef _HashStream<SHA0>   SHA0Stream;

@@ -225,6 +225,7 @@
     <ClInclude Include="streams\gzip.h" />
     <ClInclude Include="streams\handle.h" />
     <ClInclude Include="streams\hash.h" />
+    <ClInclude Include="streams\hashfwd.h" />
     <ClInclude Include="http\http.h" />
     <ClInclude Include="streams\http.h" />
     <ClInclude Include="iomanager.h" />

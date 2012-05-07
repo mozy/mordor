@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0E8A702A15594EE900607636 /* hashfwd.h in Headers */ = {isa = PBXBuildFile; fileRef = 0E8A702915594EE900607636 /* hashfwd.h */; };
 		24BDA181151D1D7D00E0A646 /* oauth2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 24BDA17F151D1D7D00E0A646 /* oauth2.cpp */; };
 		24BDA182151D1D7D00E0A646 /* oauth2.h in Headers */ = {isa = PBXBuildFile; fileRef = 24BDA180151D1D7D00E0A646 /* oauth2.h */; };
 		34CCCE4F13982DC900E6BDBA /* compoundlistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 34CCCE4D13982DC900E6BDBA /* compoundlistener.cpp */; };
@@ -115,6 +116,9 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXFileReference section */
+		0E8A702915594EE900607636 /* hashfwd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hashfwd.h; sourceTree = "<group>"; };
+		0EC278D31526562700F8AC65 /* hash_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hash_stream.cpp; sourceTree = "<group>"; };
+		0EF8669115333584009205E8 /* ragel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ragel.cpp; sourceTree = "<group>"; };
 		24BDA17F151D1D7D00E0A646 /* oauth2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = oauth2.cpp; sourceTree = "<group>"; };
 		24BDA180151D1D7D00E0A646 /* oauth2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = oauth2.h; sourceTree = "<group>"; };
 		34CCCE4D13982DC900E6BDBA /* compoundlistener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = compoundlistener.cpp; sourceTree = "<group>"; };
@@ -139,7 +143,6 @@
 		3CAB26E7112B096700607AEE /* iombench.vcproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = iombench.vcproj; sourceTree = "<group>"; };
 		3CAB26E8112B096700607AEE /* netbench.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = netbench.cpp; sourceTree = "<group>"; };
 		3CAB26E9112B096700607AEE /* netbench.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = netbench.h; sourceTree = "<group>"; };
-		0EF8669115333584009205E8 /* ragel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ragel.cpp; sourceTree = "<group>"; };
 		3CAB26EA112B096700607AEE /* simpleclient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = simpleclient.cpp; sourceTree = "<group>"; };
 		3CAB26EB112B096700607AEE /* simpleclient.vcproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = simpleclient.vcproj; sourceTree = "<group>"; };
 		3CAB26EC112B096700607AEE /* tunnel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tunnel.cpp; sourceTree = "<group>"; };
@@ -281,7 +284,6 @@
 		3CAB277E112B096700607AEE /* fibers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fibers.cpp; sourceTree = "<group>"; };
 		3CAB277F112B096700607AEE /* fibersync.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fibersync.cpp; sourceTree = "<group>"; };
 		3CAB2780112B096700607AEE /* fls.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fls.cpp; sourceTree = "<group>"; };
-		0EC278D31526562700F8AC65 /* hash_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hash_stream.cpp; sourceTree = "<group>"; };
 		3CAB2781112B096700607AEE /* hmac.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hmac.cpp; sourceTree = "<group>"; };
 		3CAB2782112B096700607AEE /* http.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = http.cpp; sourceTree = "<group>"; };
 		3CAB2783112B096700607AEE /* iomanager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iomanager.cpp; sourceTree = "<group>"; };
@@ -550,6 +552,7 @@
 		3CAB2737112B096700607AEE /* streams */ = {
 			isa = PBXGroup;
 			children = (
+				0E8A702915594EE900607636 /* hashfwd.h */,
 				61AA83C4120A18D600D7B56B /* filter.cpp */,
 				E29FD2A81136FD1D004BC293 /* timeout.cpp */,
 				E29FD2A91136FD1D004BC293 /* timeout.h */,
@@ -702,6 +705,7 @@
 				EA991A00142946FC0069FD05 /* crypto.h in Headers */,
 				E3B2FD29151A908800E87F0F /* cxa_exception.h in Headers */,
 				24BDA182151D1D7D00E0A646 /* oauth2.h in Headers */,
+				0E8A702A15594EE900607636 /* hashfwd.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
