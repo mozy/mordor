@@ -10,6 +10,14 @@
 namespace Mordor {
 namespace JSON {
 
+template<>
+void
+Value::set<bool>(const bool& value,
+                 boost::enable_if<boost::is_arithmetic<bool> >::type *)
+{
+    (ValueBase &)*this = value;
+}
+
 namespace {
 class BoolVisitor : public boost::static_visitor<>
 {
@@ -244,7 +252,7 @@ std::string unquote(const std::string &string)
     action new_key
 
     {
-        m_stack.push(&boost::get<Object>(*m_stack.top()).insert(std::make_pair(unquote(std::string(mark, fpc - mark)), Value()))->second);
+        m_stack.push(&boost::get<Object>(*m_stack.top())[unquote(std::string(mark, fpc - mark))]);
     }
     action new_element
     {

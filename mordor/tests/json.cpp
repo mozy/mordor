@@ -11,21 +11,21 @@ MORDOR_UNITTEST(JSON, example1construct)
 {
     Object root;
     Object image;
-    image.insert(std::make_pair("Width", Value(800ll)));
-    image.insert(std::make_pair("Height", Value(600ll)));
-    image.insert(std::make_pair("Title", Value(std::string("View from 15th Floor"))));
+    image["Width"] = 800ll;
+    image["Height"] = 600;
+    image["Title"] = std::string("View from 15th Floor");
     Object thumbnail;
-    thumbnail.insert(std::make_pair("Url", Value(std::string("http://www.example.com/image/481989943"))));
-    thumbnail.insert(std::make_pair("Height", Value(125ll)));
-    thumbnail.insert(std::make_pair("Width", Value(std::string("100"))));
-    image.insert(std::make_pair("Thumbnail", thumbnail));
+    thumbnail["Url"] = std::string("http://www.example.com/image/481989943");
+    thumbnail["Height"] = 125ll;
+    thumbnail["Width"] = std::string("100");
+    image["Thumbnail"] = thumbnail;
     Array ids;
-    ids.push_back(Value(116ll));
-    ids.push_back(Value(943ll));
-    ids.push_back(Value(234ll));
-    ids.push_back(Value(38793ll));
-    image.insert(std::make_pair("IDs", ids));
-    root.insert(std::make_pair("Image", image));
+    ids.push_back(116);
+    ids.push_back(943ll);
+    ids.push_back(234ll);
+    ids.push_back(38793ll);
+    image["IDs"] = ids;
+    root["Image"] = image;
 
     std::ostringstream os;
     os << root;

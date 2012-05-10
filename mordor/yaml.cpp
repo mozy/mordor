@@ -51,8 +51,7 @@ static void convertNode(JSON::Value &value, yaml_node_t *node,
                     MORDOR_THROW_EXCEPTION(std::runtime_error("Can't use a non-string as a key"));
                 std::string key((char *)keyNode->data.scalar.value,
                     keyNode->data.scalar.length);
-                convertNode(object.insert(std::make_pair(key,
-                    JSON::Value()))->second, valueNode, document);
+                convertNode(object[key], valueNode, document);
                 ++pair;
             }
             break;

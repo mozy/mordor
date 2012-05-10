@@ -2,7 +2,8 @@
 #define __MORDOR_JSON_H__
 
 #include <stack>
-
+#include <boost/type_traits.hpp>
+#include <boost/utility/enable_if.hpp>
 #include <boost/variant.hpp>
 
 #include "exception.h"
@@ -13,7 +14,7 @@ namespace JSON {
 
 class Value;
 
-typedef std::multimap<std::string, Value> Object;
+typedef std::map<std::string, Value> Object;
 typedef std::vector<Value> Array;
 typedef boost::variant<boost::blank, bool, long long, double, std::string, Array, Object> ValueBase;
 
@@ -27,7 +28,10 @@ public:
     Value() {}
     Value(const Value &copy) : ValueBase((const ValueBase &)copy) {}
     template <class T>
-    Value(const T &value) : ValueBase(value) {}
+    Value(const T &value)
+    {
+        set<T>(value);
+    }
 
     Value &operator=(const Value &rhs)
     {
@@ -37,7 +41,7 @@ public:
     template <class T>
     Value &operator=(const T &rhs)
     {
-        (ValueBase &)*this = rhs;
+        set<T>(rhs);
         return *this;
     }
 
@@ -67,9 +71,9 @@ public:
     /// @return the indexth item in the Array
     Value &operator[](size_t index) { return get<Array>()[index]; }
     const Value &operator[](size_t index) const { return get<Array>()[index]; }
-    /// @return the *first* item in the Object with the specified key, or a
+    /// @return the item in the Object with the specified key, or a
     /// boost::blank if it was not found (use find to disambiguate a real
-    /// boost::blank, or equal_range to find all items with a specified key)
+    /// boost::blank)
     /// @note There is not a non-const version, since it can't return a
     /// reference to an object that doesn't exist
     const Value &operator[](const std::string &key) const;
@@ -82,12 +86,27 @@ public:
     const_iterator find(const std::string &key) const
     { return get<Object>().find(key); }
 
-    std::pair<iterator, iterator> equal_range(const std::string &key)
-    { return get<Object>().equal_range(key); }
+private:
+    template <typename T>
+    void set(const T& value,
+             typename boost::enable_if<boost::is_integral<T> >::type* dummy = 0)
+    {
+        (ValueBase &)*this = (long long)value;
+    }
 
-    std::pair<const_iterator, const_iterator>
-    equal_range(const std::string &key) const
-    { return get<Object>().equal_range(key); }
+    template <typename T>
+    void set(const T& value,
+             typename boost::enable_if<boost::is_floating_point<T> >::type* dummy = 0)
+    {
+        (ValueBase &)*this = (double)value;
+    }
+
+    template<typename T>
+    void set(const T& value,
+             typename boost::disable_if<boost::is_arithmetic<T> >::type* dummy = 0)
+    {
+        (ValueBase &)*this = value;
+    }
 };
 
 class Parser : public RagelParserWithStack
