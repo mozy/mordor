@@ -487,12 +487,31 @@ Fiber::initStack()
     }
 #ifdef OSX
 #ifdef X86
-    m_env[8] = 0xffffffff; // EBP
     m_env[9] = (int)m_stack + m_stacksize; // ESP
+#if defined(__GNUC__) && defined(__llvm__)
+    // see following `rbp' note for the reason of setting ebp to esp
+    m_env[8] = m_env[9]; // EBP
+#else
+    m_env[8] = 0xffffffff; // EBP
+#endif
 #elif defined(X86_64)
     long long *env = (long long *)m_env;
-    env[1] = 0x0ll; // RBP
     env[2] = (long long)m_stack + m_stacksize; // RSP
+#if defined(__GNUC__) && defined(__llvm__)
+    // NOTE: `rbp' register should be cleaned because after setjmp() returns 0,
+    // this initStack() call finished, the call frame will be poped, so when
+    // setjmp() returns the second time (by longjmp), the original `rbp'
+    // register can't be used anymore as its address is invalid now.  However,
+    // with -O0 gcc+llvm compiling, there are still additional assembly
+    // instructions that refers rbp to perform writting operation, this will
+    // cause segmentation fault if `rbp' is cleared to 0 here. To workaround
+    // the issue, set `rbp' to Fiber's own stack pointer, writting junk data
+    // to Fiber's own empty stack doesn't hurt anything.
+    // This issue only happens when compiling with gcc + llvm + `-O0'
+    env[1] = env[2]; // RBP
+#else
+    env[1] = 0x0LL; // RBP
+#endif
 #elif defined(PPC)
     m_env[0] = (int)m_stack;
 #else
