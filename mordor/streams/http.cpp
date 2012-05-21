@@ -142,7 +142,7 @@ HTTPStream::start(size_t length)
                         PARTIAL_CONTENT) {
                         // Server doesn't support If-Range
                         request->cancel(true);
-                        parent(Stream::ptr());
+                        clearParent();
                     } else {
                         parent(request->responseStream());
                     }
@@ -260,12 +260,12 @@ HTTPStream::read(Buffer &buffer, size_t length)
                 throw;
             }
         } catch (SocketException &) {
-            parent(Stream::ptr());
+            clearParent();
             if (!m_delayDg || !m_delayDg(++*retries))
                 throw;
             continue;
         } catch (UnexpectedEofException &) {
-            parent(Stream::ptr());
+            clearParent();
             if (!m_delayDg || !m_delayDg(++*retries))
                 throw;
             continue;
@@ -340,7 +340,7 @@ HTTPStream::write(const Buffer &buffer, size_t length)
             m_requestHeaders.entity.contentLength =
                 (unsigned long long)m_sizeAdvice;
             m_requestHeaders.entity.contentRange = ContentRange();
-            m_writeRequested = m_writeAdvice;
+            m_writeRequested = m_sizeAdvice;
         }
         if (m_sizeAdvice == -1) {
             if (m_requestHeaders.general.transferEncoding.empty())
@@ -367,7 +367,7 @@ HTTPStream::write(const Buffer &buffer, size_t length)
     m_pos += result;
     m_writeRequested -= result;
     if (m_writeRequested == 0)
-        close();
+        close(WRITE);
     return result;
 }
 
@@ -396,16 +396,16 @@ HTTPStream::seek(long long offset, Anchor anchor)
     // Attempt to do an optimized forward seek
     if (offset > m_pos && m_readRequested != ~0ull && parent() &&
         parent()->supportsRead() &&
-        m_pos + m_readRequested < (unsigned long long)offset) {
+        m_pos + m_readRequested > (unsigned long long)offset) {
         try {
             transferStream(*this, NullStream::get(), offset - m_pos);
             MORDOR_ASSERT(m_pos == offset);
             return m_pos;
         } catch (...) {
-            parent(Stream::ptr());
+            clearParent();
         }
     } else {
-        parent(Stream::ptr());
+        clearParent();
     }
     return m_pos = offset;
 }
@@ -450,7 +450,7 @@ HTTPStream::stat()
                 } else if (!m_eTag.unspecified &&
                     response.response.eTag != m_eTag) {
                     m_eTag = response.response.eTag;
-                    parent(Stream::ptr());
+                    clearParent();
                     m_pos = 0;
                     MORDOR_THROW_EXCEPTION(EntityChangedException());
                 }
@@ -518,6 +518,7 @@ HTTPStream::close(CloseType type)
     if (parent()) {
         parent()->close();
     }
+
     if (parent() && (type & WRITE) && parent()->supportsWrite()) {
         parent(Stream::ptr());
         m_writeFuture.reset();
@@ -543,6 +544,7 @@ HTTPStream::close(CloseType type)
                 MORDOR_THROW_EXCEPTION(InvalidResponseException(m_writeRequest));
         }
     }
+    parent(Stream::ptr());
 }
 
 void
@@ -562,6 +564,8 @@ HTTPStream::clearParent()
         m_writeFuture.wait();
         MORDOR_ASSERT(!m_writeInProgress);
     }
+    if (parent())
+        parent()->close();
     parent(Stream::ptr());
 }
 
