@@ -292,6 +292,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/hmac.cpp				\
 	mordor/tests/http_client.cpp			\
 	mordor/tests/http_parser.cpp			\
+	mordor/tests/http_proxy.cpp			\
 	mordor/tests/http_server.cpp			\
 	mordor/tests/http_servlet_dispatcher.cpp	\
 	mordor/tests/http_stream.cpp			\

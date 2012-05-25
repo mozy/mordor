@@ -205,6 +205,7 @@
     <ClCompile Include="hmac.cpp" />
     <ClCompile Include="http_parser.cpp" />
     <ClCompile Include="http_client.cpp" />
+    <ClCompile Include="http_proxy.cpp" />
     <ClCompile Include="http_server.cpp" />
     <ClCompile Include="http_servlet_dispatcher.cpp" />
     <ClCompile Include="http_stream.cpp" />

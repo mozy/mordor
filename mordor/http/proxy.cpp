@@ -1,7 +1,8 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
 #include "proxy.h"
-
+#include <boost/algorithm/string.hpp>
+#include <boost/regex.hpp>
 #include "mordor/config.h"
 #include "mordor/http/broker.h"
 #include "mordor/http/client.h"
@@ -24,6 +25,14 @@
 namespace Mordor {
 namespace HTTP {
 
+#ifdef WINDOWS
+static std::ostream& operator<<(std::ostream& s,
+                                const WINHTTP_PROXY_INFO& info);
+#endif
+
+static int compare(const std::string& s1, const std::string& s2);
+static bool isMatch(const URI& uri, const std::string& pattern);
+
 static ConfigVar<std::string>::ptr g_httpProxy =
     Config::lookup("http.proxy", std::string(),
     "HTTP Proxy Server");
@@ -35,91 +44,88 @@ std::vector<URI> proxyFromConfig(const URI &uri)
     return proxyFromList(uri, g_httpProxy->val());
 }
 
-std::vector<URI> proxyFromList(const URI &uri, const std::string &proxy,
-    const std::string &bypassList)
+std::vector<URI> proxyFromList(const URI &uri,
+                               std::string proxy,
+                               std::string bypassList)
 {
-    MORDOR_ASSERT(uri.schemeDefined());
-    MORDOR_ASSERT(uri.scheme() == "http" || uri.scheme() == "https");
-    MORDOR_ASSERT(uri.authority.hostDefined());
+    MORDOR_LOG_DEBUG(proxyLog) << "Finding proxy for URI " << uri.toString()
+                               << ".";
 
-    std::vector<URI> result;
-    std::string proxyLocal = proxy;
-    std::string bypassListLocal = bypassList;
-    if (bypassListLocal.empty()) {
-        size_t bang = proxyLocal.find('!');
-        if (bang != std::string::npos) {
-            bypassListLocal = proxyLocal.substr(bang + 1);
-            proxyLocal = proxyLocal.substr(0, bang);
+    if (proxy.empty()) {
+        MORDOR_LOG_DEBUG(proxyLog) << "Empty proxy string!";
+        return std::vector<URI>();
+    }
+
+    // Split the proxy string on '!', and use the second part as the bypass
+    // list. Note that the provided bypass list should be empty if the proxy
+    // string includes a '!' character; see proxy.h.
+    std::vector<std::string> parts;
+    boost::split(parts, proxy, boost::is_any_of("!"));
+    if (parts.size() > 1) {
+        proxy = parts[0];
+        if (bypassList.empty()) {
+            bypassList = parts[1];
         }
     }
 
-    std::string host = uri.authority.host();
-    std::vector<std::string> list = split(bypassListLocal, "; \t\r\n");
-    for (std::vector<std::string>::iterator it = list.begin();
-        it != list.end();
-        ++it) {
-        const std::string &proxy = *it;
-        if (proxy.empty())
-            continue;
-        if (proxy == "<local>" && host.find('.') == std::string::npos)
-            return result;
-        if (proxy[0] == '*' && host.size() >= proxy.size() - 1 &&
-            stricmp(proxy.c_str() + 1, host.c_str() + host.size() - proxy.size() - 1) == 0)
-            return result;
-        else if (stricmp(host.c_str(), proxy.c_str()) == 0)
-            return result;
+    // Does this URI match a pattern in the bypass list?
+    std::vector<std::string> bypassEntries;
+    boost::split(bypassEntries, bypassList, boost::is_any_of(";"));
+    for (size_t i = 0; i < bypassEntries.size(); i++) {
+        MORDOR_LOG_DEBUG(proxyLog) << "Considering bypass list entry \""
+                                   << bypassEntries[i] << "\".";
+        if (isMatch(uri, bypassEntries[i])) {
+            MORDOR_LOG_DEBUG(proxyLog) << "Entry matched!";
+            return std::vector<URI>();
+        }
     }
 
-    list = split(proxyLocal, "; \t\r\n");
+    // Find the correct proxy for this URI scheme. We expect the list of proxies
+    // to look like this:
+    //
+    //   list = proxy { ";" proxy }
+    //   proxy = { scheme "=" } uri
+    //
+    // Proxies without a scheme are always included in the returned list. A
+    // proxy with a scheme is only included if the scheme matches the scheme
+    // of the provided uri.
+    std::vector<URI> proxyList;
+    std::vector<std::string> v;
+    boost::split(v, proxy, boost::is_any_of(";"));
+    for (size_t i = 0; i < v.size(); i++) {
+        MORDOR_LOG_DEBUG(proxyLog) << "Considering proxy \"" << v[i] << "\".";
 
-    for (std::vector<std::string>::iterator it = list.begin();
-        it != list.end();
-        ++it) {
-        std::string curProxy = *it;
-        if(curProxy.empty())
-            continue;
-        std::string forScheme;
-        size_t equals = curProxy.find('=');
-        if (equals != std::string::npos) {
-            forScheme = curProxy.substr(0, equals);
-            curProxy = curProxy.substr(equals + 1);
-        }
-        std::transform(forScheme.begin(), forScheme.end(), forScheme.begin(),
-            &tolower);
-        if (!forScheme.empty() && forScheme != uri.scheme() &&
-            forScheme != "socks")
-            continue;
-        equals = curProxy.find("//");
-        if (equals == std::string::npos)
-            curProxy = "//" + curProxy;
-        URI proxyUri;
-        try {
-            proxyUri = curProxy;
-        } catch (std::invalid_argument &) {
+        // Match the scheme and the URI for each proxy in the list. See above.
+        static const boost::regex e("(?:([a-zA-Z]+)=)?(.*)");
+        boost::smatch m;
+        if (!boost::regex_match(v[i], m, e)) {
+            MORDOR_LOG_DEBUG(proxyLog) << "Invalid proxy \"" << v[i] << "\".";
             continue;
         }
-        if (!proxyUri.authority.hostDefined())
-            continue;
-        if (proxyUri.schemeDefined()) {
-            std::string scheme = proxyUri.scheme();
-            std::transform(scheme.begin(), scheme.end(), scheme.begin(),
-                &tolower);
-            if (forScheme.empty() && scheme != uri.scheme())
+
+        if (!m[1].matched || compare(m[1].str(), uri.scheme()) == 0) {
+            // XXX The entry in the proxy list typically doesn't include the
+            // scheme in the URI, so we use a regex here to parse it instead of
+            // simply creating a Mordor::URI directly.
+            std::string proxyURI = m[2].str();
+            static const boost::regex uriRegex("(?:[a-zA-Z]+://)?(.*)");
+            boost::smatch uriMatch;
+            if (!boost::regex_match(proxyURI, uriMatch, uriRegex)) {
+                MORDOR_LOG_DEBUG(proxyLog) << "Invalid proxy \"" << v[i]
+                                           << "\".";
                 continue;
-            proxyUri.scheme(scheme);
-        } else {
-            if (forScheme == "socks")
-                proxyUri.scheme("socks");
-            else
-                proxyUri.scheme(uri.scheme());
+            }
+
+            std::ostringstream ss;
+            ss << uri.scheme() << "://" << uriMatch[1].str();
+
+            MORDOR_LOG_DEBUG(proxyLog) << "Proxy matches. Using proxy URI \""
+                                       << ss.str() << "\".";
+            proxyList.push_back(URI(ss.str()));
         }
-        proxyUri.path.segments.clear();
-        proxyUri.authority.userinfoDefined(false);
-        proxyUri.queryDefined(false);
-        proxyUri.fragmentDefined(false);
-        result.push_back(proxyUri);
     }
-    return result;
+
+    return proxyList;
 }
 
 #ifdef WINDOWS
@@ -196,28 +202,6 @@ getUserProxySettings()
     return result;
 }
 
-// Use WPAD protocol to search for proxy configuration file (e.g. a pac script)
-static std::string
-autoDetectConfigUrl()
-{
-    std::string url;
-    PWSTR autoConfigUrl = NULL;
-    if (pWinHttpDetectAutoProxyConfigUrl(
-            WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A,
-            &autoConfigUrl
-            )) {
-        if (autoConfigUrl) {
-            url = toUtf8(autoConfigUrl);
-            GlobalFree((HGLOBAL)autoConfigUrl);
-        }
-    } else {
-        // This is expected on any system where autodetect is enabled but no proxy is present
-        MORDOR_LOG_DEBUG(proxyLog) << "WinHttpDetectAutoProxyConfigUrl found no proxy (" << Mordor::lastError() << ")";
-    }
-    return url;
-}
-
-
 ProxyCache::ProxyCache(const std::string &userAgent)
 {
     m_hHttpSession = pWinHttpOpen(toUtf16(userAgent).c_str(),
@@ -235,45 +219,50 @@ ProxyCache::~ProxyCache()
         pWinHttpCloseHandle(m_hHttpSession);
 }
 
-boost::mutex m_proxiesMutex;
-bool ProxyCache::m_bAutoProxyFailed = false;
-std::string ProxyCache::m_autoConfigUrl; // Autodetected pac Script, if any
-std::set<std::string> ProxyCache::m_invalidProxies;
+boost::mutex ProxyCache::s_cacheMutex;
+bool ProxyCache::s_failedAutoDetect = false;
+std::set<std::string> ProxyCache::s_invalidConfigURLs;
 
-
-void
-ProxyCache::resetDetectionResultCache()
+void ProxyCache::resetDetectionResultCache()
 {
-    boost::mutex::scoped_lock lk(m_proxiesMutex);
-    m_bAutoProxyFailed = false;
-    m_autoConfigUrl.clear();
-    m_invalidProxies.clear();
+    boost::mutex::scoped_lock lock(s_cacheMutex);
+    s_failedAutoDetect = false;
+    s_invalidConfigURLs.clear();
 }
 
-std::vector<URI>
-ProxyCache::autoDetectProxy(const URI &uri, const std::string &pacScript)
+bool ProxyCache::autoDetectProxy(const URI &uri, const std::string &pacScript,
+                                 std::vector<URI> &proxyList)
 {
-    std::vector<URI> result;
-    if (!m_hHttpSession)
-        return result;
+    MORDOR_LOG_DEBUG(proxyLog) << "Auto-detecting proxy for URI \""
+                               << uri.toString() << "\".";
 
+    // We can't auto-detect or auto-configure without an HTTP session handle.
+    if (!m_hHttpSession) {
+        MORDOR_LOG_DEBUG(proxyLog) << "No HTTP session!";
+        return false;
+    }
+
+    // Check to see we've already tried to process the provided PAC file URL,
+    // and failed. Auto-detection and auto-configuration failures can take a
+    // long time, so we want to avoid trying them repeatedly.
     {
-        boost::mutex::scoped_lock lk(m_proxiesMutex);
-        if (!pacScript.empty())
-        {
-           if (m_invalidProxies.find(pacScript) != m_invalidProxies.end())
-                return result;
-        } else if (m_bAutoProxyFailed) {
-                return result;
+        boost::mutex::scoped_lock lock(s_cacheMutex);
+        if (pacScript.empty()) {
+            if (s_failedAutoDetect) {
+                MORDOR_LOG_DEBUG(proxyLog) << "Using cached auto-detection result.";
+                return false;
+            }
+        } else {
+            if (s_invalidConfigURLs.find(pacScript) != s_invalidConfigURLs.end()) {
+                MORDOR_LOG_DEBUG(proxyLog) << "Using cached auto-config result.";
+                return false;
+            }
         }
     }
 
-    WINHTTP_PROXY_INFO proxyInfo;
-    WINHTTP_AUTOPROXY_OPTIONS options;
 
-    memset(&options, 0, sizeof(WINHTTP_AUTOPROXY_OPTIONS));
-    memset(&proxyInfo, 0, sizeof(WINHTTP_PROXY_INFO));
-
+    WINHTTP_AUTOPROXY_OPTIONS options = {0};
+    options.fAutoLogonIfChallenged = TRUE;
     std::wstring pacScriptW = toUtf16(pacScript);
     if (!pacScriptW.empty()) {
         options.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL;
@@ -281,66 +270,60 @@ ProxyCache::autoDetectProxy(const URI &uri, const std::string &pacScript)
     } else {
         options.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
         options.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP |
-            WINHTTP_AUTO_DETECT_TYPE_DNS_A;
+                                    WINHTTP_AUTO_DETECT_TYPE_DNS_A;
     }
 
-    options.fAutoLogonIfChallenged = TRUE;
-    if (pWinHttpGetProxyForUrl(m_hHttpSession, toUtf16(uri.toString()).c_str(),
-        &options, &proxyInfo)) {
-        return proxyFromProxyInfo(uri, proxyInfo);
-    }
-    else
-    {
-        error_t error = Mordor::lastError();
-        MORDOR_LOG_ERROR(proxyLog) << "WinHttpGetProxyForUrl: (" << error << ") : " << uri.toString() << " : " <<  pacScript ;
+    WINHTTP_PROXY_INFO info = {0};
+    if (!pWinHttpGetProxyForUrl(m_hHttpSession,
+                                toUtf16(uri.toString()).c_str(),
+                                &options,
+                                &info)) {
+        // Record the fact that this PAC file URL failed in our cache, so that
+        // we don't attempt to run it again.
         {
-            boost::mutex::scoped_lock lk(m_proxiesMutex);
-            if (pacScript.empty())
-                m_bAutoProxyFailed = true;
-            else
-                m_invalidProxies.insert(pacScript);
-        }
-    }
-    return result;
-}
-
-std::vector<URI>
-ProxyCache::proxyFromUserSettings(const URI &uri)
-{
-    ProxySettings settings = getUserProxySettings();
-    std::vector<URI> result, temp;
-    bool currentAutoProxyFailed;
-    std::string currentAutoConfigUrl;
-    {
-        boost::mutex::scoped_lock lk(m_proxiesMutex);
-        currentAutoProxyFailed = m_bAutoProxyFailed;
-        currentAutoConfigUrl = m_autoConfigUrl;
-    }
-    if (settings.autoDetect && !currentAutoProxyFailed) {
-        if (currentAutoConfigUrl.empty()) {
-            std::string newAutoConfigUrl = autoDetectConfigUrl();
-            {
-                boost::mutex::scoped_lock lk(m_proxiesMutex);
-                m_autoConfigUrl = newAutoConfigUrl;
-                currentAutoConfigUrl = newAutoConfigUrl;
-                // Detection may take a long time to fail on some networks
-                // that have no proxy, so avoid calling it again
-                m_bAutoProxyFailed = m_autoConfigUrl.empty();
-                currentAutoProxyFailed = m_bAutoProxyFailed;
+            boost::mutex::scoped_lock lock(s_cacheMutex);
+            if (pacScript.empty()) {
+                s_failedAutoDetect = true;
+            } else {
+                s_invalidConfigURLs.insert(pacScript);
             }
         }
-        if (!currentAutoProxyFailed)
-            result = autoDetectProxy(uri, currentAutoConfigUrl);
+
+        error_t error = Mordor::lastError();
+        MORDOR_LOG_ERROR(proxyLog) << "WinHttpGetProxyForUrl: (" << error
+                                   << ") : " << uri.toString() << " : "
+                                   << pacScript ;
+        return false;
     }
-    if (!settings.pacScript.empty()) {
-        temp = autoDetectProxy(uri, settings.pacScript);
-        result.insert(result.end(), temp.begin(), temp.end());
-    }
-    temp = proxyFromList(uri, settings.proxy, settings.bypassList);
-    result.insert(result.end(), temp.begin(), temp.end());
-    return result;
+
+    MORDOR_LOG_DEBUG(proxyLog) << "Auto-detected proxy: " << std::endl << info;
+    proxyList = proxyFromProxyInfo(uri, info);
+    return true;
 }
+
+std::vector<URI> ProxyCache::proxyFromUserSettings(const URI &uri)
+{
+    ProxySettings settings = getUserProxySettings();
+
+    if (settings.autoDetect) {
+        std::vector<URI> proxyList;
+        if (autoDetectProxy(uri, "", proxyList)) {
+            return proxyList;
+        }
+    }
+
+    if (!settings.pacScript.empty()) {
+        std::vector<URI> proxyList;
+        if (autoDetectProxy(uri, settings.pacScript, proxyList)) {
+            return proxyList;
+        }
+    }
+
+    return proxyFromList(uri, settings.proxy, settings.bypassList);
+}
+
 #elif defined(OSX)
+
 ProxyCache::ProxyCache(RequestBroker::ptr requestBroker)
     : m_requestBroker(requestBroker),
       m_pacThreadCancelled(false)
@@ -595,4 +578,106 @@ tunnel(RequestBroker::ptr requestBroker, const URI &proxy, const URI &target)
             request));
 }
 
-}}
+// Returns true if the given address matches the given bypass list entry.
+bool isMatch(const URI& uri, const std::string& pattern)
+{
+    MORDOR_ASSERT(uri.schemeDefined());
+    MORDOR_ASSERT(uri.authority.hostDefined());
+
+    if (pattern.empty()) {
+        return false;
+    }
+
+    // There is no standard describing what a valid bypass list entry looks
+    // like, and slightly different formats are used by different operating
+    // systems and applications.
+    //
+    // This function accepts entries in the following format:
+    //
+    //     entry = [scheme "://"] address [":" port];
+    //     scheme = { alnum } ;
+    //     address = { alnum "." } "*" { "." alnum } ;
+    //     port = { digit }
+    //
+    // A wildcard character in the address matches any number of characters.
+    // List entries with multiple wildcards are not supported. Note that this
+    // function also doesn't support CIDR-style IP address ranges, which are
+    // supported by some browsers and operating systems.
+    boost::regex e("(?:([a-zA-Z]+)://)?(.*?)(?::(\\d+))?");
+    boost::smatch m;
+    if (!boost::regex_match(pattern, m, e)) {
+        MORDOR_LOG_DEBUG(proxyLog) << "Invalid rule \"" << pattern << "\".";
+        return false;
+    }
+
+    std::string patternScheme = m[1].str();
+    std::string patternAddress = m[2].str();
+
+    int patternPort = 0;
+    try {
+        if (m[3].matched) {
+            patternPort = boost::lexical_cast<int>(m[3].str());
+        }
+    } catch(boost::bad_lexical_cast&) {
+        MORDOR_LOG_DEBUG(proxyLog) << "Invalid rule \"" << pattern << "\".";
+        return false;
+    }
+
+    // If a scheme is present in the rule, it must match the sheme in the
+    // URI. If the rule doesn't specify a scheme, we consider it to match
+    // all schemes.
+    //
+    // XXX Like all string comparisons, this is fraught with peril. We assume
+    // that the provided strings are utf-8 encoded, and already normalized.
+    //
+    // XXX We also should not be using stricmp here, since it will not work on
+    // multibyte characters.
+    if (!patternScheme.empty() && compare(patternScheme, uri.scheme())) {
+        // Scheme doesn't match.
+        return false;
+    }
+
+    // As a special case, if the pattern is "<local>" and the address is a
+    // hostname that doesn't contain any '.' characters, then we consider this
+    // to be a match. This is for compatability with IE on Windows.
+    std::string address = uri.authority.host();
+    if (patternAddress == "<local>" && std::string::npos == address.find('.')) {
+        return true;
+    }
+
+    boost::replace_all(patternAddress, ".", "\\.");
+    boost::replace_all(patternAddress, "*", ".*");
+    boost::regex hostRegex(patternAddress, boost::regex::perl | boost::regex::icase);
+    if (!boost::regex_match(address, hostRegex)) {
+        // Address doesn't match.
+        return false;
+    }
+
+    if (0 != patternPort && patternPort != uri.authority.port()) {
+        // Port doesn't match.
+        return false;
+    }
+
+    return true;
+}
+
+int compare(const std::string& s1, const std::string& s2)
+{
+    return stricmp(s1.c_str(), s2.c_str());
+}
+
+#ifdef WINDOWS
+std::ostream& operator<<(std::ostream& s, const WINHTTP_PROXY_INFO& info)
+{
+    std::string proxy = info.lpszProxy ? toUtf8(info.lpszProxy) : "(null)";
+    std::string bypass = info.lpszProxyBypass ? toUtf8(info.lpszProxyBypass)
+        : "(null)";
+    s << "Access Type: " << info.dwAccessType << std::endl
+      << "Proxy: " << proxy << std::endl
+      << "Proxy Bypass: " << bypass << std::endl;
+    return s;
+}
+#endif
+
+} // namespace HTTP
+} // namespace Mordor
