@@ -45,6 +45,7 @@
 #endif
 
 #ifdef __GNUC__
+#   define UNUSED __attribute__((__unused__))
 #   define GCC
 #   ifdef __x86_64
 #       define X86_64
@@ -57,6 +58,8 @@
 #   elif defined(_MIPS_ARCH)
 #       define MIPS
 #   endif
+#else
+#  define UNUSED
 #endif
 
 #ifdef MSVC

@@ -334,6 +334,7 @@ mordor_pq_tests_run_tests_LDADD =		\
 	mordor/libmordor.la			\
 	mordor/pq/libmordorpq.la 		\
 	mordor/test/libmordortest.la		\
+	$(POSTGRESQL_LDFLAGS)			\
 	$(CORESERVICES_FRAMEWORK_LIBS)		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
 	$(SECURITY_FRAMEWORK_LIBS)		\
