@@ -6,6 +6,8 @@
 
 #include "iomanager_kqueue.h"
 
+#include <boost/exception_ptr.hpp>
+
 #include "assert.h"
 #include "fiber.h"
 
@@ -261,6 +263,7 @@ IOManager::idle()
         schedule(expired.begin(), expired.end());
         expired.clear();
 
+        boost::exception_ptr exception;
         for(int i = 0; i < rc; ++i) {
             struct kevent &event = events[i];
             if ((int)event.ident == m_tickleFds[0]) {
@@ -298,8 +301,14 @@ IOManager::idle()
                     << this << " kevent(" << m_kqfd << ", (" << event.ident
                     << ", " << event.filter << ", EV_DELETE)): " << rc2 << " ("
                     << lastError() << ")";
-                if (rc2)
-                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
+                if (rc2) {
+                    try {
+                        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
+                    } catch (boost::exception &) {
+                        exception = boost::current_exception();
+                        continue;
+                    }
+                }
             }
             if (e.m_dg) {
                 e.m_scheduler->schedule(e.m_dg);
@@ -320,6 +329,8 @@ IOManager::idle()
             if (remove)
                 m_pendingEvents.erase(it);
         }
+        if (exception)
+            boost::rethrow_exception(exception);
         try {
             Fiber::yield();
         } catch (OperationAbortedException &) {

@@ -8,6 +8,8 @@
 
 #include <sys/epoll.h>
 
+#include <boost/exception_ptr.hpp>
+
 #include "assert.h"
 #include "atomic.h"
 #include "fiber.h"
@@ -371,6 +373,7 @@ IOManager::idle()
         schedule(expired.begin(), expired.end());
         expired.clear();
 
+        boost::exception_ptr exception;
         for(int i = 0; i < rc; ++i) {
             epoll_event &event = events[i];
             if (event.data.fd == m_tickleFds[0]) {
@@ -416,9 +419,17 @@ IOManager::idle()
                 << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
                 << state.m_fd << ", " << (EPOLL_EVENTS)event.events << "): " << rc2
                 << " (" << lastError() << ")";
-            if (rc2)
-                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+            if (rc2) {
+                try {
+                    MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+                } catch (boost::exception &) {
+                    exception = boost::current_exception();
+                    continue;
+                }
+            }
         }
+        if (exception)
+            boost::rethrow_exception(exception);
         try {
             Fiber::yield();
         } catch (OperationAbortedException &) {
