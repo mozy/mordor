@@ -3,6 +3,10 @@
 #include "mordor/config.h"
 #include "mordor/test/test.h"
 
+#ifdef HAVE_LIBYAML
+#include "mordor/yaml.h"
+#endif
+
 using namespace Mordor;
 using namespace Mordor::Test;
 
@@ -178,3 +182,27 @@ MORDOR_UNITTEST(Config, loadFromCommandLineNoConfigVarsAfterDashDash)
     MORDOR_TEST_ASSERT_EQUAL((const char *)argv[2], "--config.test=2");
     MORDOR_TEST_ASSERT_EQUAL(g_testVar1->val(), 1);
 }
+
+#ifdef HAVE_LIBYAML
+MORDOR_UNITTEST(Config, loadFromJSON)
+{
+    ConfigVar<int>::ptr port = Config::lookup("http.port", 8080, "");
+    ConfigVar<int>::ptr quantity = Config::lookup("quantity", 123456, "");
+
+    std::ostringstream ss;
+    ss << "http:\n"
+       << "    host: 192.168.0.1\n"
+       << "    port: 80\n"
+       << "quantity: 654321\n"
+       << "price: 800.34";
+
+    Config::loadFromJSON(YAML::parse(ss.str()));
+
+    MORDOR_TEST_ASSERT_EQUAL(port->val(), 80);
+    MORDOR_TEST_ASSERT_EQUAL(quantity->val(), 654321);
+
+    MORDOR_TEST_ASSERT_EQUAL(Config::lookup("http.host")->toString(), "192.168.0.1");
+    MORDOR_TEST_ASSERT_EQUAL(Config::lookup("price")->toString(), "800.34");
+}
+#endif
+

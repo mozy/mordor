@@ -326,6 +326,9 @@ mordor_tests_run_tests_LDADD=mordor/libmordor.la mordor/test/libmordortest.la \
 	$(SECURITY_FRAMEWORK_LIBS)		\
 	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
 
+if HAVE_LIBYAML
+    mordor_tests_run_tests_LDADD+=mordor/libmordoryaml.la
+endif
 
 if HAVE_POSTGRESQL
 check_PROGRAMS+=mordor/pq/tests/run_tests

@@ -149,18 +149,42 @@ public:
         (*this)(std::string());
     }
 
-    void operator()(const std::string &string) const
+    void operator()(bool b) const
     {
-        if (!m_current.empty()) {
-            ConfigVarBase::ptr var = Config::lookup(m_current);
-            if (var)
-                var->fromString(string);
-        }
+        setValue(b);
+    }
+
+    void operator()(long long l) const
+    {
+        setValue(l);
+    }
+
+    void operator()(double d) const
+    {
+        setValue(d);
+    }
+
+    void operator()(const std::string &str) const
+    {
+        setValue(str);
     }
 
     template <class T> void operator()(const T &t) const
     {
         (*this)(boost::lexical_cast<std::string>(t));
+    }
+
+    template <class T> void setValue(const T &v) const
+    {
+        if (!m_current.empty()) {
+            ConfigVarBase::ptr var = Config::lookup(m_current);
+            if (var) {
+                var->fromString(boost::lexical_cast<std::string>(v));
+            } else if (m_current.find_first_not_of("abcdefghijklmnopqrstuvwxyz.")
+                == std::string::npos) {
+                Config::lookup(m_current, v, "Come from config file!");
+            }
+        }
     }
 
     std::list<std::pair<std::string, const JSON::Value *> > m_toCheck;

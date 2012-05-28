@@ -287,6 +287,10 @@ public:
     // The key is automatically converted to lowercase, and "_" can be
     // used in place of "."
     static void loadFromEnvironment();
+
+    // Update value of ConfigVars based on json object.
+    // If a config var not declared previously,
+    // we will create a new var to save it.
     static void loadFromJSON(const JSON::Value &json);
 #ifdef WINDOWS
     static void loadFromRegistry(HKEY key, const std::string &subKey);

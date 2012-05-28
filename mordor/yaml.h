@@ -29,6 +29,14 @@ private:
     const char *m_context;
 };
 
+/// @note YAML parser tags all scalar node as a string if not specified explicitly
+/// it could parse scalar node to a particular type if type info is explicitly specified, e.g.
+/// @verbatim
+/// name: !!str "John"
+/// price: !!float "0.278"
+/// quantity: !!int "500"
+/// @endverbatim
+
 JSON::Value parse(const std::string &string);
 JSON::Value parse(Stream &stream);
 JSON::Value parse(boost::shared_ptr<Stream> stream);
