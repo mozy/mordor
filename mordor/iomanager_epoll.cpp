@@ -396,24 +396,23 @@ IOManager::idle()
             if (event.events & (EPOLLERR | EPOLLHUP))
                 event.events |= EPOLLIN | EPOLLOUT;
 
-            bool triggered = false;
+            int incomingEvents = NONE;
             if (event.events & EPOLLIN)
-                triggered = state.triggerEvent(READ, m_pendingEventCount);
+                incomingEvents = READ;
             if (event.events & EPOLLOUT)
-                triggered = triggered ||
-                    state.triggerEvent(WRITE, m_pendingEventCount);
+                incomingEvents |= WRITE;
             if (event.events & EPOLLRDHUP)
-                triggered = triggered ||
-                    state.triggerEvent(CLOSE, m_pendingEventCount);
+                incomingEvents |= CLOSE;
 
-            // Nothing was triggered, probably because a prior cancelEvent call
+            // Nothing will be triggered, probably because a prior cancelEvent call
             // (probably on a different thread) already triggered it, so no
             // need to tell epoll anything
-            if (!triggered)
+            if ((state.m_events & incomingEvents) == NONE)
                 continue;
 
-            int op = state.m_events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
-            event.events = EPOLLET | state.m_events;
+            int remainingEvents = (state.m_events & ~incomingEvents);
+            int op = remainingEvents ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
+            event.events = EPOLLET | remainingEvents;
             int rc2 = epoll_ctl(m_epfd, op, state.m_fd, &event);
             MORDOR_LOG_LEVEL(g_log, rc2 ? Log::ERROR : Log::VERBOSE) << this
                 << " epoll_ctl(" << m_epfd << ", " << (epoll_ctl_op_t)op << ", "
@@ -427,6 +426,14 @@ IOManager::idle()
                     continue;
                 }
             }
+            bool triggered = false;
+            if (incomingEvents & READ)
+                triggered = state.triggerEvent(READ, m_pendingEventCount);
+            if (incomingEvents & WRITE)
+                triggered = state.triggerEvent(WRITE, m_pendingEventCount) || triggered;
+            if (incomingEvents & CLOSE)
+                triggered = state.triggerEvent(CLOSE, m_pendingEventCount) || triggered;
+            MORDOR_ASSERT(triggered);
         }
         if (exception)
             boost::rethrow_exception(exception);
