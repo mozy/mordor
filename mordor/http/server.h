@@ -154,6 +154,8 @@ public:
 
     std::vector<ServerRequest::const_ptr> requests();
 
+    void cancel();
+
 private:
     void scheduleNextRequest(ServerRequest *currentRequest);
     void requestComplete(ServerRequest *currentRequest);

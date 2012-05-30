@@ -234,6 +234,14 @@ ServerConnection::invariant() const
     }
 }
 
+void
+ServerConnection::cancel()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    m_stream->cancelRead();
+    m_stream->cancelWrite();
+}
+
 
 ServerRequest::ServerRequest(ServerConnection::ptr conn)
 : m_conn(conn),
