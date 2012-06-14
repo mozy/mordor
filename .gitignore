@@ -45,5 +45,4 @@ Win32
 x64
 *.pc
 xcuserdata
-tags
 test-results/

@@ -4,7 +4,6 @@
 
 #include <boost/bind.hpp>
 
-#include "atomic.h"
 #include "assert.h"
 #include "fiber.h"
 
@@ -17,7 +16,6 @@ ThreadLocalStorage<Fiber *> Scheduler::t_fiber;
 
 Scheduler::Scheduler(size_t threads, bool useCaller, size_t batchSize)
     : m_activeThreadCount(0),
-      m_idleThreadCount(0),
       m_stopping(true),
       m_autoStop(false),
       m_batchSize(batchSize)
@@ -458,9 +456,7 @@ Scheduler::run()
             return;
         }
         MORDOR_LOG_DEBUG(g_log) << this << " idling";
-        atomicIncrement(m_idleThreadCount);
         idleFiber->call();
-        atomicDecrement(m_idleThreadCount);
     }
 }
 
