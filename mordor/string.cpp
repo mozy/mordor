@@ -20,7 +20,7 @@
 namespace Mordor {
 
 std::string
-base64decode(const std::string &src)
+base64decode(const std::string &src, const std::string& altchars)
 {
     std::string result;
     result.resize(src.size() * 3 / 4);
@@ -51,9 +51,9 @@ base64decode(const std::string &src)
                 val = *ptr - 'a' + 26;
             else if(*ptr >= '0' && *ptr <= '9')
                 val = *ptr - '0' + 52;
-            else if(*ptr == '+')
+            else if(*ptr == altchars[0])
                 val = 62;
-            else if(*ptr == '/')
+            else if(*ptr == altchars[1])
                 val = 63;
             else
                 MORDOR_THROW_EXCEPTION(std::invalid_argument("src")); // invalid character
@@ -79,17 +79,23 @@ base64decode(const std::string &src)
 }
 
 std::string
-base64encode(const std::string& data)
+base64encode(const std::string& data, const std::string& altchars)
 {
-    return base64encode(data.c_str(), data.size());
+    return base64encode(data.c_str(), data.size(), altchars);
+}
+
+static inline char
+base64_char_lookup(uint8_t digit, const std::string& altchars)
+{
+    const char* standard =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    if (digit < 62) return standard[digit];
+    return altchars[digit - 62];
 }
 
 std::string
-base64encode(const void* data, size_t len)
+base64encode(const void* data, size_t len, const std::string& altchars)
 {
-    const char* base64 =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
     std::string ret;
     ret.reserve(len * 4 / 3 + 2);
 
@@ -109,12 +115,12 @@ base64encode(const void* data, size_t len)
         for(; i < 3; ++i)
             packed <<= 8;
 
-        ret.append(1, base64[packed >> 18]);
-        ret.append(1, base64[(packed >> 12) & 0x3f]);
+        ret.append(1, base64_char_lookup(packed >> 18, altchars));
+        ret.append(1, base64_char_lookup((packed >> 12) & 0x3f, altchars));
         if(padding != 2)
-            ret.append(1, base64[(packed >> 6) & 0x3f]);
+            ret.append(1, base64_char_lookup((packed >> 6) & 0x3f, altchars));
         if(padding == 0)
-            ret.append(1, base64[packed & 0x3f]);
+            ret.append(1, base64_char_lookup(packed & 0x3f, altchars));
         ret.append(padding, '=');
     }
 
