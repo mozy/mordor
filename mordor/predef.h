@@ -5,15 +5,27 @@
 
 # ifdef WINDOWS
 // Get Vista+ APIs
-#  define _WIN32_WINNT 0x0600
+#  ifndef _WIN32_WINNT
+#    define _WIN32_WINNT 0x0600
+#  endif
 // Don't include tons of crap from windows.h
-#  define WIN32_LEAN_AND_MEAN
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
 // Define this so security.h works
-#  define SECURITY_WIN32
+#  ifndef SECURITY_WIN32
+#    define SECURITY_WIN32
+#  endif
 // Shut up, CRT
-#  define _CRT_SECURE_NO_WARNINGS
-#  define _CRT_NONSTDC_NO_WARNINGS
-#  define _SCL_SECURE_NO_WARNINGS
+#  ifndef _CRT_SECURE_NO_WARNINGS
+#    define _CRT_SECURE_NO_WARNINGS
+#  endif
+#  ifndef _CRT_NONSTDC_NO_WARNINGS
+#    define _CRT_NONSTDC_NO_WARNINGS
+#  endif
+#  ifndef _SCL_SECURE_NO_WARNINGS
+#    define _SCL_SECURE_NO_WARNINGS
+#  endif
 
 // Use more common names for functions
 // (cross-platform 64-bit, strip the underscores)
