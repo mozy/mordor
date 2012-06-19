@@ -20,9 +20,17 @@
 
 namespace Mordor {
 
-std::string base64decode(const std::string &src);
-std::string base64encode(const std::string &data);
-std::string base64encode(const void *data, size_t len);
+std::string base64decode(const std::string &src,
+    const std::string& altchars="+/");
+std::string base64encode(const std::string &data,
+    const std::string& altchars="+/");
+std::string base64encode(const void *data, size_t len,
+    const std::string& altchars="+/");
+
+inline std::string urlsafeBase64encode(const std::string& data)
+    { return base64encode(data, "-_"); }
+inline std::string urlsafeBase64decode(const std::string& data)
+    { return base64decode(data, "-_"); }
 
 // Returns result in hex
 std::string md5(const std::string &data);
