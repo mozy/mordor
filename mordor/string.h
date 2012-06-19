@@ -16,21 +16,37 @@
 #ifdef OSX
 #include <CoreFoundation/CFString.h>
 #endif
+#include <openssl/opensslv.h> //for OPENSSL_VERSION_NUMBER
 
 namespace Mordor {
 
-std::string base64decode(const std::string &src);
-std::string base64encode(const std::string &data);
-std::string base64encode(const void *data, size_t len);
+std::string base64decode(const std::string &src,
+    const std::string& altchars="+/");
+std::string base64encode(const std::string &data,
+    const std::string& altchars="+/");
+std::string base64encode(const void *data, size_t len,
+    const std::string& altchars="+/");
+
+inline std::string urlsafeBase64encode(const std::string& data)
+    { return base64encode(data, "-_"); }
+inline std::string urlsafeBase64decode(const std::string& data)
+    { return base64decode(data, "-_"); }
 
 // Returns result in hex
 std::string md5(const std::string &data);
 std::string sha1(const std::string &data);
+#if OPENSSL_VERSION_NUMBER >= 0x0090800fL
+std::string sha256(const std::string &data);
+#endif
 // Returns result in blob
 std::string md5sum(const std::string &data);
 std::string md5sum(const void *data, size_t len);
 std::string sha1sum(const std::string &data);
 std::string sha1sum(const void *data, size_t len);
+#if OPENSSL_VERSION_NUMBER >= 0x0090800fL
+std::string sha256sum(const std::string &data);
+std::string sha256sum(const void *data, size_t len);
+#endif
 std::string hmacMd5(const std::string &text, const std::string &key);
 std::string hmacSha1(const std::string &text, const std::string &key);
 std::string hmacSha256(const std::string &text, const std::string &key);

@@ -6,11 +6,13 @@
 
 #include <boost/bind.hpp>
 
+#include "broker.h"
 #include "chunked.h"
 #include "mordor/assert.h"
 #include "mordor/fiber.h"
 #include "mordor/log.h"
 #include "mordor/scheduler.h"
+#include "mordor/streams/buffer.h"
 #include "mordor/streams/limited.h"
 #include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
@@ -1337,6 +1339,56 @@ ClientRequest::responseDone()
         MORDOR_LOG_DEBUG(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " " << m_responseTrailer;
     }
     m_conn->scheduleNextResponse(this);
+}
+
+void doBodyString(ClientRequest::ptr request, const std::string &string)
+{
+    Stream::ptr stream = request->requestStream();
+    stream->write(string.c_str(), string.size());
+    stream->close();
+}
+
+void doBodyBuffer(ClientRequest::ptr request, const Buffer &buffer)
+{
+    Buffer copy(buffer);
+    Stream::ptr stream = request->requestStream();
+    while (copy.readAvailable())
+        copy.consume(stream->write(copy, copy.readAvailable()));
+    stream->close();
+}
+
+ClientRequest::ptr
+request(RequestBroker::ptr broker, Request &requestHeaders,
+    const std::string &body, bool allowPipelining)
+{
+    // Allow pre-setting transferEncodings to override and force compression
+    if (requestHeaders.general.transferEncoding.empty())
+        requestHeaders.entity.contentLength = body.size();
+    return broker->request(requestHeaders, false, boost::bind(&doBodyString,
+        _1, body));
+}
+
+ClientRequest::ptr
+request(RequestBroker::ptr broker, Request &requestHeaders,
+    const Buffer &body, bool allowPipelining)
+{
+    // Allow pre-setting transferEncodings to override and force compression
+    if (requestHeaders.general.transferEncoding.empty())
+        requestHeaders.entity.contentLength = body.readAvailable();
+    return broker->request(requestHeaders, false, boost::bind(&doBodyBuffer,
+        _1, body));
+}
+
+ClientRequest::ptr
+post(RequestBroker::ptr broker, Request &requestHeaders,
+    const URI::QueryString &qs, bool allowPipelining)
+{
+    requestHeaders.requestLine.method = POST;
+    requestHeaders.general.transferEncoding.clear();
+    requestHeaders.entity.contentType =
+        MediaType("application", "x-www-form-urlencoded");
+    std::string body = qs.toString();
+    return request(broker, requestHeaders, body, allowPipelining);
 }
 
 }}

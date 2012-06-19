@@ -100,8 +100,10 @@ protected:
     std::vector<boost::function<void ()> > processTimers();
 
 private:
-    static boost::function<unsigned long long ()> ms_clockDg;
     bool detectClockRollover(unsigned long long nowUs);
+
+private:
+    static boost::function<unsigned long long ()> ms_clockDg;
     std::set<Timer::ptr, Timer::Comparator> m_timers;
     boost::mutex m_mutex;
     bool m_tickled;

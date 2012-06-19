@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS=-I m4
 AUTOMAKE_OPTIONS=nostdinc subdir-objects
-AM_CPPFLAGS=$(OPENSSL_INCLUDES) $(BOOST_CPPFLAGS) $(POSTGRESQL_CFLAGS) $(VALGRIND_CPPFLAGS) -I$(top_srcdir)
+AM_CPPFLAGS=$(OPENSSL_INCLUDES) $(BOOST_CPPFLAGS) $(POSTGRESQL_CFLAGS) $(VALGRIND_CPPFLAGS) -I$(srcdir) -I$(builddir)
 AM_CXXFLAGS=-Wall -Werror -fno-strict-aliasing
 
 nobase_include_HEADERS=			\
@@ -49,7 +49,7 @@ nobase_include_HEADERS=			\
 	mordor/pq/result.h		\
 	mordor/pq/transaction.h		\
 	mordor/predef.h			\
-	mordor/protobuf.h 		\
+	mordor/protobuf.h		\
 	mordor/ragel.h			\
 	mordor/scheduler.h		\
 	mordor/semaphore.h		\
@@ -100,8 +100,8 @@ nobase_include_HEADERS=			\
 	mordor/util.h			\
 	mordor/version.h		\
 	mordor/workerpool.h		\
-	mordor/xml/parser.h		\
 	mordor/xml/dom_parser.h		\
+	mordor/xml/parser.h		\
 	mordor/yaml.h			\
 	mordor/zip.h
 
@@ -334,6 +334,7 @@ mordor_pq_tests_run_tests_LDADD =		\
 	mordor/libmordor.la			\
 	mordor/pq/libmordorpq.la 		\
 	mordor/test/libmordortest.la		\
+	$(POSTGRESQL_LDFLAGS)			\
 	$(CORESERVICES_FRAMEWORK_LIBS)		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
 	$(SECURITY_FRAMEWORK_LIBS)		\
@@ -345,6 +346,7 @@ noinst_PROGRAMS=			\
 	mordor/examples/echoserver	\
 	mordor/examples/iombench	\
 	mordor/examples/simpleappserver	\
+        mordor/examples/simpleclient	\
 	mordor/examples/tunnel		\
 	mordor/examples/udpstats
 
@@ -379,6 +381,13 @@ mordor_examples_iombench_LDADD=mordor/libmordor.la	\
 
 mordor_examples_simpleappserver_SOURCES=mordor/examples/simpleappserver.cpp
 mordor_examples_simpleappserver_LDADD=mordor/libmordor.la	\
+	$(CORESERVICES_FRAMEWORK_LIBS)		\
+	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
+	$(SECURITY_FRAMEWORK_LIBS)		\
+	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+
+mordor_examples_simpleclient_SOURCES=mordor/examples/simpleclient.cpp
+mordor_examples_simpleclient_LDADD=mordor/libmordor.la	\
 	$(CORESERVICES_FRAMEWORK_LIBS)		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
 	$(SECURITY_FRAMEWORK_LIBS)		\

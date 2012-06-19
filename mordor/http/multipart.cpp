@@ -75,7 +75,7 @@ Multipart::nextPart()
         size_t offsetToBoundary = m_stream->find(m_boundary);
 
         Buffer b;
-        size_t result = m_stream->read(b, offsetToBoundary + m_boundary.size());
+        size_t UNUSED(result) = m_stream->read(b, offsetToBoundary + m_boundary.size());
         MORDOR_ASSERT(result == offsetToBoundary + m_boundary.size());
         b.clear();
         result = m_stream->read(b, 2);

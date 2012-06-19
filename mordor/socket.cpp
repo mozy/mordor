@@ -3,14 +3,13 @@
 #include "socket.h"
 
 #include <boost/bind.hpp>
-#include <boost/thread/once.hpp>
 
 #include "assert.h"
+#include "config.h"
 #include "fiber.h"
 #include "iomanager.h"
 #include "string.h"
 #include "version.h"
-#include "config.h"
 
 #ifdef WINDOWS
 #include <mswsock.h>
@@ -105,6 +104,8 @@ static LPFN_ACCEPTEX pAcceptEx = 0;
 static LPFN_GETACCEPTEXSOCKADDRS pGetAcceptExSockaddrs = 0;
 static LPFN_CONNECTEX ConnectEx = 0;
 
+static const size_t MAX_INTERFACE_BUFFER_SIZE = 131072;
+
 namespace {
 
 static struct Initializer {
@@ -112,42 +113,42 @@ static struct Initializer {
     {
         WSADATA wd;
         WSAStartup(MAKEWORD(2,2), &wd);
+
         socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
         DWORD bytes = 0;
 
         GUID acceptExGuid = WSAID_ACCEPTEX;
         WSAIoctl(sock,
-                    SIO_GET_EXTENSION_FUNCTION_POINTER,
-                    &acceptExGuid,
-                    sizeof(GUID),
-                    &pAcceptEx,
-                    sizeof(LPFN_ACCEPTEX),
-                    &bytes,
-                    NULL,
-                    NULL);
+                 SIO_GET_EXTENSION_FUNCTION_POINTER,
+                 &acceptExGuid,
+                 sizeof(GUID),
+                 &pAcceptEx,
+                 sizeof(LPFN_ACCEPTEX),
+                 &bytes,
+                 NULL,
+                 NULL);
 
         GUID getAcceptExSockaddrsGuid = WSAID_GETACCEPTEXSOCKADDRS;
         WSAIoctl(sock,
-                    SIO_GET_EXTENSION_FUNCTION_POINTER,
-                    &getAcceptExSockaddrsGuid,
-                    sizeof(GUID),
-                    &pGetAcceptExSockaddrs,
-                    sizeof(LPFN_GETACCEPTEXSOCKADDRS),
-                    &bytes,
-                    NULL,
-                    NULL);
+                 SIO_GET_EXTENSION_FUNCTION_POINTER,
+                 &getAcceptExSockaddrsGuid,
+                 sizeof(GUID),
+                 &pGetAcceptExSockaddrs,
+                 sizeof(LPFN_GETACCEPTEXSOCKADDRS),
+                 &bytes,
+                 NULL,
+                 NULL);
 
         GUID connectExGuid = WSAID_CONNECTEX;
         WSAIoctl(sock,
-                    SIO_GET_EXTENSION_FUNCTION_POINTER,
-                    &connectExGuid,
-                    sizeof(GUID),
-                    &ConnectEx,
-                    sizeof(LPFN_CONNECTEX),
-                    &bytes,
-                    NULL,
-                    NULL);
-
+                 SIO_GET_EXTENSION_FUNCTION_POINTER,
+                 &connectExGuid,
+                 sizeof(GUID),
+                 &ConnectEx,
+                 sizeof(LPFN_CONNECTEX),
+                 &bytes,
+                 NULL,
+                 NULL);
         closesocket(sock);
     }
     ~Initializer()
@@ -804,8 +805,7 @@ Socket::shutdown(int how)
         m_ioManager->unregisterEvent(m_hEvent);
         WSAEventSelect(m_sock, m_hEvent, 0);
 #else
-        if (m_isRegisteredForRemoteClose)
-            m_ioManager->unregisterEvent(m_sock, IOManager::CLOSE);
+        m_ioManager->unregisterEvent(m_sock, IOManager::CLOSE);
 #endif
         m_isRegisteredForRemoteClose = false;
     }
@@ -1072,8 +1072,13 @@ void
 Socket::setOption(int level, int option, const void *value, size_t len)
 {
     if (setsockopt(m_sock, level, option, (const char*)value, (socklen_t)len)) {
+        error_t error = lastError();
+        MORDOR_LOG_ERROR(g_log) << this << " setsockopt(" << m_sock << ", "
+            << level << ", " << option << "): (" << error << ")";
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("setsockopt");
     }
+    MORDOR_LOG_DEBUG(g_log) << this << " setsockopt(" << m_sock << ", "
+        << level << ", " << option << "): 0";
 }
 
 void
@@ -1419,75 +1424,37 @@ Address::getInterfaceAddresses(int family)
     std::multimap<std::string, std::pair<Address::ptr, unsigned int> >
         result;
 #ifdef WINDOWS
-    const ULONG buffer_size = 15 *1024;
-    IP_ADAPTER_ADDRESSES *addresses = NULL;
-    ULONG size = buffer_size;
-    ULONG error = NO_ERROR;
-    USHORT tries = 0;
-    do {
-        addresses = (IP_ADAPTER_ADDRESSES *) malloc(size);
-        if (addresses == NULL)
-        {
-            throw std::bad_alloc();
-        }
-        // GetAdaptersAddresses works on XP and greater.
-        error = pGetAdaptersAddresses(AF_UNSPEC, 0, NULL, addresses, &size);
-        if (error == ERROR_BUFFER_OVERFLOW) {
-            free(addresses);
-            addresses = NULL;
-        } else {
-            break;
-        }
-        tries++;
-    } while ((error == ERROR_BUFFER_OVERFLOW) && (tries < 3));
-    if (error && error != ERROR_CALL_NOT_IMPLEMENTED)
+    std::vector<char> buf(15 * 1024);
+    IP_ADAPTER_ADDRESSES *addresses = (IP_ADAPTER_ADDRESSES *)&buf[0];
+    ULONG size = (ULONG)buf.size();
+    ULONG error = pGetAdaptersAddresses(AF_UNSPEC, 0, NULL, addresses, &size);
+    while (ERROR_BUFFER_OVERFLOW == error && buf.size() < MAX_INTERFACE_BUFFER_SIZE)
     {
-        free(addresses);
-        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "GetAdaptersAddresses");
+        buf.resize(size);
+        addresses = (IP_ADAPTER_ADDRESSES *)&buf[0];
+        error = pGetAdaptersAddresses(AF_UNSPEC, 0, NULL, addresses, &size);
     }
+    if (error && error != ERROR_CALL_NOT_IMPLEMENTED)
+        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "GetAdaptersAddresses");
     // Either doesn't exist, or doesn't include netmask info to construct broadcast addr
     if (error == ERROR_CALL_NOT_IMPLEMENTED ||
-        addresses->FirstUnicastAddress->Length < sizeof(IP_ADAPTER_UNICAST_ADDRESS_LH)) 
-    {
-        // cleanup the old addresses
-        if (addresses != NULL)
+        addresses->FirstUnicastAddress->Length < sizeof(IP_ADAPTER_UNICAST_ADDRESS_LH)) {
+        PIP_ADAPTER_INFO addresses2 = (PIP_ADAPTER_INFO)&buf[0];
+        size = (ULONG)buf.size();
+        error = GetAdaptersInfo(addresses2, &size);
+        while (ERROR_BUFFER_OVERFLOW == error && buf.size() < MAX_INTERFACE_BUFFER_SIZE)
         {
-            free(addresses);
-            addresses = NULL;
-        }
-
-        PIP_ADAPTER_INFO addresses2 = NULL;
-        size = buffer_size;
-        tries = 0;
-        do
-        {
-            addresses2 = (PIP_ADAPTER_INFO) malloc(size);
-            if (addresses2 == NULL)
-            {
-                throw std::bad_alloc();
-            }
+            buf.resize(size);
+            addresses2 = (PIP_ADAPTER_INFO)&buf[0];
             error = GetAdaptersInfo(addresses2, &size);
-            if (error == ERROR_BUFFER_OVERFLOW) {
-                free(addresses2);
-                addresses2 = NULL;
-            } else {
-                break;
-            }
-            tries++;
-        } while ((error == ERROR_BUFFER_OVERFLOW) && (tries < 3));
-        
-        if (error)
-        {
-            free(addresses2);
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "PIP_ADAPTER_INFO");
         }
-        PIP_ADAPTER_INFO tempadapter = NULL;
-
-        for (tempadapter = addresses2; tempadapter; tempadapter = tempadapter->Next) {
-            std::string iface(tempadapter->AdapterName);
+        if (error)
+            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "PIP_ADAPTER_INFO");
+        for (; addresses2; addresses2 = addresses2->Next) {
+            std::string iface(addresses2->AdapterName);
             if (family != AF_INET && family != AF_UNSPEC)
                 continue;
-            IP_ADDR_STRING *address = &tempadapter->IpAddressList;
+            IP_ADDR_STRING *address = &addresses2->IpAddressList;
             for (; address; address = address->Next) {
                 sockaddr_in addr;
                 memset(&addr, 0, sizeof(sockaddr_in));
@@ -1499,19 +1466,13 @@ Address::getInterfaceAddresses(int family)
                     sizeof(sockaddr_in)), countBits(mask))));
             }
         }
-        if (addresses2 != NULL)
-        {
-            free(addresses2);
-            addresses2 = NULL;
-        }
 
         return result;
     }
-    IP_ADAPTER_ADDRESSES *tempaddr = NULL;
 
-    for (tempaddr= addresses; tempaddr; tempaddr = tempaddr->Next) {
-        std::string iface(tempaddr->AdapterName);
-        IP_ADAPTER_UNICAST_ADDRESS *address = tempaddr->FirstUnicastAddress;
+    for (; addresses; addresses = addresses->Next) {
+        std::string iface(addresses->AdapterName);
+        IP_ADAPTER_UNICAST_ADDRESS *address = addresses->FirstUnicastAddress;
         for (; address; address = address->Next) {
             if (family != AF_UNSPEC &&
                 family != address->Address.lpSockaddr->sa_family)
@@ -1530,10 +1491,6 @@ Address::getInterfaceAddresses(int family)
             result.insert(std::make_pair(iface,
                 std::make_pair(addr, prefixLength)));
         }
-    }
-    if (addresses != NULL)
-    {
-        free(addresses);
     }
     return result;
 #else
@@ -1676,6 +1633,26 @@ Address::operator==(const Address &rhs) const
 bool Address::operator!=(const Address &rhs) const
 {
     return !(*this == rhs);
+}
+
+std::vector<IPAddress::ptr>
+IPAddress::lookup(const std::string &host, int family, int type, int protocol,
+                  int port)
+{
+    std::vector<Address::ptr> addrResult = Address::lookup(host, family, type,
+            protocol);
+    std::vector<ptr> result;
+    result.reserve(addrResult.size());
+    for (std::vector<Address::ptr>::const_iterator it(addrResult.begin());
+         it != addrResult.end();
+         ++it) {
+        ptr addr = boost::dynamic_pointer_cast<IPAddress>(*it);
+        if (addr) {
+            if (port >= 0) addr->port(port);
+            result.push_back(addr);
+        }
+    }
+    return result;
 }
 
 IPAddress::ptr

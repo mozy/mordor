@@ -2,6 +2,14 @@
 
 #include "fiber.h"
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
+#ifdef HAVE_VALGRIND_VALGRIND_H
+#include <valgrind/valgrind.h>
+#endif
+
 #include <boost/thread/tss.hpp>
 
 #include "assert.h"
@@ -409,7 +417,7 @@ Fiber::allocStack()
     m_stack = mmap(NULL, m_stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     if (m_stack == MAP_FAILED)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("mmap");
-#if defined(VALGRIND) && (defined(LINUX) || defined(OSX))
+#ifdef HAVE_VALGRIND_VALGRIND_H
     m_valgrindStackId = VALGRIND_STACK_REGISTER(m_stack, (char *)m_stack + m_stacksize);
 #endif
     m_sp = (char*)m_stack + m_stacksize;
@@ -426,7 +434,7 @@ Fiber::freeStack()
 #elif defined(WINDOWS)
     VirtualFree(m_stack, 0, MEM_RELEASE);
 #elif defined(POSIX)
-#if defined(VALGRIND) && (defined(LINUX) || defined(OSX))
+#ifdef HAVE_VALGRIND_VALGRIND_H
     VALGRIND_STACK_DEREGISTER(m_valgrindStackId);
 #endif
     munmap(m_stack, m_stacksize);

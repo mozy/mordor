@@ -65,16 +65,14 @@ void Config::request(ServerRequest::ptr request, Access access)
             respondError(request, UNSUPPORTED_MEDIA_TYPE);
             return;
         }
-        Stream::ptr requestStream = request->requestStream();
-        requestStream.reset(new LimitedStream(requestStream, 65536));
-        MemoryStream requestBody;
-        transferStream(requestStream, requestBody);
-        std::string queryString;
-        queryString.resize(requestBody.buffer().readAvailable());
-        requestBody.buffer().copyOut(&queryString[0], requestBody.buffer().readAvailable());
+        URI::QueryString qs;
+        try {
+            qs = request->requestStream();
+        } catch (std::invalid_argument &) {
+            return respondError(request, BAD_REQUEST);
+        }
 
         bool failed = false;
-        URI::QueryString qs(queryString);
         for (URI::QueryString::const_iterator it = qs.begin();
             it != qs.end();
             ++it) {

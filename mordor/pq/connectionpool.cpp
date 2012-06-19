@@ -113,4 +113,12 @@ void ConnectionPool::releaseConnection(Connection* conn) {
                                    << m_freeConnections.size();
 }
 
+void
+associateConnectionPoolWithConfigVar(ConnectionPool &pool,
+    ConfigVar<size_t>::ptr configVar)
+{
+  configVar->onChange.connect(boost::bind(&ConnectionPool::resize, &pool, _1));
+  pool.resize(configVar->val());
+}
+
 }}

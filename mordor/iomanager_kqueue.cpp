@@ -266,7 +266,8 @@ IOManager::idle()
             if ((int)event.ident == m_tickleFds[0]) {
                 unsigned char dummy;
                 MORDOR_VERIFY(read(m_tickleFds[0], &dummy, 1) == 1);
-                MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
+                MORDOR_LOG_VERBOSE(g_log) << this << " received tickle (" << event.data
+                    << " remaining)";
                 continue;
             }
 
@@ -331,10 +332,6 @@ IOManager::idle()
 void
 IOManager::tickle()
 {
-    if (!hasIdleThreads()) {
-        MORDOR_LOG_VERBOSE(g_log) << this << " 0 idle thread, no tickle.";
-        return;
-    }
     int rc = write(m_tickleFds[1], "T", 1);
     MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
         << rc << " (" << lastError() << ")";

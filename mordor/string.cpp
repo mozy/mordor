@@ -20,7 +20,7 @@
 namespace Mordor {
 
 std::string
-base64decode(const std::string &src)
+base64decode(const std::string &src, const std::string& altchars)
 {
     std::string result;
     result.resize(src.size() * 3 / 4);
@@ -42,7 +42,7 @@ base64decode(const std::string &src)
 
             // padding with "=" only
             if (padding > 0)
-                return "";
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("src"));
 
             int val = 0;
             if(*ptr >= 'A' && *ptr <= 'Z')
@@ -51,21 +51,21 @@ base64decode(const std::string &src)
                 val = *ptr - 'a' + 26;
             else if(*ptr >= '0' && *ptr <= '9')
                 val = *ptr - '0' + 52;
-            else if(*ptr == '+')
+            else if(*ptr == altchars[0])
                 val = 62;
-            else if(*ptr == '/')
+            else if(*ptr == altchars[1])
                 val = 63;
             else
-                return ""; // invalid character
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("src")); // invalid character
 
             packed = (packed << 6) | val;
         }
         if (i != 4)
-            return "";
+            MORDOR_THROW_EXCEPTION(std::invalid_argument("src"));
         if (padding > 0 && ptr != end)
-            return "";
+            MORDOR_THROW_EXCEPTION(std::invalid_argument("src"));
         if (padding > 2)
-            return "";
+            MORDOR_THROW_EXCEPTION(std::invalid_argument("src"));
 
         *writeBuf++ = (char)((packed >> 16) & 0xff);
         if(padding != 2)
@@ -79,17 +79,23 @@ base64decode(const std::string &src)
 }
 
 std::string
-base64encode(const std::string& data)
+base64encode(const std::string& data, const std::string& altchars)
 {
-    return base64encode(data.c_str(), data.size());
+    return base64encode(data.c_str(), data.size(), altchars);
+}
+
+static inline char
+base64_char_lookup(uint8_t digit, const std::string& altchars)
+{
+    const char* standard =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    if (digit < 62) return standard[digit];
+    return altchars[digit - 62];
 }
 
 std::string
-base64encode(const void* data, size_t len)
+base64encode(const void* data, size_t len, const std::string& altchars)
 {
-    const char* base64 =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
     std::string ret;
     ret.reserve(len * 4 / 3 + 2);
 
@@ -109,12 +115,12 @@ base64encode(const void* data, size_t len)
         for(; i < 3; ++i)
             packed <<= 8;
 
-        ret.append(1, base64[packed >> 18]);
-        ret.append(1, base64[(packed >> 12) & 0x3f]);
+        ret.append(1, base64_char_lookup(packed >> 18, altchars));
+        ret.append(1, base64_char_lookup((packed >> 12) & 0x3f, altchars));
         if(padding != 2)
-            ret.append(1, base64[(packed >> 6) & 0x3f]);
+            ret.append(1, base64_char_lookup((packed >> 6) & 0x3f, altchars));
         if(padding == 0)
-            ret.append(1, base64[packed & 0x3f]);
+            ret.append(1, base64_char_lookup(packed & 0x3f, altchars));
         ret.append(padding, '=');
     }
 
@@ -132,6 +138,14 @@ sha1(const std::string &data)
 {
     return hexstringFromData(sha1sum(data).c_str(), SHA_DIGEST_LENGTH);
 }
+
+#if OPENSSL_VERSION_NUMBER >= 0x0090800fL
+std::string
+sha256(const std::string &data)
+{
+    return hexstringFromData(sha256sum(data).c_str(), SHA256_DIGEST_LENGTH);
+}
+#endif
 
 std::string
 md5sum(const void *data, size_t len)
@@ -168,6 +182,26 @@ sha1sum(const std::string &data)
 {
     return sha1sum(data.c_str(), data.size());
 }
+
+#if OPENSSL_VERSION_NUMBER >= 0x0090800fL
+std::string
+sha256sum(const void *data, size_t len)
+{
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, data, len);
+    std::string result;
+    result.resize(SHA256_DIGEST_LENGTH);
+    SHA256_Final((unsigned char*)&result[0], &ctx);
+    return result;
+}
+
+std::string
+sha256sum(const std::string &data)
+{
+    return sha256sum(data.c_str(), data.size());
+}
+#endif
 
 struct xorStruct
 {

@@ -80,10 +80,18 @@ using namespace Mordor;
     doctypedecl = '<!DOCTYPE' S Name (S ExternalID)? S? ('[' intSubset ']' S?)? '>';
     prolog = XMLDecl? Misc* (doctypedecl Misc*)?;
 
+    action cdata
+    {
+        if (fpc != mark) {
+            m_handler.onCData(std::string(mark, fpc - mark));
+            mark = NULL;
+        }
+    }
+
     CDStart = '<![CDATA[';
     CData = (Char* - (Char* ']]>' Char*));
     CDEnd = ']]>';
-    CDSect = CDStart CData CDEnd;
+    CDSect = CDStart CData >mark %cdata CDEnd;
 
     action start_tag {
         m_handler.onStartTag(std::string(mark, fpc-mark));
@@ -115,9 +123,9 @@ using namespace Mordor;
     action inner_text
     {
         if (fpc != mark) {
-			m_handler.onInnerText(std::string(mark, fpc-mark));
-			mark = NULL;
-	    }
+            m_handler.onInnerText(std::string(mark, fpc-mark));
+            mark = NULL;
+        }
     }
 
     content = CharData? >mark %inner_text ((element | Reference | CDSect | PI | Comment) CharData? >mark %inner_text)*;

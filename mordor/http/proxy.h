@@ -62,18 +62,20 @@ public:
     std::vector<URI> autoDetectProxy(const URI &uri,
         const std::string &pacScript = std::string());
 
-    // Depending on the settings the proxyFromUserSettings() method
-    // may attempt to autodetect a proxy.
-    // This autodetection can be slow, so the results are cached.
-    // This method should be called if network configuration changes are
-    // detected to force a new discovery
-    static void resetDetectionResultCache();
+    bool resetDetectionResultCache() {
+        // Depending on the settings the proxyFromUserSettings() method
+        // may attempt to autodetect a proxy.
+        // This autodetection can be slow, so the results are cached.
+        // This method should be called if network configuration changes are
+        // detected to force a new discovery
+        m_bAutoProxyFailed = false;
+        m_autoConfigUrl.clear();
+    }
 
 private:
     HINTERNET m_hHttpSession;
-    static bool m_bAutoProxyFailed;
-    static std::string m_autoConfigUrl; // Autodetected pac Script, if any
-    static std::set<std::string> m_invalidProxies;
+    std::string m_autoConfigUrl; // Autodetected pac Script, if any
+    bool m_bAutoProxyFailed;
 };
 #elif defined (OSX)
 class ProxyCache

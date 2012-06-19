@@ -180,7 +180,7 @@ private:
 ///                (Content-Type will be set to text/plain)
 void respondError(ServerRequest::ptr request, Status status,
     const std::string &message = std::string(), bool closeConnection = false,
-    bool clearETag = true);
+    bool clearContentType = true, bool clearETag = true);
 
 /// Respond with a Stream
 ///

@@ -515,7 +515,7 @@ MORDOR_UNITTEST(Fibers, forceThrowExceptionFiberYieldTo)
 
 static void eatSomeStack()
 {
-    char stackEater[4096];
+    char UNUSED stackEater[4096];
     stackEater[0] = 1;
 }
 

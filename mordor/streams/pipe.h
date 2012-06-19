@@ -6,12 +6,25 @@
 
 #include <boost/shared_ptr.hpp>
 
+#ifdef WINDOWS
+#include "handle.h"
+#else
+#include "fd.h"
+#endif
+
 namespace Mordor {
 
-class Stream;
+class IOManager;
 
-std::pair<boost::shared_ptr<Stream>, boost::shared_ptr<Stream> >
-    pipeStream(size_t bufferSize = ~0);
+/// Create a user-space only, full-duplex anonymous pipe
+std::pair<Stream::ptr, Stream::ptr> pipeStream(size_t bufferSize = ~0);
+
+/// Create a kernel-level, half-duplex anonymous pipe
+///
+/// The Streams created by this function will have a file handle, and are
+/// suitable for usage with native OS APIs
+std::pair<NativeStream::ptr, NativeStream::ptr>
+    anonymousPipe(IOManager *ioManager = NULL);
 
 }
 

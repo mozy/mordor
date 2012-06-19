@@ -106,18 +106,6 @@ ServerConnection::requestComplete(ServerRequest *request)
 void
 ServerConnection::responseComplete(ServerRequest *request)
 {
-    if (request->m_willClose) {
-        MORDOR_LOG_TRACE(g_log) << this << " closing";
-        try {
-            m_stream->close();
-        } catch (...) {
-            request->cancel();
-            throw;
-        }
-    } else {
-        MORDOR_LOG_TRACE(g_log) << this << " flushing";
-        m_stream->flush();
-    }
     {
         boost::mutex::scoped_lock lock(m_mutex);
         invariant();
@@ -146,14 +134,28 @@ ServerConnection::responseComplete(ServerRequest *request)
                 return;
             }
         } else {
+            // Do not remove from m_pendingRequests until we finish flushing
+            // The next request can start before the flush completes, though
             if (request->m_requestState >= ServerRequest::COMPLETE)
                 scheduleNextRequest(request);
         }
         if (request->m_willClose) {
             m_priorResponseClosed = request->m_requestNumber;
+            MORDOR_LOG_TRACE(g_log) << this << " closing";
+        } else {
+            MORDOR_LOG_TRACE(g_log) << this << " flushing";
         }
     }
-
+    if (request->m_willClose) {
+        try {
+            m_stream->close();
+        } catch (...) {
+            request->cancel();
+            throw;
+        }
+    } else {
+        m_stream->flush();
+    }
     boost::mutex::scoped_lock lock(m_mutex);
     invariant();
     MORDOR_ASSERT(!m_pendingRequests.empty());
@@ -252,6 +254,15 @@ ServerRequest::ServerRequest(ServerConnection::ptr conn)
 ServerRequest::~ServerRequest()
 {
     cancel();
+#ifndef NDEBUG
+    MORDOR_ASSERT(m_conn);
+    boost::mutex::scoped_lock lock(m_conn->m_mutex);
+    MORDOR_ASSERT(std::find(m_conn->m_pendingRequests.begin(),
+        m_conn->m_pendingRequests.end(),
+        this) == m_conn->m_pendingRequests.end());
+    MORDOR_ASSERT(m_conn->m_waitingResponses.find(this) ==
+        m_conn->m_waitingResponses.end());
+#endif
 }
 
 bool
@@ -842,7 +853,8 @@ ServerRequest::responseDone()
 
 void
 respondError(ServerRequest::ptr request, Status status,
-    const std::string &message, bool closeConnection, bool clearETag)
+    const std::string &message, bool closeConnection,
+    bool clearContentType, bool clearETag)
 {
     MORDOR_ASSERT(!request->committed());
     request->response().status.status = status;
@@ -851,12 +863,14 @@ respondError(ServerRequest::ptr request, Status status,
     request->response().general.transferEncoding.clear();
     request->response().general.trailer.clear();
     request->response().entity.contentLength = message.size();
-    request->response().entity.contentType.type.clear();
+    if (clearContentType)
+        request->response().entity.contentType.type.clear();
     if (clearETag)
         request->response().response.eTag = ETag();
     if (!message.empty()) {
-        request->response().entity.contentType.type = "text";
-        request->response().entity.contentType.subtype = "plain";
+        if (clearContentType)
+            request->response().entity.contentType =
+                MediaType("text", "plain");
         if (request->request().requestLine.method == HEAD) {
             request->finish();
         } else {
@@ -1169,7 +1183,7 @@ bool ifMatch(ServerRequest::ptr request, const ETag &eTag)
             if (getOrHead)
                 request->response().response.eTag = eTag;
             respondError(request, getOrHead ? NOT_MODIFIED : PRECONDITION_FAILED,
-                std::string(), false, !getOrHead);
+                std::string(), false, true, !getOrHead);
             return false;
         }
     } else {
@@ -1190,7 +1204,7 @@ bool ifMatch(ServerRequest::ptr request, const ETag &eTag)
                 request->response().response.eTag = eTag;
             respondError(request,
                 getOrHead ? NOT_MODIFIED : PRECONDITION_FAILED, std::string(),
-                false, !getOrHead);
+                false, true, !getOrHead);
             return false;
         }
     }

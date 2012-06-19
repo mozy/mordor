@@ -65,11 +65,10 @@ public:
         if (!m_writeParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
         m_writeParent->flush();
     }
-    using Stream::find;
-    ptrdiff_t find(char delim)
+    ptrdiff_t find(char delimiter, size_t sanitySize = ~0, bool throwOnNotFound = true)
     {
         if (!m_readParent) MORDOR_THROW_EXCEPTION(BrokenPipeException());
-        return m_readParent->find(delim);
+        return m_readParent->find(delimiter, sanitySize, throwOnNotFound);
     }
     ptrdiff_t find(const std::string &str, size_t sanitySize = ~0, bool throwOnNotFound = true)
     {

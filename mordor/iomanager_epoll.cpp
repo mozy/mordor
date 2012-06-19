@@ -120,20 +120,23 @@ IOManager::AsyncState::contextForEvent(Event event)
 }
 
 bool
-IOManager::AsyncState::triggerEvent(Event event, size_t &pendingEventCount)
+IOManager::AsyncState::triggerEvent(Event event, size_t *pendingEventCount,
+    Fiber::ptr *fiber, boost::function<void ()> *dg)
 {
     if (!(m_events & event))
         return false;
     m_events = (Event)(m_events & ~event);
-    atomicDecrement(pendingEventCount);
-    EventContext &context = contextForEvent(event);
-    if (context.dg)
-        context.scheduler->schedule(context.dg);
-    else
-        context.scheduler->schedule(context.fiber);
-    context.scheduler = NULL;
-    context.fiber.reset();
-    context.dg = NULL;
+    if (pendingEventCount) {
+        atomicDecrement(*pendingEventCount);
+        EventContext &context = contextForEvent(event);
+        if (context.dg)
+            context.scheduler->schedule(context.dg);
+        else
+            context.scheduler->schedule(context.fiber);
+        context.scheduler = NULL;
+        fiber->swap(context.fiber);
+        dg->swap(context.dg);
+    }
     return true;
 }
 
@@ -157,19 +160,12 @@ IOManager::IOManager(size_t threads, bool useCaller)
     MORDOR_ASSERT(m_tickleFds[1] > 0);
     epoll_event event;
     memset(&event, 0, sizeof(epoll_event));
-    event.events = EPOLLIN | EPOLLET;
+    event.events = EPOLLIN;
     event.data.fd = m_tickleFds[0];
-    rc = fcntl(m_tickleFds[0], F_SETFL, O_NONBLOCK);
-    if (rc == -1) {
-        close(m_tickleFds[0]);
-        close(m_tickleFds[1]);
-        close(m_epfd);
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
-    }
     rc = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_ADD, " << m_tickleFds[0]
-        << ", EPOLLIN | EPOLLET): " << rc << " (" << lastError() << ")";
+        << ", EPOLLIN): " << rc << " (" << lastError() << ")";
     if (rc) {
         close(m_tickleFds[0]);
         close(m_tickleFds[1]);
@@ -329,7 +325,10 @@ IOManager::cancelEvent(int fd, Event event)
         << " (" << lastError() << ")";
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
-    state.triggerEvent(event, m_pendingEventCount);
+    Fiber::ptr fiber;
+    boost::function<void ()> dg;
+    state.triggerEvent(event, &m_pendingEventCount, &fiber, &dg);
+    lock2.unlock();
     return true;
 }
 
@@ -375,11 +374,9 @@ IOManager::idle()
             epoll_event &event = events[i];
             if (event.data.fd == m_tickleFds[0]) {
                 unsigned char dummy;
-                int rc2;
-                while((rc2 = read(m_tickleFds[0], &dummy, 1)) == 1) {
-                    MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
-                }
-                MORDOR_VERIFY(rc2 < 0 && errno == EAGAIN);
+                int rc2 = read(m_tickleFds[0], &dummy, 1);
+                MORDOR_VERIFY(rc2 == 1);
+                MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
                 continue;
             }
 
@@ -394,14 +391,14 @@ IOManager::idle()
                 event.events |= EPOLLIN | EPOLLOUT;
 
             bool triggered = false;
-            if (event.events & EPOLLIN)
-                triggered = state.triggerEvent(READ, m_pendingEventCount);
-            if (event.events & EPOLLOUT)
-                triggered = triggered ||
-                    state.triggerEvent(WRITE, m_pendingEventCount);
-            if (event.events & EPOLLRDHUP)
-                triggered = triggered ||
-                    state.triggerEvent(CLOSE, m_pendingEventCount);
+            uint32_t toTrigger = event.events;
+            uint32_t oldEvents = state.m_events;
+            if (toTrigger & EPOLLIN)
+                triggered = state.triggerEvent(READ);
+            if (toTrigger & EPOLLOUT)
+                triggered = triggered || state.triggerEvent(WRITE);
+            if (toTrigger & EPOLLRDHUP)
+                triggered = triggered || state.triggerEvent(CLOSE);
 
             // Nothing was triggered, probably because a prior cancelEvent call
             // (probably on a different thread) already triggered it, so no
@@ -418,6 +415,23 @@ IOManager::idle()
                 << " (" << lastError() << ")";
             if (rc2)
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
+
+            Fiber::ptr readFiber, writeFiber, closeFiber;
+            boost::function<void ()> readDg, writeDg, closeDg;
+            state.m_events = (Event)oldEvents;
+            if (toTrigger & EPOLLIN)
+                state.triggerEvent(READ, &m_pendingEventCount, &readFiber,
+                    &readDg);
+            if (toTrigger & EPOLLOUT)
+                state.triggerEvent(WRITE, &m_pendingEventCount, &writeFiber,
+                    &writeDg);
+            if (toTrigger & EPOLLRDHUP)
+                state.triggerEvent(CLOSE, &m_pendingEventCount, &closeFiber,
+                    &closeDg);
+            // Make sure that the mutex is unlocked prior to the fiber/dg
+            // destructing, which may trigger a call to cancelEvent, causing
+            // a deadlock
+            lock2.unlock();
         }
         try {
             Fiber::yield();
@@ -430,10 +444,6 @@ IOManager::idle()
 void
 IOManager::tickle()
 {
-    if (!hasIdleThreads()) {
-        MORDOR_LOG_VERBOSE(g_log) << this << " 0 idle thread, no tickle.";
-        return;
-    }
     int rc = write(m_tickleFds[1], "T", 1);
     MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
         << rc << " (" << lastError() << ")";

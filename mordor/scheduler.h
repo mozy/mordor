@@ -171,7 +171,6 @@ protected:
     virtual void tickle() = 0;
 
     bool hasWorkToDo();
-    virtual bool hasIdleThreads() const { return m_idleThreadCount != 0; }
 
 private:
     void yieldTo(bool yieldToCallerOnTerminate);
@@ -196,7 +195,7 @@ private:
     boost::shared_ptr<Fiber> m_rootFiber;
     boost::shared_ptr<Fiber> m_callingFiber;
     std::vector<boost::shared_ptr<Thread> > m_threads;
-    size_t m_threadCount, m_activeThreadCount, m_idleThreadCount;
+    size_t m_threadCount, m_activeThreadCount;
     bool m_stopping;
     bool m_autoStop;
     size_t m_batchSize;

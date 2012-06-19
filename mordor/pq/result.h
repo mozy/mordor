@@ -31,6 +31,7 @@ public:
     size_t column(const char *name) const;
     size_t column(const std::string &name) const
     { return column(name.c_str()); }
+    const char *column(size_t index) const;
 
     Oid getType(size_t column) const;
     Oid getType(const char *col) const

@@ -150,10 +150,8 @@ ZlibStream::read(Buffer &buffer, size_t length)
 
     while (true) {
         std::vector<iovec> inbufs = m_inBuffer.readBuffers();
-        size_t avail_in;
         if (!inbufs.empty()) {
             m_strm.next_in = (Bytef*)inbufs[0].iov_base;
-            avail_in = inbufs[0].iov_len;
             m_strm.avail_in = inbufs[0].iov_len;
         } else {
             m_strm.next_in = NULL;

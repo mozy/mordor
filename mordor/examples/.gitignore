@@ -1,6 +1,7 @@
 cat
 echoserver
 iombench
+simpleappserver
 simpleclient
 tunnel
 udpstats

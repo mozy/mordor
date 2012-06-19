@@ -123,3 +123,22 @@ MORDOR_UNITTEST(SSLStream, forceDuplex)
     pool.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
 }
+
+MORDOR_UNITTEST(SSLStream, incomingDataAfterShutdown)
+{
+    WorkerPool pool;
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+
+    SSLStream::ptr sslserver(new SSLStream(pipes.first, false));
+    SSLStream::ptr sslclient(new SSLStream(pipes.second, true));
+
+    Stream::ptr server = sslserver, client = sslclient;
+
+    pool.schedule(boost::bind(&accept, sslserver));
+    sslclient->connect();
+    pool.dispatch();
+
+    MORDOR_TEST_ASSERT_EQUAL(sslclient->write("c", 1u), 1u);
+    sslclient->flush(false);
+    sslserver->close();
+}

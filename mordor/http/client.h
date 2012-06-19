@@ -24,6 +24,7 @@ class TimerManager;
 namespace HTTP {
 
 class ClientConnection;
+class RequestBroker;
 
 class ClientRequest : public boost::enable_shared_from_this<ClientRequest>, boost::noncopyable
 {
@@ -85,6 +86,7 @@ public:
 
     // derive from this to customize request/response logging
     struct RequestLogger {
+        virtual ~RequestLogger() {}
         // default implementation logs request (>=DEBUG) or request.requestline (VERBOSE),
         // censoring HTTP Basic auth
         virtual void logRequest(size_t connectionNum, long long requestNum, const Request &request, bool censorBasicAuth = true);
@@ -191,6 +193,32 @@ private:
 
     void invariant() const;
 };
+
+// Helper functions
+/// Send a request with a body
+ClientRequest::ptr request(boost::shared_ptr<RequestBroker> broker,
+    Request &requestHeaders, const std::string &body,
+    bool allowPipelining = true);
+
+/// Send a request with a body
+ClientRequest::ptr request(boost::shared_ptr<RequestBroker> broker,
+    Request &requestHeaders, const Buffer &body,
+    bool allowPipelining = true);
+
+/// Do a POST
+ClientRequest::ptr post(boost::shared_ptr<RequestBroker> broker,
+    Request &requestHeaders, const URI::QueryString &qs,
+    bool allowPipelining = true);
+inline ClientRequest::ptr post(boost::shared_ptr<RequestBroker> broker,
+    const URI &uri, const URI::QueryString &qs,
+    bool allowPipelining = true)
+{
+    Request request;
+    request.requestLine.uri = uri;
+    return post(broker, request, qs, allowPipelining);
+}
+
+
 
 }}
 

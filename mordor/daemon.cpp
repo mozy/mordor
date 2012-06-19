@@ -2,6 +2,7 @@
 
 #include "daemon.h"
 
+#include "exception.h"
 #include "log.h"
 #include "main.h"
 
@@ -205,7 +206,7 @@ static BOOL WINAPI HandlerRoutine(DWORD dwCtrlType)
 }
 
 int run(int argc, char **argv,
-    boost::function<int (int, char **)> daemonMain, bool)
+    boost::function<int (int, char **)> daemonMain)
 {
     SERVICE_TABLE_ENTRYW ServiceStartTable[] = {
         { L"", &ServiceMain },
@@ -231,8 +232,6 @@ int run(int argc, char **argv,
 
 #include <errno.h>
 #include <signal.h>
-#include <sys/wait.h>
-boost::function<bool (pid_t, int)> onChildProcessExit;
 
 static sigset_t blockedSignals()
 {
@@ -331,9 +330,10 @@ static bool shouldDaemonize(char **enviro)
         return false;
     std::string parent;
     for (const char *env = *enviro; *env; env += strlen(env) + 1) {
+        if (strncmp(env, "_=", 2) != 0 &&
+            strncmp(env, "SUDO_COMMAND=", 13) != 0)
+          continue;
         const char *equals = strchr(env, '=');
-        if (equals != env + 1 || *env != '_')
-            continue;
         parent = equals + 1;
         break;
     }
@@ -363,90 +363,101 @@ static bool shouldDaemonizeDueToParent()
     const char *parentEnviro = parentEnviron.c_str();
     return shouldDaemonize((char **)&parentEnviro);
 }
+
+static bool shouldDaemonizeDueToCmdLine(int argc, char **argv)
+{
+    for (int i=0; i < argc; i++) {
+        if (strcmp(argv[i], "--daemonize") == 0) {
+            return true;
+        }
+    }
+    return false;
+}
 #endif
 
-// running user specified main
-static int startMain(int argc, char** argv,
-        boost::function<int (int, char**)> userMain)
+int run(int argc, char **argv,
+    boost::function<int (int, char **)> daemonMain)
 {
-    // Mask signals from other threads so we can handle them ourselves
+#ifndef OSX
+    std::string pidfile;
+    // Check for being run from /etc/init.d or start-stop-daemon as a hint to
+    // daemonize, or --daemonize was explicitely given on the command line
+    if (shouldDaemonize(environ) || shouldDaemonizeDueToParent() || shouldDaemonizeDueToCmdLine(argc, argv)) {
+        const char *pidfileEnv = getenv("PIDFILE");
+        if (pidfileEnv)
+            pidfile = pidfileEnv;
+        if (pidfile.empty()) {
+            const char *process = argv[0];
+            const char *slash = strchr(process, '/');
+            while (slash) {
+                process = slash + 1;
+                slash = strchr(process, '/');
+            }
+            std::ostringstream os;
+            os << "/var/run/" << process << ".pid";
+            pidfile = os.str();
+        }
+        int fd = open(pidfile.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0644);
+        if (fd < 0) {
+            std::cerr << "Unable to open " << pidfile << ": " << lastError() << std::endl;
+            return errno;
+        }
+        if (daemon(0, 0) == -1) {
+            close(fd);
+            return errno;
+        }
+        MORDOR_LOG_VERBOSE(g_log) << "Daemonizing; writing pid " << getpid() << " to " << pidfile;
+        std::string pid = boost::lexical_cast<std::string>(getpid());
+        pid.append(1, '\n');
+        int rc = write(fd, pid.c_str(), pid.size());
+        if (rc != (int)pid.size()) {
+            std::cerr << "Unable to write to pidfile " << pidfile << ": "
+                << lastError() << std::endl;
+            close(fd);
+            return errno;
+        }
+        close(fd);
+    }
+#endif
+
+    // Mask signals from other threads so we can handle them
+    // ourselves
     sigset_t mask = blockedSignals();
     int rc = pthread_sigmask(SIG_BLOCK, &mask, NULL);
-    if (rc != 0)
-        return errno;
+    if (rc != 0) {
+        rc = errno;
+        goto cleanup;
+    }
 
     // Create the thread that will handle signals for us
     pthread_t signal_thread_id;
     rc = pthread_create(&signal_thread_id, NULL, &signal_thread, NULL);
-    if (rc != 0)
-        return errno;
-
-    // Run the daemon's main
-    MORDOR_LOG_INFO(g_log) << "Starting main in daemon";
-    rc = userMain(argc, argv);
-    MORDOR_LOG_INFO(g_log) << "Main stopped in daemon";
-    return rc;
-}
-
-// start main in a forked process and monitor it, restart it in case
-// it dies abnormally.
-static int watchdog(int argc, char** argv,
-        boost::function<int (int, char**)> userMain)
-{
-    for (;;) {
-        pid_t pid = fork();
-        switch (pid) {
-        case -1:
-            MORDOR_LOG_ERROR(g_log) << "Unable to fork(2): " << errno;
-            return errno;
-        case 0:
-            MORDOR_LOG_INFO(g_log) << "Child #" << getpid() << " started";
-            return startMain(argc, argv, userMain);
-        default:
-            MORDOR_LOG_INFO(g_log) << "Watchdog starts monitoring child #" << pid;
-            int status;
-            if (waitpid(pid, &status, 0) == -1) {
-                MORDOR_LOG_ERROR(g_log) << "Failed to waitpid(2): " << errno;
-                return errno;
-            }
-            MORDOR_LOG_INFO(g_log) << "Child #" << pid << " dies with status:"
-                                   << status;
-            bool done = false;
-            // check if program wish to quit
-            if (!onChildProcessExit.empty()) {
-                done = onChildProcessExit(pid, status);
-                MORDOR_LOG_INFO(g_log) << "onChildProcessExit returns " << done;
-            } else {
-                MORDOR_LOG_INFO(g_log) << "onChildProcessExit is not set, "
-                                       << "restart child by default";
-            }
-            if (done) {
-                MORDOR_LOG_INFO(g_log) << "Watchdog stopped";
-                return 0;
-            }
-        }
+    if (rc != 0) {
+        rc = errno;
+        goto cleanup;
     }
-}
 
-int run(int argc, char **argv,
-    boost::function<int (int, char **)> daemonMain,
-    bool enableWatchdog)
-{
 #ifndef OSX
-    // Check for being run from /etc/init.d or start-stop-daemon as a hint to
-    // daemonize
-    if (shouldDaemonize(environ) || shouldDaemonizeDueToParent()) {
-        MORDOR_LOG_VERBOSE(g_log) << "Daemonizing";
-        if (daemon(0, 0) == -1)
-            return errno;
-    }
+    try {
 #endif
+    // Run the daemon's main
+    MORDOR_LOG_INFO(g_log) << "Starting daemon";
+    rc = daemonMain(argc, argv);
+    MORDOR_LOG_INFO(g_log) << "Daemon stopped";
 
-    if (enableWatchdog) {
-        return watchdog(argc, argv, daemonMain);
-    } else {
-        return startMain(argc, argv, daemonMain);
+#ifndef OSX
+    } catch (...) {
+        if (!pidfile.empty())
+            unlink(pidfile.c_str());
+        throw;
     }
+cleanup:
+    if (!pidfile.empty())
+        unlink(pidfile.c_str());
+#else
+cleanup:
+#endif
+    return rc;
 }
 #endif
 
