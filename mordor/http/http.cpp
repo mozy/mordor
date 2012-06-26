@@ -26,7 +26,7 @@ quote(const std::string &str, bool alwaysQuote, bool comment)
     if (str.empty())
         return comment ? "()" : "\"\"";
 
-    if (!alwaysQuote && str.find_first_not_of("!#$%&'*+-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~") == std::string::npos) {
+    if (!alwaysQuote && str.find_first_not_of("!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~") == std::string::npos) {
         return str;
     }
 
