@@ -72,12 +72,12 @@ Semaphore::wait()
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WaitForSingleObject");
     }
 #elif defined(OSX)
-    while (true) {
-        if (!semaphore_wait(m_semaphore))
-            return;
-        if (errno != EINTR) {
-            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("semaphore_wait");
-        }
+    kern_return_t rc;
+    do {
+        rc = semaphore_wait(m_semaphore);
+    } while (rc == KERN_ABORTED);
+    if (rc != KERN_SUCCESS) {
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("semaphore_wait");
     }
 #elif defined(FREEBSD)
     sembuf op;
