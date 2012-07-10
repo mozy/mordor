@@ -31,7 +31,7 @@ ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (Ser
 void
 ServerConnection::processRequests()
 {
-    boost::mutex::scoped_lock lock(m_mutex);
+    boost::recursive_mutex::scoped_lock lock(m_mutex);
     invariant();
     scheduleNextRequest(NULL);
 }
@@ -40,7 +40,7 @@ std::vector<ServerRequest::const_ptr>
 ServerConnection::requests()
 {
     std::vector<ServerRequest::const_ptr> result;
-    boost::mutex::scoped_lock lock(m_mutex);
+    boost::recursive_mutex::scoped_lock lock(m_mutex);
     invariant();
     for (std::list<ServerRequest *>::const_iterator it(m_pendingRequests.begin());
         it != m_pendingRequests.end();
@@ -75,7 +75,7 @@ ServerConnection::requestComplete(ServerRequest *request)
     MORDOR_ASSERT(request);
     bool close = false;
     {
-        boost::mutex::scoped_lock lock(m_mutex);
+        boost::recursive_mutex::scoped_lock lock(m_mutex);
         invariant();
         MORDOR_ASSERT(!m_pendingRequests.empty());
         MORDOR_ASSERT(request == m_pendingRequests.back());
@@ -119,7 +119,7 @@ ServerConnection::responseComplete(ServerRequest *request)
         m_stream->flush();
     }
     {
-        boost::mutex::scoped_lock lock(m_mutex);
+        boost::recursive_mutex::scoped_lock lock(m_mutex);
         invariant();
         MORDOR_ASSERT(request->m_responseState == ServerRequest::HEADERS ||
             ServerRequest::BODY);
@@ -154,7 +154,7 @@ ServerConnection::responseComplete(ServerRequest *request)
         }
     }
 
-    boost::mutex::scoped_lock lock(m_mutex);
+    boost::recursive_mutex::scoped_lock lock(m_mutex);
     invariant();
     MORDOR_ASSERT(!m_pendingRequests.empty());
     MORDOR_ASSERT(request == m_pendingRequests.front());
@@ -237,7 +237,7 @@ ServerConnection::invariant() const
 void
 ServerConnection::cancel()
 {
-    boost::mutex::scoped_lock lock(m_mutex);
+    boost::recursive_mutex::scoped_lock lock(m_mutex);
     m_stream->cancelRead();
     m_stream->cancelWrite();
 }
@@ -373,7 +373,7 @@ ServerRequest::responseTrailer()
 void
 ServerRequest::processNextRequest()
 {
-    boost::mutex::scoped_lock lock(m_conn->m_mutex);
+    boost::recursive_mutex::scoped_lock lock(m_conn->m_mutex);
     m_pipeline = true;
     m_conn->invariant();
     m_conn->scheduleNextRequest(this);
@@ -385,7 +385,7 @@ ServerRequest::cancel()
     if (m_requestState >= COMPLETE && m_responseState >= COMPLETE)
         return;
     MORDOR_LOG_TRACE(g_log) << m_context << " aborting";
-    boost::mutex::scoped_lock lock(m_conn->m_mutex);
+    boost::recursive_mutex::scoped_lock lock(m_conn->m_mutex);
     m_conn->invariant();
     if (m_requestState < COMPLETE)
         m_requestState = ERROR;
@@ -717,7 +717,7 @@ ServerRequest::commit()
 
     bool wait = false;
     {
-        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        boost::recursive_mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         if (m_conn->m_priorRequestFailed < m_requestNumber ||
             m_conn->m_priorResponseClosed < m_requestNumber) {
@@ -757,7 +757,7 @@ ServerRequest::commit()
         m_fiber.reset();
         MORDOR_LOG_TRACE(g_log) << m_context << " responding";
         // Check for problems that occurred while we were waiting
-        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        boost::recursive_mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         if (m_conn->m_priorRequestFailed <= m_requestNumber)
             MORDOR_THROW_EXCEPTION(PriorRequestFailedException());
@@ -792,7 +792,7 @@ ServerRequest::commit()
             m_responseState = BODY;
         }
     } catch(...) {
-        boost::mutex::scoped_lock lock(m_conn->m_mutex);
+        boost::recursive_mutex::scoped_lock lock(m_conn->m_mutex);
         m_conn->invariant();
         m_conn->m_priorRequestFailed = (std::min)(m_conn->m_priorRequestFailed,
             m_requestNumber);

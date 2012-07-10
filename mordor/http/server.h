@@ -2,7 +2,7 @@
 #define __MORDOR_HTTP_SERVER_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include <boost/thread/mutex.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 
 #include "connection.h"
 
@@ -164,7 +164,7 @@ private:
 
 private:
     boost::function<void (ServerRequest::ptr)> m_dg;
-    boost::mutex m_mutex;
+    boost::recursive_mutex m_mutex;
     std::list<ServerRequest *> m_pendingRequests;
     std::set<ServerRequest *> m_waitingResponses;
     unsigned long long m_requestCount, m_priorRequestFailed,
