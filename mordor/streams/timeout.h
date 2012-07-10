@@ -17,7 +17,7 @@ public:
 
 public:
     TimeoutStream(Stream::ptr parent, TimerManager &timerManager, bool own = true)
-        : FilterStream(parent),
+        : FilterStream(parent, own),
           m_timerManager(timerManager),
           m_readTimeout(~0ull),
           m_writeTimeout(~0ull),
