@@ -19,7 +19,6 @@ public:
         : FilterStream(parent, own)
     {}
 
-    boost::function<void ()> notifyOnClose;
     boost::function<void ()> notifyOnFlush;
     boost::function<void ()> notifyOnEof;
     boost::function<void ()> notifyOnException;
@@ -36,8 +35,8 @@ public:
             Mordor::rethrow_exception(exception);
             MORDOR_NOTREACHED();
         }
-        if (notifyOnClose)
-            notifyOnClose();
+        if (m_notifyOnClose)
+            m_notifyOnClose(type);
     }
 
     using FilterStream::read;
@@ -86,6 +85,25 @@ public:
         if (notifyOnFlush)
             notifyOnFlush();
     }
+
+    void notifyOnClose(boost::function<void ()> dg = NULL)
+    {
+        if (dg)
+            notifyOnClose2(boost::bind(&NotifyStream::onCloseAdapter, dg, _1));
+        else
+            notifyOnClose2(NULL);
+    }
+
+    void notifyOnClose2(boost::function<void (CloseType)> dg)
+    { m_notifyOnClose = dg; }
+
+private:
+    static void onCloseAdapter(boost::function<void ()> dg, CloseType type)
+    { dg(); }
+
+private:
+    boost::function<void (CloseType)> m_notifyOnClose;
+
 };
 
 }

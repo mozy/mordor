@@ -65,10 +65,30 @@ MORDOR_UNITTEST(NotifyStream, basic)
     MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
     stream.notifyOnFlush.clear();
 
-    stream.notifyOnClose = boost::bind(onNotify, boost::ref(sequence));
+    stream.notifyOnClose(boost::bind(onNotify, boost::ref(sequence)));
     stream.close();
     MORDOR_TEST_ASSERT_EQUAL(sequence, 3);
-    stream.notifyOnClose.clear();
+    stream.notifyOnClose(NULL);
+}
+
+void onNotifyClose(int &sequence, Stream::CloseType type, Stream::CloseType expected)
+{
+    MORDOR_TEST_ASSERT_EQUAL(type, expected);
+    ++sequence;
+}
+
+MORDOR_UNITTEST(NotifyStream, notifyOnClose2)
+{
+    int sequence = 0;
+    NotifyStream stream(Stream::ptr(new MemoryStream()));
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 0);
+    stream.notifyOnClose2(boost::bind(onNotifyClose, boost::ref(sequence), _1, Stream::READ));
+    stream.close(Stream::READ);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+    stream.notifyOnClose2(boost::bind(onNotifyClose, boost::ref(sequence), _1, Stream::WRITE));
+    stream.close(Stream::WRITE);
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 2);
+    stream.notifyOnClose2(NULL);
 }
 
 MORDOR_UNITTEST(NotifyStream, notifyOnExceptionSameThread)

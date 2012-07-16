@@ -179,7 +179,7 @@ BodyPart::stream()
         std::string headers = os.str();
         m_multipart->m_stream->write(headers.c_str(), headers.size());
         NotifyStream *notify = new NotifyStream(m_multipart->m_stream, false);
-        notify->notifyOnClose = boost::bind(&Multipart::partDone, m_multipart);
+        notify->notifyOnClose(boost::bind(&Multipart::partDone, m_multipart));
         m_stream.reset(notify);
     }
     return m_stream;
@@ -198,7 +198,7 @@ BodyPart::multipart()
         std::string headers = os.str();
         m_multipart->m_stream->write(headers.c_str(), headers.size());
         NotifyStream *notify = new NotifyStream(m_multipart->m_stream, false);
-        notify->notifyOnClose = boost::bind(&Multipart::partDone, m_multipart);
+        notify->notifyOnClose(boost::bind(&Multipart::partDone, m_multipart));
         m_stream.reset(notify);
     }
     HTTP::StringMap::const_iterator it = m_headers.contentType.parameters.find("boundary");

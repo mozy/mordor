@@ -121,7 +121,7 @@ Connection::getStream(const GeneralHeaders &general,
     }
     NotifyStream::ptr notify(new NotifyStream(stream));
     stream = notify;
-    notify->notifyOnClose = notifyOnEof;
+    notify->notifyOnClose(notifyOnEof);
     notify->notifyOnEof = notifyOnEof;
     notify->notifyOnException = notifyOnException;
     return stream;

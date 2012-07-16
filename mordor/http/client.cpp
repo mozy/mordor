@@ -717,7 +717,7 @@ ClientRequest::cancel(bool abort, bool error)
             NotifyStream::ptr notify =
                 boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
             MORDOR_ASSERT(notify);
-            notify->notifyOnClose = NULL;
+            notify->notifyOnClose(NULL);
             notify->notifyOnEof = NULL;
             notify->notifyOnException = NULL;
             notify->parent(Stream::ptr(new Stream()));
@@ -731,7 +731,7 @@ ClientRequest::cancel(bool abort, bool error)
         NotifyStream::ptr notify =
             boost::dynamic_pointer_cast<NotifyStream>(responseStream);
         MORDOR_ASSERT(notify);
-        notify->notifyOnClose = NULL;
+        notify->notifyOnClose(NULL);
         notify->notifyOnEof = NULL;
         notify->notifyOnException = NULL;
     }
@@ -1206,7 +1206,7 @@ ClientRequest::requestDone()
     NotifyStream::ptr notify =
         boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
     MORDOR_ASSERT(notify);
-    notify->notifyOnClose = NULL;
+    notify->notifyOnClose(NULL);
     notify->notifyOnEof = NULL;
     notify->notifyOnException = NULL;
     if (m_requestStream->supportsSize() && m_requestStream->supportsTell())
@@ -1233,7 +1233,7 @@ ClientRequest::requestFailed()
         NotifyStream::ptr notify =
             boost::dynamic_pointer_cast<NotifyStream>(m_requestStream);
         MORDOR_ASSERT(notify);
-        notify->notifyOnClose = NULL;
+        notify->notifyOnClose(NULL);
         notify->notifyOnEof = NULL;
         notify->notifyOnException = NULL;
     }
@@ -1307,7 +1307,7 @@ ClientRequest::responseDone()
     NotifyStream::ptr notify =
         boost::dynamic_pointer_cast<NotifyStream>(stream);
     MORDOR_ASSERT(notify);
-    notify->notifyOnClose = NULL;
+    notify->notifyOnClose(NULL);
     notify->notifyOnEof = NULL;
     notify->notifyOnException = NULL;
     // Make sure every stream in the stack gets a proper EOF
