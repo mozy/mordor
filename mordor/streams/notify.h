@@ -4,9 +4,7 @@
 
 #include <boost/function.hpp>
 
-#include "mordor/assert.h"
-#include "mordor/exception.h"
-#include "mordor/streams/filter.h"
+#include "filter.h"
 
 namespace Mordor {
 
@@ -29,11 +27,9 @@ public:
             if (ownsParent())
                 parent()->close(type);
         } catch (...) {
-            boost::exception_ptr exception(boost::current_exception());
             if (notifyOnException)
                 notifyOnException();
-            Mordor::rethrow_exception(exception);
-            MORDOR_NOTREACHED();
+            throw;
         }
         if (m_notifyOnClose)
             m_notifyOnClose(type);
@@ -46,11 +42,9 @@ public:
         try {
             result = parent()->read(b, len);
         } catch(...) {
-            boost::exception_ptr exception(boost::current_exception());
             if (notifyOnException)
                 notifyOnException();
-            Mordor::rethrow_exception(exception);
-            MORDOR_NOTREACHED();
+            throw;
         }
         if (result == 0 && notifyOnEof)
             notifyOnEof();
@@ -63,11 +57,9 @@ public:
         try {
             return parent()->write(b, len);
         } catch(...) {
-            boost::exception_ptr exception(boost::current_exception());
             if (notifyOnException)
                 notifyOnException();
-            Mordor::rethrow_exception(exception);
-            MORDOR_NOTREACHED();
+            throw;
         }
     }
 
@@ -76,11 +68,9 @@ public:
         try {
             parent()->flush(flushParent);
         } catch(...) {
-            boost::exception_ptr exception(boost::current_exception());
             if (notifyOnException)
                 notifyOnException();
-            Mordor::rethrow_exception(exception);
-            MORDOR_NOTREACHED();
+            throw;
         }
         if (notifyOnFlush)
             notifyOnFlush();
