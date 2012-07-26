@@ -337,6 +337,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\counter.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\chunked.cpp"
 				>
 			</File>
@@ -776,6 +780,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\cat.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\counter.h"
 				>
 			</File>
 			<File

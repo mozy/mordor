@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0E01DD2615C0F28B00DC4F2B /* counter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E01DD2415C0F28B00DC4F2B /* counter.cpp */; };
+		0E01DD2715C0F28B00DC4F2B /* counter.h in Headers */ = {isa = PBXBuildFile; fileRef = 0E01DD2515C0F28B00DC4F2B /* counter.h */; };
+		0E01DD2A15C0F29700DC4F2B /* delay.h in Headers */ = {isa = PBXBuildFile; fileRef = 0E01DD2915C0F29700DC4F2B /* delay.h */; };
+		0E01DD2C15C0F2E400DC4F2B /* counter_stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E01DD2B15C0F2E400DC4F2B /* counter_stream.cpp */; };
+		0E01DD2E15C0F2F800DC4F2B /* notify_stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E01DD2D15C0F2F800DC4F2B /* notify_stream.cpp */; };
+		0E01DD3015C0F30200DC4F2B /* timeout_stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E01DD2F15C0F30200DC4F2B /* timeout_stream.cpp */; };
 		0E8A702A15594EE900607636 /* hashfwd.h in Headers */ = {isa = PBXBuildFile; fileRef = 0E8A702915594EE900607636 /* hashfwd.h */; };
 		24BDA181151D1D7D00E0A646 /* oauth2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 24BDA17F151D1D7D00E0A646 /* oauth2.cpp */; };
 		24BDA182151D1D7D00E0A646 /* oauth2.h in Headers */ = {isa = PBXBuildFile; fileRef = 24BDA180151D1D7D00E0A646 /* oauth2.h */; };
@@ -183,6 +189,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0E01DD2415C0F28B00DC4F2B /* counter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = counter.cpp; sourceTree = "<group>"; };
+		0E01DD2515C0F28B00DC4F2B /* counter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = counter.h; sourceTree = "<group>"; };
+		0E01DD2915C0F29700DC4F2B /* delay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = delay.h; sourceTree = "<group>"; };
+		0E01DD2B15C0F2E400DC4F2B /* counter_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = counter_stream.cpp; sourceTree = "<group>"; };
+		0E01DD2D15C0F2F800DC4F2B /* notify_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = notify_stream.cpp; sourceTree = "<group>"; };
+		0E01DD2F15C0F30200DC4F2B /* timeout_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timeout_stream.cpp; sourceTree = "<group>"; };
 		0E8A702915594EE900607636 /* hashfwd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hashfwd.h; sourceTree = "<group>"; };
 		0EC278D31526562700F8AC65 /* hash_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hash_stream.cpp; sourceTree = "<group>"; };
 		0EF8669115333584009205E8 /* ragel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ragel.cpp; sourceTree = "<group>"; };
@@ -644,6 +656,9 @@
 		3CAB2737112B096700607AEE /* streams */ = {
 			isa = PBXGroup;
 			children = (
+				0E01DD2915C0F29700DC4F2B /* delay.h */,
+				0E01DD2415C0F28B00DC4F2B /* counter.cpp */,
+				0E01DD2515C0F28B00DC4F2B /* counter.h */,
 				0E8A702915594EE900607636 /* hashfwd.h */,
 				61AA83C4120A18D600D7B56B /* filter.cpp */,
 				E29FD2A81136FD1D004BC293 /* timeout.cpp */,
@@ -728,6 +743,9 @@
 		3CAB2777112B096700607AEE /* tests */ = {
 			isa = PBXGroup;
 			children = (
+				0E01DD2F15C0F30200DC4F2B /* timeout_stream.cpp */,
+				0E01DD2D15C0F2F800DC4F2B /* notify_stream.cpp */,
+				0E01DD2B15C0F2E400DC4F2B /* counter_stream.cpp */,
 				3CAB2779112B096700607AEE /* buffer.cpp */,
 				3CAB277A112B096700607AEE /* buffered_stream.cpp */,
 				3CAB277B112B096700607AEE /* chunked_stream.cpp */,
@@ -795,6 +813,8 @@
 				E3B2FD29151A908800E87F0F /* cxa_exception.h in Headers */,
 				24BDA182151D1D7D00E0A646 /* oauth2.h in Headers */,
 				0E8A702A15594EE900607636 /* hashfwd.h in Headers */,
+				0E01DD2715C0F28B00DC4F2B /* counter.h in Headers */,
+				0E01DD2A15C0F29700DC4F2B /* delay.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -964,6 +984,7 @@
 				EA9919FE142946FC0069FD05 /* crypto.cpp in Sources */,
 				E3B2FD27151A908800E87F0F /* cxa_exception.cpp in Sources */,
 				24BDA181151D1D7D00E0A646 /* oauth2.cpp in Sources */,
+				0E01DD2615C0F28B00DC4F2B /* counter.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1002,6 +1023,9 @@
 				5C8544A015756FC700589928 /* uri.cpp in Sources */,
 				5C8544A115756FC700589928 /* zlib.cpp in Sources */,
 				5C8544DF1576710800589928 /* http_proxy.cpp in Sources */,
+				0E01DD2C15C0F2E400DC4F2B /* counter_stream.cpp in Sources */,
+				0E01DD2E15C0F2F800DC4F2B /* notify_stream.cpp in Sources */,
+				0E01DD3015C0F30200DC4F2B /* timeout_stream.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -32,6 +32,9 @@
     <ClCompile Include="streams\cat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="streams\counter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="http\chunked.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -248,6 +251,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="streams\cat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="streams\counter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="http\chunked.h">

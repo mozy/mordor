@@ -60,6 +60,7 @@ nobase_include_HEADERS=			\
 	mordor/streams/buffered.h	\
 	mordor/streams/buffer.h		\
 	mordor/streams/cat.h		\
+	mordor/streams/counter.h	\
 	mordor/streams/deflate.h	\
 	mordor/streams/duplex.h		\
 	mordor/streams/fd.h		\
@@ -147,6 +148,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/streams/buffer.cpp		\
 	mordor/streams/buffered.cpp		\
 	mordor/streams/cat.cpp			\
+	mordor/streams/counter.cpp		\
 	mordor/streams/fd.cpp			\
 	mordor/streams/file.cpp			\
 	mordor/streams/filter.cpp		\
@@ -282,6 +284,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/chunked_stream.cpp			\
 	mordor/tests/config.cpp				\
 	mordor/tests/coroutine.cpp			\
+	mordor/tests/counter_stream.cpp		\
 	mordor/tests/endian.cpp				\
 	mordor/tests/fibers.cpp				\
 	mordor/tests/fibersync.cpp			\

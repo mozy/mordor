@@ -194,6 +194,7 @@
     <ClCompile Include="chunked_stream.cpp" />
     <ClCompile Include="config.cpp" />
     <ClCompile Include="coroutine.cpp" />
+    <ClCompile Include="counter_stream.cpp" />
     <ClCompile Include="crypto.cpp" />
     <ClCompile Include="efs_stream.cpp" />
     <ClCompile Include="endian.cpp" />

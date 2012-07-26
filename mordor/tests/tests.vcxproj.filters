@@ -30,6 +30,9 @@
     <ClCompile Include="coroutine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="counter_stream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="efs_stream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -358,6 +358,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\counter_stream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\crypto.cpp"
 				>
 			</File>

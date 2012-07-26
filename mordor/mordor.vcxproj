@@ -122,6 +122,7 @@
     <ClCompile Include="streams\buffer.cpp" />
     <ClCompile Include="streams\buffered.cpp" />
     <ClCompile Include="streams\cat.cpp" />
+    <ClCompile Include="streams\counter.cpp" />
     <ClCompile Include="http\chunked.cpp" />
     <ClCompile Include="http\client.cpp" />
     <ClCompile Include="config.cpp" />
@@ -204,6 +205,7 @@
     <ClInclude Include="streams\buffer.h" />
     <ClInclude Include="streams\buffered.h" />
     <ClInclude Include="streams\cat.h" />
+    <ClInclude Include="streams\counter.h" />
     <ClInclude Include="http\chunked.h" />
     <ClInclude Include="http\client.h" />
     <ClInclude Include="config.h" />
