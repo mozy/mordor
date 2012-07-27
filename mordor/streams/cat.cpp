@@ -57,54 +57,40 @@ CatStream::seek(long long offset, Anchor anchor)
     if (offset == 0 && anchor == CURRENT)
         return m_pos;
     MORDOR_ASSERT(m_seekable);
-    std::vector<Stream::ptr>::iterator it = m_it;
-    long long itOffset = 0;
+    long long newPos = 0;
     switch (anchor) {
         case BEGIN:
-            it = m_streams.begin();
-            if (it != m_streams.end())
-                itOffset = (*it)->tell();
+            newPos = offset;
             break;
         case CURRENT:
+            newPos = m_pos + offset;
             break;
         case END:
-            it = m_streams.end();
+            newPos = m_size + offset;
             break;
         default:
             MORDOR_NOTREACHED();
     }
-    long long pos = m_pos;
-    while (offset != 0) {
-        if (offset < 0) {
-            if (itOffset == 0) {
-                if (it == m_streams.begin())
-                    throw std::invalid_argument("Can't seek below 0");
-                --it;
-                itOffset = (*it)->size();
-            }
-            long long toChange = (std::min)(-offset, itOffset);
-            itOffset -= toChange;
-            pos -= toChange;
-            offset += toChange;
-        } else {
-            long long toChange = offset;
-            if (it != m_streams.end())
-                toChange = (std::min)(offset, (*it)->size() - itOffset);
-            itOffset += toChange;
-            pos += toChange;
-            offset -= toChange;
-            if (it != m_streams.end() && itOffset == (*it)->size()) {
-                ++it;
-                itOffset = 0;
-            }
-        }
+    if (newPos < 0) {
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("Can't seek below 0"));
+    } else if (newPos >= m_size) {
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("Can't seek above max size"));
     }
-    if (it != m_streams.end() && it != m_it)
-        (*it)->seek(itOffset);
-    m_it = it;
-    if (it == m_streams.end())
-        pos = m_size + itOffset;
-    return m_pos = pos;
+
+    long long cursor = 0;
+    for (std::vector<Stream::ptr>::iterator it = m_streams.begin();
+        it != m_streams.end();
+        ++it) {
+        long long size = (*it)->size();
+        if (newPos < cursor + size) {
+            m_it = it;
+            (*m_it)->seek(newPos - cursor);
+            break;
+        }
+        cursor += size;
+    }
+    m_pos = newPos;
+    return m_pos;
 }
 
 long long
