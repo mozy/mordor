@@ -30,7 +30,7 @@ void
 TimeoutHandler::onTimeout()
 {
     if (!m_lastTimedOut) {
-        MORDOR_LOG_INFO(g_log) << this << " timeout";
+        MORDOR_LOG_DEBUG(g_log) << this << " timeout";
         m_lastTimedOut = m_permaTimedOut = true;
         if (m_timeoutDg)
             m_timeoutDg();
@@ -67,7 +67,7 @@ TimeoutHandler::setTimeout(unsigned long long timeout, TimeoutDg dg)
 void
 TimeoutHandler::startTimer()
 {
-    MORDOR_LOG_INFO(g_log) << this << " startTimer()";
+    MORDOR_LOG_TRACE(g_log) << this << " startTimer()";
     if (m_permaTimedOut)
         MORDOR_THROW_EXCEPTION(TimedOutException());
     MORDOR_ASSERT(!m_timer);
@@ -81,7 +81,7 @@ TimeoutHandler::startTimer()
 bool
 TimeoutHandler::cancelTimer()
 {
-    MORDOR_LOG_INFO(g_log) << this << " cancelTimer()";
+    MORDOR_LOG_TRACE(g_log) << this << " cancelTimer()";
     bool res = m_lastTimedOut;
     if (m_timer) {
         m_timer->cancel();
@@ -94,7 +94,7 @@ TimeoutHandler::cancelTimer()
 bool
 TimeoutHandler::refreshTimer()
 {
-    MORDOR_LOG_INFO(g_log) << this << " refreshTimer()";
+    MORDOR_LOG_TRACE(g_log) << this << " refreshTimer()";
     bool res = m_lastTimedOut;
     if (m_timer) {
         m_timer->refresh();
