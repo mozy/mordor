@@ -517,6 +517,7 @@ static void eatSomeStack()
 {
     char stackEater[4096];
     stackEater[0] = 1;
+    (void) stackEater;
 }
 
 MORDOR_UNITTEST(Fibers, resetStress)

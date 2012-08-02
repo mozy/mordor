@@ -439,7 +439,7 @@ SSLStream::flush(bool flushParent)
     size_t toWrite = BIO_get_mem_data(m_writeBio, &writeBuf);
     m_writeBuffer.copyIn(writeBuf, toWrite);
     int dummy = BIO_reset(m_writeBio);
-    dummy = 0;
+    (void) dummy;
     if (m_writeBuffer.readAvailable() == 0)
         return;
 

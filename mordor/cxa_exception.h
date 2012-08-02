@@ -18,10 +18,10 @@
 namespace __cxxabiv1 {
     // __cxa_exception is defined in unwind.h which is in turn a part of GCC.
     // here we do not care about the internals of it. so make it a `void'.
-    typedef void __cxa_exception;
+    typedef void __cxa_exception_;
     // Each thread in a C++ program has access to a __cxa_eh_globals object.
     struct __cxa_eh_globals {
-        __cxa_exception *   caughtExceptions;
+        __cxa_exception_ *   caughtExceptions;
         unsigned int        uncaughtExceptions;
 #ifdef __ARM_EABI_UNWINDER__
         __cxa_exception* propagatingExceptions;
