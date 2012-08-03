@@ -18,8 +18,13 @@ public:
     };
 
 public:
-    NamedPipeStream(const std::string &name, Flags flags = READWRITE, IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
-    NamedPipeStream(const std::wstring &name, Flags flags = READWRITE, IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
+
+    // Currently this class only supports the Server side of a named pipe connection
+    // It creates a new pipe based on the passed name argument.
+    // By default a byte-mode pipe is created (PIPE_TYPE_BYTE), but the pipeModeFlags 
+    // argument can be used to create a message-mode pipe.
+    NamedPipeStream(const std::string &name, Flags flags = READWRITE, IOManager *ioManager = NULL, Scheduler *scheduler = NULL, DWORD pipeModeFlags = (DWORD)-1);
+    NamedPipeStream(const std::wstring &name, Flags flags = READWRITE, IOManager *ioManager = NULL, Scheduler *scheduler = NULL, DWORD pipeModeFlags = (DWORD)-1);
 
     bool supportsRead() { return m_supportsRead; }
     bool supportsWrite() { return m_supportsWrite; }
@@ -27,10 +32,20 @@ public:
 
     void close(CloseType type = BOTH);
 
+    // Close a connected client if any, but leave the named pipe open.
+    // Should be called after processing a client request and before
+    // calling accept to wait for the next connection.
+    void disconnectClient();
+
+    // Accept will put the fiber to sleep until a client connection arrives
+    // Throws OperationAbortedException if another fiber calls cancelAccept()
     void accept();
+
     void cancelAccept();
 
 private:
+    void init(const std::wstring &name, Flags flags, DWORD pipeModeFlags, IOManager *ioManager, Scheduler *scheduler);
+
     bool m_supportsRead, m_supportsWrite;
 };
 

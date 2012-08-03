@@ -12,33 +12,29 @@ namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:streams::namedpipe");
 
-NamedPipeStream::NamedPipeStream(const std::string &name, Flags flags, IOManager *ioManager, Scheduler *scheduler)
+NamedPipeStream::NamedPipeStream(const std::string &name, Flags flags, IOManager *ioManager, Scheduler *scheduler, DWORD pipeModeFlags)
 {
-    HANDLE hPipe = CreateNamedPipeW(toUtf16(name).c_str(),
-        (DWORD)flags | (ioManager ? FILE_FLAG_OVERLAPPED : 0),
-        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-        PIPE_UNLIMITED_INSTANCES,
-        0, 0, 0, NULL);
-    error_t error = lastError();
-    MORDOR_LOG_LEVEL(g_log, hPipe == INVALID_HANDLE_VALUE ? Log::ERROR : Log::INFO)
-        << this << " CreateNamedPipeW(" << name << ", " << flags << "): "
-        << hPipe << " (" << error << ")";
-    if (hPipe == INVALID_HANDLE_VALUE)
-        MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CreateNamedPipeW");
-    HandleStream::init(hPipe, ioManager, scheduler);
-    m_supportsRead = !!(flags & READ);
-    m_supportsWrite = !!(flags & WRITE);
+    init(toUtf16(name), flags, pipeModeFlags,ioManager, scheduler);
 }
 
-NamedPipeStream::NamedPipeStream(const std::wstring &name, Flags flags, IOManager *ioManager, Scheduler *scheduler)
+NamedPipeStream::NamedPipeStream(const std::wstring &name, Flags flags, IOManager *ioManager, Scheduler *scheduler, DWORD pipeModeFlags)
 {
+    init(name, flags, pipeModeFlags, ioManager, scheduler);
+}
+
+void NamedPipeStream::init(const std::wstring &name, Flags flags, DWORD pipeModeFlags, IOManager *ioManager, Scheduler *scheduler)
+{
+    if (pipeModeFlags == (DWORD)-1) {
+        pipeModeFlags = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT;
+    }
+
     HANDLE hPipe = CreateNamedPipeW(name.c_str(),
         (DWORD)flags | (ioManager ? FILE_FLAG_OVERLAPPED : 0),
-        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+        pipeModeFlags,
         PIPE_UNLIMITED_INSTANCES,
         0, 0, 0, NULL);
     error_t error = lastError();
-    MORDOR_LOG_LEVEL(g_log, hPipe == INVALID_HANDLE_VALUE ? Log::ERROR : Log::INFO)
+    MORDOR_LOG_LEVEL(g_log, hPipe == INVALID_HANDLE_VALUE ? Log::ERROR : Log::VERBOSE)
         << this << " CreateNamedPipeW(" << toUtf8(name) << ", " << flags
         << "): " << hPipe << " (" << error << ")";
     if (hPipe == INVALID_HANDLE_VALUE)
@@ -130,6 +126,14 @@ NamedPipeStream::cancelAccept()
         if (!pCancelIoEx(m_hFile, NULL))
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIoEx");
     }
+}
+
+void
+NamedPipeStream::disconnectClient()
+{
+    // Prepare for reuse of the named pipe handle
+    FlushFileBuffers(m_hFile);
+    DisconnectNamedPipe(m_hFile);
 }
 
 }
