@@ -58,9 +58,11 @@
 #endif
 
 #ifdef MSVC
-#ifndef _DEBUG
-#define NDEBUG
-#endif
+#   ifndef _DEBUG
+#       ifndef NDEBUG
+#           define NDEBUG
+#       endif
+#   endif
 #endif
 
 #endif
