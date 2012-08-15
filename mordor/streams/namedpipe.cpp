@@ -72,7 +72,7 @@ NamedPipeStream::accept()
         overlapped = &m_readEvent.overlapped;
     }
     BOOL ret = ConnectNamedPipe(m_hFile, overlapped);
-    Log::Level level = Log::INFO;
+    Log::Level level = Log::DEBUG;
     if (!ret) {
         if (lastError() == ERROR_PIPE_CONNECTED) {
         } else if (m_ioManager) {
@@ -102,7 +102,7 @@ NamedPipeStream::accept()
         else
             Scheduler::yieldTo();
         error_t error = pRtlNtStatusToDosError((NTSTATUS)m_readEvent.overlapped.Internal);
-        MORDOR_LOG_LEVEL(g_log, error ? Log::ERROR : Log::INFO) << this
+        MORDOR_LOG_LEVEL(g_log, error ? Log::ERROR : Log::DEBUG) << this
             << " ConnectNamedPipe(" << m_hFile << "): (" << error
             << ")";
         if (error)
