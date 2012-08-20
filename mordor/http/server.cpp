@@ -420,18 +420,7 @@ ServerRequest::finish()
             return;
         }
     }
-    if (m_requestState == BODY && !m_willClose) {
-        if (m_request.entity.contentType.type == "multipart") {
-            if (!m_requestMultipart)
-                m_requestMultipart = requestMultipart();
-            while(m_requestMultipart->nextPart());
-        } else {
-            if (!m_requestStream)
-                m_requestStream = requestStream();
-            MORDOR_ASSERT(m_requestStream);
-            transferStream(m_requestStream, NullStream::get());
-        }
-    }
+    discardRequestBody();
 }
 
 void
@@ -846,6 +835,23 @@ ServerRequest::responseDone()
     MORDOR_LOG_INFO(g_log) << m_context << " "
         << m_request.requestLine << " " << m_response.status.status;
     m_conn->responseComplete(this);
+}
+
+void
+ServerRequest::discardRequestBody()
+{
+    if (m_requestState == BODY && !m_willClose) {
+        if (m_request.entity.contentType.type == "multipart") {
+            if (!m_requestMultipart)
+                m_requestMultipart = requestMultipart();
+            while(m_requestMultipart->nextPart());
+        } else {
+            if (!m_requestStream)
+                m_requestStream = requestStream();
+            MORDOR_ASSERT(m_requestStream);
+            transferStream(m_requestStream, NullStream::get());
+        }
+    }
 }
 
 void
