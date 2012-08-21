@@ -984,6 +984,12 @@ respondStream(ServerRequest::ptr request, Stream &response)
             unsigned long long currentPos = 0;
 
             if (request->request().requestLine.method != HEAD) {
+                // force use chunked encoding. Reason:
+                // - Content-Type: multipart/byteranges itself can't tell
+                //   when the response body end, and
+                // - Content-Length is not applicable here as well.
+                if (transferEncoding.empty())
+                    transferEncoding.push_back("chunked");
                 Multipart::ptr multipart = request->responseMultipart();
                 for (RangeSet::const_iterator it(range.begin());
                     it != range.end();

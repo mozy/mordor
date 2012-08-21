@@ -6,6 +6,7 @@
 
 #include "mordor/assert.h"
 #include "mordor/streams/buffer.h"
+#include "mordor/streams/buffered.h"
 #include "mordor/streams/notify.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/transfer.h"
@@ -47,6 +48,8 @@ Multipart::Multipart(Stream::ptr stream, std::string boundary)
     }
     m_boundary = "\r\n--" + m_boundary;
     if (m_stream->supportsRead()) {
+        if (!m_stream->supportsFind())
+            m_stream.reset(new BufferedStream(m_stream));
         MORDOR_ASSERT(m_stream->supportsFind());
         MORDOR_ASSERT(m_stream->supportsUnread());
     }
