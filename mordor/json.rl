@@ -447,4 +447,10 @@ std::ostream &operator <<(std::ostream &os, const Value &json)
     return os;
 }
 
+bool isBlank(Value value)
+{
+    boost::blank *isItBlank = boost::get<boost::blank>(&value);
+    return  !!isItBlank;
+}
+
 }}

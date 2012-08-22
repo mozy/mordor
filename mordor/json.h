@@ -152,6 +152,8 @@ template <class T> Value parse(T &t)
 
 std::ostream &operator <<(std::ostream &os, const Value &json);
 
+bool isBlank(Value value);
+
 }}
 
 #endif
