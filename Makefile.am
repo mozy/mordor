@@ -311,6 +311,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/scheduler.cpp			\
 	mordor/tests/socket.cpp				\
 	mordor/tests/ssl_stream.cpp			\
+	mordor/tests/statistics.cpp			\
 	mordor/tests/stream.cpp				\
 	mordor/tests/string.cpp				\
 	mordor/tests/temp_stream.cpp			\

@@ -19,6 +19,7 @@ struct Statistic
     virtual ~Statistic() {}
     const char *units;
 
+    void dump(std::ostream &);
     virtual void reset() = 0;
     virtual std::ostream &serialize(std::ostream &os) const { return os; }
 

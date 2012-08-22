@@ -228,6 +228,7 @@
     <ClCompile Include="scheduler.cpp" />
     <ClCompile Include="socket.cpp" />
     <ClCompile Include="ssl_stream.cpp" />
+    <ClCompile Include="statistics.cpp" />
     <ClCompile Include="stream.cpp" />
     <ClCompile Include="string.cpp" />
     <ClCompile Include="temp_stream.cpp" />

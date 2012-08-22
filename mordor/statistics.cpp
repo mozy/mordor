@@ -33,6 +33,12 @@ dump(std::ostream &os, const Statistic &stat, int level = 0)
     return os;
 }
 
+void
+Statistic::dump(std::ostream &os)
+{
+    Mordor::dump(os, *this);
+}
+
 std::ostream &
 Statistics::dump(std::ostream &os)
 {

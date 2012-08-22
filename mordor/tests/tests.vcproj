@@ -502,6 +502,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\statistics.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\stream.cpp"
 				>
 			</File>

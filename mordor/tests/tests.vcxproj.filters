@@ -93,6 +93,9 @@
     <ClCompile Include="ssl_stream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="statistics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="stream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
