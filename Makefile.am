@@ -88,6 +88,7 @@ nobase_include_HEADERS=			\
 	mordor/streams/throttle.h	\
 	mordor/streams/timeout.h	\
 	mordor/streams/transfer.h	\
+	mordor/streams/zero.h		\
 	mordor/streams/zlib.h		\
 	mordor/streams/crypto.h		\
 	mordor/string.h			\
@@ -169,6 +170,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/streams/test.cpp			\
 	mordor/streams/throttle.cpp		\
 	mordor/streams/transfer.cpp		\
+	mordor/streams/zero.cpp			\
 	mordor/streams/zlib.cpp			\
 	mordor/streams/crypto.cpp		\
 	mordor/string.cpp			\

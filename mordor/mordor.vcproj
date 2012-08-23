@@ -529,6 +529,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\zero.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\oauth.cpp"
 				>
 			</File>
@@ -784,6 +788,10 @@
 			</File>
 			<File
 				RelativePath=".\streams\counter.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\zero.h"
 				>
 			</File>
 			<File

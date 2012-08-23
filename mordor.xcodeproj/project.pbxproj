@@ -75,6 +75,8 @@
 		3CAC4A341151622F00F85725 /* iomanager_kqueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB271B112B096700607AEE /* iomanager_kqueue.cpp */; };
 		3CC4CE561138646D001C21F2 /* progress.h in Headers */ = {isa = PBXBuildFile; fileRef = 3CC4CE551138646D001C21F2 /* progress.h */; };
 		3F4296F01385DADC007EC0C7 /* util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F4296EF1385DADC007EC0C7 /* util.cpp */; };
+		46AA782B15E685AC0052192D /* zero.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 46AA782915E685AC0052192D /* zero.cpp */; };
+		46AA782C15E685AC0052192D /* zero.h in Headers */ = {isa = PBXBuildFile; fileRef = 46AA782A15E685AC0052192D /* zero.h */; };
 		5C85448415756FC700589928 /* buffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB2779112B096700607AEE /* buffer.cpp */; };
 		5C85448515756FC700589928 /* buffered_stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB277A112B096700607AEE /* buffered_stream.cpp */; };
 		5C85448615756FC700589928 /* chunked_stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3CAB277B112B096700607AEE /* chunked_stream.cpp */; };
@@ -394,6 +396,8 @@
 		3CAB29B1112B340600607AEE /* libmordor.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmordor.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		3CC4CE551138646D001C21F2 /* progress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = progress.h; sourceTree = "<group>"; };
 		3F4296EF1385DADC007EC0C7 /* util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = util.cpp; sourceTree = "<group>"; };
+		46AA782915E685AC0052192D /* zero.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = zero.cpp; sourceTree = "<group>"; };
+		46AA782A15E685AC0052192D /* zero.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zero.h; sourceTree = "<group>"; };
 		5C85447915756F8400589928 /* run_tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = run_tests; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8544CD1576632300589928 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = SDKs/MacOSX10.7.sdk/usr/lib/libcrypto.dylib; sourceTree = DEVELOPER_DIR; };
 		5C8544CF1576633000589928 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = SDKs/MacOSX10.7.sdk/usr/lib/libz.dylib; sourceTree = DEVELOPER_DIR; };
@@ -721,6 +725,8 @@
 				3CAB276A112B096700607AEE /* throttle.h */,
 				3CAB276B112B096700607AEE /* transfer.cpp */,
 				3CAB276C112B096700607AEE /* transfer.h */,
+				46AA782915E685AC0052192D /* zero.cpp */,
+				46AA782A15E685AC0052192D /* zero.h */,
 				3CAB276D112B096700607AEE /* zlib.cpp */,
 				3CAB276E112B096700607AEE /* zlib.h */,
 			);
@@ -818,6 +824,7 @@
 				0E8A702A15594EE900607636 /* hashfwd.h in Headers */,
 				0E01DD2715C0F28B00DC4F2B /* counter.h in Headers */,
 				0E01DD2A15C0F29700DC4F2B /* delay.h in Headers */,
+				46AA782C15E685AC0052192D /* zero.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -989,6 +996,7 @@
 				24BDA181151D1D7D00E0A646 /* oauth2.cpp in Sources */,
 				0E01DD2615C0F28B00DC4F2B /* counter.cpp in Sources */,
 				0EF3018A15E4BEF40020B13A /* statistics.cpp in Sources */,
+				46AA782B15E685AC0052192D /* zero.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1239,6 +1247,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+			defaultConfigurationName = Release;
 		5C85448215756F8400589928 /* Build configuration list for PBXNativeTarget "run_tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

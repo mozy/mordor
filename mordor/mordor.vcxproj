@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -181,6 +181,7 @@
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="streams\transfer.cpp" />
     <ClCompile Include="streams\zlib.cpp" />
+    <ClCompile Include="streams\zero.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="workerpool.cpp" />
     <ClCompile Include="xml\dom_parser.cpp" />
@@ -279,6 +280,7 @@
     <ClInclude Include="util.h" />
     <ClInclude Include="version.h" />
     <ClInclude Include="streams\zlib.h" />
+    <ClInclude Include="streams\zero.h" />
     <ClInclude Include="zip.h" />
   </ItemGroup>
   <ItemGroup>
