@@ -8,7 +8,7 @@
 class ZeroStream : public Mordor::Stream
 {
 private:
-    ZeroStream();
+    ZeroStream() {}
 
 public:
     static Stream::ptr get_ptr() {
