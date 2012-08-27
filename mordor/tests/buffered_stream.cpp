@@ -247,6 +247,20 @@ MORDOR_UNITTEST(BufferedStream, findSanityChecks)
     MORDOR_TEST_ASSERT_EQUAL(bufferedStream->find("\r\n", 20, false), -21);
 }
 
+MORDOR_UNITTEST(BufferedStream, testEmptyBuffer)
+{
+    MemoryStream::ptr baseStream(new MemoryStream(Buffer()));
+    BufferedStream::ptr bufferedStream(new BufferedStream(baseStream));
+    bufferedStream->bufferSize(5);
+    MORDOR_TEST_ASSERT_EQUAL(
+        bufferedStream->getDelimited("\r\n", true, false),
+        "");
+
+    MORDOR_TEST_ASSERT_EXCEPTION(
+        bufferedStream->getDelimited("\r\n", false, false),
+        UnexpectedEofException);
+}
+
 static void throwRuntimeError()
 {
     throw std::runtime_error("");

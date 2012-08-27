@@ -149,7 +149,7 @@ Stream::getDelimited(const std::string &delim, bool eofIsDelimiter,
     ptrdiff_t offset = find(delim, ~0, !eofIsDelimiter);
     eofIsDelimiter = offset < 0;
     if (offset < 0)
-        offset = -offset - delim.size();
+        offset = -offset - 1;
     std::string result;
     result.resize(offset + (eofIsDelimiter ? 0 : delim.size()));
     MORDOR_VERIFY(read((char *)result.c_str(), result.size())
