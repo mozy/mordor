@@ -2,17 +2,28 @@
 
 #include "protobuf.h"
 
+#include "mordor/assert.h"
+#include "mordor/streams/buffer.h"
+
+#ifdef MSVC
+// Disable some warnings, but only while
+// processing the google generated code
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+
 #include <google/protobuf/io/zero_copy_stream.h>
 #include <google/protobuf/message.h>
 
-#include "mordor/assert.h"
-#include "mordor/streams/buffer.h"
+#ifdef MSVC
+#pragma warning(pop)
+#endif
 
 using namespace google::protobuf;
 
 #ifdef MSVC
 #ifdef _DEBUG
-#pragma comment(lib, "libprotobuf-debug.lib")
+#pragma comment(lib, "libprotobuf-d.lib")
 #else
 #pragma comment(lib, "libprotobuf.lib")
 #endif
