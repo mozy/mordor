@@ -30,6 +30,7 @@ nobase_include_HEADERS=			\
 	mordor/http/multipart.h		\
 	mordor/http/negotiate.h		\
 	mordor/http/oauth.h		\
+	mordor/http/oauth2.h	\
 	mordor/http/parser.h		\
 	mordor/http/proxy.h		\
 	mordor/http/server.h		\
@@ -130,6 +131,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/http/http_parser.cpp		\
 	mordor/http/multipart.cpp		\
 	mordor/http/oauth.cpp			\
+	mordor/http/oauth2.cpp			\
 	mordor/http/proxy.cpp			\
 	mordor/http/server.cpp			\
 	mordor/http/servlet.cpp			\
