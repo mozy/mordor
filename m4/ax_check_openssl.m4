@@ -32,14 +32,14 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 7
+#serial 8
 
 AU_ALIAS([CHECK_SSL], [AX_CHECK_OPENSSL])
 AC_DEFUN([AX_CHECK_OPENSSL], [
     found=false
-    AC_ARG_WITH(openssl,
-        AS_HELP_STRING([--with-openssl=DIR],
-            [root of the OpenSSL directory]),
+    AC_ARG_WITH([openssl],
+        [AS_HELP_STRING([--with-openssl=DIR],
+            [root of the OpenSSL directory])],
         [
             case "$withval" in
             "" | y | ye | yes | n | no)
@@ -51,7 +51,7 @@ AC_DEFUN([AX_CHECK_OPENSSL], [
         ], [
             # if pkg-config is installed and openssl has installed a .pc file,
             # then use that information and don't search ssldirs
-            AC_PATH_PROG(PKG_CONFIG, pkg-config)
+            AC_PATH_PROG([PKG_CONFIG], [pkg-config])
             if test x"$PKG_CONFIG" != x""; then
                 OPENSSL_LDFLAGS=`$PKG_CONFIG openssl --libs-only-L 2>/dev/null`
                 if test $? = 0; then
@@ -106,7 +106,7 @@ AC_DEFUN([AX_CHECK_OPENSSL], [
     LIBS="$OPENSSL_LIBS $LIBS"
     CPPFLAGS="$OPENSSL_INCLUDES $CPPFLAGS"
     AC_LINK_IFELSE(
-        AC_LANG_PROGRAM([#include <openssl/ssl.h>], [SSL_new(NULL)]),
+        [AC_LANG_PROGRAM([#include <openssl/ssl.h>], [SSL_new(NULL)])],
         [
             AC_MSG_RESULT([yes])
             $1
