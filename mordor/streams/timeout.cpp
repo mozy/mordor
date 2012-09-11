@@ -29,9 +29,9 @@ TimeoutHandler::~TimeoutHandler()
 void
 TimeoutHandler::onTimeout()
 {
-    if (!m_lastTimedOut) {
+    if (m_lastTimedOut == TIMING) {
         MORDOR_LOG_DEBUG(g_log) << this << " timeout";
-        m_lastTimedOut = m_permaTimedOut = true;
+        m_lastTimedOut = m_permaTimedOut = TIMEDOUT;
         if (m_timeoutDg)
             m_timeoutDg();
     } else {
@@ -45,18 +45,18 @@ TimeoutHandler::setTimeout(unsigned long long timeout, TimeoutDg dg)
     m_timeout = timeout;
     m_timeoutDg = dg;
     if (m_timer) {
-        // timer is running
-        if (timeout == ~0ull) {
+        // timer is running, need to stop it or reset its counting down
+        if (!isTimeoutSet()) {
             cancelTimer();
         } else {
             m_timer->reset(timeout, true);
         }
     } else {
-        // timer is not running
-        if (timeout != ~0ull) {
+        // timer is not running, start it
+        if (isTimeoutSet()) {
             // start new timer if read/write is ongoing
             // OR auto start is set
-            if (!m_lastTimedOut || m_autoStart) {
+            if (m_lastTimedOut == TIMING || m_autoStart) {
                 m_timer = m_timerManager.registerTimer(timeout,
                         boost::bind(&TimeoutHandler::onTimeout, this));
             }
@@ -68,26 +68,25 @@ void
 TimeoutHandler::startTimer()
 {
     MORDOR_LOG_TRACE(g_log) << this << " startTimer()";
-    if (m_permaTimedOut)
+    if (m_permaTimedOut == TIMEDOUT)
         MORDOR_THROW_EXCEPTION(TimedOutException());
     MORDOR_ASSERT(!m_timer);
-    m_lastTimedOut = false;
-    if (m_timeout != ~0ull)
+    m_lastTimedOut = TIMING;
+    if (isTimeoutSet())
         m_timer = m_timerManager.registerTimer(m_timeout,
             boost::bind(&TimeoutHandler::onTimeout, this));
-
 }
 
 bool
 TimeoutHandler::cancelTimer()
 {
     MORDOR_LOG_TRACE(g_log) << this << " cancelTimer()";
-    bool res = m_lastTimedOut;
+    bool res = (m_lastTimedOut == TIMEDOUT);
     if (m_timer) {
         m_timer->cancel();
         m_timer.reset();
     }
-    m_lastTimedOut = true;
+    m_lastTimedOut = NONE;
     return res;
 }
 
@@ -95,11 +94,11 @@ bool
 TimeoutHandler::refreshTimer()
 {
     MORDOR_LOG_TRACE(g_log) << this << " refreshTimer()";
-    bool res = m_lastTimedOut;
+    bool res = (m_lastTimedOut == TIMEDOUT);
     if (m_timer) {
         m_timer->refresh();
     }
-    m_lastTimedOut = false;
+    m_lastTimedOut = TIMING;
     return res;
 }
 

@@ -14,11 +14,19 @@ class TimeoutHandler
 {
 public:
     typedef boost::function<void ()> TimeoutDg;
+
+private:
+    enum STATUS {
+        NONE,
+        TIMING,
+        TIMEDOUT
+    };
+
 public:
     TimeoutHandler(TimerManager &timerManager, bool autoRestart = false):
         m_timeout(~0ull),
-        m_lastTimedOut(true),
-        m_permaTimedOut(false),
+        m_lastTimedOut(NONE),
+        m_permaTimedOut(NONE),
         m_autoStart(autoRestart),
         m_timerManager(timerManager)
     {}
@@ -27,7 +35,7 @@ public:
 
     unsigned long long getTimeout() const { return m_timeout; }
     void setTimeout(unsigned long long timeout, TimeoutDg dg);
-    bool isEnabled() const { return m_timeout != ~0ull; }
+    bool isTimeoutSet() const { return m_timeout != ~0ull; }
 
     /// start timer
     /// @throws TimedOutException if it already timed out
@@ -46,8 +54,7 @@ private:
 
 private:
     unsigned long long m_timeout;
-    bool m_lastTimedOut;
-    bool m_permaTimedOut;
+    STATUS m_lastTimedOut, m_permaTimedOut;
     bool m_autoStart;
     TimeoutDg m_timeoutDg;
     boost::shared_ptr<Timer> m_timer;
