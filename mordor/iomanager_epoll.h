@@ -40,11 +40,15 @@ private:
 
         EventContext &contextForEvent(Event event);
         bool triggerEvent(Event event, size_t &pendingEventCount);
+        void resetContext(EventContext &);
 
         int m_fd;
         EventContext m_in, m_out, m_close;
         Event m_events;
         boost::mutex m_mutex;
+
+    private:
+        void asyncResetContextFiber(boost::shared_ptr<Fiber>);
     };
 
 public:
