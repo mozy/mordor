@@ -12,6 +12,7 @@
 #elif defined (OSX)
 #include "mordor/util.h"
 
+#include <Security/SecItem.h>
 #include <Security/SecKeychain.h>
 #include <Security/SecKeychainItem.h>
 #include <Security/SecKeychainSearch.h>
@@ -202,44 +203,37 @@ bool getCredentialsFromKeychain(const URI &uri, ClientRequest::ptr priorRequest,
     else
         return false;
 
-    std::vector<SecKeychainAttribute> attrVector;
-    std::string host = uri.authority.host();
-    attrVector.push_back((SecKeychainAttribute){kSecServerItemAttr, host.size(),
-       (void *)host.c_str()});
+    ScopedCFRef<CFMutableDictionaryRef> query = CFDictionaryCreateMutable(NULL, 0, NULL, NULL);
+    const std::string host = uri.authority.host();
+    CFDictionaryAddValue(query, kSecClass, kSecClassInternetPassword);
+    ScopedCFRef<CFStringRef> server = CFStringCreateWithCStringNoCopy(NULL, host.c_str(), kCFStringEncodingUTF8, kCFAllocatorNull);
+    CFDictionaryAddValue(query, kSecAttrServer, server);
 
-    UInt32 port = 0;
+
     if (uri.authority.portDefined()) {
-        port = uri.authority.port();
-        attrVector.push_back((SecKeychainAttribute){kSecPortItemAttr,
-           sizeof(UInt32), &port});
+        int port = uri.authority.port();
+        ScopedCFRef<CFNumberRef> cfPort = CFNumberCreate(NULL, kCFNumberIntType, &port);
+        CFDictionaryAddValue(query, kSecAttrPort, cfPort);
     }
-    SecProtocolType protocol;
+    CFTypeRef protocol = NULL;
     if (proxy && priorRequest->request().requestLine.method == CONNECT)
-        protocol = kSecProtocolTypeHTTPSProxy;
+        protocol = kSecAttrProtocolHTTPSProxy;
     else if (proxy)
-        protocol = kSecProtocolTypeHTTPProxy;
+        protocol = kSecAttrProtocolHTTPProxy;
     else if (uri.scheme() == "https")
-        protocol = kSecProtocolTypeHTTPS;
+        protocol = kSecAttrProtocolHTTPS;
     else if (uri.scheme() == "http")
-        protocol = kSecProtocolTypeHTTP;
+        protocol = kSecAttrProtocolHTTP;
     else
         MORDOR_NOTREACHED();
-    attrVector.push_back((SecKeychainAttribute){kSecProtocolItemAttr,
-        sizeof(SecProtocolType), &protocol});
-
-    ScopedCFRef<SecKeychainSearchRef> search;
-    SecKeychainAttributeList attrList;
-    attrList.count = (UInt32)attrVector.size();
-    attrList.attr = &attrVector[0];
-
-    OSStatus status = SecKeychainSearchCreateFromAttributes(NULL,
-        kSecInternetPasswordItemClass, &attrList, &search);
-    if (status != 0)
-        return false;
+    CFDictionaryAddValue(query, kSecAttrProtocol, protocol);
+    CFDictionaryAddValue(query, kSecReturnRef, kCFBooleanTrue);
     ScopedCFRef<SecKeychainItemRef> item;
-    status = SecKeychainSearchCopyNext(search, &item);
-    if (status != 0)
+    OSStatus status = SecItemCopyMatching(query, (CFTypeRef*)&item);
+    if (status != errSecSuccess)
         return false;
+    // SecItemCopyMatching() just returns one record by default.
+    MORDOR_ASSERT(CFGetTypeID(item) == SecKeychainItemGetTypeID());
     SecKeychainAttributeInfo info;
     SecKeychainAttrType tag = kSecAccountItemAttr;
     CSSM_DB_ATTRIBUTE_FORMAT format = CSSM_DB_ATTRIBUTE_FORMAT_STRING;
@@ -247,23 +241,22 @@ bool getCredentialsFromKeychain(const URI &uri, ClientRequest::ptr priorRequest,
     info.tag = (UInt32 *)&tag;
     info.format = (UInt32 *)&format;
     
-    SecKeychainAttributeList *attrs;
+    SecKeychainAttributeList *attrs = NULL;
     UInt32 passwordLength = 0;
     void *passwordBytes = NULL;
 
     status = SecKeychainItemCopyAttributesAndData(item, &info, NULL, &attrs,
         &passwordLength, &passwordBytes);
-    if (status != 0)
+    if (status != errSecSuccess)
         return false;
-
     try {
         username.assign((const char *)attrs->attr[0].data, attrs->attr[0].length);
         password.assign((const char *)passwordBytes, passwordLength);
     } catch (...) {
-        SecKeychainItemFreeContent(attrs, passwordBytes);
+        SecKeychainItemFreeAttributesAndData(attrs, passwordBytes);
         throw;
     }
-    SecKeychainItemFreeContent(attrs, passwordBytes);
+    SecKeychainItemFreeAttributesAndData(attrs, passwordBytes);
     return true;
 }
 #endif
