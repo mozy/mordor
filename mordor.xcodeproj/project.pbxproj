@@ -1191,7 +1191,6 @@
 				PRODUCT_NAME = mordor;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				USE_HEADERMAP = NO;
-				ZERO_LINK = NO;
 			};
 			name = Release;
 		};
@@ -1235,14 +1234,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_LDFLAGS = (
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libcrypto-1.0.0e.a",
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libssl-1.0.0e.a",
@@ -1254,7 +1252,6 @@
 					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_date_time-mt.a",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 			};
 			name = Debug;
@@ -1263,14 +1260,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
-				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "NDEBUG=1";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_LDFLAGS = (
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libcrypto-1.0.0e.a",
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libssl-1.0.0e.a",
@@ -1282,7 +1278,6 @@
 					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_date_time-mt.a",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 			};
 			name = Release;
