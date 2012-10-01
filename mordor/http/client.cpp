@@ -19,6 +19,7 @@
 #include "mordor/timer.h"
 #include "mordor/util.h"
 #include "mordor/atomic.h"
+#include "mordor/socket.h"
 #include "multipart.h"
 #include "parser.h"
 
@@ -1317,7 +1318,13 @@ ClientRequest::responseDone()
     while (filter && !chunked && !limited) {
         chunked = boost::dynamic_pointer_cast<ChunkedStream>(filter);
         limited = boost::dynamic_pointer_cast<LimitedStream>(filter);
-        transferStream(filter, NullStream::get());
+        //redmine issue #86223
+        try {
+            transferStream(filter, NullStream::get());
+        }
+        catch( ... ) {
+            MORDOR_LOG_TRACE(g_log) << "Ignoring exception";
+        }
         filter = boost::dynamic_pointer_cast<FilterStream>(filter->parent());
     }
     if (!m_response.general.transferEncoding.empty()) {
