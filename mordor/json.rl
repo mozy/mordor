@@ -14,6 +14,8 @@ namespace {
 class BoolVisitor : public boost::static_visitor<>
 {
 public:
+    BoolVisitor() : result(false) {}
+
     void operator()(const Array &array)
     {
         result = array.empty();
@@ -36,6 +38,8 @@ public:
 class SizeVisitor : public boost::static_visitor<>
 {
 public:
+    SizeVisitor() : result(0) {}
+
     void operator()(const Array &array)
     {
         result = array.size();
