@@ -529,10 +529,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\zero.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\http\oauth.cpp"
 				>
 			</File>
@@ -737,6 +733,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\lzma2.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\zero.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\zip.cpp"
 				>
 			</File>
@@ -788,10 +792,6 @@
 			</File>
 			<File
 				RelativePath=".\streams\counter.h"
-				>
-			</File>
-			<File
-				RelativePath=".\streams\zero.h"
 				>
 			</File>
 			<File
@@ -1112,6 +1112,14 @@
 			</File>
 			<File
 				RelativePath=".\workerpool.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\lzma2.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\zero.h"
 				>
 			</File>
 			<File

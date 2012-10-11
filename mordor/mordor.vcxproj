@@ -168,6 +168,7 @@
       <ObjectFileName>$(IntDir)socket_stream.obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="socket.cpp" />
+    <ClCompile Include="streams\lzma2.cpp" />
     <ClCompile Include="streams\ssl.cpp" />
     <ClCompile Include="statistics.cpp" />
     <ClCompile Include="streams\std.cpp" />
@@ -235,6 +236,7 @@
     <ClInclude Include="iomanager_iocp.h" />
     <ClInclude Include="json.h" />
     <ClInclude Include="streams\limited.h" />
+    <ClInclude Include="streams\lzma2.h" />
     <ClInclude Include="log.h" />
     <ClInclude Include="streams\memory.h" />
     <ClInclude Include="http\multipart.h" />

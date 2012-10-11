@@ -224,6 +224,9 @@
     <ClCompile Include="http\oauth2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="streams\xz.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h">
@@ -500,6 +503,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="http\oauth2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="streams\xz.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -92,6 +92,7 @@ nobase_include_HEADERS=			\
 	mordor/streams/zero.h		\
 	mordor/streams/zlib.h		\
 	mordor/streams/crypto.h		\
+	mordor/streams/lzma2.h		\
 	mordor/string.h			\
 	mordor/test/antxmllistener.h	\
 	mordor/test/compoundlistener.h	\
@@ -194,7 +195,16 @@ mordor_libmordor_la_LDFLAGS=			\
 	$(SECURITY_FRAMEWORK_LIBS)		\
 	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)	\
 	-version-info $(LIBMORDOR_SO_VERSION)
-mordor_libmordor_la_LIBADD=$(OPENSSL_LIBS) $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB)
+mordor_libmordor_la_LIBADD = \
+	$(OPENSSL_LIBS) 		\
+	$(BOOST_REGEX_LIB)		\
+	$(BOOST_THREAD_LIB)		\
+	$(LZMA_LIBS)
+if HAVE_LZMA
+mordor_libmordor_la_SOURCES += \
+	mordor/streams/lzma2.cpp
+mordor_libmordor_la_CFLAGS = $(AM_CFLAGS) $(LZMA_CFLAGS)
+endif
 
 if HAVE_POSTGRESQL
     lib_LTLIBRARIES+=mordor/pq/libmordorpq.la
