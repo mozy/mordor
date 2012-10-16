@@ -67,7 +67,6 @@ static std::string getOpenSSLErrorMessage()
             os << "\n";
         os << ERR_error_string(err, buf);
     }
-    MORDOR_ASSERT(!os.str().empty());
     return os.str();
 }
 
