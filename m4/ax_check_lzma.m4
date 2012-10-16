@@ -84,4 +84,7 @@ then
 fi
 ])
 
-ifdef([m4_ifblank],[],[m4_include(m4/sugar.m4)])
+ifdef([m4_ifblank],[],[
+m4_define([m4_ifblank],
+[m4_if(m4_translit([[$1]],  [ ][	][
+]), [], [$2], [$3])])])
