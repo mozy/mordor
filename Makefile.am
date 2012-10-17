@@ -190,6 +190,7 @@ mordor_libmordor_la_CPPFLAGS=-I$(top_srcdir) -include mordor/pch.h $(AM_CPPFLAGS
 mordor_libmordor_la_LDFLAGS=			\
 	$(OPENSSL_LDFLAGS)			\
 	$(BOOST_LDFLAGS)			\
+	$(LZMA_LDFLAGS)				\
 	$(CORESERVICES_FRAMEWORK_LIBS)		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
 	$(SECURITY_FRAMEWORK_LIBS)		\
@@ -199,7 +200,7 @@ mordor_libmordor_la_LIBADD = \
 	$(OPENSSL_LIBS) 		\
 	$(BOOST_REGEX_LIB)		\
 	$(BOOST_THREAD_LIB)		\
-	$(LZMA_LIBS)
+	$(LZMA_LIB)
 if HAVE_LZMA
 mordor_libmordor_la_SOURCES += \
 	mordor/streams/lzma2.cpp
