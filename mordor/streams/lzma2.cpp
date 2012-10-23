@@ -92,7 +92,7 @@ LZMAStream::read(Buffer &buffer, size_t length)
 
     for (;;) {
         std::vector<iovec> inbufs = m_inBuffer.readBuffers();
-        if (inbufs.empty()) {
+        if (m_inBuffer.readAvailable() == 0) {
             m_strm.next_in = NULL;
             m_strm.avail_in = 0;
         } else {
@@ -104,14 +104,14 @@ LZMAStream::read(Buffer &buffer, size_t length)
             << (inbufs.empty() ? 0 : inbufs[0].iov_len) << ", "
             << outbuf.iov_len << ")): " << rc << " (" << m_strm.avail_in
             << ", " << m_strm.avail_out << ")";
-        if (!inbufs.empty())
+        if (m_inBuffer.readAvailable() > 0)
             m_inBuffer.consume(inbufs[0].iov_len - m_strm.avail_in);
         size_t result;
         switch (rc) {
             case LZMA_BUF_ERROR:
                 // no progress...
                 MORDOR_ASSERT(m_strm.avail_in == 0);
-                MORDOR_ASSERT(inbufs.empty());
+                MORDOR_ASSERT(m_inBuffer.readAvailable() == 0);
                 result = parent()->read(m_inBuffer, BUFFER_SIZE);
                 // the end of input file has been reached, and since we are in
                 // LZMA_CONCATENATED mode, we need to tell lzma_code() that no
@@ -201,17 +201,25 @@ LZMAStream::flushBuffer()
 void
 LZMAStream::finish()
 {
-    if (m_outBuffer.writeAvailable() == 0)
-        m_outBuffer.reserve(BUFFER_SIZE);
-    iovec outbuf = m_outBuffer.writeBuffer(~0u, false);
     MORDOR_ASSERT(m_strm.avail_in == 0);
-    m_strm.next_out = (uint8_t*)outbuf.iov_base;
-    m_strm.avail_out = outbuf.iov_len;
-    lzma_ret rc = lzma_code(&m_strm, LZMA_FINISH);
-    MORDOR_ASSERT(m_strm.avail_in == 0);
-    MORDOR_LOG_DEBUG(g_log) << this << " lzma_code(0, " << outbuf.iov_len
-        << "): " << rc << " (0, " << m_strm.avail_out << ")";
-    m_outBuffer.produce(outbuf.iov_len - m_strm.avail_out);
+    lzma_ret rc = LZMA_OK;
+    do {
+        if (m_outBuffer.writeAvailable() == 0)
+            m_outBuffer.reserve(BUFFER_SIZE);
+        iovec outbuf = m_outBuffer.writeBuffer(~0u, false);
+        m_strm.next_out = (uint8_t*)outbuf.iov_base;
+        m_strm.avail_out = outbuf.iov_len;
+        rc = lzma_code(&m_strm, LZMA_FINISH);
+        MORDOR_ASSERT(m_strm.avail_in == 0);
+        MORDOR_LOG_DEBUG(g_log) << this << " lzma_code(0, " << outbuf.iov_len
+            << "): " << rc << " (0, " << m_strm.avail_out << ")";
+        if (m_strm.avail_out == 0 || rc == LZMA_STREAM_END) {
+            m_outBuffer.produce(outbuf.iov_len - m_strm.avail_out);
+        }
+        if (m_outBuffer.writeAvailable() == 0) {
+            flushBuffer();
+        }
+    } while (rc == LZMA_OK);
     if (rc != LZMA_STREAM_END) {
         MORDOR_THROW_EXCEPTION(LZMAException(rc));
     }
