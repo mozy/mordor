@@ -5,6 +5,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
+#include "exception.h"
 #include "preparedstatement.h"
 
 namespace Mordor {
@@ -42,35 +43,45 @@ public:
     /// statement on the server
     PreparedStatement find(const std::string &name);
 
+#define PQ_EXCEPTION_WRAPPER_EXECUTE(code) \
+    try {                                  \
+        return code;                       \
+    } catch (Mordor::PQ::Exception &) {    \
+        m_exceptioned = true;              \
+        throw;                             \
+    }
+
     Result execute(const std::string &command)
-    { return prepare(command).execute(); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute()); }
     template <class T1>
     Result execute(const std::string &command, const T1 &param1)
-    { return prepare(command).execute(param1); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute(param1)); }
     template <class T1, class T2>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2)
-    { return prepare(command).execute(param1, param2); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute(param1, param2)); }
     template <class T1, class T2, class T3>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3)
-    { return prepare(command).execute(param1, param2, param3); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute(param1, param2, param3)); }
     template <class T1, class T2, class T3, class T4>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3, const T4 &param4)
-    { return prepare(command).execute(param1, param2, param3, param4); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute(param1, param2, param3, param4)); }
     template <class T1, class T2, class T3, class T4, class T5>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3, const T4 &param4, const T5 &param5)
-    { return prepare(command).execute(param1, param2, param3, param4, param5); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute(param1, param2, param3, param4, param5)); }
     template <class T1, class T2, class T3, class T4, class T5, class T6>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3, const T4 &param4, const T5 &param5, const T6 &param6)
-    { return prepare(command).execute(param1, param2, param3, param4, param5, param6); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute(param1, param2, param3, param4, param5, param6)); }
     template <class T1, class T2, class T3, class T4, class T5, class T6, class T7>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3, const T4 &param4, const T5 &param5, const T6 &param6, const T7 &param7)
-    { return prepare(command).execute(param1, param2, param3, param4, param5, param6, param7); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute(param1, param2, param3, param4, param5, param6, param7)); }
     template <class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3, const T4 &param4, const T5 &param5, const T6 &param6, const T7 &param7, const T8 &param8)
-    { return prepare(command).execute(param1, param2, param3, param4, param5, param6, param7, param8); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute(param1, param2, param3, param4, param5, param6, param7, param8)); }
     template <class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9>
     Result execute(const std::string &command, const T1 &param1, const T2 &param2, const T3 &param3, const T4 &param4, const T5 &param5, const T6 &param6, const T7 &param7, const T8 &param8, const T9 &param9)
-    { return prepare(command).execute(param1, param2, param3, param4, param5, param6, param7, param8, param9); }
+    { PQ_EXCEPTION_WRAPPER_EXECUTE(prepare(command).execute(param1, param2, param3, param4, param5, param6, param7, param8, param9)); }
+
+#undef PQ_EXCEPTION_WRAPPER_EXECUTE
 
     /// Bulk copy data to the server
     struct CopyParams
@@ -147,6 +158,7 @@ private:
     std::string m_conninfo;
     SchedulerType *m_scheduler;
     boost::shared_ptr<PGconn> m_conn;
+    bool m_exceptioned;
 };
 
 // Internal functions

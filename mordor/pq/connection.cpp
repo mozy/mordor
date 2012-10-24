@@ -20,6 +20,7 @@ static Logger::ptr g_log = Log::lookup("mordor:pq");
 Connection::Connection(const std::string &conninfo, IOManager *ioManager,
     Scheduler *scheduler, bool connectImmediately)
 : m_conninfo(conninfo)
+, m_exceptioned(false)
 {
 #ifdef WINDOWS
     m_scheduler = scheduler;
@@ -33,7 +34,7 @@ Connection::Connection(const std::string &conninfo, IOManager *ioManager,
 ConnStatusType
 Connection::status()
 {
-    if (!m_conn)
+    if (!m_conn || m_exceptioned)
         return CONNECTION_BAD;
     return PQstatus(m_conn.get());
 }
