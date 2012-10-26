@@ -42,6 +42,7 @@ Connection::status()
 void
 Connection::connect()
 {
+    m_exceptioned = false;
 #ifdef WINDOWS
     SchedulerSwitcher switcher(m_scheduler);
 #else
@@ -93,6 +94,7 @@ Connection::connect()
 void
 Connection::reset()
 {
+    m_exceptioned = false;
 #ifdef WINDOWS
     SchedulerSwitcher switcher(m_scheduler);
 #else
