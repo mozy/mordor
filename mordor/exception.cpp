@@ -296,6 +296,7 @@ void throwExceptionFromLastError(error_t error)
             throw boost::enable_current_exception(BrokenPipeException())
                 << errinfo_nativeerror(error);
         case ERROR_SHARING_VIOLATION:
+        case ERROR_LOCK_VIOLATION:
             throw boost::enable_current_exception(SharingViolation())
                 << errinfo_nativeerror(error);
         case ERROR_CANT_RESOLVE_FILENAME:
