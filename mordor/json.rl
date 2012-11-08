@@ -64,6 +64,11 @@ public:
 };
 }
 
+#if defined(GCC) && ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 6))
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 bool
 Value::empty() const
 {
@@ -79,6 +84,10 @@ Value::size() const
     boost::apply_visitor(visitor, *this);
     return visitor.result;
 }
+
+#if defined(GCC) && ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 6))
+#pragma GCC diagnostic pop
+#endif
 
 static Value g_blank;
 
