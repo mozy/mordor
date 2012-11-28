@@ -92,7 +92,7 @@ private:
     void stat();
     void doWrite(boost::shared_ptr<HTTP::ClientRequest> request);
     void startWrite();
-    void clearParent();
+    void clearParent(bool error = false);
 
 private:
     HTTP::Request m_requestHeaders;
@@ -107,6 +107,7 @@ private:
     bool m_writeInProgress, m_abortWrite;
     Future<> m_writeFuture, m_writeFuture2;
     boost::shared_ptr<HTTP::ClientRequest> m_writeRequest;
+    boost::shared_ptr<HTTP::ClientRequest> m_readRequest;
     boost::exception_ptr m_writeException;
 };
 

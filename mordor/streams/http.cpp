@@ -51,7 +51,11 @@ HTTPStream::HTTPStream(const Request &requestHeaders, RequestBroker::ptr request
 
 HTTPStream::~HTTPStream()
 {
-    clearParent();
+    try {
+        clearParent();
+    } catch (...) {
+        // ignore clean up errors
+    }
 }
 
 ETag
@@ -144,6 +148,7 @@ HTTPStream::start(size_t length)
                         request->cancel(true);
                         clearParent();
                     } else {
+                        m_readRequest = request;
                         parent(request->responseStream());
                     }
                     m_pos = 0;
@@ -155,6 +160,7 @@ HTTPStream::start(size_t length)
                     m_readRequested = ~0ull;
                     transferStream(responseStream, NullStream::get(), m_pos);
                 }
+                m_readRequest = request;
                 parent(responseStream);
                 break;
             default:
@@ -220,6 +226,7 @@ HTTPStream::checkModified()
             return true;
         }
     }
+    m_readRequest = request;
     parent(responseStream);
     return true;
 }
@@ -260,12 +267,12 @@ HTTPStream::read(Buffer &buffer, size_t length)
                 throw;
             }
         } catch (SocketException &) {
-            clearParent();
+            clearParent(true);
             if (!m_delayDg || !m_delayDg(++*retries))
                 throw;
             continue;
         } catch (UnexpectedEofException &) {
-            clearParent();
+            clearParent(true);
             if (!m_delayDg || !m_delayDg(++*retries))
                 throw;
             continue;
@@ -402,7 +409,7 @@ HTTPStream::seek(long long offset, Anchor anchor)
             MORDOR_ASSERT(m_pos == offset);
             return m_pos;
         } catch (...) {
-            clearParent();
+            clearParent(true);
         }
     } else {
         clearParent();
@@ -555,7 +562,7 @@ HTTPStream::flush(bool flushParent)
 }
 
 void
-HTTPStream::clearParent()
+HTTPStream::clearParent(bool error)
 {
     if (m_writeInProgress) {
         m_abortWrite = true;
@@ -564,9 +571,23 @@ HTTPStream::clearParent()
         m_writeFuture.wait();
         MORDOR_ASSERT(!m_writeInProgress);
     }
-    if (parent())
-        parent()->close();
-    parent(Stream::ptr());
+    if (parent()) {
+        if (parent()->supportsWrite() && m_writeRequest) {
+            if (error)
+                m_writeRequest->cancel(true);
+            else
+                m_writeRequest->finish();
+            m_writeRequest.reset();
+        }
+        if (parent()->supportsRead() && m_readRequest) {
+            if (error)
+                m_readRequest->cancel(true);
+            else
+                m_readRequest->finish();
+            m_readRequest.reset();
+        }
+        parent(Stream::ptr());
+    }
 }
 
 }
