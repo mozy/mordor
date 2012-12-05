@@ -122,7 +122,7 @@ struct HashOps<MD5>
     { return MD5_Update(ctx, data, len); }
     static int final(unsigned char *md, ctx_type *ctx)
     { return MD5_Final(md, ctx); }
-    static size_t digestLength() { return SHA256_DIGEST_LENGTH; }
+    static size_t digestLength() { return MD5_DIGEST_LENGTH; }
 };
 
 template<HASH_TYPE H>
