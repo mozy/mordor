@@ -1,7 +1,7 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
 #include "mordor/predef.h"
-
+#include "mordor/config.h"
 #include "stdoutlistener.h"
 
 #include <iostream>
@@ -10,6 +10,9 @@
 
 using namespace Mordor;
 using namespace Mordor::Test;
+
+static ConfigVar<bool>::ptr g_include_startime =
+    Config::lookup<bool>("mordor.test.outputstarttime", true, "Print start time in test output");
 
 StdoutListener::StdoutListener()
 : m_tests(0),
@@ -22,7 +25,10 @@ StdoutListener::testStarted(const std::string &suite, const std::string &test)
 {
     if (test != "<invariant>")
         ++m_tests;
-    std::cout << "Running " << suite << "::" << test << ": ";
+    std::cout << "Running ";
+    if( g_include_startime->val() )
+        std::cout << "(" << time(NULL) << ") ";
+    std::cout << suite << "::" << test << ": ";
     std::cout.flush();
 }
 
