@@ -222,6 +222,78 @@ MORDOR_UNITTEST(HTTPClient, simpleResponseBody)
 #endif
 }
 
+static void validateMultipartStream(
+        Stream::ptr stream,
+        std::string data)
+{
+    MORDOR_TEST_ASSERT(stream);
+    MORDOR_TEST_ASSERT(stream->supportsRead());
+    MORDOR_TEST_ASSERT(!stream->supportsWrite());
+    MORDOR_TEST_ASSERT(!stream->supportsSeek());
+    MORDOR_TEST_ASSERT(!stream->supportsTruncate());
+    MORDOR_TEST_ASSERT(!stream->supportsFind());
+    MORDOR_TEST_ASSERT(!stream->supportsUnread());
+
+    MemoryStream body;
+    transferStream(stream, body);
+    MORDOR_TEST_ASSERT(body.buffer() == data);
+}
+
+MORDOR_UNITTEST(HTTPClient, multipartResponseBody)
+{
+    std::string boundary = Multipart::randomBoundary();
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: multipart/bytesrange; boundary=\"" + boundary + "\"\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "\r\n--" + boundary + "\r\n"
+        "\r\n"
+        "This is the first part.\r\n"
+        "--" + boundary + "\r\n"
+        "\r\n"
+        "This is the second part.\r\n"
+        "--" + boundary + "--\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT(request->hasResponseBody());
+
+    Multipart::ptr response = request->responseMultipart();
+    BodyPart::ptr part = response->nextPart();
+    MORDOR_TEST_ASSERT(part);
+    Stream::ptr stream = part->stream();
+    validateMultipartStream(stream, "This is the first part.");
+
+    part = response->nextPart();
+    MORDOR_TEST_ASSERT(part);
+    stream = part->stream();
+    validateMultipartStream(stream, "This is the second part.");
+
+    part = response->nextPart();
+    MORDOR_TEST_ASSERT(!part);
+
+    stream.reset();
+    part.reset();
+    response.reset();
+#ifndef NDEBUG
+    MORDOR_TEST_ASSERT_ASSERTED(request->responseMultipart());
+#endif
+    request->finish();
+}
+
 MORDOR_UNITTEST(HTTPClient, incompleteResponseBody)
 {
     MemoryStream::ptr requestStream(new MemoryStream());

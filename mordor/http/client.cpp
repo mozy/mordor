@@ -656,15 +656,17 @@ ClientRequest::stream()
 Multipart::ptr
 ClientRequest::responseMultipart()
 {
+    MORDOR_ASSERT(m_response.entity.contentType.type == "multipart");
     Multipart::ptr result = m_responseMultipart.lock();
-    if (result)
+    if (result) {
+        MORDOR_ASSERT(m_hasResponseBody);
         return result;
-    // You can only ask for the response stream once
+    }
+    // You can only ask for the response multipart once
     // (to avoid circular references)
     MORDOR_ASSERT(!m_hasResponseBody);
     ensureResponse();
     MORDOR_ASSERT(m_responseState == BODY);
-    MORDOR_ASSERT(m_response.entity.contentType.type == "multipart");
     StringMap::const_iterator it = m_response.entity.contentType.parameters.find("boundary");
     if (it == m_response.entity.contentType.parameters.end()) {
         MORDOR_THROW_EXCEPTION(MissingMultipartBoundaryException());
@@ -677,6 +679,7 @@ ClientRequest::responseMultipart()
     result.reset(new Multipart(stream, it->second));
     result->multipartFinished = boost::bind(&ClientRequest::responseDone, shared_from_this());
     m_responseMultipart = result;
+    m_hasResponseBody = true;
     return result;
 }
 
