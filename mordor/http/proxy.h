@@ -118,10 +118,10 @@ private:
 
     void runPacWorker();
 
-    std::vector<URI> proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
+    std::vector<URI> proxyFromPacScript(CFURLRef cfurl, ScopedCFRef<CFURLRef> targeturl,
         RequestBroker::ptr requestBroker,
         std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts);
-    std::vector<URI> proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl,
+    std::vector<URI> proxyFromCFArray(CFArrayRef proxies, ScopedCFRef<CFURLRef> targeturl,
         RequestBroker::ptr requestBroker,
         std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts);
 };

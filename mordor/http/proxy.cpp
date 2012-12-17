@@ -342,7 +342,7 @@ ProxyCache::~ProxyCache()
     m_pacThread.join();
 }
 
-std::vector<URI> ProxyCache::proxyFromCFArray(CFArrayRef proxies, CFURLRef targeturl,
+std::vector<URI> ProxyCache::proxyFromCFArray(CFArrayRef proxies, ScopedCFRef<CFURLRef> targeturl,
     RequestBroker::ptr requestBroker,
     std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts)
 {
@@ -425,7 +425,7 @@ void ProxyCache::runPacWorker()
     }
 }
 
-std::vector<URI> ProxyCache::proxyFromPacScript(CFURLRef cfurl, CFURLRef targeturl,
+std::vector<URI> ProxyCache::proxyFromPacScript(CFURLRef cfurl, ScopedCFRef<CFURLRef> targeturl,
     RequestBroker::ptr requestBroker,
     std::map<URI, ScopedCFRef<CFStringRef> > &cachedScripts)
 {
