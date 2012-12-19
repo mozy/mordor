@@ -472,7 +472,7 @@ struct RequestBrokerOptions
     bool handleRedirects; // Whether to add a RedirectRequestBroker to the chain of RequestBrokers
     TimerManager *timerManager; // When not specified the iomanager will be used
 
-    // Optional timeout values (ns)
+    // Optional timeout values (us)
     unsigned long long connectTimeout;
     unsigned long long sslConnectReadTimeout;
     unsigned long long sslConnectWriteTimeout;

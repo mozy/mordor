@@ -86,7 +86,7 @@ Logger::ptr getLogger();
 
 /// @ingroup parallel_do
 /// Execute a functor for multiple objects in parallel by scheduling up to
-/// parallelism at a time on the current Scheduler.  Concurrency is achived
+/// parallelism at a time on the current Scheduler.  Concurrency is achieved
 /// either because the Scheduler is running on multiple threads, or because the
 /// the functor yields to the Scheduler during execution, instead of blocking.
 /// @tparam Iterator The type of the iterator for the collection
