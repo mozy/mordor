@@ -42,6 +42,7 @@ nobase_include_HEADERS=			\
 	mordor/json.h			\
 	mordor/log.h			\
 	mordor/main.h			\
+	mordor/openssl_lock.h		\
 	mordor/parallel.h		\
 	mordor/pq/connection.h		\
 	mordor/pq/connectionpool.h	\
@@ -141,6 +142,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/iomanager_kqueue.cpp		\
 	mordor/json.cpp				\
 	mordor/log.cpp				\
+	mordor/openssl_lock.cpp			\
 	mordor/parallel.cpp			\
 	mordor/ragel.cpp			\
 	mordor/scheduler.cpp			\

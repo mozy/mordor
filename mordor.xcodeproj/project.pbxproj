@@ -150,6 +150,8 @@
 		EA9919FF142946FC0069FD05 /* crypto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EA9919FC142946FC0069FD05 /* crypto.cpp */; };
 		EA991A00142946FC0069FD05 /* crypto.h in Headers */ = {isa = PBXBuildFile; fileRef = EA9919FD142946FC0069FD05 /* crypto.h */; };
 		EA991A01142946FC0069FD05 /* crypto.h in Headers */ = {isa = PBXBuildFile; fileRef = EA9919FD142946FC0069FD05 /* crypto.h */; };
+		FC1BF5041694A05E00B8D291 /* openssl_lock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FC1BF5021694A05E00B8D291 /* openssl_lock.cpp */; };
+		FC1BF5051694A05E00B8D291 /* openssl_lock.h in Headers */ = {isa = PBXBuildFile; fileRef = FC1BF5031694A05E00B8D291 /* openssl_lock.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -444,6 +446,8 @@
 		EA9919F9142946E60069FD05 /* crypto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = crypto.cpp; sourceTree = "<group>"; };
 		EA9919FC142946FC0069FD05 /* crypto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = crypto.cpp; sourceTree = "<group>"; };
 		EA9919FD142946FC0069FD05 /* crypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = crypto.h; sourceTree = "<group>"; };
+		FC1BF5021694A05E00B8D291 /* openssl_lock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = openssl_lock.cpp; sourceTree = "<group>"; };
+		FC1BF5031694A05E00B8D291 /* openssl_lock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = openssl_lock.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -533,6 +537,8 @@
 		3CAB26D4112B096700607AEE /* mordor */ = {
 			isa = PBXGroup;
 			children = (
+				FC1BF5021694A05E00B8D291 /* openssl_lock.cpp */,
+				FC1BF5031694A05E00B8D291 /* openssl_lock.h */,
 				3F4296EF1385DADC007EC0C7 /* util.cpp */,
 				C32854BC120A1E750079C4A2 /* thread.cpp */,
 				C32854BD120A1E750079C4A2 /* thread.h */,
@@ -847,6 +853,7 @@
 				0E01DD2A15C0F29700DC4F2B /* delay.h in Headers */,
 				46AA782C15E685AC0052192D /* zero.h in Headers */,
 				4620C41C1613FB91006114F3 /* lzma2.h in Headers */,
+				FC1BF5051694A05E00B8D291 /* openssl_lock.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1046,6 +1053,7 @@
 				0EF3018A15E4BEF40020B13A /* statistics.cpp in Sources */,
 				46AA782B15E685AC0052192D /* zero.cpp in Sources */,
 				4620C41A1613FB91006114F3 /* lzma2.cpp in Sources */,
+				FC1BF5041694A05E00B8D291 /* openssl_lock.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1095,7 +1103,6 @@
 				0E01DD2C15C0F2E400DC4F2B /* counter_stream.cpp in Sources */,
 				0E01DD2E15C0F2F800DC4F2B /* notify_stream.cpp in Sources */,
 				0E01DD3015C0F30200DC4F2B /* timeout_stream.cpp in Sources */,
-				4620C41B1613FB91006114F3 /* lzma2.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

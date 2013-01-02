@@ -117,6 +117,7 @@
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="daemon.cpp" />
+    <ClCompile Include="openssl_lock.cpp" />
     <ClCompile Include="parallel.cpp" />
     <ClCompile Include="socks.cpp" />
     <ClCompile Include="streams\buffer.cpp" />
@@ -202,6 +203,7 @@
     <ClInclude Include="http\servlets\config.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="daemon.h" />
+    <ClInclude Include="openssl_lock.h" />
     <ClInclude Include="parallel.h" />
     <ClInclude Include="socks.h" />
     <ClInclude Include="streams\buffer.h" />
