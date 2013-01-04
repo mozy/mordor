@@ -48,7 +48,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/MP"
+				AdditionalOptions="/Zm200 /MP"
 				Optimization="0"
 				AdditionalIncludeDirectories=".."
 				BasicRuntimeChecks="3"
@@ -117,7 +117,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/MP"
+				AdditionalOptions="/Zm200 /MP"
 				Optimization="0"
 				AdditionalIncludeDirectories=".."
 				BasicRuntimeChecks="3"
@@ -186,7 +186,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/MP"
+				AdditionalOptions="/Zm200 /MP"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories=".."
@@ -257,7 +257,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/MP"
+				AdditionalOptions="/Zm200 /MP"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories=".."
@@ -337,10 +337,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\counter.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\http\chunked.cpp"
 				>
 			</File>
@@ -393,6 +389,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\counter.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\crypto.cpp"
 				>
 			</File>
@@ -406,6 +406,10 @@
 			</File>
 			<File
 				RelativePath=".\http\digest.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\xml\dom_parser.cpp"
 				>
 			</File>
 			<File
@@ -445,10 +449,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\http.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\streams\http.cpp"
 				>
 				<FileConfiguration
@@ -485,6 +485,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\http\http.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\http\http_parser.cpp"
 				>
 			</File>
@@ -502,6 +506,10 @@
 			</File>
 			<File
 				RelativePath=".\log.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\lzma2.cpp"
 				>
 			</File>
 			<File
@@ -725,15 +733,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\xml\dom_parser.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\xml\xml_parser.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\streams\lzma2.cpp"
 				>
 			</File>
 			<File
@@ -791,10 +791,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\streams\counter.h"
-				>
-			</File>
-			<File
 				RelativePath=".\http\chunked.h"
 				>
 			</File>
@@ -819,6 +815,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\streams\counter.h"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\crypto.h"
 				>
 			</File>
@@ -836,6 +836,10 @@
 			</File>
 			<File
 				RelativePath=".\http\digest.h"
+				>
+			</File>
+			<File
+				RelativePath=".\xml\dom_parser.h"
 				>
 			</File>
 			<File
@@ -891,11 +895,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\http.h"
+				RelativePath=".\streams\http.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\http.h"
+				RelativePath=".\http\http.h"
 				>
 			</File>
 			<File
@@ -916,6 +920,10 @@
 			</File>
 			<File
 				RelativePath=".\log.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streams\lzma2.h"
 				>
 			</File>
 			<File
@@ -959,15 +967,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\http\parser.h"
-				>
-			</File>
-			<File
-				RelativePath=".\xml\dom_parser.h"
-				>
-			</File>
-			<File
 				RelativePath=".\xml\parser.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http\parser.h"
 				>
 			</File>
 			<File
@@ -1003,11 +1007,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\scheduler.h"
+				RelativePath=".\streams\scheduler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\streams\scheduler.h"
+				RelativePath=".\scheduler.h"
 				>
 			</File>
 			<File
@@ -1112,10 +1116,6 @@
 			</File>
 			<File
 				RelativePath=".\workerpool.h"
-				>
-			</File>
-			<File
-				RelativePath=".\streams\lzma2.h"
 				>
 			</File>
 			<File
