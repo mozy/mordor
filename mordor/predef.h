@@ -4,8 +4,8 @@
 #include "version.h"
 
 #ifdef WINDOWS
-// Get Vista+ APIs
-#define _WIN32_WINNT 0x0600
+// Get Win7+ APIs
+#define _WIN32_WINNT 0x0601
 // Don't include tons of crap from windows.h
 #define WIN32_LEAN_AND_MEAN
 // Define this so security.h works
