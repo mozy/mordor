@@ -27,6 +27,11 @@
 #include <ntstatus.h>
 #define WIN32_NO_STATUS
 #include <windows.h>
+// define the PSAPI_VERSION to 1 so that we can still run on old XP systems
+// The specific function that was failing fo kalypso was GetModuleName
+/* http://msdn.microsoft.com/en-us/library/windows/desktop/ms683196(v=vs.85).aspx */
+#define PSAPI_VERSION (1)
+
 #include <ws2tcpip.h>
 
 // Take things out of the preprocessor, and put into the global namespace
