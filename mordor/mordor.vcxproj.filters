@@ -221,6 +221,9 @@
     <ClCompile Include="http\oauth2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="xml\dom_parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="anymap.h">
@@ -491,6 +494,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="http\oauth2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="xml\dom_parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

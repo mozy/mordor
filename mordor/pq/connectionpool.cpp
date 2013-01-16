@@ -1,5 +1,7 @@
 // Copyright (c) 2010 Mozy, Inc.
 
+#include "mordor/predef.h"
+
 #include "connectionpool.h"
 
 #include <boost/bind.hpp>
