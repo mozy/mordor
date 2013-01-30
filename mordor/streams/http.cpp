@@ -164,6 +164,7 @@ HTTPStream::start(size_t length)
                 parent(responseStream);
                 break;
             default:
+                request->finish();
                 MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
         }
     }
