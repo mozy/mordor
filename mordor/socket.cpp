@@ -1442,13 +1442,18 @@ Address::getInterfaceAddresses(int family)
     } while ((error == ERROR_BUFFER_OVERFLOW) && (tries < 3));
     if (error && error != ERROR_CALL_NOT_IMPLEMENTED)
     {
-        free(addresses);
+        if (addresses != NULL)
+        {
+            free(addresses);
+            addresses = NULL;
+        }
         MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "GetAdaptersAddresses");
     }
-    // Either doesn't exist, or doesn't include netmask info to construct broadcast addr
-    if (error == ERROR_CALL_NOT_IMPLEMENTED ||
+    else if (error == ERROR_CALL_NOT_IMPLEMENTED ||
+        NULL == addresses ||
+        NULL == addresses->FirstUnicastAddress ||
         addresses->FirstUnicastAddress->Length < sizeof(IP_ADAPTER_UNICAST_ADDRESS_LH)) 
-    {
+    {   // Either doesn't exist, or doesn't include netmask info to construct broadcast addr
         // cleanup the old addresses
         if (addresses != NULL)
         {
