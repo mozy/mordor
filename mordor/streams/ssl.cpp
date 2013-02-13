@@ -87,7 +87,7 @@ static void add_ext(X509 *cert, int nid, const char *value);
 
 static void mkcert(boost::shared_ptr<X509> &cert,
                   boost::shared_ptr<EVP_PKEY> &pkey, int bits, int serial,
-                  int days)
+                  int days, const std::string &commonName)
 {
     RSA *rsa;
     X509_NAME *name=NULL;
@@ -118,9 +118,12 @@ static void mkcert(boost::shared_ptr<X509> &cert,
                             MBSTRING_ASC,
                             (const unsigned char *)"United States",
                             -1, -1, 0);
+    const char *cn = commonName.c_str();
+    if (commonName.empty())
+        cn = "Mordor Default Self-signed Certificate";
     X509_NAME_add_entry_by_txt(name,"CN",
                             MBSTRING_ASC,
-                            (const unsigned char *)"Mordor Default Self-signed Certificate",
+                            (const unsigned char *)cn,
                             -1, -1, 0);
 
     /* Its self signed so set the issuer name to be the same as the
@@ -161,6 +164,18 @@ void add_ext(X509 *cert, int nid, const char *value)
     X509_EXTENSION_free(ex);
 }
 
+boost::shared_ptr<SSL_CTX>
+SSLStream::generateSelfSignedCertificate(const std::string &commonName)
+{
+    boost::shared_ptr<SSL_CTX> ctx;
+    ctx.reset(SSL_CTX_new(SSLv23_server_method()), &SSL_CTX_free);
+    boost::shared_ptr<X509> cert;
+    boost::shared_ptr<EVP_PKEY> pkey;
+    mkcert(cert, pkey, 1024, rand(), 365, commonName);
+    SSL_CTX_use_certificate(ctx.get(), cert.get());
+    SSL_CTX_use_PrivateKey(ctx.get(), pkey.get());
+    return ctx;
+}
 
 SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
 : MutatingFilterStream(parent, own)
@@ -169,22 +184,17 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
     ERR_clear_error();
     if (ctx)
         m_ctx.reset(ctx, &nop<SSL_CTX *>);
+    // Auto-generate self-signed server cert
+    else if (!client)
+        m_ctx = generateSelfSignedCertificate();
     else
-        m_ctx.reset(SSL_CTX_new(client ? SSLv23_client_method() :
-            SSLv23_server_method()), &SSL_CTX_free);
+        m_ctx.reset(SSL_CTX_new(SSLv23_client_method()), &SSL_CTX_free);
     if (!m_ctx) {
         MORDOR_ASSERT(hasOpenSSLError());
         MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
             << boost::errinfo_api_function("SSL_CTX_new");
     }
-    // Auto-generate self-signed server cert
-    if (!ctx && !client) {
-        boost::shared_ptr<X509> cert;
-        boost::shared_ptr<EVP_PKEY> pkey;
-        mkcert(cert, pkey, 1024, rand(), 365);
-        SSL_CTX_use_certificate(m_ctx.get(), cert.get());
-        SSL_CTX_use_PrivateKey(m_ctx.get(), pkey.get());
-    }
+
     m_ssl.reset(SSL_new(m_ctx.get()), &SSL_free);
     if (!m_ssl) {
         MORDOR_ASSERT(hasOpenSSLError());

@@ -51,6 +51,10 @@ public:
     typedef boost::shared_ptr<SSLStream> ptr;
 
 public:
+    static boost::shared_ptr<SSL_CTX> generateSelfSignedCertificate(
+        const std::string &commonName = std::string());
+
+public:
     SSLStream(Stream::ptr parent, bool client = true, bool own = true, SSL_CTX *ctx = NULL);
 
     bool supportsHalfClose() { return false; }
