@@ -837,3 +837,28 @@ MORDOR_UNITTEST(HTTP, boundary)
     MORDOR_TEST_ASSERT_EQUAL(mt2.parameters.size(), 1u);
     MORDOR_TEST_ASSERT_EQUAL(mt2.parameters["boundary"], boundary);
 }
+
+MORDOR_UNITTEST(HTTP, authHeader)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("GET / HTTP/1.1\r\n"
+               "Authorization: OAuth oauth_consumer_key=\"It's Bob \\\" pub key\" , oauth_version=1.0\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.final());
+
+    AuthParams & auth = request.request.authorization;
+    MORDOR_TEST_ASSERT_EQUAL(auth.scheme, "OAuth");
+    MORDOR_TEST_ASSERT_EQUAL(auth.parameters.size(), 2u);
+
+    StringMap::iterator it;
+    it = auth.parameters.find("oauth_version");
+    MORDOR_TEST_ASSERT(it != auth.parameters.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "1.0");
+
+    it = auth.parameters.find("oauth_consumer_key");
+    MORDOR_TEST_ASSERT(it != auth.parameters.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "It's Bob \" pub key");
+}

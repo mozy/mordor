@@ -161,7 +161,7 @@ unquote(const std::string &str)
     ctext = TEXT -- ("(" | ")");
     comment = "(" @{fcall parse_comment;};
     parse_comment := (ctext | quoted_pair | '(' @{fcall parse_comment;} )* ")" @{fret;};
-    qdtext = TEXT -- "\"";
+    qdtext = TEXT -- ("\"" | "\\");
     quoted_string = "\"" ( qdtext | quoted_pair )* "\"";
 
     base64char = ALPHA | DIGIT | '+' | '/';
