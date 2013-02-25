@@ -94,6 +94,8 @@ public:
     /// ignore request body
     void discardRequestBody();
 
+    unsigned long long startTime() const { return m_startTime; }
+
 private:
     void doRequest();
     void commit();
@@ -115,6 +117,7 @@ private:
     boost::shared_ptr<Stream> m_requestStream, m_responseStream;
     boost::shared_ptr<Multipart> m_requestMultipart, m_responseMultipart;
     std::string m_context;
+    unsigned long long m_startTime;
 };
 
 /// Individual connection to an HTTP server

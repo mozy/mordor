@@ -9,6 +9,7 @@
 #include "mordor/socket.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/transfer.h"
+#include "mordor/timer.h"
 #include "multipart.h"
 #include "parser.h"
 
@@ -250,7 +251,8 @@ ServerRequest::ServerRequest(ServerConnection::ptr conn)
   m_requestState(HEADERS),
   m_responseState(PENDING),
   m_willClose(false),
-  m_pipeline(false)
+  m_pipeline(false),
+  m_startTime(0)
 {
     std::ostringstream os;
     os << m_conn << "-" << m_requestNumber;
@@ -433,6 +435,7 @@ ServerRequest::doRequest()
         RequestParser parser(m_request);
         try {
             unsigned long long consumed = parser.run(m_conn->m_stream);
+            m_startTime = TimerManager::now();
             if (consumed == 0 && !parser.error() && !parser.complete()) {
                 // EOF
                 MORDOR_LOG_TRACE(g_log) << m_conn << " No more request";
