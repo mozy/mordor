@@ -328,6 +328,33 @@ MORDOR_UNITTEST(Socket, sendReceive)
     MORDOR_TEST_ASSERT_EQUAL(sendbuf, (const char *)receivebuf);
 }
 
+#ifndef WINDOWS
+MORDOR_UNITTEST(Socket, exceedIOVMAX)
+{
+    IOManager ioManager;
+    Connection conns = establishConn(ioManager);
+    ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
+    conns.connect->connect(conns.address);
+    ioManager.dispatch();
+
+    const char * buf = "abcd";
+    size_t n = IOV_MAX + 1, len = 4;
+    boost::shared_array<iovec> iovs(new iovec[n]);
+    for (size_t i = 0 ; i < n; ++i) {
+        iovs[i].iov_base = (void*)buf;
+        iovs[i].iov_len = len;
+    }
+    size_t rc;
+    try {
+        rc = conns.connect->send(iovs.get(), n);
+    } catch (...) {
+        MORDOR_NOTREACHED();
+    }
+    MORDOR_TEST_ASSERT(rc <= IOV_MAX * len);
+    MORDOR_TEST_ASSERT(rc >= 0);
+}
+#endif
+
 static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
 {
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);

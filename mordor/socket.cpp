@@ -940,7 +940,7 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
     msghdr msg;
     memset(&msg, 0, sizeof(msghdr));
     msg.msg_iov = buffers;
-    msg.msg_iovlen = length;
+    msg.msg_iovlen = std::min(length, (size_t)IOV_MAX);
     if (address) {
         msg.msg_name = (sockaddr *)address->name();
         msg.msg_namelen = address->nameLen();
