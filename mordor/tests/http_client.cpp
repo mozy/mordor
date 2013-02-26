@@ -2643,15 +2643,18 @@ namespace {
 class DummyStreamBroker : public StreamBroker
 {
 public:
+    typedef boost::shared_ptr<DummyStreamBroker> ptr;
     Stream::ptr getStream(const URI &uri)
     {
         std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
         Servlet::ptr servlet(new ServletDispatcher());
-        ServerConnection::ptr server(new ServerConnection(pipe.second,
+        serverConn.reset(new ServerConnection(pipe.second,
             boost::bind(&Servlet::request, servlet, _1)));
-        server->processRequests();
+        serverConn->processRequests();
         return pipe.first;
     }
+    // Latest server connection
+    ServerConnection::ptr serverConn;
 };
 }
 
@@ -2659,13 +2662,41 @@ MORDOR_UNITTEST(HTTPConnectionCache, idleDoesntPreventStop)
 {
     IOManager ioManager;
     StreamBroker::ptr broker(new DummyStreamBroker());
-    ConnectionCache cache(broker, &ioManager);
-    cache.idleTimeout(5000000ull);
-    ClientConnection::ptr conn = cache.getConnection("http://localhost/").first;
-    cache.closeIdleConnections();
+    ConnectionCache::ptr cache = ConnectionCache::create(broker, &ioManager);
+    cache->idleTimeout(5000000ull);
+    ClientConnection::ptr conn = cache->getConnection("http://localhost/").first;
+    cache->closeIdleConnections();
     unsigned long long start = TimerManager::now();
     ioManager.stop();
     MORDOR_TEST_ASSERT_LESS_THAN(TimerManager::now() - start, 1000000ull);
+}
+
+MORDOR_UNITTEST(HTTPConnectionCache, remoteClose)
+{
+    IOManager ioManager;
+    boost::weak_ptr<ConnectionCache> weakCache;
+    ServerConnection::ptr serverConn;
+    ClientConnection::ptr clientConn;
+    {
+        DummyStreamBroker::ptr broker(new DummyStreamBroker());
+        ConnectionCache::ptr cache = ConnectionCache::create(broker, &ioManager);
+        weakCache = cache;
+        cache->idleTimeout(5000000ull);
+        clientConn = cache->getConnection("http://localhost/").first;
+        serverConn = broker->serverConn;
+    }
+
+    // Connection cache of broker has been destroyed already
+    ConnectionCache::ptr cache = weakCache.lock();
+    MORDOR_TEST_ASSERT(!cache);
+    // Stream of client connection still exists
+    MORDOR_TEST_ASSERT(clientConn->stream());
+    // Close remote stream, and it shouldn't throw exception
+    try {
+        serverConn->stream()->close();
+    } catch (...) {
+        MORDOR_TEST_ASSERT(!"Crashed caused by remote close!");
+    }
 }
 
 namespace {
@@ -2680,15 +2711,15 @@ public:
 };
 }
 
-static void expectFail(ConnectionCache &cache)
+static void expectFail(ConnectionCache::ptr cache)
 {
-    MORDOR_TEST_ASSERT_EXCEPTION(cache.getConnection("http://localhost/"),
+    MORDOR_TEST_ASSERT_EXCEPTION(cache->getConnection("http://localhost/"),
         DummyException);
 }
 
-static void expectPriorFail(ConnectionCache &cache)
+static void expectPriorFail(ConnectionCache::ptr cache)
 {
-    MORDOR_TEST_ASSERT_EXCEPTION(cache.getConnection("http://localhost/"),
+    MORDOR_TEST_ASSERT_EXCEPTION(cache->getConnection("http://localhost/"),
         PriorConnectionFailedException);
 }
 
@@ -2696,9 +2727,9 @@ MORDOR_UNITTEST(HTTPConnectionCache, pendingConnectionsFailTogether)
 {
     WorkerPool pool;
     StreamBroker::ptr broker(new FailStreamBroker());
-    ConnectionCache cache(broker);
-    pool.schedule(boost::bind(&expectFail, boost::ref(cache)));
-    pool.schedule(boost::bind(&expectPriorFail, boost::ref(cache)));
-    pool.schedule(boost::bind(&expectPriorFail, boost::ref(cache)));
+    ConnectionCache::ptr cache = ConnectionCache::create(broker);
+    pool.schedule(boost::bind(&expectFail, cache));
+    pool.schedule(boost::bind(&expectPriorFail, cache));
+    pool.schedule(boost::bind(&expectPriorFail, cache));
     pool.dispatch();
 }

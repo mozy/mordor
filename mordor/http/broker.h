@@ -148,18 +148,23 @@ struct PriorConnectionFailedException : virtual Exception {};
 //
 // Although exposed by createRequestBroker(), normal clients will not manipulate
 // the ConnectionCache directly, apart from calling abortConnections or closeIdleConnections
-class ConnectionCache : public ConnectionBroker
+class ConnectionCache : public boost::enable_shared_from_this<ConnectionCache>, public ConnectionBroker
 {
 public:
     typedef boost::shared_ptr<ConnectionCache> ptr;
+    typedef boost::weak_ptr<ConnectionCache> weak_ptr;
 
-public:
+protected:
     ConnectionCache(StreamBroker::ptr streamBroker, TimerManager *timerManager = NULL)
         : m_streamBroker(streamBroker),
           m_connectionsPerHost(1u),
           m_closed(false),
           m_timerManager(timerManager)
     {}
+
+public:
+    static ConnectionCache::ptr create(StreamBroker::ptr streamBroker, TimerManager *timerManager = NULL)
+    { return ConnectionCache::ptr(new ConnectionCache(streamBroker, timerManager)); }
 
     // Specify the maximum number of seperate connections to allow to a specific host (or proxy)
     // at a time
@@ -217,7 +222,7 @@ private:
         FiberMutex::ScopedLock &lock);
     void cleanOutDeadConns(CachedConnectionMap &conns);
     void addSSL(const URI &uri, boost::shared_ptr<Stream> &stream);
-    void dropConnection(const URI &uri, const ClientConnection *connection);
+    void dropConnection(weak_ptr self, const URI &uri, const ClientConnection *connection);
 
 private:
     FiberMutex m_mutex;

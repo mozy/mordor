@@ -39,8 +39,8 @@ createRequestBroker(const RequestBrokerOptions &options)
         streamBroker = options.customStreamBrokerFilter;
     }
 
-    ConnectionCache::ptr connectionCache(new ConnectionCache(streamBroker,
-        timerManager));
+    ConnectionCache::ptr connectionCache =
+        ConnectionCache::create(streamBroker, timerManager);
     connectionCache->httpReadTimeout(options.httpReadTimeout);
     connectionCache->httpWriteTimeout(options.httpWriteTimeout);
     connectionCache->idleTimeout(options.idleTimeout);
@@ -381,15 +381,15 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
         MORDOR_LOG_TRACE(g_cacheLog) << this << " connection " << result.first
             << " to " << endpoint << " established";
         stream->onRemoteClose(boost::bind(&ConnectionCache::dropConnection,
-            this, endpoint, result.first.get()));
+            this, weak_ptr(shared_from_this()), endpoint, result.first.get()));
         if (m_httpReadTimeout != ~0ull)
             result.first->readTimeout(m_httpReadTimeout);
         if (m_httpWriteTimeout != ~0ull)
             result.first->writeTimeout(m_httpWriteTimeout);
         if (m_idleTimeout != ~0ull)
             result.first->idleTimeout(m_idleTimeout,
-            boost::bind(&ConnectionCache::dropConnection, this, endpoint,
-                result.first.get()));
+            boost::bind(&ConnectionCache::dropConnection,
+                this, weak_ptr(shared_from_this()), endpoint, result.first.get()));
         // Assign this connection to the first blank connection for this
         // schemeAndAuthority
         for (it2 = info->connections.begin();
@@ -570,9 +570,15 @@ struct CompareConn
 }
 
 void
-ConnectionCache::dropConnection(const URI &uri,
+ConnectionCache::dropConnection(weak_ptr self,
+    const URI &uri,
     const ClientConnection *connection)
 {
+    ptr strongSelf = self.lock();
+    if (!strongSelf) {
+        return;
+    }
+
     FiberMutex::ScopedLock lock(m_mutex);
     CachedConnectionMap::iterator it = m_conns.find(uri);
     if (it == m_conns.end())
