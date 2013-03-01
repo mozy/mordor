@@ -2,6 +2,7 @@
 
 #include "mordor/iomanager.h"
 #include "mordor/parallel.h"
+#include "mordor/streams/buffered.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/random.h"
@@ -15,6 +16,7 @@ using namespace Mordor;
 static void accept(SSLStream::ptr server)
 {
     server->accept();
+    server->flush();
 }
 
 MORDOR_UNITTEST(SSLStream, basic)
@@ -124,6 +126,12 @@ MORDOR_UNITTEST(SSLStream, forceDuplex)
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
 }
 
+static void expectUnexpectedEof(Stream::ptr stream)
+{
+    unsigned char buffer;
+    MORDOR_TEST_ASSERT_EQUAL(stream->read(&buffer, 1u), 0u);
+}
+
 MORDOR_UNITTEST(SSLStream, incomingDataAfterShutdown)
 {
     WorkerPool pool;
@@ -140,5 +148,21 @@ MORDOR_UNITTEST(SSLStream, incomingDataAfterShutdown)
 
     MORDOR_TEST_ASSERT_EQUAL(sslclient->write("c", 1u), 1u);
     sslclient->flush(false);
+    pool.schedule(boost::bind(&expectUnexpectedEof, sslclient));
     sslserver->close();
+}
+
+MORDOR_UNITTEST(SSLStream, acceptOverBuffering)
+{
+    WorkerPool pool;
+    std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+    BufferedStream::ptr bufferedStream(new BufferedStream(pipes.first));
+    bufferedStream->allowPartialReads(true);
+
+    SSLStream::ptr sslserver(new SSLStream(bufferedStream, false));
+    SSLStream::ptr sslclient(new SSLStream(pipes.second, true));
+
+    pool.schedule(boost::bind(&accept, sslserver));
+    sslclient->connect();
+    pool.dispatch();
 }

@@ -456,9 +456,6 @@ SSLStream::flush(bool flushParent)
     if (BIO_reset(m_writeBio) != 1)
       MORDOR_LOG_TRACE(g_log) << this << " BIO_reset failed ??";
 
-    if (m_writeBuffer.readAvailable() == 0)
-        return;
-
     while (m_writeBuffer.readAvailable()) {
         MORDOR_LOG_TRACE(g_log) << this << " parent()->write("
             << m_writeBuffer.readAvailable() << ")";
