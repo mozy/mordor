@@ -29,6 +29,7 @@ configure
 depcomp
 html
 install-sh
+/ipch/
 iphone
 lcov*
 libtool
