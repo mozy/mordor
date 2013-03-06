@@ -346,7 +346,8 @@ Socket::connect(const Address &to)
                 << to << "): (" << lastError() << ")";
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("connect");
         }
-        MORDOR_LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to << ")";
+        MORDOR_LOG_INFO(g_log) << this << " connect(" << m_sock << ", "
+            << to << ") local: " << *(localAddress());
     } else {
 #ifdef WINDOWS
         if (m_useConnectEx && ConnectEx) {
@@ -438,8 +439,8 @@ Socket::connect(const Address &to)
                     << ", " << to << "): (" << error << ")";
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "ConnectEx");
             }
-            MORDOR_LOG_INFO(g_log) << this << " ConnectEx(" << m_sock << ", "
-                << to << ")";
+            MORDOR_LOG_INFO(g_log) << this << " connectEX(" << m_sock << ", "
+                << to << ") local: " << *(localAddress());
             setOption(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
         } else {
 suckylsp:
@@ -451,8 +452,8 @@ suckylsp:
             if (WSAEventSelect(m_sock, m_hEvent, FD_CONNECT))
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WSAEventSelect");
             if (!::connect(m_sock, to.name(), to.nameLen())) {
-                MORDOR_LOG_INFO(g_log) << this << " connect(" << m_sock << ", "
-                    << to << ")";
+                MORDOR_LOG_INFO(g_log) << this << " connectEX(" << m_sock << ", "
+                    << to << ") local: " << *(localAddress());
                 // Worked first time
                 return;
             }
@@ -509,8 +510,8 @@ suckylsp:
         }
 #else
         if (!::connect(m_sock, to.name(), to.nameLen())) {
-            MORDOR_LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
-                << ")";
+            MORDOR_LOG_INFO(g_log) << this << " connect(" << m_sock << ", "
+                << to << ") local: " << *(localAddress());
             // Worked first time
             return;
         }
@@ -544,8 +545,8 @@ suckylsp:
                     << "): (" << err << ")";
                 MORDOR_THROW_EXCEPTION_FROM_ERROR_API(err, "connect");
             }
-            MORDOR_LOG_INFO(g_log) << this << " connect(" << m_sock << ", " << to
-                << ")";
+            MORDOR_LOG_INFO(g_log) << this << " connect(" << m_sock << ", "
+                << to << ") local: " << *(localAddress());
         } else {
             MORDOR_LOG_ERROR(g_log) << this << " connect(" << m_sock << ", " << to
                 << "): (" << lastError() << ")";
@@ -600,7 +601,7 @@ Socket::accept(Socket &target)
         }
         target.m_sock = newsock;
         MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
-                << newsock << " (" << *target.remoteAddress() << ')';
+                << newsock << " (" << *target.remoteAddress() << ", " << &target << ')';
     } else {
 #ifdef WINDOWS
         if (m_useAcceptEx && pAcceptEx) {
@@ -659,7 +660,7 @@ Socket::accept(Socket &target)
 
             std::ostringstream os;
             MORDOR_LOG_INFO(g_log) << this << " AcceptEx(" << m_sock << "): "
-                << target.m_sock << " (" << *target.remoteAddress() << ')';
+                << target.m_sock << " (" << *target.remoteAddress() << ", " << &target << ')';
             target.setOption(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, &m_sock, sizeof(m_sock));
             target.m_ioManager->registerFile((HANDLE)target.m_sock);
             target.m_skipCompletionPortOnSuccess =
@@ -732,7 +733,7 @@ suckylsp:
                 ::closesocket(target.m_sock);
             target.m_sock = newsock;
             MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
-                << newsock << " (" << *target.remoteAddress() << ')';
+                << newsock << " (" << *target.remoteAddress() << ", " << &target << ')';
             target.m_skipCompletionPortOnSuccess =
                 !!pSetFileCompletionNotificationModes((HANDLE)newsock,
                     FILE_SKIP_COMPLETION_PORT_ON_SUCCESS |
@@ -783,7 +784,7 @@ suckylsp:
         }
         target.m_sock = newsock;
         MORDOR_LOG_INFO(g_log) << this << " accept(" << m_sock << "): "
-            << newsock << " (" << *target.remoteAddress() << ')';
+            << newsock << " (" << *target.remoteAddress() << ", " << &target << ')';
 #endif
         target.m_isConnected = true;
         if (!target.m_onRemoteClose.empty())
@@ -1105,6 +1106,7 @@ Socket::cancelConnect()
 #ifdef WINDOWS
     if (m_cancelledSend)
         return;
+    MORDOR_LOG_VERBOSE(g_log) << this << " cancelConnect(" << m_sock << ")";
     m_cancelledSend = ERROR_OPERATION_ABORTED;
     if (m_useConnectEx && ConnectEx) {
         m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
@@ -1126,6 +1128,7 @@ Socket::cancelSend()
 #ifdef WINDOWS
     if (m_cancelledSend)
         return;
+    MORDOR_LOG_VERBOSE(g_log) << this << " cancelSend(" << m_sock << ")";
     m_cancelledSend = ERROR_OPERATION_ABORTED;
     m_ioManager->cancelEvent((HANDLE)m_sock, &m_sendEvent);
 #else
@@ -1141,6 +1144,7 @@ Socket::cancelReceive()
 #ifdef WINDOWS
     if (m_cancelledReceive)
         return;
+    MORDOR_LOG_VERBOSE(g_log) << this << "cancelReceive(" << m_sock << ")";
     m_cancelledReceive = ERROR_OPERATION_ABORTED;
     m_ioManager->cancelEvent((HANDLE)m_sock, &m_receiveEvent);
 #else
@@ -1155,6 +1159,7 @@ Socket::cancelIo(error_t &cancelled, error_t error)
     MORDOR_ASSERT(error);
     if (cancelled)
         return;
+    MORDOR_LOG_VERBOSE(g_log) << this << " cancelIo(" << m_sock << ")";
     cancelled = error;
     if (m_hEvent && m_scheduler && m_fiber) {
         m_unregistered = !!m_ioManager->unregisterEvent(m_hEvent);
@@ -1168,6 +1173,9 @@ Socket::cancelIo(int event, error_t &cancelled, error_t error)
     MORDOR_ASSERT(error);
     if (cancelled)
         return;
+    MORDOR_LOG_VERBOSE(g_log) << this
+        << ((event == IOManager::READ) ? " cancelReceive(" : " cancelSend(")
+        << m_sock << ")";
     cancelled = error;
     m_ioManager->cancelEvent(m_sock, (IOManager::Event)event);
 }

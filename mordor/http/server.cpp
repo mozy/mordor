@@ -112,6 +112,9 @@ ServerConnection::responseComplete(ServerRequest *request)
         try {
             m_stream->close();
         } catch (...) {
+            MORDOR_LOG_DEBUG(g_log) << this << " " << request->context()
+                << " Unexpected exception: "
+                << boost::current_exception_diagnostic_information();
             request->cancel();
             throw;
         }
@@ -239,6 +242,7 @@ void
 ServerConnection::cancel()
 {
     boost::recursive_mutex::scoped_lock lock(m_mutex);
+    MORDOR_LOG_VERBOSE(g_log) << this << " server connection cancelled";
     m_stream->cancelRead();
     m_stream->cancelWrite();
 }
@@ -261,6 +265,7 @@ ServerRequest::ServerRequest(ServerConnection::ptr conn)
 
 ServerRequest::~ServerRequest()
 {
+    MORDOR_LOG_TRACE(g_log) << this << " " << context() << " server request destroyed";
     cancel();
 }
 
@@ -386,8 +391,11 @@ ServerRequest::cancel()
 {
     if (m_requestState >= COMPLETE && m_responseState >= COMPLETE)
         return;
-    MORDOR_LOG_TRACE(g_log) << m_context << " aborting";
     boost::recursive_mutex::scoped_lock lock(m_conn->m_mutex);
+    MORDOR_LOG_INFO(g_log) << " " << m_context
+        << " aborting with requestState: " << m_requestState
+        << " responseState: " << m_responseState
+        << " priorRequestFailed: " << m_conn->m_priorRequestFailed;
     m_conn->invariant();
     if (m_requestState < COMPLETE)
         m_requestState = ERROR;
@@ -410,14 +418,18 @@ ServerRequest::finish()
 {
     if (m_responseState < COMPLETE) {
         if (hasResponseBody())
-            MORDOR_LOG_WARNING(g_log) << m_context
+            MORDOR_LOG_WARNING(g_log) << " " << m_context
                 << " incomplete response";
         if (committed() && hasResponseBody()) {
+            MORDOR_LOG_INFO(g_log) << " " << m_context
+                << " committed and hasResponseBody, cancel...";
             cancel();
             return;
         }
         commit();
         if (hasResponseBody()) {
+            MORDOR_LOG_INFO(g_log) << " " << m_context
+                << " commit and hasResponseBody, cancel...";
             cancel();
             return;
         }
@@ -443,18 +455,27 @@ ServerRequest::doRequest()
                 return;
             }
             if (parser.error() || !parser.complete()) {
+                MORDOR_LOG_WARNING(g_log) << " " << m_context
+                    << " parser error: " << parser.error()
+                    << " parser complete: " << parser.complete();
                 m_requestState = ERROR;
                 m_conn->m_priorRequestClosed = m_requestNumber;
                 respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
                 return;
             }
         } catch (SocketException &) {
+            MORDOR_LOG_WARNING(g_log) << " " << m_context
+                << " Unexpected SocketException";
             cancel();
             return;
         } catch (BrokenPipeException &) {
+            MORDOR_LOG_WARNING(g_log) << " " << m_context
+                << " Unexpected BrokenPipeException";
             cancel();
             return;
         } catch (UnexpectedEofException &) {
+            MORDOR_LOG_WARNING(g_log) << " " << m_context
+                << " Unexpected BrokenPipeException";
             cancel();
             return;
         }
