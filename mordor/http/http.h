@@ -100,13 +100,19 @@ enum Status
     UNSUPPORTED_MEDIA_TYPE           = 415,
     REQUESTED_RANGE_NOT_SATISFIABLE  = 416,
     EXPECTATION_FAILED               = 417,
+    // RFC 6585
+    PRECONDITION_REQUIRED            = 428,
+    TOO_MANY_REQUESTS                = 429,
+    REQUEST_HEADER_FIELDS_TOO_LARGE  = 431,
 
     INTERNAL_SERVER_ERROR            = 500,
     NOT_IMPLEMENTED                  = 501,
     BAD_GATEWAY                      = 502,
     SERVICE_UNAVAILABLE              = 503,
     GATEWAY_TIMEOUT                  = 504,
-    HTTP_VERSION_NOT_SUPPORTED       = 505
+    HTTP_VERSION_NOT_SUPPORTED       = 505,
+    // RFC 6585
+    NETWORK_AUTHENTICATION_REQUIRED  = 511
 };
 const char *reason(Status s);
 

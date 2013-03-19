@@ -254,6 +254,13 @@ const char *reason(Status s)
             return "Requested range not satisfiable";
         case EXPECTATION_FAILED:
             return "Expectation Failed";
+        // RFC 6585
+        case PRECONDITION_REQUIRED:
+            return "Precondition Required";
+        case TOO_MANY_REQUESTS:
+            return "Too Many Requests";
+        case REQUEST_HEADER_FIELDS_TOO_LARGE:
+            return "Request Header Fields Too Large";
 
         case INTERNAL_SERVER_ERROR:
             return "Internal Server Error";
@@ -267,6 +274,9 @@ const char *reason(Status s)
             return "Gateway Time-out";
         case HTTP_VERSION_NOT_SUPPORTED:
             return "HTTP Version not supported";
+        // RFC 6585
+        case NETWORK_AUTHENTICATION_REQUIRED:
+            return "Network Authentication Required";
 
         default:
             return "<INVALID>";
