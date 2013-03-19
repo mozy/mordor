@@ -204,6 +204,7 @@
     <ClInclude Include="main.h" />
     <ClInclude Include="daemon.h" />
     <ClInclude Include="parallel.h" />
+    <ClInclude Include="rate_limiter.h" />
     <ClInclude Include="socks.h" />
     <ClInclude Include="streams\buffer.h" />
     <ClInclude Include="streams\buffered.h" />

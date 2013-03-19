@@ -51,6 +51,7 @@ nobase_include_HEADERS=			\
 	mordor/predef.h			\
 	mordor/protobuf.h		\
 	mordor/ragel.h			\
+	mordor/rate_limiter.h		\
 	mordor/scheduler.h		\
 	mordor/semaphore.h		\
 	mordor/sleep.h			\
@@ -300,6 +301,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/notify_stream.cpp			\
 	mordor/tests/oauth.cpp				\
 	mordor/tests/pipe_stream.cpp			\
+	mordor/tests/rate_limiter.cpp			\
 	mordor/tests/scheduler.cpp			\
 	mordor/tests/socket.cpp				\
 	mordor/tests/ssl_stream.cpp			\

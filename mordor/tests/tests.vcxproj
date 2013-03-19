@@ -225,6 +225,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="pipe_stream.cpp" />
+    <ClCompile Include="rate_limiter.cpp" />
     <ClCompile Include="run_tests.cpp" />
     <ClCompile Include="scheduler.cpp" />
     <ClCompile Include="socket.cpp" />
