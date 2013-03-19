@@ -37,20 +37,31 @@ public:
           m_timeLimit(timeLimit)
     {}
 
+    ~RateLimiter()
+    {
+        for(typename std::map<T, Bucket>::iterator it(m_buckets.begin());
+            it != m_buckets.end();
+            ++it) {
+            if (it->second.m_timer)
+                it->second.m_timer->cancel();
+        }
+    }
+
     bool allowed(const T &key)
     {
         boost::mutex::scoped_lock lock(m_mutex);
         unsigned long long now = m_timerManager.now();
         Bucket &bucket = m_buckets[key];
         size_t countLimit = m_countLimit->val();
-        trim(bucket, now, countLimit);
+        unsigned long long timeLimit = m_timeLimit->val();
+        trim(bucket, now, countLimit, timeLimit);
         if (bucket.m_count >= countLimit) {
-            startTimer(key, bucket);
+            startTimer(key, bucket, now, timeLimit);
             return false;
         }
         bucket.m_timestamps.push_back(now);
         ++bucket.m_count;
-        startTimer(key, bucket);
+        startTimer(key, bucket, now, timeLimit);
         MORDOR_ASSERT(bucket.m_count == bucket.m_timestamps.size());
         return true;
     }
@@ -58,7 +69,7 @@ public:
     void reset(const T &key)
     {
         boost::mutex::scoped_lock lock(m_mutex);
-        std::map<T, Bucket>::iterator it = m_buckets.find(key);
+        typename std::map<T, Bucket>::iterator it = m_buckets.find(key);
         if (it != m_buckets.end()) {
             if (it->second.m_timer)
                 it->second.m_timer->cancel();
@@ -71,13 +82,14 @@ private:
     {
         boost::mutex::scoped_lock lock(m_mutex);
         Bucket &bucket = m_buckets[key];
-        trim(bucket, m_timerManager.now());
-        startTimer(key, bucket, m_countLimit->val());
+        unsigned long long now = m_timerManager.now();
+        unsigned long long timeLimit = m_timeLimit->val();
+        trim(bucket, now, m_countLimit->val(), timeLimit);
+        startTimer(key, bucket, now, timeLimit);
     }
 
-    void trim(Bucket &bucket, unsigned long long now, size_t countLimit)
+    void trim(Bucket &bucket, unsigned long long now, size_t countLimit, unsigned long long timeLimit)
     {
-        unsigned long long timeLimit = m_timeLimit->val();
         MORDOR_ASSERT(bucket.m_count == bucket.m_timestamps.size());
         while(!bucket.m_timestamps.empty() && (bucket.m_timestamps.front() < now - timeLimit || bucket.m_count > countLimit))
         {
@@ -96,13 +108,13 @@ private:
         }
     }
 
-    void startTimer(const T &key, Bucket &bucket)
+    void startTimer(const T &key, Bucket &bucket, unsigned long long now, unsigned long long timeLimit)
     {
         // If there are still timestamps, set a timer to clear it
         if(!bucket.m_timestamps.empty()) {
             if (!bucket.m_timer) {
-                //bucket.m_timer = m_timerManager.registerTimer(bucket.m_timestamps.front() + timeLimit - now,
-                //    boost::bind(&RateLimiter::trimKey, this, key));
+                bucket.m_timer = m_timerManager.registerTimer(bucket.m_timestamps.front() + timeLimit - now,
+                    boost::bind(&RateLimiter::trimKey, this, key));
             }
         } else {
             m_buckets.erase(key);
