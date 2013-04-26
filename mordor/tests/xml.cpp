@@ -262,6 +262,15 @@ MORDOR_UNITTEST(XMLParser, domParserInvalid)
         std::invalid_argument);
 }
 
+MORDOR_UNITTEST(XMLParser, domParserCData)
+{
+    DOM::XMLParser parser;
+    DOM::Document::ptr doc = parser.loadDocument(
+        "<?xml version='1.0' encoding='UTF-8'?>\n"
+        "<root><![CDATA[hello]]></root>");
+    DOM::Element *root = (DOM::Element *)doc->getElementsByTagName("root")[0];
+    MORDOR_TEST_ASSERT_EQUAL(root->text(), "hello");
+}
 
 #if 0
 // Disabled until comment support fixed
@@ -283,4 +292,3 @@ MORDOR_UNITTEST(XMLParser, parsecomment)
     MORDOR_ASSERT(!parser.error());
 }
 #endif
-

@@ -2,7 +2,7 @@
 #define __MORDOR_DOM_DOM_PARSER_H__
 // Copyright (c) 2009 - Mozy, Inc.
 
-//#include <boost/function.hpp>
+#include "mordor/exception.h"
 #include "mordor/xml/parser.h"
 
 namespace Mordor {
@@ -104,24 +104,33 @@ namespace DOM {
         Element *m_docElement;
     };
 
-    class XMLParser {
+    class XMLParser : public XMLParserEventHandler {
     public:
         XMLParser() : m_element(NULL) {}
-        Document::ptr loadDocument(const std::string &xml);
-        Document::ptr loadDocument(const char *str);
-        Document::ptr loadDocument(const Buffer& buffer);
-        Document::ptr loadDocument(Stream& stream);
-        Document::ptr loadDocument(boost::shared_ptr<Stream> stream);
+        template <class T>
+        Document::ptr loadDocument(T &xml)
+        {
+            m_doc.reset(new Document());
+            m_element = m_doc->documentElement();
+            Mordor::XMLParser parser(*this);
+            parser.run(xml);
+            if (!parser.final() || parser.error()) {
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("failed to parse: Invalid xml"));
+            }
+            return m_doc;
+        }
 
     protected:
-        void onStartTag(const std::string &tag, Document *doc);
-        void onEndTag(const std::string &tag, Document *doc);
+        void onStartTag(const std::string &tag);
+        void onEndTag(const std::string &tag);
         void onEmptyTag();
         void onAttributeName(const std::string &attribute);
         void onAttributeValue(const std::string &value);
         void onInnerText(const std::string &text);
         void onReference(const std::string &reference);
+        void onCData(const std::string &text);
     private:
+        Document::ptr m_doc;
         Element *m_element;
         std::string m_text, m_attrib;
     };

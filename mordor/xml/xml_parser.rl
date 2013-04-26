@@ -18,7 +18,7 @@ using namespace Mordor;
         postpop();
     }
 
-    Char = '\t' | '\n' | '\r' | [' '-255];
+    Char = (extend - cntrl) | '\t' | '\n' | '\r';
     S = (' ' | '\t' | '\r' | '\n')+;
 
     NameStartChar = ':' | [A-Z] | '_' | [a-z] | 0xC0..0xD6 | 0xD8..0xF6 | 0xF8..0xFF;
@@ -83,15 +83,16 @@ using namespace Mordor;
     action cdata
     {
         if (fpc != mark) {
-            m_handler.onCData(std::string(mark, fpc - mark));
+		    // An extra 3, because we don't call this action until after CDEnd
+            m_handler.onCData(std::string(mark, fpc - mark - 3));
             mark = NULL;
         }
     }
 
     CDStart = '<![CDATA[';
-    CData = (Char* - (Char* ']]>' Char*));
     CDEnd = ']]>';
-    CDSect = CDStart CData >mark %cdata CDEnd;
+    CData = (Char* - (Char* CDEnd Char *));
+    CDSect = CDStart CData >mark CDEnd %cdata;
 
     action start_tag {
         m_handler.onStartTag(std::string(mark, fpc-mark));

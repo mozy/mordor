@@ -8,25 +8,6 @@
 namespace Mordor {
 namespace DOM {
 
-#define PARSE_DOC(xml) \
-    Document *doc = new Document(); \
-    m_element = doc->documentElement(); \
-    CallbackXMLParserEventHandler handler( \
-        boost::bind(&XMLParser::onStartTag, this, _1, doc), \
-        boost::bind(&XMLParser::onEndTag, this, _1, doc), \
-        boost::bind(&XMLParser::onEmptyTag, this), \
-        boost::bind(&XMLParser::onAttributeName, this, _1), \
-        boost::bind(&XMLParser::onAttributeValue, this, _1), \
-        boost::bind(&XMLParser::onInnerText, this, _1), \
-        boost::bind(&XMLParser::onReference, this, _1)); \
-        Mordor::XMLParser parser(handler); \
-    parser.run(xml); \
-    if (!parser.final() || parser.error()) { \
-        delete doc; \
-        MORDOR_THROW_EXCEPTION(std::invalid_argument("failed to parse: Invalid xml")); \
-    } \
-    return Document::ptr(doc);
-
 NodeList Element::getElementsByTagName(const std::string &tagName) {
     NodeList l;
     for (size_t i = 0; i < m_children.size(); i++) {
@@ -57,40 +38,24 @@ Element * Element::getElementById(const std::string &id) {
     return e;
 }
 
-Document::ptr XMLParser::loadDocument(const std::string& str) {
-    PARSE_DOC(str)
-}
-Document::ptr XMLParser::loadDocument(const char *str) {
-    PARSE_DOC(str)
-}
-Document::ptr XMLParser::loadDocument(const Buffer& buffer) {
-    PARSE_DOC(buffer)
-}
-Document::ptr XMLParser::loadDocument(Stream& stream) {
-    PARSE_DOC(stream)
-}
-Document::ptr XMLParser::loadDocument(boost::shared_ptr<Stream> stream) {
-    PARSE_DOC(*stream)
-}
-
-void XMLParser::onStartTag(const std::string &tag, Document *doc) {
+void XMLParser::onStartTag(const std::string &tag) {
     Element *parent = m_element;
 
     boost::trim(m_text);
     if (!m_text.empty()) {
-        Text *text = doc->createTextNode(m_text);
+        Text *text = m_doc->createTextNode(m_text);
         parent->appendChild(text);
     }
-    m_element = doc->createElement(tag);
+    m_element = m_doc->createElement(tag);
     parent->appendChild(m_element);
     m_text.clear();
 }
 
-void XMLParser::onEndTag(const std::string &tag, Document *doc) {
+void XMLParser::onEndTag(const std::string &tag) {
     // ignore white space by default
     boost::trim(m_text);
     if (!m_text.empty()) {
-        Text *text = doc->createTextNode(m_text);
+        Text *text = m_doc->createTextNode(m_text);
         m_element->appendChild(text);
     }
     m_element = (Element *)m_element->parentNode();
@@ -132,5 +97,10 @@ void XMLParser::onReference(const std::string &reference) {
         // Real code should also look for character references like ~S&#38;~T
         MORDOR_NOTREACHED();
 }
+
+void XMLParser::onCData(const std::string &text) {
+    m_text.append(text);
+}
+
 }
 }
