@@ -40,34 +40,34 @@ can't do them both _in the same function_.  Mordor allows you to do just that.
 For example, here's a complete program to read a file from disk, and send it to
 a socket on the network:
 
-#include <iostream>
+    #include <iostream>
 
-#include <mordor/socket.h>
-#include <mordor/streams/file.h>
-#include <mordor/streams/socket.h>
-#include <mordor/streams/transfer.h>
+    #include <mordor/socket.h>
+    #include <mordor/streams/file.h>
+    #include <mordor/streams/socket.h>
+    #include <mordor/streams/transfer.h>
 
-using namespace Mordor;
+    using namespace Mordor;
 
-int main(int argc, char **argv)
-{
-    if (argc != 3) {
-        std::cerr << "usage: " << argv[0] << " <file> <destination>" << std::endl;
-        return 1;
+    int main(int argc, char **argv)
+    {
+        if (argc != 3) {
+            std::cerr << "usage: " << argv[0] << " <file> <destination>" << std::endl;
+            return 1;
+        }
+        try {
+            std::vector<Address::ptr> addresses = Address::lookup(argv[2], AF_UNSPEC, SOCK_STREAM);
+            Socket::ptr socket = addresses[0]->createSocket();
+            socket->connect(addresses[0]);
+            Stream::ptr fileStream(new FileStream(argv[1], FileStream::OPEN, FileStream::READ));
+            Stream::ptr socketStream(new SocketStream(socket));
+            transferStream(fileStream, socketStream);
+        } catch (...) {
+            std::cerr << boost::current_exception_diagnostic_information() << std::endl;
+            return 2;
+        }
+        return 0;
     }
-    try {
-        std::vector<Address::ptr> addresses = Address::lookup(argv[2], AF_UNSPEC, SOCK_STREAM);
-        Socket::ptr socket = addresses[0]->createSocket();
-        socket->connect(addresses[0]);
-        Stream::ptr fileStream(new FileStream(argv[1], FileStream::OPEN, FileStream::READ));
-        Stream::ptr socketStream(new SocketStream(socket));
-        transferStream(fileStream, socketStream);
-    } catch (...) {
-        std::cerr << boost::current_exception_diagnostic_information() << std::endl;
-        return 2;
-    }
-    return 0;
-}
 
 This program is quite simple.  It checks for usage, translates the string
 argument into a network address, creates a socket that is compatible with that
@@ -82,45 +82,45 @@ this is all we're doing.  But what if instead we were sending 1000 files to
 say we want one thread for communicating with the network, and four threads for
 reading the file off the disk.  Let's do it!
 
-#include <iostream>
+    #include <iostream>
 
-#include <mordor/iomanager.h>
-#include <mordor/scheduler.h>
-#include <mordor/socket.h>
-#include <mordor/streams/file.h>
-#include <mordor/streams/socket.h>
-#include <mordor/streams/transfer.h>
+    #include <mordor/iomanager.h>
+    #include <mordor/scheduler.h>
+    #include <mordor/socket.h>
+    #include <mordor/streams/file.h>
+    #include <mordor/streams/socket.h>
+    #include <mordor/streams/transfer.h>
 
-using namespace Mordor;
+    using namespace Mordor;
 
-static void doOne(const char *file, const char *destination, IOManager &ioManager, Scheduler &scheduler)
-{
-    try {
-        std::vector<Address::ptr> addresses = Address::lookup(destination, AF_UNSPEC, SOCK_STREAM);
-        Socket::ptr socket = addresses[0]->createSocket(ioManager);
-        socket->connect(addresses[0]);
-        Stream::ptr fileStream(new FileStream(file, FileStream::READ, FileStream::OPEN, &ioManager, &scheduler));
-        Stream::ptr socketStream(new SocketStream(socket));
-        transferStream(fileStream, socketStream);
-    } catch (...) {
-        std::cerr << boost::current_exception_diagnostic_information() << std::endl;
+    static void doOne(const char *file, const char *destination, IOManager &ioManager, Scheduler &scheduler)
+    {
+        try {
+            std::vector<Address::ptr> addresses = Address::lookup(destination, AF_UNSPEC, SOCK_STREAM);
+            Socket::ptr socket = addresses[0]->createSocket(ioManager);
+            socket->connect(addresses[0]);
+            Stream::ptr fileStream(new FileStream(file, FileStream::READ, FileStream::OPEN, &ioManager, &scheduler));
+            Stream::ptr socketStream(new SocketStream(socket));
+            transferStream(fileStream, socketStream);
+        } catch (...) {
+            std::cerr << boost::current_exception_diagnostic_information() << std::endl;
+        }
     }
-}
 
-int main(int argc, char **argv)
-{
-    if (argc % 2 != 1) {
-        std::cerr << "usage: " << argv[0] << " (<file> <destination>)*" << std::endl;
-        return 1;
+    int main(int argc, char **argv)
+    {
+        if (argc % 2 != 1) {
+            std::cerr << "usage: " << argv[0] << " (<file> <destination>)*" << std::endl;
+            return 1;
+        }
+        IOManager ioManager;
+        WorkerPool workerPool(4, false);
+        for (int i = 1; i < argc; i += 2)
+            ioManager.schedule(boost::bind(&doOne, argv[i], argv[i + 1], boost::ref(ioManager), boost::ref(workerPool)));
+        ioManager.dispatch();
+
+        return 0;
     }
-    IOManager ioManager;
-    WorkerPool workerPool(4, false);
-    for (int i = 1; i < argc; i += 2)
-        ioManager.schedule(boost::bind(&doOne, argv[i], argv[i + 1], boost::ref(ioManager), boost::ref(workerPool)));
-    ioManager.dispatch();
-
-    return 0;
-}
 
 So we re-factored most of main into doOne, but other than that it is nearly
 identical.  And it will transfer as many files as you pass on the command line
