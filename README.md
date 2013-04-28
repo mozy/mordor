@@ -129,6 +129,110 @@ for debug:
 
     ~/mordor/buildtools/build.sh debug
     
+## Benchmark
+
+So I follow the benchmark from Monkey website (Benchmark: Monkey v/s GWan in a Linux 64 bit platform)
+http://monkey-project.com/benchmarks/x86_64_monkey_gwan
+
+and perform the benchmark myself on file with sizeof 1312 bytes.
+
+I run the test 3 times for each server and choose the best one.
+
+## Monkey vs GWan vs original Mordor vs cmpxchg16/Mordor
+
+Environment:
+
+Intel board, some details:
+
+* Kernel : 3.5.0 - x86_64 (Ubuntu 12.10)
+* CPU : Intel(R) Core(TM) i7-3720QM CPU @ 2.60GHz (4 cores)
+* RAM : 4 GB
+* Filesystem: ext4 on a SSD
+
+### GWan:
+
+    ** SIEGE 2.70
+    ** Preparing 500 concurrent users for battle.
+    The server is now under siege...
+    Lifting the server siege...      done.
+    Transactions:		       66914 hits
+    Availability:		      100.00 %
+    Elapsed time:		        9.68 secs
+    Data transferred:	       31.46 MB
+    Response time:		        0.07 secs
+    Transaction rate:	     6912.60 trans/sec
+    Throughput:		        3.25 MB/sec
+    Concurrency:		      490.04
+    Successful transactions:       66914
+    Failed transactions:	           0
+    Longest transaction:	        1.00
+    Shortest transaction:	        0.00
+
+### Monkey:
+
+    ** SIEGE 2.70
+    ** Preparing 500 concurrent users for battle.
+    The server is now under siege...
+    Lifting the server siege...      done.
+    Transactions:		       73447 hits
+    Availability:		      100.00 %
+    Elapsed time:		        9.46 secs
+    Data transferred:	       95.54 MB
+    Response time:		        0.06 secs
+    Transaction rate:	     7763.95 trans/sec
+    Throughput:		       10.10 MB/sec
+    Concurrency:		      490.98
+    Successful transactions:       73448
+    Failed transactions:	           0
+    Longest transaction:	        0.77
+    Shortest transaction:	        0.00
+
+### Original Mordor:
+
+    ** SIEGE 2.70
+    ** Preparing 500 concurrent users for battle.
+    The server is now under siege...
+    Lifting the server siege...      done.
+    Transactions:		       20882 hits
+    Availability:		      100.00 %
+    Elapsed time:		        9.06 secs
+    Data transferred:	       26.13 MB
+    Response time:		        0.18 secs
+    Transaction rate:	     2304.86 trans/sec
+    Throughput:		        2.88 MB/sec
+    Concurrency:		      410.50
+    Successful transactions:       20882
+    Failed transactions:	           0
+    Longest transaction:	        7.39
+    Shortest transaction:	        0.01
+    
+### cmpxchg16/Mordor:
+
+    ** SIEGE 2.70
+    ** Preparing 500 concurrent users for battle.
+    The server is now under siege...
+    Lifting the server siege...      done.
+    Transactions:		       67650 hits
+    Availability:		      100.00 %
+    Elapsed time:		        9.99 secs
+    Data transferred:	       84.65 MB
+    Response time:		        0.07 secs
+    Transaction rate:	     6771.77 trans/sec
+    Throughput:		        8.47 MB/sec
+    Concurrency:		      470.47
+    Successful transactions:       67650
+    Failed transactions:	           0
+    Longest transaction:	        7.08
+    Shortest transaction:	        0.00
+
+
+* cmpxchg16/Mordor 3x than original Mordor
+* cmpxchg16/Mordor ~= GWan
+* Monkey look the best
+
+*But! don't forget that Mordor without the callbacks hell! you write synchronous network/file I/O, and under the hood it's asynchronous.*
+
+
 ## License
 
 Mordor is licensed under the New BSD License, and Copyright (c) 2009, Decho Corp.
