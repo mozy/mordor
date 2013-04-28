@@ -9,7 +9,7 @@ several main areas:
 * Cooperatively scheduled fiber engine, including synchronization primitives
 * Streams library, for dealing with streams of data and manipulating them.
 * HTTP library, building on top of Fibers and Streams, to provide a simple to
-  use, yet extremely powerful HTTP client and server API.
+  use, yet extremely powerful HTTP client and server API including SSL/TLS.
 * Supporting infrastructure, including logging, configuration, statistics
   gathering, and exceptions.
 * A unit test framework that is lightweight, easy to use, but has several useful
