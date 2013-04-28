@@ -19,20 +19,15 @@ using namespace Mordor;
 
 static void httpRequest(HTTP::ServerRequest::ptr request)
 {
-	try {
-		const std::string &method = request->request().requestLine.method;
-		const URI &uri = request->request().requestLine.uri;
+	const std::string &method = request->request().requestLine.method;
+	const URI &uri = request->request().requestLine.uri;
 
-		if (method == HTTP::GET) {
-			FileStream::ptr stream(new FileStream(uri.path.toString(), FileStream::READ, FileStream::OPEN, static_cast<IOManager*>(Scheduler::getThis()), Scheduler::getThis()));
-			HTTP::respondStream(request, stream);
-		} else {
-			HTTP::respondError(request, HTTP::METHOD_NOT_ALLOWED);
-		}
-	} catch (...) {
-        std::cerr << boost::current_exception_diagnostic_information() << std::endl;
-        HTTP::respondError(request, HTTP::NOT_FOUND);
-    }
+	if (method == HTTP::GET) {
+		FileStream::ptr stream(new FileStream(uri.path.toString(), FileStream::READ, FileStream::OPEN, static_cast<IOManager*>(Scheduler::getThis()), Scheduler::getThis()));
+		HTTP::respondStream(request, stream);
+	} else {
+		HTTP::respondError(request, HTTP::METHOD_NOT_ALLOWED);
+	}
 }
 
 void serve(Socket::ptr listen)
