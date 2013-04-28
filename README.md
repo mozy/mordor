@@ -117,16 +117,18 @@ Something to point out here is that when the work is scheduled on the IOManager,
 ## Dependencies
 
 * boost 1.49
-* OpenSSL 1.0.1c
+* OpenSSL
 * Zlib
 * Ragel (compile-time only)
 
 ## Building
+
     ~/mordor/buildtools/build.sh
 
 for debug:
 
     ~/mordor/buildtools/build.sh debug
+    
 ## License
 
 Mordor is licensed under the New BSD License, and Copyright (c) 2009, Decho Corp.
