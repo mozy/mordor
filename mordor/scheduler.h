@@ -7,12 +7,49 @@
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread/tss.hpp>
+#include <boost/thread/thread.hpp>
 
 #include "thread.h"
 #include "thread_local_storage.h"
+#include "config.h"
 
 namespace Mordor {
+
+class StacksPool
+{
+public:
+	std::list<void*> m_free_list;
+	int m_pool_size;
+	int m_max_pool_size;
+
+
+	StacksPool(int max_pool_size) : m_pool_size(0), m_max_pool_size (max_pool_size)
+	{
+	}
+
+    inline bool push (void* stack)
+	{
+		if (m_pool_size >= m_max_pool_size)
+			return false;
+
+		++m_pool_size;
+		m_free_list.push_back (stack);
+		return true;
+	}
+
+    inline void* pop ()
+	{
+    	if (!m_pool_size)
+    		return NULL;
+
+		--m_pool_size;
+		void* stack = m_free_list.back ();
+		m_free_list.pop_back ();
+		return stack;
+	}
+
+};
 
 class Fiber;
 
@@ -94,7 +131,6 @@ public:
     {
         bool tickleMe = false;
         {
-            boost::mutex::scoped_lock lock(m_mutex);
             while (begin != end) {
                 tickleMe = scheduleNoLock(*begin) || tickleMe;
                 ++begin;
@@ -188,9 +224,11 @@ private:
         boost::function<void ()> dg;
         tid_t thread;
     };
+public:
+    static ThreadLocalStorage<StacksPool *> t_stacks_pool;
+private:
     static ThreadLocalStorage<Scheduler *> t_scheduler;
     static ThreadLocalStorage<Fiber *> t_fiber;
-    boost::mutex m_mutex;
     std::list<FiberAndThread> m_fibers;
     tid_t m_rootThread;
     boost::shared_ptr<Fiber> m_rootFiber;

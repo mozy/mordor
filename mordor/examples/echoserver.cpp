@@ -3,6 +3,7 @@
 #include "mordor/predef.h"
 
 #include <boost/bind.hpp>
+#include <boost/thread.hpp>
 
 #include "mordor/config.h"
 #include "mordor/daemon.h"
@@ -11,13 +12,12 @@
 #include "mordor/iomanager.h"
 #include "mordor/main.h"
 #include "mordor/socket.h"
-#ifdef WINDOWS
-#include "mordor/streams/namedpipe.h"
-#endif
 #include "mordor/streams/socket.h"
 #include "mordor/streams/transfer.h"
 
+
 using namespace Mordor;
+
 
 void streamConnection(Stream::ptr stream)
 {
@@ -51,12 +51,10 @@ void startSocketServer(IOManager &ioManager)
         Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
     }
 
-#ifndef WINDOWS
     UnixAddress echoaddress("/tmp/echo");
     Socket::ptr s = echoaddress.createSocket(ioManager, SOCK_STREAM);
     s->bind(echoaddress);
     Scheduler::getThis()->schedule(boost::bind(&socketServer, s));
-#endif
 }
 
 void httpRequest(HTTP::ServerRequest::ptr request)
@@ -118,43 +116,47 @@ void startHttpServer(IOManager &ioManager)
     for (std::vector<Address::ptr>::const_iterator it(addresses.begin());
         it != addresses.end();
         ++it) {
-        Socket::ptr s = (*it)->createSocket(ioManager, SOCK_STREAM);
+		Socket::ptr s = (*it)->createSocket(ioManager, SOCK_STREAM);
         s->bind(*it);
         Scheduler::getThis()->schedule(boost::bind(&httpServer, s));
     }
 }
 
-#ifdef WINDOWS
-void namedPipeServer(IOManager &ioManager)
+void serve(Socket::ptr listen)
 {
+	IOManager ioManager;
+
     while (true) {
-        NamedPipeStream::ptr stream(new NamedPipeStream("\\\\.\\pipe\\echo", NamedPipeStream::READWRITE, &ioManager));
-        stream->accept();
-        Scheduler::getThis()->schedule(boost::bind(&streamConnection, stream));
+    	Socket::ptr socket = listen->accept(&ioManager);
+        Stream::ptr stream(new SocketStream(socket));
+        HTTP::ServerConnection::ptr conn(new HTTP::ServerConnection(stream, &httpRequest));
+        Scheduler::getThis()->schedule(boost::bind(&HTTP::ServerConnection::processRequests, conn));
     }
 }
-#endif
 
-int run(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
-    try {
-        IOManager ioManager;
-        startSocketServer(ioManager);
-        startHttpServer(ioManager);
-#ifdef WINDOWS
-        ioManager.schedule(boost::bind(&namedPipeServer, boost::ref(ioManager)));
-        ioManager.schedule(boost::bind(&namedPipeServer, boost::ref(ioManager)));
-#endif
-        ioManager.dispatch();
+	try {
+		IOManager ioManager;
+
+		std::vector<Address::ptr> addresses = Address::lookup("localhost:10001");
+		Socket::ptr socket = addresses[0]->createSocket(ioManager, SOCK_STREAM);
+		socket->bind(addresses[0]);
+		socket->listen();
+
+//		serve (socket);
+    	boost::thread serveThread1(serve, socket);
+    	boost::thread serveThread2(serve, socket);
+//    	boost::thread serveThread3(serve, socket);
+//    	boost::thread serveThread4(serve, socket);
+//
+    	serveThread1.join();
+    	serveThread2.join();
+//    	serveThread3.join();
+//    	serveThread4.join();
     } catch (...) {
         std::cerr << boost::current_exception_diagnostic_information() << std::endl;
         return 1;
     }
     return 0;
-}
-
-MORDOR_MAIN(int argc, char *argv[])
-{
-    Config::loadFromEnvironment();
-    return Daemon::run(argc, argv, &run);
 }

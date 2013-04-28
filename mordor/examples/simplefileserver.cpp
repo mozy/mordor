@@ -11,35 +11,27 @@
 #include "mordor/iomanager.h"
 #include "mordor/main.h"
 #include "mordor/socket.h"
-#include "mordor/streams/memory.h"
+#include "mordor/streams/file.h"
 #include "mordor/streams/socket.h"
 #include "mordor/streams/transfer.h"
 
 using namespace Mordor;
 
-static std::map<URI, MemoryStream::ptr> g_state;
-
 static void httpRequest(HTTP::ServerRequest::ptr request)
 {
-    const std::string &method = request->request().requestLine.method;
-    const URI &uri = request->request().requestLine.uri;
+	try {
+		const std::string &method = request->request().requestLine.method;
+		const URI &uri = request->request().requestLine.uri;
 
-    if (method == HTTP::GET || method == HTTP::HEAD) {
-        std::map<URI, MemoryStream::ptr>::iterator it =
-            g_state.find(uri);
-        if (it == g_state.end()) {
-            HTTP::respondError(request, HTTP::NOT_FOUND);
-        } else {
-            MemoryStream::ptr copy(new MemoryStream(it->second->buffer()));
-            HTTP::respondStream(request, copy);
-        }
-    } else if (method == HTTP::PUT) {
-        MemoryStream::ptr stream(new MemoryStream());
-        transferStream(request->requestStream(), stream);
-        g_state[uri] = stream;
-        HTTP::respondError(request, HTTP::OK);
-    } else {
-        HTTP::respondError(request, HTTP::METHOD_NOT_ALLOWED);
+		if (method == HTTP::GET) {
+			FileStream::ptr stream(new FileStream(uri.path.toString(), FileStream::READ, FileStream::OPEN, static_cast<IOManager*>(Scheduler::getThis()), Scheduler::getThis()));
+			HTTP::respondStream(request, stream);
+		} else {
+			HTTP::respondError(request, HTTP::METHOD_NOT_ALLOWED);
+		}
+	} catch (...) {
+        std::cerr << boost::current_exception_diagnostic_information() << std::endl;
+        HTTP::respondError(request, HTTP::NOT_FOUND);
     }
 }
 
@@ -63,7 +55,7 @@ MORDOR_MAIN(int argc, char *argv[])
         Config::loadFromEnvironment();
         IOManager ioManager;
         Socket::ptr socket = Socket::ptr(new Socket(ioManager, AF_INET, SOCK_STREAM));
-        IPv4Address address(INADDR_ANY, 80);
+        IPv4Address address(INADDR_ANY, 8080);
 
         socket->bind(address);
         socket->listen();
