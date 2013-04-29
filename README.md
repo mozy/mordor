@@ -225,12 +225,16 @@ Intel board, some details:
 * cmpxchg16/Mordor ~= GWan
 * Monkey look the best
 
-*But! don't forget that Mordor without the callbacks hell! you write synchronous network/file I/O, and under the hood it's asynchronous.*
+*But! don't forget that Mordor without the **callbacks hell!** you write synchronous network/file I/O, and under the hood it's asynchronous.*
 
+## Important Notes:
+
+* The core was changed so Scheduler can run only on one native thread and doesn't create threads itself, yet not all the examples was migrated to that model, so it could be that some examples will not work properly (migrated::simplefileserver, simpleappserver, echoserver)
+* There is stacks pool free list, so we reuse stacks and eliminate system calls for new/delete stack, the size of the pool can be configured.
 
 ## License
 
-Mordor is licensed under the New BSD License, and Copyright (c) 2009, Decho Corp.
+Mordor is licensed under the New BSD License
 See LICENSE for details.
 
 ## Authors
