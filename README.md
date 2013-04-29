@@ -225,7 +225,7 @@ Intel board, some details:
 * cmpxchg16/Mordor ~= GWan
 * Monkey look the best
 
-*But! don't forget that Mordor without the **callbacks hell!** you write synchronous network/file I/O, and under the hood it's asynchronous.*
+**But! don't forget that Mordor without the callbacks hell! you write synchronous network/file I/O, and under the hood it's asynchronous.**
 
 ## Important Notes:
 
