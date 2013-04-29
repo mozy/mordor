@@ -229,8 +229,8 @@ Intel board, some details:
 
 ## Important Notes:
 
-* The core was changed so Scheduler can run only on one native thread and doesn't create threads itself, yet not all the examples was migrated to that model, so it could be that some examples will not work properly (migrated::simplefileserver, simpleappserver, echoserver)
-* There is stacks pool free list, so we reuse stacks and eliminate system calls for new/delete stack, the size of the pool can be configured.
+* To gain more performance, the locks in scheduling executions was eliminated, the core was changed so Scheduler can run only on one native thread and doesn't create native threads, yet not all the examples was migrated to that model, so it could be that some examples will not work properly due to assertion that validate the model (migrated examples::simplefileserver, simpleappserver, echoserver)
+* The core include stacks pool, so we reuse stacks and eliminate system calls for new/delete stack, the size of the pool can be configured and it's should be fine tune because its affect on performance
 
 ## License
 
