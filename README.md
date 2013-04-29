@@ -223,7 +223,7 @@ Intel board, some details:
 
 * cmpxchg16/Mordor 3x than original Mordor
 * cmpxchg16/Mordor ~= GWan
-* Monkey look the best
+* Monkey slightly better
 
 **But! don't forget that Mordor without the callbacks hell! you write synchronous network/file I/O, and under the hood it's asynchronous.**
 
