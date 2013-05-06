@@ -1,4 +1,5 @@
 // Copyright (c) 2009 - Mozy, Inc.
+#include <vector>
 
 #include <boost/bind.hpp>
 
@@ -21,6 +22,7 @@
 #include "mordor/streams/null.h"
 #include "mordor/streams/pipe.h"
 #include "mordor/streams/random.h"
+#include "mordor/streams/ssl.h"
 #include "mordor/streams/test.h"
 #include "mordor/streams/transfer.h"
 #include "mordor/test/test.h"
@@ -2656,6 +2658,30 @@ public:
     // Latest server connection
     ServerConnection::ptr serverConn;
 };
+
+static void accept(SSLStream::ptr server)
+{
+    server->accept();
+}
+
+class DummySSLStreamBroker : public StreamBroker
+{
+public:
+    typedef boost::shared_ptr<DummyStreamBroker> ptr;
+    Stream::ptr getStream(const URI &uri)
+    {
+        std::pair<Stream::ptr, Stream::ptr> pipes = pipeStream();
+        m_pipes.push_back(pipes);
+        SSLStream::ptr sslserver(new SSLStream(pipes.first, false));
+
+        m_pool.schedule(boost::bind(&accept, sslserver));
+        return pipes.second;
+    }
+
+private:
+    WorkerPool m_pool;
+    std::vector<std::pair<Stream::ptr, Stream::ptr> > m_pipes;
+};
 }
 
 MORDOR_UNITTEST(HTTPConnectionCache, idleDoesntPreventStop)
@@ -2697,6 +2723,38 @@ MORDOR_UNITTEST(HTTPConnectionCache, remoteClose)
     } catch (...) {
         MORDOR_TEST_ASSERT(!"Crashed caused by remote close!");
     }
+}
+
+MORDOR_UNITTEST(HTTPConnectionNoCache, getDifferentConnection)
+{
+    IOManager ioManager;
+    StreamBroker::ptr broker(new DummyStreamBroker());
+    ConnectionNoCache::ptr noCache(new ConnectionNoCache(broker, &ioManager));
+    ClientConnection::ptr conn1 = noCache->getConnection("http://localhost/").first;
+    ClientConnection::ptr conn2 = noCache->getConnection("http://localhost/").first;
+    MORDOR_TEST_ASSERT_NOT_EQUAL(conn1->stream().get(), conn2->stream().get());
+    ioManager.stop();
+}
+
+MORDOR_UNITTEST(HTTPConnectionNoCache, getDifferentSSLConnection)
+{
+    StreamBroker::ptr broker(new DummySSLStreamBroker());
+    ConnectionNoCache::ptr noCache(new ConnectionNoCache(broker, NULL));
+    noCache->verifySslCertificateHost(false);
+    ClientConnection::ptr conn1 = noCache->getConnection("https://localhost/").first;
+    ClientConnection::ptr conn2 = noCache->getConnection("https://localhost/").first;
+    MORDOR_TEST_ASSERT_NOT_EQUAL(conn1->stream().get(), conn2->stream().get());
+}
+
+MORDOR_UNITTEST(HTTPConnectionNoCache, regardlessForceNewConnectionParam)
+{
+    IOManager ioManager;
+    StreamBroker::ptr broker(new DummyStreamBroker());
+    ConnectionNoCache::ptr noCache(new ConnectionNoCache(broker, &ioManager));
+    ClientConnection::ptr conn1 = noCache->getConnection("http://localhost/", false).first;
+    ClientConnection::ptr conn2 = noCache->getConnection("http://localhost/", false).first;
+    MORDOR_TEST_ASSERT_NOT_EQUAL(conn1->stream().get(), conn2->stream().get());
+    ioManager.stop();
 }
 
 namespace {

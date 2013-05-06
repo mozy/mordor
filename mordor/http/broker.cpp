@@ -39,22 +39,29 @@ createRequestBroker(const RequestBrokerOptions &options)
         streamBroker = options.customStreamBrokerFilter;
     }
 
-    ConnectionCache::ptr connectionCache =
-        ConnectionCache::create(streamBroker, timerManager);
-    connectionCache->httpReadTimeout(options.httpReadTimeout);
-    connectionCache->httpWriteTimeout(options.httpWriteTimeout);
-    connectionCache->idleTimeout(options.idleTimeout);
-    connectionCache->sslReadTimeout(options.sslConnectReadTimeout);
-    connectionCache->sslWriteTimeout(options.sslConnectWriteTimeout);
-    connectionCache->sslCtx(options.sslCtx);
-    connectionCache->proxyForURI(options.proxyForURIDg);
-    connectionCache->proxyRequestBroker(options.proxyRequestBroker);
-    connectionCache->verifySslCertificate(options.verifySslCertificate);
-    connectionCache->verifySslCertificateHost(options.verifySslCertificateHost);
-    connectionCache->connectionsPerHost(options.connectionsPerHost);
+    ConnectionBroker::ptr connectionBroker;
+    ConnectionCache::ptr connectionCache;
+    if (!options.enableConnectionCache) {
+        ConnectionNoCache::ptr connectionNoCache(new ConnectionNoCache(streamBroker,
+            timerManager));
+        connectionBroker = boost::static_pointer_cast<ConnectionBroker>(connectionNoCache);
+    } else {
+        connectionCache = ConnectionCache::create(streamBroker, timerManager);
+        connectionCache->idleTimeout(options.idleTimeout);
+        connectionCache->proxyForURI(options.proxyForURIDg);
+        connectionCache->proxyRequestBroker(options.proxyRequestBroker);
+        connectionCache->connectionsPerHost(options.connectionsPerHost);
+        connectionBroker = boost::static_pointer_cast<ConnectionBroker>(connectionCache);
+    }
+    connectionBroker->httpReadTimeout(options.httpReadTimeout);
+    connectionBroker->httpWriteTimeout(options.httpWriteTimeout);
+    connectionBroker->sslReadTimeout(options.sslConnectReadTimeout);
+    connectionBroker->sslWriteTimeout(options.sslConnectWriteTimeout);
+    connectionBroker->sslCtx(options.sslCtx);
+    connectionBroker->verifySslCertificate(options.verifySslCertificate);
+    connectionBroker->verifySslCertificateHost(options.verifySslCertificateHost);
 
-    RequestBroker::ptr requestBroker(new BaseRequestBroker(
-        boost::static_pointer_cast<ConnectionBroker>(connectionCache)));
+    RequestBroker::ptr requestBroker(new BaseRequestBroker(connectionBroker));
 
     if (options.getCredentialsDg || options.getProxyCredentialsDg)
         requestBroker.reset(new AuthRequestBroker(requestBroker,
@@ -266,6 +273,28 @@ ConnectionCache::getConnection(const URI &uri, bool forceNewConnection)
                 throw;
         }
     }
+}
+
+std::pair<ClientConnection::ptr, bool>
+ConnectionNoCache::getConnection(const URI &uri, bool forceNewConnection)
+{
+    URI endPoint = uri;
+    endPoint.path = URI::Path();
+    endPoint.queryDefined(false);
+    endPoint.fragmentDefined(false);
+
+    // Establish a new connection
+    Stream::ptr stream = m_streamBroker->getStream(endPoint);
+    addSSL(endPoint, stream);
+
+    std::pair<ClientConnection::ptr, bool> result = std::make_pair(ClientConnection::ptr(
+        new ClientConnection(stream, m_timerManager)), false);
+    if (m_httpReadTimeout != ~0ull)
+        result.first->readTimeout(m_httpReadTimeout);
+    if (m_httpWriteTimeout != ~0ull)
+        result.first->writeTimeout(m_httpWriteTimeout);
+
+    return result;
 }
 
 std::pair<ClientConnection::ptr, bool>
@@ -521,7 +550,7 @@ ConnectionCache::cleanOutDeadConns(CachedConnectionMap &conns)
 }
 
 void
-ConnectionCache::addSSL(const URI &uri, Stream::ptr &stream)
+ConnectionBroker::addSSL(const URI &uri, Stream::ptr &stream)
 {
     if (uri.schemeDefined() && uri.scheme() == "https") {
         TimeoutStream::ptr timeoutStream;

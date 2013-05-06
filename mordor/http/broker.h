@@ -109,7 +109,8 @@ public:
           m_idleTimeout(~0ull),
           m_sslReadTimeout(~0ull),
           m_sslWriteTimeout(~0ull),
-          m_sslCtx(NULL)
+          m_sslCtx(NULL),
+          m_timerManager(NULL)
     {}
     virtual ~ConnectionBroker() {}
 
@@ -126,10 +127,14 @@ public:
     void verifySslCertificateHost(bool verify) { m_verifySslCertificateHost = verify; }
 
 protected:
+    void addSSL(const URI &uri, boost::shared_ptr<Stream> &stream);
+
+protected:
     bool m_verifySslCertificate, m_verifySslCertificateHost;
     unsigned long long m_httpReadTimeout, m_httpWriteTimeout, m_idleTimeout,
         m_sslReadTimeout, m_sslWriteTimeout;
     SSL_CTX * m_sslCtx;
+    TimerManager *m_timerManager;
 };
 
 struct PriorConnectionFailedException : virtual Exception {};
@@ -158,9 +163,10 @@ protected:
     ConnectionCache(StreamBroker::ptr streamBroker, TimerManager *timerManager = NULL)
         : m_streamBroker(streamBroker),
           m_connectionsPerHost(1u),
-          m_closed(false),
-          m_timerManager(timerManager)
-    {}
+          m_closed(false)
+    {
+        m_timerManager = timerManager;
+    }
 
 public:
     static ConnectionCache::ptr create(StreamBroker::ptr streamBroker, TimerManager *timerManager = NULL)
@@ -221,7 +227,6 @@ private:
         getConnectionViaProxy(const URI &uri, const URI &proxy,
         FiberMutex::ScopedLock &lock);
     void cleanOutDeadConns(CachedConnectionMap &conns);
-    void addSSL(const URI &uri, boost::shared_ptr<Stream> &stream);
     void dropConnection(weak_ptr self, const URI &uri, const ClientConnection *connection);
 
 private:
@@ -231,9 +236,28 @@ private:
 
     CachedConnectionMap m_conns;
     bool m_closed;
-    TimerManager *m_timerManager;
     boost::function<std::vector<URI> (const URI &)> m_proxyForURIDg;
     boost::shared_ptr<RequestBroker> m_proxyBroker;
+};
+
+// The ConnectionNoCache has no support for proxies.
+class ConnectionNoCache : public ConnectionBroker
+{
+public:
+    typedef boost::shared_ptr<ConnectionNoCache> ptr;
+
+    ConnectionNoCache(StreamBroker::ptr streamBroker, TimerManager *timerManager = NULL)
+        : m_streamBroker(streamBroker)
+    {
+        m_timerManager = timerManager;
+    }
+
+    // Get a new connection associated with a URI. Do not cache it.
+    std::pair<boost::shared_ptr<ClientConnection>, bool /*is proxy connection*/>
+        getConnection(const URI &uri, bool forceNewConnection = false);
+
+private:
+    StreamBroker::ptr m_streamBroker;
 };
 
 // Mock object useful for unit tests.  Rather than
@@ -249,9 +273,10 @@ public:
             boost::shared_ptr<ServerRequest>)> dg,
         TimerManager *timerManager = NULL, unsigned long long readTimeout = ~0ull,
         unsigned long long writeTimeout = ~0ull)
-        : m_dg(dg),
-          m_timerManager(timerManager)
-    {}
+        : m_dg(dg)
+    {
+        m_timerManager = timerManager;
+    }
 
     std::pair<boost::shared_ptr<ClientConnection>, bool /*is proxy connection*/>
         getConnection(const URI &uri, bool forceNewConnection = false);
@@ -259,7 +284,6 @@ public:
 private:
     boost::function<void (const URI &uri, boost::shared_ptr<ServerRequest>)> m_dg;
     ConnectionCache m_conns;
-    TimerManager *m_timerManager;
 };
 
 // Abstract base-class for all the RequestBroker objects.
@@ -459,7 +483,8 @@ struct RequestBrokerOptions
         connectionsPerHost(1u),
         sslCtx(NULL),
         verifySslCertificate(false),
-        verifySslCertificateHost(true)
+        verifySslCertificateHost(true),
+        enableConnectionCache(true)
     {}
 
     IOManager *ioManager;
@@ -509,6 +534,7 @@ struct RequestBrokerOptions
     SSL_CTX *sslCtx;
     bool verifySslCertificate;
     bool verifySslCertificateHost;
+    bool enableConnectionCache;
 
     // When specified a UserAgentRequestBroker will take care of adding
     // the User-Agent header to each request
