@@ -59,20 +59,15 @@ For example, here's a complete program for simple http file server:
 
     static void httpRequest(HTTP::ServerRequest::ptr request)
     {
-	    try {
-		    const std::string &method = request->request().requestLine.method;
-		    const URI &uri = request->request().requestLine.uri;
+	    const std::string &method = request->request().requestLine.method;
+	    const URI &uri = request->request().requestLine.uri;
 
-		    if (method == HTTP::GET) {
-			    FileStream::ptr stream(new FileStream(uri.path.toString(), FileStream::READ, FileStream::OPEN, static_cast<IOManager*>(Scheduler::getThis()), Scheduler::getThis()));
-			    HTTP::respondStream(request, stream);
-		    } else {
-			    HTTP::respondError(request, HTTP::METHOD_NOT_ALLOWED);
-		    }
-	    } catch (...) {
-            std::cerr << boost::current_exception_diagnostic_information() << std::endl;
-            HTTP::respondError(request, HTTP::NOT_FOUND);
-        }
+	    if (method == HTTP::GET) {
+		    FileStream::ptr stream(new FileStream(uri.path.toString(), FileStream::READ, FileStream::OPEN, static_cast<IOManager*>(Scheduler::getThis()), Scheduler::getThis()));
+		    HTTP::respondStream(request, stream);
+	    } else {
+		    HTTP::respondError(request, HTTP::METHOD_NOT_ALLOWED);
+	    }
     }
 
     void serve(Socket::ptr listen)
@@ -228,14 +223,18 @@ Intel board, some details:
 
 * cmpxchg16/Mordor 3x than original Mordor
 * cmpxchg16/Mordor ~= GWan
-* Monkey look the best
+* Monkey slightly better
 
-*But! don't forget that Mordor without the callbacks hell! you write synchronous network/file I/O, and under the hood it's asynchronous.*
+**But! don't forget that Mordor without the callbacks hell! you write synchronous network/file I/O, and under the hood it's asynchronous.**
 
+## Important Notes:
+
+* To gain more performance, the locks in scheduling executions was eliminated, the core was changed so Scheduler can run only on one native thread and doesn't create native threads, yet not all the examples was migrated to that model, so it could be that some examples will not work properly due to assertion that validate the model (migrated examples::simplefileserver, simpleappserver, echoserver)
+* The core include stacks pool, so we reuse stacks and eliminate system calls for new/delete stack, the size of the pool can be configured and it's should be fine tune because its affect on performance
 
 ## License
 
-Mordor is licensed under the New BSD License, and Copyright (c) 2009, Decho Corp.
+Mordor is licensed under the New BSD License
 See LICENSE for details.
 
 ## Authors
