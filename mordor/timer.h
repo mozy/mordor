@@ -103,7 +103,7 @@ private:
     static boost::function<unsigned long long ()> ms_clockDg;
     bool detectClockRollover(unsigned long long nowUs);
     std::set<Timer::ptr, Timer::Comparator> m_timers;
-    boost::mutex m_mutex;
+//    boost::mutex m_mutex;
     bool m_tickled;
     unsigned long long m_previousTime;
 };
