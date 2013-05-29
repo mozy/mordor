@@ -207,22 +207,22 @@ Intel board, some details:
     ** Preparing 500 concurrent users for battle.
     The server is now under siege...
     Lifting the server siege...      done.
-    Transactions:		       67650 hits
+    Transactions:		       67896 hits
     Availability:		      100.00 %
-    Elapsed time:		        9.99 secs
-    Data transferred:	       84.65 MB
+    Elapsed time:		        9.62 secs
+    Data transferred:	       88.32 MB
     Response time:		        0.07 secs
-    Transaction rate:	     6771.77 trans/sec
-    Throughput:		        8.47 MB/sec
-    Concurrency:		      470.47
-    Successful transactions:       67650
+    Transaction rate:	     7057.80 trans/sec
+    Throughput:		        9.18 MB/sec
+    Concurrency:		      488.34
+    Successful transactions:       67896
     Failed transactions:	           0
-    Longest transaction:	        7.08
+    Longest transaction:	        1.42
     Shortest transaction:	        0.00
 
 
 * cmpxchg16/Mordor 3x than original Mordor
-* cmpxchg16/Mordor ~= GWan
+* cmpxchg16/Mordor slightly better from GWan
 * Monkey slightly better
 
 **But! don't forget that Mordor without the callbacks hell! you write synchronous network/file I/O, and under the hood it's asynchronous.**
