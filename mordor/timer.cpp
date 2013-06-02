@@ -105,7 +105,6 @@ bool
 Timer::cancel()
 {
     MORDOR_LOG_DEBUG(g_log) << this << " cancel";
-//    boost::mutex::scoped_lock lock(m_manager->m_mutex);
     if (m_dg) {
         m_dg = NULL;
         std::set<Timer::ptr, Timer::Comparator>::iterator it =
@@ -120,7 +119,6 @@ Timer::cancel()
 bool
 Timer::refresh()
 {
-//    boost::mutex::scoped_lock lock(m_manager->m_mutex);
     if (!m_dg)
         return false;
     std::set<Timer::ptr, Timer::Comparator>::iterator it =
@@ -129,7 +127,6 @@ Timer::refresh()
     m_manager->m_timers.erase(it);
     m_next = TimerManager::now() + m_us;
     m_manager->m_timers.insert(shared_from_this());
-//    lock.unlock();
     MORDOR_LOG_DEBUG(g_log) << this << " refresh";
     return true;
 }
@@ -137,7 +134,6 @@ Timer::refresh()
 bool
 Timer::reset(unsigned long long us, bool fromNow)
 {
-//    boost::mutex::scoped_lock lock(m_manager->m_mutex);
     if (!m_dg)
         return false;
     // No change
@@ -158,7 +154,6 @@ Timer::reset(unsigned long long us, bool fromNow)
     bool atFront = (it == m_manager->m_timers.begin()) && !m_manager->m_tickled;
     if (atFront)
         m_manager->m_tickled = true;
-//    lock.unlock();
     MORDOR_LOG_DEBUG(g_log) << this << " reset to " << m_us;
     if (atFront)
         m_manager->onTimerInsertedAtFront();
@@ -173,7 +168,6 @@ TimerManager::TimerManager()
 TimerManager::~TimerManager()
 {
 #ifndef NDEBUG
-//    boost::mutex::scoped_lock lock(m_mutex);
     MORDOR_ASSERT(m_timers.empty());
 #endif
 }
@@ -184,13 +178,11 @@ TimerManager::registerTimer(unsigned long long us, boost::function<void ()> dg,
 {
     MORDOR_ASSERT(dg);
     Timer::ptr result(new Timer(us, dg, recurring, this));
-//    boost::mutex::scoped_lock lock(m_mutex);
     std::set<Timer::ptr, Timer::Comparator>::iterator it =
         m_timers.insert(result).first;
     bool atFront = (it == m_timers.begin()) && !m_tickled;
     if (atFront)
         m_tickled = true;
-//    lock.unlock();
     MORDOR_LOG_DEBUG(g_log) << result.get() << " registerTimer(" << us
         << ", " << recurring << "): " << atFront;
     if (atFront)
@@ -224,7 +216,6 @@ stubOnTimer(
 unsigned long long
 TimerManager::nextTimer()
 {
-//    boost::mutex::scoped_lock lock(m_mutex);
     m_tickled = false;
     if (m_timers.empty()) {
         MORDOR_LOG_DEBUG(g_log) << this << " nextTimer(): ~0ull";
@@ -268,7 +259,6 @@ TimerManager::processTimers()
     std::vector<boost::function<void ()> > result;
     unsigned long long nowUs = now();
     {
-//        boost::mutex::scoped_lock lock(m_mutex);
         if (m_timers.empty())
             return result;
         bool rollover = detectClockRollover(nowUs);
