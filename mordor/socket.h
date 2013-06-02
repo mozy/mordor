@@ -21,6 +21,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #ifndef OSX
 # include <netinet/in_systm.h>
 # include <netinet/ip.h>
