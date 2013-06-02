@@ -749,6 +749,8 @@ suckylsp:
             error = errno;
         } while (newsock == -1 && error == EINTR);
         while (newsock == -1 && error == EAGAIN) {
+            //ensure we are not already registered (assert will fire)
+            ioManager->unregisterEvent(m_sock, IOManager::READ);
             ioManager->registerEvent(m_sock, IOManager::READ);
             if (m_cancelledReceive) {
                 MORDOR_LOG_ERROR(g_log) << this << " accept(" << m_sock << "): ("
