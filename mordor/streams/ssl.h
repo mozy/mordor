@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include <boost/thread/mutex.hpp>
+
 #include <openssl/ssl.h>
 
 #include "buffer.h"
@@ -52,6 +54,10 @@ public:
 
 public:
     SSLStream(Stream::ptr parent, bool client = true, bool own = true, SSL_CTX *ctx = NULL);
+
+    static SSL_CTX* createSSLCTX ();
+
+    ~SSLStream();
 
     bool supportsHalfClose() { return false; }
 
