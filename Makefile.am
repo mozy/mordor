@@ -362,6 +362,7 @@ noinst_PROGRAMS=			\
 	mordor/examples/iombench	\
 	mordor/examples/simpleappserver	\
 	mordor/examples/simplehttpfileserver	\
+	mordor/examples/simplehttpserver	\
 	mordor/examples/sslterminator	\
 	mordor/examples/tunnel		\
 	mordor/examples/udpstats
@@ -411,6 +412,13 @@ mordor_examples_simplehttpfileserver_LDADD=mordor/libmordor.la       \
 
 mordor_examples_sslterminator_SOURCES=mordor/examples/sslterminator.cpp
 mordor_examples_sslterminator_LDADD=mordor/libmordor.la       \
+        $(CORESERVICES_FRAMEWORK_LIBS)          \
+        $(COREFOUNDATION_FRAMEWORK_LIBS)        \
+        $(SECURITY_FRAMEWORK_LIBS)              \
+        $(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+
+mordor_examples_simplehttpserver_SOURCES=mordor/examples/simplehttpserver.cpp
+mordor_examples_simplehttpserver_LDADD=mordor/libmordor.la       \
         $(CORESERVICES_FRAMEWORK_LIBS)          \
         $(COREFOUNDATION_FRAMEWORK_LIBS)        \
         $(SECURITY_FRAMEWORK_LIBS)              \
