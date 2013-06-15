@@ -40,6 +40,19 @@ AX_CHECK_SECURITY_FRAMEWORK
 AX_CHECK_SYSTEMCONFIGURATION_FRAMEWORK
 AX_LIB_POSTGRESQL
 AM_CONDITIONAL([HAVE_POSTGRESQL], [test "x${POSTGRESQL_VERSION}" != x])
+
+
+AC_ARG_WITH(tcmalloc,
+            [AC_HELP_STRING([--with-tcmalloc], [(optional) link with tcmalloc; default is no])],
+            [with_tcmalloc=$withval],
+            [with_tcmalloc=no]
+           )
+
+if test "x$with_tcmalloc" != 'xno'
+then
+  AC_CHECK_LIB([tcmalloc_minimal], [malloc], [], [AC_MSG_ERROR([Cannot find tcmalloc])])
+fi
+
 AC_ARG_WITH(yaml,
 	[AS_HELP_STRING([--with-yaml=[[ARG]]],
 		[Enable YAML parsing support @<:@default=check@:>@])],

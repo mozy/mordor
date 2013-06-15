@@ -5,6 +5,7 @@ if [ ! -x configure ]; then
 fi
 
 CXXFLAGS=
+TCMALLOC=
 if [ `uname` = 'Darwin' ] ; then
     CXXFLAGS="-Wno-deprecated-declarations"
 fi
@@ -19,10 +20,12 @@ if [ ! -f Makefile ]; then
         VALGRINDFLAGS=--enable-valgrind=yes
     else
         ASSERTFLAGS=--disable-assert
+        CXXFLAGS+=' -O3'
+	TCMALLOC=--with-tcmalloc=yes
     fi
     export CXXFLAGS
     which pg_config >/dev/null || POSTGRESFLAGS=--without-postgresql
-    ./configure --disable-shared $ASSERTFLAGS $POSTGRESFLAGS $VALGRINDFLAGS
+    ./configure --disable-shared $ASSERTFLAGS $POSTGRESFLAGS $VALGRINDFLAGS $TCMALLOC
 fi
 if [ $(uname) = 'Linux' ]; then
     j=$(grep processor /proc/cpuinfo | wc -l)

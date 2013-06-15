@@ -115,6 +115,7 @@ Something to point out here is that when the work is scheduled on the IOManager,
 * OpenSSL
 * Zlib
 * Ragel (compile-time only)
+* tcmalloc (optional)
 
 ## Building
 
