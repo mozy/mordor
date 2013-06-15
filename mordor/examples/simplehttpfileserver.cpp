@@ -32,7 +32,7 @@ static void httpRequest(HTTP::ServerRequest::ptr request)
 void serve(Socket::ptr listen, bool ssl)
 {
 	IOManager ioManager;
-	SSL_CTX* ssl_ctx;
+	SSL_CTX* ssl_ctx = NULL;
 
 	if (ssl)
 		ssl_ctx = SSLStream::createSSLCTX();

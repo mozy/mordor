@@ -74,7 +74,7 @@ For example, here's a complete program for simple http file server (mordor/examp
     void serve(Socket::ptr listen, bool ssl)
     {
     	IOManager ioManager;
-    	SSL_CTX* ssl_ctx;
+    	SSL_CTX* ssl_ctx = NULL;
 
     	if (ssl)
 		    ssl_ctx = SSLStream::createSSLCTX();
