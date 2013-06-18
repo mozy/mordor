@@ -164,7 +164,11 @@ HTTPStream::start(size_t length)
                 parent(responseStream);
                 break;
             default:
-                request->finish();
+                // The bad ClientRequest `request' is propagated along with the
+                // InvalidResponseException, the uppper level should handle the
+                // error and finish the request, fail to do so will cause the
+                // corresponding ClientConnection abortion and all the remaining
+                // requests on the connection will be canceled.
                 MORDOR_THROW_EXCEPTION(InvalidResponseException(request));
         }
     }
