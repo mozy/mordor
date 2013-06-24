@@ -48,17 +48,37 @@ private:
 /// create a vhost for that authority, and only accept requests with the given
 /// Host header.  Other or missing Host headers will fall back to a servlet
 /// defined with no authority.
+/// Supports wildcard - '*' can be used in URI segments to allow matching any
+/// content in the segment
 /// Differing schemes (http vs. https) are not currently supported; the scheme
 /// is currently ignored
+/// URI match rule:
+/// * authority match first, if no authority matches, fall back to rules in no authority
+/// - non-wildcard character matching rule:
+///   * longest path match first
+///   * the same path is not allowed to register more than once, otherwise
+///     assertion will be triggered.
+/// - wildcard character matching rule:
+///   * longest path match first
+///   * if there is more than one path matches, following precedence will be considered
+///     - non-wildcard path,
+///     - wildcard path with right-most postion of the left-most '*'
 class ServletDispatcher : public Servlet
 {
 private:
     typedef boost::variant<boost::shared_ptr<Servlet>,
             boost::function<Servlet *()> > ServletOrCreator;
     typedef std::map<URI::Path, ServletOrCreator> ServletPathMap;
-    typedef std::map<URI::Authority, ServletPathMap> ServletHostMap;
+    typedef ServletPathMap ServletWildcardPathMap;
+    typedef std::pair<ServletPathMap, ServletWildcardPathMap> ServletPathMapPair;
+    typedef std::map<URI::Authority, ServletPathMapPair> ServletHostMap;
 public:
     typedef boost::shared_ptr<ServletDispatcher> ptr;
+
+public:
+    ServletDispatcher(bool enableWildcard = false)
+        : m_enableWildcard(enableWildcard)
+    {}
 
 public:
     /// Use to register a servlet that can share the same Servlet object every
@@ -93,12 +113,20 @@ public:
 
     void request(boost::shared_ptr<ServerRequest> request);
 
+    static bool isWildcardPath(const URI::Path &path);
+    static bool wildcardPathMatch(const URI::Path &wildPath, const URI::Path &path);
+
 private:
-    Servlet::ptr getServlet(ServletPathMap &vhost, URI::Path &path);
+    Servlet::ptr getServlet(ServletPathMapPair &vhost, const URI::Path &path);
+    Servlet::ptr getServletWildcard(ServletWildcardPathMap &vhost, const URI::Path &path);
+
     void registerServlet(const URI &uri, const ServletOrCreator &servlet);
+
+    static Servlet::ptr getServletPtr(ServletOrCreator &);
 
 private:
     ServletHostMap m_servlets;
+    bool m_enableWildcard;
 };
 
 }}
