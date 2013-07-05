@@ -163,7 +163,7 @@ Scheduler::schedule(Fiber::ptr f, tid_t thread)
         boost::mutex::scoped_lock lock(m_mutex);
         tickleMe = scheduleNoLock(f, thread);
     }
-    if (tickleMe && Scheduler::getThis() != this)
+    if (shouldTickle(tickleMe))
         tickle();
 }
 
@@ -175,7 +175,7 @@ Scheduler::schedule(boost::function<void ()> dg, tid_t thread)
         boost::mutex::scoped_lock lock(m_mutex);
         tickleMe = scheduleNoLock(dg, thread);
     }
-    if (tickleMe && Scheduler::getThis() != this)
+    if (shouldTickle(tickleMe))
         tickle();
 }
 
@@ -304,7 +304,7 @@ Scheduler::yieldTo(bool yieldToCallerOnTerminate)
 void
 Scheduler::run()
 {
-    t_scheduler = this;
+    setThis();
     if (gettid() != m_rootThread) {
         // Running in own thread
         t_fiber = Fiber::getThis().get();

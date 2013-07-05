@@ -100,7 +100,7 @@ public:
                 ++begin;
             }
         }
-        if (tickleMe && Scheduler::getThis() != this)
+        if (shouldTickle(tickleMe))
             tickle();
     }
 
@@ -172,6 +172,14 @@ protected:
 
     bool hasWorkToDo();
     virtual bool hasIdleThreads() const { return m_idleThreadCount != 0; }
+
+    /// determine whether tickle() is needed, to be invoked in schedule()
+    /// @param empty whether m_fibers is empty before the new task is scheduled
+    virtual bool shouldTickle(bool empty) const
+    { return empty && Scheduler::getThis() != this; }
+
+    /// set `this' to TLS so that getThis() can get correct Scheduler
+    void setThis() { t_scheduler = this; }
 
 private:
     void yieldTo(bool yieldToCallerOnTerminate);
