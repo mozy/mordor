@@ -426,8 +426,14 @@ Scheduler::run()
                             dgFiber->reset(NULL);
                     }
                 } catch (...) {
-                    MORDOR_LOG_FATAL(Log::root())
-                        << boost::current_exception_diagnostic_information();
+                    try {
+                        MORDOR_LOG_FATAL(Log::root())
+                            << boost::current_exception_diagnostic_information();
+                    }
+                    catch(...) {
+                        // Swallow any exceptions that might occur while trying to log the current fiber state #98680
+                    }
+
                     {
                         boost::mutex::scoped_lock lock(m_mutex);
                         std::vector<FiberAndThread>::iterator it2 = it;
