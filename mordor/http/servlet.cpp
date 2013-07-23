@@ -71,7 +71,7 @@ Servlet::ptr
 ServletDispatcher::getServlet(ServletPathMapPair &vhosts, const URI::Path &path)
 {
     URI::Path copy(path);
-    while (!path.segments.empty()) {
+    while (!copy.segments.empty()) {
         // search from non-wildcard path
         ServletPathMap::iterator it = vhosts.first.find(copy);
         if (it != vhosts.first.end())

@@ -20,14 +20,18 @@ MORDOR_UNITTEST(ServletDispatcher, basic)
     Servlet::ptr root(new DummyServlet), ab(new DummyServlet),
         ca(new DummyServlet), ma(new DummyServlet), wl(new DummyServlet);
 
+    // non registered, can't find any
     MORDOR_TEST_ASSERT(!dispatcher.getServlet("/d/e/f"));
 
-    dispatcher.registerServlet("/", root);
     dispatcher.registerServlet("/a/b", ab);
     dispatcher.registerServlet("/c/a", ca);
     dispatcher.registerServlet("/m/a/", ma);
     dispatcher.registerServlet("/w/*/l/", wl);
 
+    // some servlets registered, still can't find it
+    MORDOR_TEST_ASSERT(!dispatcher.getServlet("/d/e/f"));
+
+    dispatcher.registerServlet("/", root);
     MORDOR_TEST_ASSERT_EQUAL(dispatcher.getServlet("/d/e/f"), root);
     MORDOR_TEST_ASSERT_EQUAL(dispatcher.getServlet("/a/b") , ab);
     MORDOR_TEST_ASSERT_EQUAL(dispatcher.getServlet("/a/b/") , ab);
@@ -72,9 +76,8 @@ MORDOR_UNITTEST(ServletDispatcher, vhosts)
 MORDOR_UNITTEST(ServletDispatcher, wildcardBasic)
 {
     ServletDispatcher dispatcher(true);
-    Servlet::ptr root(new DummyServlet), axb(new DummyServlet), cxdx(new DummyServlet);
+    Servlet::ptr axb(new DummyServlet), cxdx(new DummyServlet);
 
-    dispatcher.registerServlet("/", root);
     dispatcher.registerServlet("/a/*/b", axb);
     dispatcher.registerServlet("/c/*/d/*/", cxdx);
     MORDOR_TEST_ASSERT_EQUAL(dispatcher.getServlet("/a/b/b"), axb);
@@ -83,8 +86,8 @@ MORDOR_UNITTEST(ServletDispatcher, wildcardBasic)
     MORDOR_TEST_ASSERT_EQUAL(dispatcher.getServlet("/c/y/d/m/n"), cxdx);
     MORDOR_TEST_ASSERT_EQUAL(dispatcher.getServlet("/a/b/b/b"), axb);
     // not match
-    MORDOR_TEST_ASSERT_EQUAL(dispatcher.getServlet("/a/b/c"), root);
-    MORDOR_TEST_ASSERT_EQUAL(dispatcher.getServlet("/b/*/b"), root);
+    MORDOR_TEST_ASSERT(!dispatcher.getServlet("/a/b/c"));
+    MORDOR_TEST_ASSERT(!dispatcher.getServlet("/b/*/b"));
 }
 
 MORDOR_UNITTEST(ServletDispatcher, wildcardLowerPriority)
