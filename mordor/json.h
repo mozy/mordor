@@ -109,6 +109,10 @@ private:
     }
 };
 
+// declare the specialization to let compiler know it
+template<> void Value::set<bool>(const bool& value,
+    boost::enable_if<boost::is_arithmetic<bool> >::type *);
+
 class Parser : public RagelParserWithStack
 {
 public:

@@ -20,7 +20,9 @@ if [ ! -f Makefile ]; then
     else
         ASSERTFLAGS=--disable-assert
     fi
-    export CXXFLAGS
+    if [[ -n "$CXXFLAGS" ]] ; then
+        export CXXFLAGS
+    fi
     which pg_config >/dev/null || POSTGRESFLAGS=--without-postgresql
     ./configure --disable-shared $ASSERTFLAGS $POSTGRESFLAGS $VALGRINDFLAGS
 fi

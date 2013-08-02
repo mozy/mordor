@@ -274,6 +274,13 @@ MORDOR_UNITTEST(JSON, escaping)
     MORDOR_TEST_ASSERT_EQUAL(unquote("\"\\\"\\\\\\b\\f\\n\\r\\t\\u001b\\/\""), "\"\\\b\f\n\r\t\x1b/");
 }
 
+MORDOR_UNITTEST(JSON, boolValue)
+{
+    Value root;
+    root = true;
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(root), "true");
+}
+
 MORDOR_UNITTEST(JSON, unicodeEscape)
 {
     Value root;
