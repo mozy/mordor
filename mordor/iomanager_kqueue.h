@@ -34,9 +34,6 @@ private:
         Scheduler *m_scheduler, *m_schedulerClose;
         boost::shared_ptr<Fiber> m_fiber, m_fiberClose;
         boost::function<void ()> m_dg, m_dgClose;
-
-        bool operator<(const AsyncEvent &rhs) const
-        { if (event.ident < rhs.event.ident) return true; return event.filter < rhs.event.filter; }
     };
 
 public:
