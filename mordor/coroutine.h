@@ -44,7 +44,7 @@ public:
                 m_fiber->inject(boost::current_exception());
             }
         }
-        m_fiber->reset();
+        m_fiber->reset(boost::bind(&Coroutine::run, this));
     }
 
     void reset(boost::function<void (Coroutine &, Arg)> dg)
@@ -119,7 +119,7 @@ public:
                 m_fiber->inject(boost::current_exception());
             }
         }
-        m_fiber->reset();
+        m_fiber->reset(boost::bind(&Coroutine::run, this));
     }
 
     void reset(boost::function<void (Coroutine &)> dg)
@@ -190,7 +190,7 @@ public:
                 m_fiber->inject(boost::current_exception());
             }
         }
-        m_fiber->reset();
+        m_fiber->reset(boost::bind(&Coroutine::run, this));
     }
 
     void reset(boost::function<void (Coroutine &, Arg)> dg)

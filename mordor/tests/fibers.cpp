@@ -328,8 +328,9 @@ MORDOR_UNITTEST(Fibers, reset)
     int sequence = 0;
     Fiber::ptr mainFiber = Fiber::getThis();
     Fiber::ptr a(new Fiber(NULL));
-    a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
-        boost::ref(sequence), false));
+    boost::function<void ()> dg = boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
+                                              boost::ref(sequence), false);
+    a->reset(dg);
     MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
     MORDOR_TEST_ASSERT(a != mainFiber);
     MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
@@ -340,7 +341,7 @@ MORDOR_UNITTEST(Fibers, reset)
     MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
     MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
-    a->reset();
+    a->reset(dg);
     MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
     a->call();
     ++sequence;
@@ -348,7 +349,7 @@ MORDOR_UNITTEST(Fibers, reset)
     MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
     MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
-    a->reset();
+    a->reset(dg);
     MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
     a->call();
     ++sequence;
@@ -356,8 +357,9 @@ MORDOR_UNITTEST(Fibers, reset)
     MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
     MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     MORDOR_TEST_ASSERT(a->state() == Fiber::TERM);
-    a->reset(boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
-        boost::ref(sequence), true));
+    dg = boost::bind(&fiberProc4, mainFiber, Fiber::weak_ptr(a),
+                     boost::ref(sequence), true);
+    a->reset(dg);
     MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
     MORDOR_TEST_ASSERT_EXCEPTION(a->call(), DummyException);
     ++sequence;
@@ -365,7 +367,7 @@ MORDOR_UNITTEST(Fibers, reset)
     MORDOR_TEST_ASSERT(Fiber::getThis() == mainFiber);
     MORDOR_TEST_ASSERT(mainFiber->state() == Fiber::EXEC);
     MORDOR_TEST_ASSERT(a->state() == Fiber::EXCEPT);
-    a->reset();
+    a->reset(dg);
     MORDOR_TEST_ASSERT(a->state() == Fiber::INIT);
     MORDOR_TEST_ASSERT_EXCEPTION(a->call(), DummyException);
     ++sequence;
@@ -525,7 +527,7 @@ MORDOR_UNITTEST(Fibers, resetStress)
     Fiber::ptr f(new Fiber(&eatSomeStack));
     for (int i = 0; i < 1025; ++i) {
         f->call();
-        f->reset();
+        f->reset(&eatSomeStack);
     }
 }
 

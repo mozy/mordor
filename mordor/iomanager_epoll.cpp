@@ -129,16 +129,17 @@ IOManager::AsyncState::triggerEvent(Event event, size_t &pendingEventCount)
     m_events = (Event)(m_events & ~event);
     atomicDecrement(pendingEventCount);
     EventContext &context = contextForEvent(event);
-    if (context.dg)
-        context.scheduler->schedule(context.dg);
-    else
-        context.scheduler->schedule(context.fiber);
-    resetContext(context);
+    if (context.dg) {
+        context.scheduler->schedule(&context.dg);
+    } else {
+        context.scheduler->schedule(&context.fiber);
+    }
+    context.scheduler = NULL;
     return true;
 }
 
 void
-IOManager::AsyncState::asyncResetContextFiber(Fiber::ptr fiber)
+IOManager::AsyncState::asyncResetContext(AsyncState::EventContext& context)
 {
     // fiber.reset is not necessary to be running under the lock.
     // However, it is needed to acquire the lock and then unlock
@@ -146,28 +147,25 @@ IOManager::AsyncState::asyncResetContextFiber(Fiber::ptr fiber)
     // fiber which scheduled this async reset call.
     boost::mutex::scoped_lock lock(m_mutex);
     lock.unlock();
-    fiber.reset();
+    context.fiber.reset();
+    context.dg = NULL;
 }
 
 void
 IOManager::AsyncState::resetContext(EventContext &context)
 {
-    // asynchronously reset fiber to avoid fiber destroying in IOManager::idle
+    // asynchronously reset fiber/dg to avoid destroying in IOManager::idle
     // NOTE: this function has the pre-condition that the m_mutex is
     // already acquired in upper level (which is true right now), in this
-    // way, the asyncResetFiber will not be executed until the m_mutex
-    // is released, and it is surely run in Scheduler working fiber instead
-    // of idle fiber.
-    if (context.fiber) {
-        // it is fine to pass context address to the boost function
-        // since the address will be always valid until ~IOManager
-        context.scheduler->schedule(boost::bind(
-            &IOManager::AsyncState::asyncResetContextFiber, this, context.fiber));
-    }
+    // way, the asyncReset will not be executed until the m_mutex is released,
+    // and it is surely run in Scheduler working fiber instead of idle fiber.
+    // it is fine to pass context address to the boost function
+    // since the address will be always valid until ~IOManager()
+    context.scheduler->schedule(boost::bind(
+        &IOManager::AsyncState::asyncResetContext, this, context));
     context.scheduler = NULL;
     context.fiber.reset();
     context.dg = NULL;
-    return;
 }
 
 IOManager::IOManager(size_t threads, bool useCaller, bool autoStart)
@@ -285,9 +283,11 @@ IOManager::registerEvent(int fd, Event event, boost::function<void ()> dg)
     MORDOR_ASSERT(!context.fiber);
     MORDOR_ASSERT(!context.dg);
     context.scheduler = Scheduler::getThis();
-    if (!dg)
+    if (dg) {
+        context.dg.swap(dg);
+    } else {
         context.fiber = Fiber::getThis();
-    context.dg.swap(dg);
+    }
 }
 
 bool
@@ -325,6 +325,7 @@ IOManager::unregisterEvent(int fd, Event event)
     atomicDecrement(m_pendingEventCount);
     state.m_events = newEvents;
     AsyncState::EventContext &context = state.contextForEvent(event);
+    // spawn a dedicated fiber to do the cleanup
     state.resetContext(context);
     return true;
 }

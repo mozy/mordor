@@ -93,10 +93,6 @@ public:
     Fiber(boost::function<void ()> dg, size_t stacksize = 0);
     ~Fiber();
 
-    /// @brief Reset a Fiber to be used again
-    /// @pre state() == INIT || state() == TERM || state() == EXCEPT
-    /// @post state() == INIT
-    void reset();
     /// @brief Reset a Fiber to be used again, with a different initial function
     /// @param dg The new initial function
     /// @pre state() == INIT || state() == TERM || state() == EXCEPT

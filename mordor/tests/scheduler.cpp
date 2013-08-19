@@ -120,7 +120,7 @@ MORDOR_UNITTEST(Scheduler, hijackMultipleDispatch)
     MORDOR_TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::INIT);
     pool.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::TERM);
-    doNothingFiber->reset();
+    doNothingFiber->reset(&doNothing);
     pool.schedule(doNothingFiber);
     MORDOR_TEST_ASSERT_EQUAL(doNothingFiber->state(), Fiber::INIT);
     pool.dispatch();
@@ -240,8 +240,9 @@ MORDOR_UNITTEST(Scheduler, parallelDoFibersDone)
     int total = 0;
     std::vector<boost::function<void ()> > dgs;
     std::vector<Fiber::ptr> fibers;
+    boost::function<void ()> dg = boost::bind(&increment, boost::ref(total));
     for (int i = 0; i < 8; ++i) {
-        dgs.push_back(boost::bind(&increment, boost::ref(total)));
+        dgs.push_back(dg);
         fibers.push_back(Fiber::ptr(new Fiber(NULL)));
     }
 
@@ -249,7 +250,7 @@ MORDOR_UNITTEST(Scheduler, parallelDoFibersDone)
         parallel_do(dgs, fibers);
         for (size_t j = 0; j < dgs.size(); ++j)
             // This should not assert about the fiber not being terminated
-            fibers[j]->reset();
+            fibers[j]->reset(dg);
     }
 }
 
@@ -338,15 +339,15 @@ MORDOR_UNITTEST(Scheduler, parallelForEachStopShortParallel)
     MORDOR_TEST_ASSERT_LESS_THAN(sequence, 10);
 }
 
-#ifndef NDEBUG
-MORDOR_UNITTEST(Scheduler, scheduleForThreadNotOnScheduler)
-{
-    Fiber::ptr doNothingFiber(new Fiber(&doNothing));
-    WorkerPool pool(1, false);
-    MORDOR_TEST_ASSERT_ASSERTED(pool.schedule(doNothingFiber, gettid()));
-    pool.stop();
-}
-#endif
+// #ifndef NDEBUG
+// MORDOR_UNITTEST(Scheduler, scheduleForThreadNotOnScheduler)
+// {
+//     Fiber::ptr doNothingFiber(new Fiber(&doNothing));
+//     WorkerPool pool(1, false);
+//     MORDOR_TEST_ASSERT_ASSERTED(pool.schedule(doNothingFiber, gettid()));
+//     pool.stop();
+// }
+// #endif
 
 static void sleepForABit(std::set<tid_t> &threads,
     boost::mutex &mutex, Fiber::ptr scheduleMe, int *count)
@@ -463,4 +464,21 @@ MORDOR_UNITTEST(Scheduler, tolerantExceptionInBatch)
     // even though the 2nd is exceptioned,
     // the 3rd one should still have chance to get executed
     MORDOR_TEST_ASSERT_EQUAL(values[2], 3);
+}
+
+namespace {
+    struct DummyClass {
+        ~DummyClass() { Scheduler::yield(); }
+    };
+
+    static void fun(boost::shared_ptr<DummyClass> a) {}
+}
+
+MORDOR_UNITTEST(Scheduler, allowYieldInDestructor)
+{
+    WorkerPool pool(2, true);
+    pool.schedule(boost::bind(fun, boost::shared_ptr<DummyClass>(new DummyClass)));
+    pool.schedule(Fiber::ptr(
+            new Fiber(boost::bind(fun, boost::shared_ptr<DummyClass>(new DummyClass)))));
+    pool.stop();
 }

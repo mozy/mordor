@@ -181,9 +181,9 @@ IOManager::cancelEvent(int fd, Event events)
     if (rc)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     if (dg)
-        scheduler->schedule(dg);
+        scheduler->schedule(&dg);
     else
-        scheduler->schedule(fiber);
+        scheduler->schedule(&fiber);
     m_pendingEvents.erase(it);
 }
 
@@ -203,14 +203,17 @@ IOManager::unregisterEvent(int fd, Event events)
     if (events == READ) {
         e.m_fiber.reset();
         e.m_dg = NULL;
-        if (e.m_fiberClose || e.m_dgClose)
+        if (e.m_fiberClose || e.m_dgClose) {
             return;
+        }
     } else if (events == CLOSE) {
         e.m_fiberClose.reset();
         e.m_dgClose = NULL;
-        if (e.m_fiber || e.m_dg)
+        if (e.m_fiber || e.m_dg) {
             return;
+        }
     }
+
     e.event.flags = EV_DELETE;
     int rc = kevent(m_kqfd, &e.event, 1, NULL, 0, NULL);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this << " kevent("
@@ -220,7 +223,6 @@ IOManager::unregisterEvent(int fd, Event events)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     m_pendingEvents.erase(it);
 }
-
 
 bool
 IOManager::stopping(unsigned long long &nextTimeout)
@@ -315,19 +317,15 @@ IOManager::idle()
                 }
             }
             if (e.m_dg) {
-                e.m_scheduler->schedule(e.m_dg);
-                e.m_dg = NULL;
+                e.m_scheduler->schedule(&e.m_dg);
             } else if (e.m_fiber) {
-                e.m_scheduler->schedule(e.m_fiber);
-                e.m_fiber.reset();
+                e.m_scheduler->schedule(&e.m_fiber);
             }
             if (eof && e.event.filter == EVFILT_READ) {
                 if (e.m_dgClose) {
-                    e.m_schedulerClose->schedule(e.m_dgClose);
-                    e.m_dgClose = NULL;
+                    e.m_schedulerClose->schedule(&e.m_dgClose);
                 } else if (e.m_fiberClose) {
-                    e.m_schedulerClose->schedule(e.m_fiberClose);
-                    e.m_fiberClose.reset();
+                    e.m_schedulerClose->schedule(&e.m_fiberClose);
                 }
             }
             if (remove)

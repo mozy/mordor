@@ -48,7 +48,7 @@ private:
         boost::mutex m_mutex;
 
     private:
-        void asyncResetContextFiber(boost::shared_ptr<Fiber>);
+        void asyncResetContext(EventContext&);
     };
 
 public:

@@ -155,17 +155,6 @@ Fiber::~Fiber()
 }
 
 void
-Fiber::reset()
-{
-    m_exception = boost::exception_ptr();
-    MORDOR_ASSERT(m_stack);
-    MORDOR_ASSERT(m_state == TERM || m_state == INIT || m_state == EXCEPT);
-    MORDOR_ASSERT(m_dg);
-    initStack();
-    m_state = INIT;
-}
-
-void
 Fiber::reset(boost::function<void ()> dg)
 {
     m_exception = boost::exception_ptr();
@@ -326,6 +315,7 @@ Fiber::entryPoint()
         }
         MORDOR_ASSERT(cur->m_state == EXEC);
         cur->m_dg();
+        cur->m_dg = NULL;
     } catch (boost::exception &ex) {
         removeTopFrames(ex);
         cur->m_exception = boost::current_exception();

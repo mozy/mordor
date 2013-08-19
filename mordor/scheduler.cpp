@@ -156,72 +156,6 @@ Scheduler::stopping()
 }
 
 void
-Scheduler::schedule(Fiber::ptr f, tid_t thread)
-{
-    bool tickleMe;
-    {
-        boost::mutex::scoped_lock lock(m_mutex);
-        tickleMe = scheduleNoLock(f, thread);
-    }
-    if (shouldTickle(tickleMe))
-        tickle();
-}
-
-void
-Scheduler::schedule(boost::function<void ()> dg, tid_t thread)
-{
-    bool tickleMe;
-    {
-        boost::mutex::scoped_lock lock(m_mutex);
-        tickleMe = scheduleNoLock(dg, thread);
-    }
-    if (shouldTickle(tickleMe))
-        tickle();
-}
-
-#ifndef NDEBUG
-static bool contains(const std::vector<boost::shared_ptr<Thread> >
-    &threads, tid_t thread)
-{
-    for (std::vector<boost::shared_ptr<Thread> >::const_iterator it =
-        threads.begin(); it != threads.end(); ++it)
-        if ((*it)->tid() == thread)
-            return true;
-    return false;
-}
-#endif
-
-bool
-Scheduler::scheduleNoLock(Fiber::ptr f, tid_t thread)
-{
-    MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << f << " on thread "
-        << thread;
-    MORDOR_ASSERT(f);
-    // Not thread-targeted, or this scheduler owns the targetted thread
-    MORDOR_ASSERT(thread == emptytid() || thread == m_rootThread ||
-        contains(m_threads, thread));
-    FiberAndThread ft = {f, NULL, thread };
-    bool tickleMe = m_fibers.empty();
-    m_fibers.push_back(ft);
-    return tickleMe;
-}
-
-bool
-Scheduler::scheduleNoLock(boost::function<void ()> dg, tid_t thread)
-{
-    MORDOR_LOG_DEBUG(g_log) << this << " scheduling " << dg << " on thread "
-        << thread;
-    MORDOR_ASSERT(dg);
-    // Not thread-targeted, or this scheduler owns the targetted thread
-    MORDOR_ASSERT(thread == emptytid() || thread == m_rootThread ||
-        contains(m_threads, thread));
-    FiberAndThread ft = {Fiber::ptr(), dg, thread };
-    bool tickleMe = m_fibers.empty();
-    m_fibers.push_back(ft);
-    return tickleMe;
-}
-
-void
 Scheduler::switchTo(tid_t thread)
 {
     MORDOR_ASSERT(Scheduler::getThis() != NULL);
@@ -296,7 +230,8 @@ Scheduler::yieldTo(bool yieldToCallerOnTerminate)
         MORDOR_ASSERT(m_rootThread == gettid());
     if (t_fiber->state() != Fiber::HOLD) {
         m_stopping = m_autoStop || m_stopping;
-        t_fiber->reset();
+        // XXX: is t_fiber the hijacked thread ?
+        t_fiber->reset(boost::bind(&Scheduler::run, this));
     }
     t_fiber->yieldTo(yieldToCallerOnTerminate);
 }
@@ -316,10 +251,11 @@ Scheduler::run()
     MORDOR_LOG_VERBOSE(g_log) << this << " starting thread with idle fiber " << idleFiber;
     Fiber::ptr dgFiber;
     // use a vector for O(1) .size()
-    std::vector<FiberAndThread> batch(m_batchSize);
+    std::vector<FiberAndThread> batch;
+    batch.reserve(m_batchSize);
     bool isActive = false;
     while (true) {
-        batch.clear();
+        MORDOR_ASSERT(batch.empty());
         bool dontIdle = false;
         bool tickleMe = false;
         {
@@ -357,7 +293,6 @@ Scheduler::run()
                 if ( (tickleMe || m_activeThreadCount == threadCount()) &&
                     batch.size() == m_batchSize)
                     break;
-
                 if (it->thread != emptytid() && it->thread != gettid()) {
                     MORDOR_LOG_DEBUG(g_log) << this
                         << " skipping item scheduled for thread "
@@ -404,69 +339,71 @@ Scheduler::run()
             << " got " << batch.size() << " fiber/dgs to process (max: "
             << m_batchSize << ", active: " << isActive << ")";
         MORDOR_ASSERT(isActive == !batch.empty());
-        if (!batch.empty()) {
-            std::vector<FiberAndThread>::iterator it;
-            for (it = batch.begin(); it != batch.end(); ++it) {
-                Fiber::ptr f = it->fiber;
-                boost::function<void ()> dg = it->dg;
 
-                try {
-                    if (f && f->state() != Fiber::TERM) {
-                        MORDOR_LOG_DEBUG(g_log) << this << " running " << f;
-                        f->yieldTo();
-                    } else if (dg) {
-                        if (!dgFiber)
-                            dgFiber.reset(new Fiber(dg));
-                        dgFiber->reset(dg);
-                        MORDOR_LOG_DEBUG(g_log) << this << " running " << dg;
-                        dgFiber->yieldTo();
-                        if (dgFiber->state() != Fiber::TERM)
-                            dgFiber.reset();
-                        else
-                            dgFiber->reset(NULL);
-                    }
-                } catch (...) {
-                    try {
-                        MORDOR_LOG_FATAL(Log::root())
-                            << boost::current_exception_diagnostic_information();
-                    }
-                    catch(...) {
-                        // Swallow any exceptions that might occur while trying to log the current fiber state #98680
-                    }
+        if (batch.empty()) {
+            if (dontIdle)
+                continue;
 
-                    {
-                        boost::mutex::scoped_lock lock(m_mutex);
-                        std::vector<FiberAndThread>::iterator it2 = it;
-                        // push all un-executed fibers back to m_fibers
-                        while (++it2 != batch.end()) {
-                            m_fibers.push_back(*it2);
-                        }
-                        batch.clear();
-                        // decrease the activeCount as this thread is in exception
-                        isActive = false;
-                        --m_activeThreadCount;
-                    }
-                    throw;
-                }
+            if (idleFiber->state() == Fiber::TERM) {
+                MORDOR_LOG_DEBUG(g_log) << this << " idle fiber terminated";
+                if (gettid() == m_rootThread)
+                    m_callingFiber.reset();
+                // Unblock the next thread
+                if (threadCount() > 1)
+                    tickle();
+                return;
             }
+            MORDOR_LOG_DEBUG(g_log) << this << " idling";
+            atomicIncrement(m_idleThreadCount);
+            idleFiber->call();
+            atomicDecrement(m_idleThreadCount);
             continue;
         }
-        if (dontIdle)
-            continue;
 
-        if (idleFiber->state() == Fiber::TERM) {
-            MORDOR_LOG_DEBUG(g_log) << this << " idle fiber terminated";
-            if (gettid() == m_rootThread)
-                m_callingFiber.reset();
-            // Unblock the next thread
-            if (threadCount() > 1)
-                tickle();
-            return;
+        while (!batch.empty()) {
+            FiberAndThread& ft = batch.back();
+            Fiber::ptr f = ft.fiber;
+            boost::function<void ()> dg = ft.dg;
+            batch.pop_back();
+
+            try {
+                if (f && f->state() != Fiber::TERM) {
+                    MORDOR_LOG_DEBUG(g_log) << this << " running " << f;
+                    f->yieldTo();
+                } else if (dg) {
+                    if (dgFiber)
+                        dgFiber->reset(dg);
+                    else
+                        dgFiber.reset(new Fiber(dg));
+                    MORDOR_LOG_DEBUG(g_log) << this << " running " << dg;
+                    dg = NULL;
+                    dgFiber->yieldTo();
+                    if (dgFiber->state() != Fiber::TERM)
+                        dgFiber.reset();
+                    else
+                        dgFiber->reset(NULL);
+                }
+            } catch (...) {
+                try {
+                    MORDOR_LOG_FATAL(Log::root())
+                        << boost::current_exception_diagnostic_information();
+                }
+                catch(...) {
+                    // Swallow any exceptions that might occur while trying to log the current fiber state #98680
+                }
+
+                {
+                    boost::mutex::scoped_lock lock(m_mutex);
+                    // push all un-executed fibers back to m_fibers
+                    copy(batch.begin(), batch.end(), back_inserter(m_fibers));
+                    batch.clear();
+                    // decrease the activeCount as this thread is in exception
+                    isActive = false;
+                    --m_activeThreadCount;
+                }
+                throw;
+            }
         }
-        MORDOR_LOG_DEBUG(g_log) << this << " idling";
-        atomicIncrement(m_idleThreadCount);
-        idleFiber->call();
-        atomicDecrement(m_idleThreadCount);
     }
 }
 

@@ -73,17 +73,21 @@ public:
 
     /// Schedule a Fiber to be executed on the Scheduler
 
-    /// @param f The Fiber to schedule
+    /// @param fd The Fiber or the functor to schedule, if a pointer is passed
+    ///           in, the ownership will be transfered to this scheduler
     /// @param thread Optionally provide a specific thread for the Fiber to run
     /// on
-    void schedule(boost::shared_ptr<Fiber> fiber, tid_t thread = emptytid());
-    /// Schedule a generic functor to be executed on the Scheduler
-
-    /// The functor will be executed on a new Fiber.
-    /// @param dg The functor to schedule
-    /// @param thread Optionally provide a specific thread for the functor to
-    /// run on
-    void schedule(boost::function<void ()> dg, tid_t thread = emptytid());
+    template <class FiberOrDg>
+    void schedule(FiberOrDg fd, tid_t thread = emptytid())
+    {
+        bool tickleMe;
+        {
+            boost::mutex::scoped_lock lock(m_mutex);
+            tickleMe = scheduleNoLock(fd, thread);
+        }
+        if (shouldTickle(tickleMe))
+            tickle();
+    }
 
     /// Schedule multiple items to be executed at once
 
@@ -96,7 +100,7 @@ public:
         {
             boost::mutex::scoped_lock lock(m_mutex);
             while (begin != end) {
-                tickleMe = scheduleNoLock(*begin) || tickleMe;
+                tickleMe = scheduleNoLock(&*begin) || tickleMe;
                 ++begin;
             }
         }
@@ -185,16 +189,34 @@ private:
     void yieldTo(bool yieldToCallerOnTerminate);
     void run();
 
-    bool scheduleNoLock(boost::shared_ptr<Fiber> fiber,
-        tid_t thread = emptytid());
-    bool scheduleNoLock(boost::function<void ()> dg,
-        tid_t thread = emptytid());
+    /// @pre @c fd should be valid
+    /// @pre the task to be scheduled is not thread-targeted, or this scheduler
+    ///      owns the targeted thread.
+    template <class FiberOrDg>
+        bool scheduleNoLock(FiberOrDg fd,
+                            tid_t thread = emptytid()) {
+        bool tickleMe = m_fibers.empty();
+        m_fibers.push_back(FiberAndThread(fd, thread));
+        return tickleMe;
+    }
 
 private:
     struct FiberAndThread {
         boost::shared_ptr<Fiber> fiber;
         boost::function<void ()> dg;
         tid_t thread;
+        FiberAndThread(boost::shared_ptr<Fiber> f, tid_t th)
+            : fiber(f), thread(th) {}
+        FiberAndThread(boost::shared_ptr<Fiber>* f, tid_t th)
+            : thread(th) {
+            fiber.swap(*f);
+        }
+        FiberAndThread(boost::function<void ()> d, tid_t th)
+            : dg(d), thread(th) {}
+        FiberAndThread(boost::function<void ()> *d, tid_t th)
+            : thread(th) {
+            dg.swap(*d);
+        }
     };
     static ThreadLocalStorage<Scheduler *> t_scheduler;
     static ThreadLocalStorage<Fiber *> t_fiber;
