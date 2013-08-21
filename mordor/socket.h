@@ -313,14 +313,24 @@ private:
 struct UnixAddress : public Address
 {
 public:
+    /// @pre @c path.length() is less or equal to MAX_PATH_LEN
     UnixAddress(const std::string &path);
-
+    /// create a dummy instance of @c UnixAddress
+    ///
+    /// an all '\0' string sized @c MAX_PATH_LEN is used as the path for the
+    /// address.
+    ///
+    /// @note one is supposed to fill the sockaddr returned by @name() before
+    ///       actually start using it, and to set the @length correctly using
+    ///       @c nameLen(size_t).
+    UnixAddress();
     const sockaddr *name() const { return (sockaddr*)&sun; }
     sockaddr *name() { return (sockaddr*)&sun; }
     socklen_t nameLen() const { return length; }
+    void nameLen(size_t len) { length = len; }
 
     std::ostream & insert(std::ostream &os) const;
-
+    static const size_t MAX_PATH_LEN;
 private:
     size_t length;
     struct sockaddr_un sun;

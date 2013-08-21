@@ -1207,6 +1207,11 @@ Socket::remoteAddress()
         case AF_INET6:
             result.reset(new IPv6Address());
             break;
+#ifndef WINDOWS
+        case AF_UNIX:
+            result.reset(new UnixAddress());
+            break;
+#endif
         default:
             result.reset(new UnknownAddress(m_family));
             break;
@@ -1215,6 +1220,12 @@ Socket::remoteAddress()
     if (getpeername(m_sock, result->name(), &namelen))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getpeername");
     MORDOR_ASSERT(namelen <= result->nameLen());
+#ifndef WINDOWS
+    if (m_family == AF_UNIX) {
+        boost::shared_ptr<UnixAddress> addr = boost::dynamic_pointer_cast<UnixAddress>(result);
+        addr->nameLen(namelen);
+    }
+#endif
     return m_remoteAddress = result;
 }
 
@@ -1231,6 +1242,11 @@ Socket::localAddress()
         case AF_INET6:
             result.reset(new IPv6Address());
             break;
+#ifndef WINDOWS
+        case AF_UNIX:
+            result.reset(new UnixAddress());
+            break;
+#endif
         default:
             result.reset(new UnknownAddress(m_family));
             break;
@@ -1239,6 +1255,13 @@ Socket::localAddress()
     if (getsockname(m_sock, result->name(), &namelen))
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("getsockname");
     MORDOR_ASSERT(namelen <= result->nameLen());
+#ifndef WINDOWS
+    // set the result->nameLen() right
+    if (m_family == AF_UNIX) {
+        boost::shared_ptr<UnixAddress> addr = boost::dynamic_pointer_cast<UnixAddress>(result);
+        addr->nameLen(namelen);
+    }
+#endif
     return m_localAddress = result;
 }
 
@@ -1905,6 +1928,8 @@ IPv6Address::insert(std::ostream &os) const
 }
 
 #ifndef WINDOWS
+const size_t UnixAddress::MAX_PATH_LEN = sizeof(((sockaddr_un *)0)->sun_path) - 1;
+
 UnixAddress::UnixAddress(const std::string &path)
 {
     sun.sun_family = AF_UNIX;
@@ -1917,6 +1942,13 @@ UnixAddress::UnixAddress(const std::string &path)
     MORDOR_ASSERT(length <= sizeof(sun.sun_path));
     memcpy(sun.sun_path, path.c_str(), length);
     length += offsetof(sockaddr_un, sun_path);
+}
+
+UnixAddress::UnixAddress()
+{
+    memset(&sun, 0, sizeof(sun));
+    sun.sun_family = AF_UNIX;
+    length = offsetof(sockaddr_un, sun_path) + MAX_PATH_LEN;
 }
 
 std::ostream &
