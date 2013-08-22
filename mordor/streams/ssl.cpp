@@ -190,7 +190,7 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
         MORDOR_THROW_EXCEPTION(OpenSSLException(getOpenSSLErrorMessage()))
             << boost::errinfo_api_function("SSL_CTX_new");
     }
-    m_readBio = BIO_new_mem_buf((void *)"", 0);
+    m_readBio = BIO_new(BIO_s_mem());
     m_writeBio = BIO_new(BIO_s_mem());
     if (!m_readBio || !m_writeBio) {
         if (m_readBio) BIO_free(m_readBio);
@@ -481,11 +481,16 @@ SSLStream::write(const void *buffer, size_t length)
 void
 SSLStream::flush(bool flushParent)
 {
-    char *writeBuf;
-    size_t toWrite = BIO_get_mem_data(m_writeBio, &writeBuf);
-    m_writeBuffer.copyIn(writeBuf, toWrite);
-    int dummy = BIO_reset(m_writeBio);
-    (void) dummy;
+    static const int WRITE_BUF_LENGTH = 4096;
+    char writeBuf[WRITE_BUF_LENGTH];
+    int toWrite = 0;
+    do {
+        toWrite = BIO_read(m_writeBio, (void *)writeBuf, WRITE_BUF_LENGTH);
+        if (toWrite > 0) {
+            m_writeBuffer.copyIn((const void *)writeBuf, toWrite);
+        }
+    } while (toWrite > 0);
+
     if (m_writeBuffer.readAvailable() == 0)
         return;
 
@@ -722,32 +727,24 @@ SSLStream::verifyPeerCertificate(const std::string &hostname)
 void
 SSLStream::wantRead()
 {
-    BUF_MEM *bm;
-    BIO_get_mem_ptr(m_readBio, &bm);
-    MORDOR_ASSERT(bm->max <= 0x7fffffff);
-    MORDOR_ASSERT(bm->length == 0);
-    m_readBuffer.consume(bm->max);
-    bm->length = bm->max = 0;
     if (m_readBuffer.readAvailable() == 0) {
-        size_t result;
         MORDOR_LOG_TRACE(g_log) << this << " parent()->read(32768)";
-        result = parent()->read(m_readBuffer, 32768);
+        const size_t result = parent()->read(m_readBuffer, 32768);
         MORDOR_LOG_TRACE(g_log) << this << " parent()->read(32768): " << result;
         if (result == 0) {
             BIO_set_mem_eof_return(m_readBio, 0);
             return;
         }
-        BIO_get_mem_ptr(m_readBio, &bm);
     }
     MORDOR_ASSERT(m_readBuffer.readAvailable());
     const iovec iov = m_readBuffer.readBuffer(~0, false);
-    bm->data = (char *)iov.iov_base;
-    bm->length = bm->max =
-        (long)std::min<size_t>(0x7fffffff, iov.iov_len);
-    MORDOR_ASSERT(bm->length == bm->max);
-    MORDOR_ASSERT(bm->length);
-    MORDOR_ASSERT(bm->max <= 0x7fffffff);
-    MORDOR_LOG_DEBUG(g_log) << this << " wantRead(): " << bm->length;
+    MORDOR_ASSERT(iov.iov_len > 0);
+    const int written = BIO_write(m_readBio, (char *)iov.iov_base, iov.iov_len);
+    MORDOR_ASSERT(written > 0);
+    if (written > 0) {
+        m_readBuffer.consume(written);
+    }
+    MORDOR_LOG_DEBUG(g_log) << this << " wantRead(): " << written;
 }
 
 int
