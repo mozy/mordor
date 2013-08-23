@@ -16,6 +16,8 @@ enum ExactLength
     UNTILEOF
 };
 
+unsigned long long transferStreamDirect(Stream::ptr src, Stream::ptr dst);
+
 unsigned long long transferStream(Stream &src, Stream &dst,
                                   unsigned long long toTransfer = ~0ull,
                                   ExactLength exactLength = INFER);

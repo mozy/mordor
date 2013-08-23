@@ -18,6 +18,11 @@ static ConfigVar<size_t>::ptr g_chunkSize =
     Config::lookup("transferstream.chunksize",
                    (size_t)65536,
                    "transfer chunk size.");
+
+static ConfigVar<size_t>::ptr g_defaultSize =
+    Config::lookup<size_t>("transferstream.defaultsize", 4096,
+    "Default size for transfer stream");
+
 static Logger::ptr g_log = Log::lookup("mordor:stream:transfer");
 
 static void readOne(Stream &src, Buffer *&buffer, size_t len, size_t &result)
@@ -118,6 +123,23 @@ unsigned long long transferStream(Stream &src, Stream &dst,
     MORDOR_LOG_VERBOSE(g_log) << "transferred " << totalRead << "/" << toTransfer
         << " from " << &src << " to " << &dst;
     return totalRead;
+}
+
+unsigned long long transferStreamDirect(Stream::ptr src, Stream::ptr dst) {
+	size_t size = g_defaultSize->val();
+	char buffer[size];
+	size_t total = 0;
+
+	while (true)
+	{
+		size_t len = src->read(buffer, size);
+		total += len;
+		if (!len)
+			break;
+		dst->write (buffer, len);
+	}
+
+	return total;
 }
 
 }
