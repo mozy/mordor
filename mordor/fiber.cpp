@@ -3,12 +3,14 @@
 #include "fiber.h"
 
 #include <boost/thread/tss.hpp>
+#include <boost/thread/thread.hpp>
 
 #include "assert.h"
 #include "config.h"
 #include "exception.h"
 #include "statistics.h"
 #include "version.h"
+#include "scheduler.h"
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -406,9 +408,13 @@ Fiber::allocStack()
     VirtualAlloc((char*)m_stack + g_pagesize, m_stacksize, MEM_COMMIT, PAGE_READWRITE);
     m_sp = (char*)m_stack + m_stacksize + g_pagesize;
 #elif defined(POSIX)
-    m_stack = mmap(NULL, m_stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-    if (m_stack == MAP_FAILED)
-        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("mmap");
+    m_stack = Scheduler::t_stacks_pool->pop();
+    if (!m_stack)
+    {
+		m_stack = mmap(NULL, m_stacksize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+		if (m_stack == MAP_FAILED)
+			MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("mmap");
+    }
 #if defined(VALGRIND) && (defined(LINUX) || defined(OSX))
     m_valgrindStackId = VALGRIND_STACK_REGISTER(m_stack, (char *)m_stack + m_stacksize);
 #endif
@@ -429,7 +435,8 @@ Fiber::freeStack()
 #if defined(VALGRIND) && (defined(LINUX) || defined(OSX))
     VALGRIND_STACK_DEREGISTER(m_valgrindStackId);
 #endif
-    munmap(m_stack, m_stacksize);
+    if (!Scheduler::t_stacks_pool->push(m_stack))
+    	munmap(m_stack, m_stacksize);
 #endif
 }
 

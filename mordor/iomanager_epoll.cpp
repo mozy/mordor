@@ -102,7 +102,6 @@ IOManager::AsyncState::AsyncState()
 
 IOManager::AsyncState::~AsyncState()
 {
-    boost::mutex::scoped_lock lock(m_mutex);
     MORDOR_ASSERT(!m_events);
 }
 
@@ -144,8 +143,6 @@ IOManager::AsyncState::asyncResetContextFiber(Fiber::ptr fiber)
     // However, it is needed to acquire the lock and then unlock
     // to ensure that this function is executed after the other
     // fiber which scheduled this async reset call.
-    boost::mutex::scoped_lock lock(m_mutex);
-    lock.unlock();
     fiber.reset();
 }
 
@@ -251,7 +248,6 @@ IOManager::registerEvent(int fd, Event event, boost::function<void ()> dg)
     MORDOR_ASSERT(event == READ || event == WRITE || event == CLOSE);
 
     // Look up our state in the global map, expanding it if necessary
-    boost::mutex::scoped_lock lock(m_mutex);
     if (m_pendingEvents.size() < (size_t)fd)
         m_pendingEvents.resize(fd * 3 / 2);
     if (!m_pendingEvents[fd - 1]) {
@@ -260,9 +256,6 @@ IOManager::registerEvent(int fd, Event event, boost::function<void ()> dg)
     }
     AsyncState &state = *m_pendingEvents[fd - 1];
     MORDOR_ASSERT(fd == state.m_fd);
-    lock.unlock();
-
-    boost::mutex::scoped_lock lock2(state.m_mutex);
 
     MORDOR_ASSERT(!(state.m_events & event));
     int op = state.m_events ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
@@ -294,16 +287,13 @@ IOManager::unregisterEvent(int fd, Event event)
     MORDOR_ASSERT(fd > 0);
     MORDOR_ASSERT(event == READ || event == WRITE || event == CLOSE);
 
-    boost::mutex::scoped_lock lock(m_mutex);
     if (m_pendingEvents.size() < (size_t)fd)
         return false;
     if (!m_pendingEvents[fd - 1])
         return false;
     AsyncState &state = *m_pendingEvents[fd - 1];
     MORDOR_ASSERT(fd == state.m_fd);
-    lock.unlock();
 
-    boost::mutex::scoped_lock lock2(state.m_mutex);
     if (!(state.m_events & event))
         return false;
 
@@ -333,16 +323,13 @@ IOManager::cancelEvent(int fd, Event event)
     MORDOR_ASSERT(fd > 0);
     MORDOR_ASSERT(event == READ || event == WRITE || event == CLOSE);
 
-    boost::mutex::scoped_lock lock(m_mutex);
     if (m_pendingEvents.size() < (size_t)fd)
         return false;
     if (!m_pendingEvents[fd - 1])
         return false;
     AsyncState &state = *m_pendingEvents[fd - 1];
     MORDOR_ASSERT(fd == state.m_fd);
-    lock.unlock();
 
-    boost::mutex::scoped_lock lock2(state.m_mutex);
     if (!(state.m_events & event))
         return false;
 
@@ -416,7 +403,6 @@ IOManager::idle()
 
             AsyncState &state = *(AsyncState *)event.data.ptr;
 
-            boost::mutex::scoped_lock lock2(state.m_mutex);
             MORDOR_LOG_TRACE(g_log) << " epoll_event {"
                 << (EPOLL_EVENTS)event.events << ", " << state.m_fd
                 << "}, registered for " << (EPOLL_EVENTS)state.m_events;

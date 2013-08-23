@@ -5,7 +5,6 @@
 
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
 
 #include "scheduler.h"
 #include "timer.h"
@@ -51,7 +50,6 @@ private:
         void removeEntry(int index);
 
     private:
-        boost::mutex m_mutex;
         IOManager &m_outer;
         HANDLE m_reconfigured;
         HANDLE m_handles[MAXIMUM_WAIT_OBJECTS];
@@ -92,7 +90,6 @@ private:
     std::map<OVERLAPPED *, AsyncEvent*> m_pendingEvents;
 #endif
     size_t m_pendingEventCount;
-    boost::mutex m_mutex;
     std::list<WaitBlock::ptr> m_waitBlocks;
 };
 

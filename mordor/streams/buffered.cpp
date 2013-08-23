@@ -9,7 +9,7 @@
 namespace Mordor {
 
 static ConfigVar<size_t>::ptr g_defaultBufferSize =
-    Config::lookup<size_t>("stream.buffered.defaultbuffersize", 65536,
+    Config::lookup<size_t>("stream.buffered.defaultbuffersize", 4096,
     "Default buffer size for new BufferedStreams");
 
 static Logger::ptr g_log = Log::lookup("mordor:streams:buffered");

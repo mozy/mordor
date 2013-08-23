@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+#include <boost/thread.hpp>
+
 #include "mordor/config.h"
 #include "mordor/http/server.h"
 #include "mordor/iomanager.h"
@@ -41,24 +43,36 @@ static void httpRequest(HTTP::ServerRequest::ptr request)
     }
 }
 
+void serve(Socket::ptr listen)
+{
+	IOManager ioManager;
+
+	while (true)
+	{
+		Socket::ptr socket = listen->accept(&ioManager);
+		Stream::ptr stream(new SocketStream(socket));
+		HTTP::ServerConnection::ptr conn(new HTTP::ServerConnection(stream,
+			&httpRequest));
+		conn->processRequests();
+	}
+}
+
 MORDOR_MAIN(int argc, char *argv[])
 {
     try {
         Config::loadFromEnvironment();
         IOManager ioManager;
-        Socket s(ioManager, AF_INET, SOCK_STREAM);
+        Socket::ptr socket = Socket::ptr(new Socket(ioManager, AF_INET, SOCK_STREAM));
         IPv4Address address(INADDR_ANY, 80);
 
-        s.bind(address);
-        s.listen();
+        socket->bind(address);
+        socket->listen();
 
-        while (true) {
-            Socket::ptr socket = s.accept();
-            Stream::ptr stream(new SocketStream(socket));
-            HTTP::ServerConnection::ptr conn(new HTTP::ServerConnection(stream,
-                &httpRequest));
-            conn->processRequests();
-        }
+        boost::thread serveThread1(serve, socket);
+		boost::thread serveThread2(serve, socket);
+		serveThread1.join();
+		serveThread2.join();
+
     } catch (...) {
         std::cerr << boost::current_exception_diagnostic_information() << std::endl;
     }

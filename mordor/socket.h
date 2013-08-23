@@ -21,6 +21,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #ifndef OSX
 # include <netinet/in_systm.h>
 # include <netinet/ip.h>
@@ -93,7 +94,7 @@ public:
     { connect(*addr.get()); }
     void listen(int backlog = SOMAXCONN);
 
-    Socket::ptr accept();
+    Socket::ptr accept(IOManager *ioManager = NULL);
     void shutdown(int how = SHUT_RDWR);
 
     void getOption(int level, int option, void *result, size_t *len);
@@ -153,7 +154,7 @@ private:
     size_t doIO(iovec *buffers, size_t length, int &flags, Address *address = NULL);
     static void callOnRemoteClose(weak_ptr self);
     void registerForRemoteClose();
-    void accept(Socket &target);
+    void accept(Socket &target, IOManager *ioManager);
 
 #ifdef WINDOWS
     // For WSAEventSelect

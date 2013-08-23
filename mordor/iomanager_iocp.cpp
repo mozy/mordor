@@ -54,7 +54,6 @@ IOManager::WaitBlock::registerEvent(HANDLE hEvent,
                                         boost::function <void ()> dg,
                                         bool recurring)
 {
-    boost::mutex::scoped_lock lock(m_mutex);
     if (m_inUseCount == -1 || m_inUseCount == MAXIMUM_WAIT_OBJECTS - 1)
         return false;
     ++m_inUseCount;
@@ -79,7 +78,6 @@ typedef boost::function<void ()> functor;
 size_t
 IOManager::WaitBlock::unregisterEvent(HANDLE handle)
 {
-    boost::mutex::scoped_lock lock(m_mutex);
     if (m_inUseCount == -1)
         return 0;
     size_t unregistered = 0;
@@ -103,7 +101,6 @@ IOManager::WaitBlock::unregisterEvent(HANDLE handle)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("ResetEvent");
         if (!SetEvent(m_handles[0]))
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
-        lock.unlock();
         if (WaitForSingleObject(m_reconfigured, INFINITE) == WAIT_FAILED)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("WaitForSingleObject");
     }
@@ -118,7 +115,6 @@ IOManager::WaitBlock::run()
     HANDLE handles[MAXIMUM_WAIT_OBJECTS];
 
     {
-        boost::mutex::scoped_lock lock(m_mutex);
         if (m_inUseCount == -1) {
             // The first/final handle was unregistered out from under us
             // before we could even start
@@ -138,7 +134,6 @@ IOManager::WaitBlock::run()
             << "): " << dwRet << " (" << lastError() << ")";
         if (dwRet == WAIT_OBJECT_0) {
             // Array just got reconfigured
-            boost::mutex::scoped_lock lock(m_mutex);
             if (!SetEvent(m_reconfigured))
                 MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
             if (m_inUseCount == -1)
@@ -147,7 +142,6 @@ IOManager::WaitBlock::run()
             memcpy(handles, m_handles, (count) * sizeof(HANDLE));
             MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " reconfigure " << count;
         } else if (dwRet >= WAIT_OBJECT_0 + 1 && dwRet < WAIT_OBJECT_0 + MAXIMUM_WAIT_OBJECTS) {
-            boost::mutex::scoped_lock lock(m_mutex);
 
             if (m_inUseCount == -1) {
                 // The final handle was unregistered out from under us
@@ -186,7 +180,6 @@ IOManager::WaitBlock::run()
     MORDOR_LOG_DEBUG(g_logWaitBlock) << this << " done";
     {
         ptr self = shared_from_this();
-        boost::mutex::scoped_lock lock(m_outer.m_mutex);
         std::list<WaitBlock::ptr>::iterator it =
             std::find(m_outer.m_waitBlocks.begin(), m_outer.m_waitBlocks.end(),
                 shared_from_this());
@@ -267,7 +260,6 @@ IOManager::registerEvent(AsyncEvent *e)
     MORDOR_LOG_DEBUG(g_log) << this << " registerEvent(" << &e->overlapped << ")";
 #ifndef NDEBUG
     {
-        boost::mutex::scoped_lock lock(m_mutex);
         MORDOR_ASSERT(m_pendingEvents.find(&e->overlapped) == m_pendingEvents.end());
         m_pendingEvents[&e->overlapped] = e;
 #endif
@@ -288,7 +280,6 @@ IOManager::unregisterEvent(AsyncEvent *e)
     e->m_fiber.reset();
 #ifndef NDEBUG
     {
-        boost::mutex::scoped_lock lock(m_mutex);
         std::map<OVERLAPPED *, AsyncEvent *>::iterator it =
             m_pendingEvents.find(&e->overlapped);
         MORDOR_ASSERT(it != m_pendingEvents.end());
@@ -310,7 +301,6 @@ IOManager::registerEvent(HANDLE handle, boost::function<void ()> dg, bool recurr
     MORDOR_ASSERT(handle != INVALID_HANDLE_VALUE);
     MORDOR_ASSERT(Scheduler::getThis());
 
-    boost::mutex::scoped_lock lock(m_mutex);
     for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();
         it != m_waitBlocks.end();
         ++it) {
@@ -326,7 +316,6 @@ size_t
 IOManager::unregisterEvent(HANDLE handle)
 {
     MORDOR_ASSERT(handle);
-    boost::mutex::scoped_lock lock(m_mutex);
     size_t result = 0;
     for (std::list<WaitBlock::ptr>::iterator it = m_waitBlocks.begin();
         it != m_waitBlocks.end();
@@ -377,7 +366,6 @@ IOManager::stopping(unsigned long long &nextTimeout)
     if (nextTimeout == ~0ull && Scheduler::stopping()) {
         if (m_pendingEventCount != 0)
             return false;
-        boost::mutex::scoped_lock lock(m_mutex);
         return m_waitBlocks.empty();
     }
     return false;
@@ -427,7 +415,6 @@ IOManager::idle()
         expired.clear();
 
 #ifndef NDEBUG
-        boost::mutex::scoped_lock lock(m_mutex, boost::defer_lock_t());
 #endif
         int tickles = 0;
         for (ULONG i = 0; i < count; ++i) {

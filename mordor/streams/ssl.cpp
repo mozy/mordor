@@ -160,6 +160,20 @@ void add_ext(X509 *cert, int nid, const char *value)
     X509_EXTENSION_free(ex);
 }
 
+SSL_CTX* SSLStream::createSSLCTX ()
+{
+	SSL_CTX* ssl_ctx = SSL_CTX_new(SSLv23_server_method());
+
+	boost::shared_ptr<X509> cert;
+	boost::shared_ptr<EVP_PKEY> pkey;
+	mkcert(cert, pkey, 1024, rand(), 365);
+	SSL_CTX_use_certificate(ssl_ctx, cert.get());
+	SSL_CTX_use_PrivateKey(ssl_ctx, pkey.get());
+
+	SSL_CTX_set_session_cache_mode (ssl_ctx, SSL_SESS_CACHE_BOTH);
+
+	return ssl_ctx;
+}
 
 SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
 : MutatingFilterStream(parent, own)
@@ -203,6 +217,18 @@ SSLStream::SSLStream(Stream::ptr parent, bool client, bool own, SSL_CTX *ctx)
 
     SSL_set_bio(m_ssl.get(), m_readBio, m_writeBio);
 }
+
+SSLStream::~SSLStream()
+{
+	try
+	{
+		SSLStream::close ();
+
+	} catch (...) {
+		//TODO
+		std::cerr << boost::current_exception_diagnostic_information() << std::endl;
+	}
+ }
 
 void
 SSLStream::close(CloseType type)
@@ -386,7 +412,8 @@ SSLStream::write(const void *buffer, size_t length)
             << toWrite << "): " << result << " (" << error << ")";
         switch (error) {
             case SSL_ERROR_NONE:
-                return result;
+				flush(false);
+				return result;
             case SSL_ERROR_ZERO_RETURN:
                 // Received close_notify message
                 MORDOR_ASSERT(result != 0);

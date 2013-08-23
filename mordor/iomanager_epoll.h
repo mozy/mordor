@@ -45,8 +45,6 @@ private:
         int m_fd;
         EventContext m_in, m_out, m_close;
         Event m_events;
-        boost::mutex m_mutex;
-
     private:
         void asyncResetContextFiber(boost::shared_ptr<Fiber>);
     };
@@ -76,7 +74,6 @@ private:
     int m_epfd;
     int m_tickleFds[2];
     size_t m_pendingEventCount;
-    boost::mutex m_mutex;
     std::vector<AsyncState *> m_pendingEvents;
 };
 
