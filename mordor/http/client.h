@@ -85,6 +85,7 @@ public:
 
     // derive from this to customize request/response logging
     struct RequestLogger {
+        virtual ~RequestLogger() {}
         // default implementation logs request (>=DEBUG) or request.requestline (VERBOSE),
         // censoring HTTP Basic auth
         virtual void logRequest(size_t connectionNum, long long requestNum, const Request &request, bool censorBasicAuth = true);

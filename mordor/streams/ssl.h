@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <openssl/ssl.h>
+#include <boost/thread.hpp>
 
 #include "buffer.h"
 
