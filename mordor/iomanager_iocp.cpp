@@ -212,7 +212,7 @@ IOManager::WaitBlock::removeEntry(int index)
     memmove(&m_recurring[index], &m_recurring[index + 1], (m_inUseCount - index) * sizeof(bool));
 }
 
-IOManager::IOManager(size_t threads, bool useCaller)
+IOManager::IOManager(size_t threads, bool useCaller, bool autoStart)
     : Scheduler(threads, useCaller)
 {
     m_pendingEventCount = 0;
@@ -222,11 +222,13 @@ IOManager::IOManager(size_t threads, bool useCaller)
         << lastError() << ")";
     if (!m_hCompletionPort)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
-    try {
-        start();
-    } catch (...) {
-        CloseHandle(m_hCompletionPort);
-        throw;
+    if (autoStart) {
+        try {
+            start();
+        } catch (...) {
+            CloseHandle(m_hCompletionPort);
+            throw;
+        }
     }
 }
 

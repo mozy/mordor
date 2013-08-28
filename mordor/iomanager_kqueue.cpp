@@ -15,7 +15,7 @@ namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:iomanager");
 
-IOManager::IOManager(size_t threads, bool useCaller)
+IOManager::IOManager(size_t threads, bool useCaller, bool autoStart)
     : Scheduler(threads, useCaller)
 {
     m_kqfd = kqueue();
@@ -45,14 +45,16 @@ IOManager::IOManager(size_t threads, bool useCaller)
         close(m_kqfd);
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
     }
-    try {
-        start();
-    } catch (...) {
-        close(m_tickleFds[0]);
-        close(m_tickleFds[1]);
-        close(m_kqfd);
-        throw;
-    }    
+    if (autoStart) {
+        try {
+            start();
+        } catch (...) {
+            close(m_tickleFds[0]);
+            close(m_tickleFds[1]);
+            close(m_kqfd);
+            throw;
+        }
+    }
 }
 
 IOManager::~IOManager()

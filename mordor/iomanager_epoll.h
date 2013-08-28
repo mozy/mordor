@@ -52,7 +52,10 @@ private:
     };
 
 public:
-    IOManager(size_t threads = 1, bool useCaller = true);
+    /// @param autoStart  whether call the start() automatically in constructor
+    /// @note @p autoStart provides a more friendly behavior for derived class
+    ///      that inherits from IOManager
+    IOManager(size_t threads = 1, bool useCaller = true, bool autoStart = true);
     ~IOManager();
 
     bool stopping();

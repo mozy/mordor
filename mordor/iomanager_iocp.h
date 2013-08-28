@@ -63,7 +63,7 @@ private:
     };
 
 public:
-    IOManager(size_t threads = 1, bool useCaller = true);
+    IOManager(size_t threads = 1, bool useCaller = true, bool autoStart = true);
     ~IOManager();
 
     bool stopping();

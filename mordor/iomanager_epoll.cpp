@@ -170,7 +170,7 @@ IOManager::AsyncState::resetContext(EventContext &context)
     return;
 }
 
-IOManager::IOManager(size_t threads, bool useCaller)
+IOManager::IOManager(size_t threads, bool useCaller, bool autoStart)
     : Scheduler(threads, useCaller),
       m_pendingEventCount(0)
 {
@@ -209,13 +209,15 @@ IOManager::IOManager(size_t threads, bool useCaller)
         close(m_epfd);
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_ctl");
     }
-    try {
-        start();
-    } catch (...) {
-        close(m_tickleFds[0]);
-        close(m_tickleFds[1]);
-        close(m_epfd);
-        throw;
+    if (autoStart) {
+        try {
+            start();
+        } catch (...) {
+            close(m_tickleFds[0]);
+            close(m_tickleFds[1]);
+            close(m_epfd);
+            throw;
+        }
     }
 }
 
