@@ -425,8 +425,10 @@ IOManager::idle()
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetQueuedCompletionStatusEx");
         }
         std::vector<boost::function<void ()> > expired = processTimers();
-        schedule(expired.begin(), expired.end());
-        expired.clear();
+        if (!expired.empty()) {
+            schedule(expired.begin(), expired.end());
+            expired.clear();
+        }
 
 #ifndef NDEBUG
         boost::mutex::scoped_lock lock(m_mutex, boost::defer_lock_t());

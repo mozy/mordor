@@ -400,8 +400,10 @@ IOManager::idle()
         if (rc < 0)
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("epoll_wait");
         std::vector<boost::function<void ()> > expired = processTimers();
-        schedule(expired.begin(), expired.end());
-        expired.clear();
+        if (!expired.empty()) {
+            schedule(expired.begin(), expired.end());
+            expired.clear();
+        }
 
         boost::exception_ptr exception;
         for(int i = 0; i < rc; ++i) {
