@@ -902,12 +902,12 @@ ClientRequest::doRequest()
     // If any transfer encodings, must include chunked, must have chunked only once, and must be the last one
     const ParameterizedList &transferEncoding = m_request.general.transferEncoding;
     if (!transferEncoding.empty()) {
-        MORDOR_ASSERT(transferEncoding.back().value == "chunked");
+        MORDOR_ASSERT(stricmp(transferEncoding.back().value.c_str(), "chunked") == 0);
         for (ParameterizedList::const_iterator it(transferEncoding.begin());
             it + 1 != transferEncoding.end();
             ++it) {
             // Only the last one can be chunked
-            MORDOR_ASSERT(it->value != "chunked");
+            MORDOR_ASSERT(stricmp(it->value.c_str(), "chunked") != 0);
             // identity is only acceptable in the TE header field
             MORDOR_ASSERT(it->value != "identity");
             if (it->value == "gzip" ||
