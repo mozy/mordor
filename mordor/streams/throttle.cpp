@@ -51,7 +51,11 @@ ThrottleStream::write(const Buffer &b, size_t len)
     MORDOR_ASSERT(len != 0);
     unsigned int throttle = m_dg();
     if (throttle == 0 || throttle == ~0u) {
-        m_written = 0;
+        if (m_written > 0){
+            m_written = 0;
+            MORDOR_LOG_DEBUG(g_log) << this << " no longer throttling";
+        }
+        m_writeTimestamp = TimerManager::now();
         return parent()->write(b, len);
     }
     unsigned long long now = TimerManager::now();
@@ -59,7 +63,7 @@ ThrottleStream::write(const Buffer &b, size_t len)
     unsigned long long actualTime = (now - m_writeTimestamp);
     MORDOR_LOG_DEBUG(g_log) << this << " write " << m_written << "B throttle "
         << throttle << "bps now " << now << "us last " << m_writeTimestamp
-        << "us min" << minTime << " us actual " << actualTime << "us";
+        << "us min " << minTime << "us actual " << actualTime << "us";
     if (actualTime < minTime) {
         unsigned long long sleepTime = minTime - actualTime;
         // Never sleep for longer than a tenth of a second
@@ -68,14 +72,12 @@ ThrottleStream::write(const Buffer &b, size_t len)
             sleep(*m_timerManager, sleepTime);
         else
             sleep(sleepTime);
-        m_writeTimestamp = TimerManager::now();
-    } else {
-        m_writeTimestamp = now;
     }
     // Aim for no more than a tenth of a second's worth of data
     len = std::min<size_t>(throttle / 8 / 10, len);
     if (len == 0)
         len = 1;
+    m_writeTimestamp = TimerManager::now();
     return m_written = parent()->write(b, len);
 }
 
