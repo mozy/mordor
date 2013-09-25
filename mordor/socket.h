@@ -81,6 +81,8 @@ public:
     Socket(IOManager &ioManager, int family, int type, int protocol = 0);
     ~Socket();
 
+    socket_t socket() { return m_sock; }
+
     unsigned long long receiveTimeout() { return m_receiveTimeout; }
     void receiveTimeout(unsigned long long us) { m_receiveTimeout = us; }
     unsigned long long sendTimeout() { return m_sendTimeout; }

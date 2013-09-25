@@ -70,6 +70,28 @@ AS_IF([test "x$with_protobuf" = xyes],
 	[PKG_CHECK_MODULES([PROTOBUF], [protobuf], [], [true])])
 AM_CONDITIONAL([HAVE_PROTOBUF], [test "x${PROTOBUF_CFLAGS}" != x])
 
+AC_ARG_WITH(ssh2,
+	[AS_HELP_STRING([--with-ssh2=[[ARG]]],
+		[Enable ssh library @<:@default=check@:>@])],
+	[],
+	[with_ssh2=check])
+LIBSSH2=
+AS_IF([test "x$with_ssh2" != xno],
+	[AC_CHECK_LIB([ssh2], [libssh2_init],
+		[AC_SUBST([LIBSSH2], ["-lssh2"])
+		AC_DEFINE([HAVE_LIBSSH2], [1],
+					[Define if you have libssh2])
+		AM_CONDITIONAL([HAVE_LIBSSH2], true)
+		],
+		[AM_CONDITIONAL([HAVE_LIBSSH2], false)
+		if test "x$with_ssh2" != xcheck; then
+			AC_MSG_FAILURE(
+			[--with-ssh2 was given, but test for libssh2 failed])
+		fi
+		])],
+	[AM_CONDITIONAL([HAVE_LIBSSH2], false)])
+
+
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h valgrind/valgrind.h])
 

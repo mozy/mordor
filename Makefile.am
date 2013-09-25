@@ -57,7 +57,9 @@ nobase_include_HEADERS=			\
 	mordor/sleep.h			\
 	mordor/socket.h			\
 	mordor/socks.h			\
-	mordor/statistics.h		\
+	mordor/ssh/agent.h		\
+	mordor/ssh/channel.h		\
+	mordor/ssh/session.h		\
 	mordor/streams/buffered.h	\
 	mordor/streams/buffer.h		\
 	mordor/streams/cat.h		\
@@ -82,6 +84,7 @@ nobase_include_HEADERS=			\
 	mordor/streams/ssl.h		\
 	mordor/streams/std.h		\
 	mordor/streams/stream.h		\
+	mordor/streams/tee.h		\
 	mordor/streams/temp.h		\
 	mordor/streams/test.h		\
 	mordor/streams/throttle.h	\
@@ -162,6 +165,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/streams/ssl.cpp			\
 	mordor/streams/std.cpp			\
 	mordor/streams/stream.cpp		\
+	mordor/streams/tee.cpp			\
 	mordor/streams/temp.cpp			\
 	mordor/streams/timeout.cpp		\
 	mordor/streams/test.cpp			\
@@ -225,6 +229,18 @@ mordor_libmordoryaml_la_LDFLAGS=$(LIBYAML)
 mordor_libmordoryaml_la_CPPFLAGS=-I$(top_srcdir) $(AM_CPPFLAGS)
 mordor_libmordoryaml_la_LIBADD=mordor/libmordor.la
 
+if HAVE_LIBSSH2
+    lib_LTLIBRARIES+=mordor/libmordorssh.la
+endif
+
+mordor_libmordorssh_la_SOURCES=	\
+	mordor/ssh/agent.cpp	\
+	mordor/ssh/channel.cpp	\
+	mordor/ssh/session.cpp
+mordor_libmordorssh_la_LDFLAGS=$(LIBSSH2)
+mordor_libmordorssh_la_CPPFLAGS=-I$(top_srcdir) $(AM_CPPFLAGS)
+mordor_libmordorssh_la_LIBADD=mordor/libmordor.la
+
 pkgconfigdir=$(libdir)/pkgconfig
 pkgconfig_DATA=mordor/libmordor.pc mordor/test/libmordortest.pc
 
@@ -238,6 +254,10 @@ endif
 
 if HAVE_LIBYAML
 	pkgconfig_DATA+=mordor/libmordoryaml.pc
+endif
+
+if HAVE_LIBSSH2
+	pkgconfig_DATA+=mordor/libmordorssh.pc
 endif
 
 SUFFIXES=.rl

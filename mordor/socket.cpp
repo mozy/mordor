@@ -221,7 +221,7 @@ Socket::Socket(int family, int type, int protocol)
     // Windows accepts type == 0 as implying SOCK_STREAM; other OS's aren't so
     // lenient
     MORDOR_ASSERT(type != 0);
-    m_sock = socket(family, type, protocol);
+    m_sock = ::socket(family, type, protocol);
     MORDOR_LOG_DEBUG(g_log) << this << " socket(" << (Family)family << ", "
         << (Type)type << ", " << (Protocol)protocol << "): " << m_sock << " ("
         << lastError() << ")";
@@ -259,7 +259,7 @@ Socket::Socket(IOManager &ioManager, int family, int type, int protocol)
     // Windows accepts type == 0 as implying SOCK_STREAM; other OS's aren't so
     // lenient
     MORDOR_ASSERT(type != 0);
-    m_sock = socket(family, type, protocol);
+    m_sock = ::socket(family, type, protocol);
     MORDOR_LOG_DEBUG(g_log) << this << " socket(" << (Family)family << ", "
         << (Type)type << ", " << (Protocol)protocol << "): " << m_sock << " ("
         << lastError() << ")";
