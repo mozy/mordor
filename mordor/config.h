@@ -332,6 +332,25 @@ boost::shared_ptr<Timer> associateTimerWithConfigVar(
 void associateSchedulerWithConfigVar(Scheduler &scheduler,
     boost::shared_ptr<ConfigVar<int> > configVar);
 
+
+/// helper class to allow temporarily change the ConfigVar Value
+///
+/// When an instance is created, the specified ConfigVar is hijacked to the @c
+/// tempValue, after the instance is @c reset() or destroyed, the value is
+/// restored.
+class HijackConfigVar
+{
+public:
+    HijackConfigVar(const std::string &name, const std::string &value);
+    const std::string& originValue() const { return m_oldValue; }
+    void reset();
+    ~HijackConfigVar();
+
+private:
+    boost::shared_ptr<Mordor::ConfigVarBase> m_var;
+    std::string m_oldValue;
+};
+
 }
 
 #endif

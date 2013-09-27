@@ -53,13 +53,21 @@ registerSuiteInvariant(const std::string &suite, TestDg invariant)
 }
 
 TimeConstraint::TimeConstraint(unsigned long long us)
-    : m_us(us),
-      m_start(TimerManager::now())
+    : m_end(TimerManager::now() + us)
 {}
 
 TimeConstraint::~TimeConstraint()
 {
-    MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(TimerManager::now() - m_start, m_us);
+    MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(TimerManager::now(), m_end);
+}
+
+TakesAtLeast::TakesAtLeast(unsigned long long us)
+: m_until(TimerManager::now() + us)
+{}
+
+TakesAtLeast::~TakesAtLeast()
+{
+    MORDOR_TEST_ASSERT_GREATER_THAN(TimerManager::now(), m_until);
 }
 
 void

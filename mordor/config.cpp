@@ -439,4 +439,28 @@ void associateSchedulerWithConfigVar(Scheduler &scheduler,
     updateThreadCount(configVar->val(), scheduler);
 }
 
+HijackConfigVar::HijackConfigVar(const std::string &name, const std::string &value)
+    : m_var(Config::lookup(name))
+{
+    MORDOR_ASSERT(m_var);
+    m_oldValue = m_var->toString();
+    // failed to set value
+    if (!m_var->fromString(value))
+        m_var.reset();
+}
+
+HijackConfigVar::~HijackConfigVar()
+{
+    reset();
+}
+
+void
+HijackConfigVar::reset()
+{
+    if (m_var) {
+        m_var->fromString(m_oldValue);
+        m_var.reset();
+    }
+}
+
 }

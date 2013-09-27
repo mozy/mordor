@@ -207,7 +207,16 @@ struct TimeConstraint
     ~TimeConstraint();
 
 private:
-    unsigned long long m_us, m_start;
+    unsigned long long m_end;
+};
+
+/// Assert on destruction if it was alive for shorter than us microseconds
+struct TakesAtLeast
+{
+    TakesAtLeast(unsigned long long us);
+    ~TakesAtLeast();
+private:
+    unsigned long long m_until;
 };
 
 // Assertion internal functions
