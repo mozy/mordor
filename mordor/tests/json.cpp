@@ -1,5 +1,7 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
+#include <boost/lexical_cast.hpp>
+
 #include "mordor/json.h"
 #include "mordor/test/test.h"
 
