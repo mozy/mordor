@@ -19,9 +19,7 @@ public:
     using Mordor::Stream::read;
 
     virtual bool supportsSeek() { return true; }
-    virtual long long seek(long long offset, Anchor anchor = BEGIN) {
-        return 0;
-    }
+    long long seek(long long offset, Anchor anchor = BEGIN);
 
 private:
     static ZeroStream s_zeroStream;
