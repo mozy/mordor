@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -119,6 +119,7 @@
     <ClCompile Include="daemon.cpp" />
     <ClCompile Include="openssl_lock.cpp" />
     <ClCompile Include="parallel.cpp" />
+    <ClCompile Include="protobuf.cpp" />
     <ClCompile Include="socks.cpp" />
     <ClCompile Include="streams\buffer.cpp" />
     <ClCompile Include="streams\buffered.cpp" />
@@ -205,6 +206,7 @@
     <ClInclude Include="daemon.h" />
     <ClInclude Include="openssl_lock.h" />
     <ClInclude Include="parallel.h" />
+    <ClInclude Include="protobuf.h" />
     <ClInclude Include="socks.h" />
     <ClInclude Include="streams\buffer.h" />
     <ClInclude Include="streams\buffered.h" />

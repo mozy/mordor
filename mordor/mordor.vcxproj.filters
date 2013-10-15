@@ -224,7 +224,19 @@
     <ClCompile Include="http\oauth2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="streams\xz.cpp">
+    <ClCompile Include="openssl_lock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="streams\lzma2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="streams\zero.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="xml\dom_parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="protobuf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -505,7 +517,19 @@
     <ClInclude Include="http\oauth2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="streams\xz.h">
+    <ClInclude Include="openssl_lock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="streams\lzma2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="xml\dom_parser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="streams\zero.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="protobuf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
