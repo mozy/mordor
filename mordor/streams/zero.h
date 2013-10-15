@@ -5,6 +5,8 @@
 #include "stream.h"
 #include "mordor/util.h"
 
+namespace Mordor {
+
 class ZeroStream : public Mordor::Stream
 {
 private:
@@ -24,5 +26,7 @@ public:
 private:
     static ZeroStream s_zeroStream;
 };
+
+}
 
 #endif

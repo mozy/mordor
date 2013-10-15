@@ -2,6 +2,8 @@
 
 #include <string.h>
 
+namespace Mordor {
+
 ZeroStream ZeroStream::s_zeroStream;
 
 size_t
@@ -15,4 +17,6 @@ long long
 ZeroStream::seek(long long offset, Anchor anchor)
 {
     return 0;
+}
+
 }
