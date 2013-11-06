@@ -176,6 +176,9 @@ public:
     // at a time
     void connectionsPerHost(size_t connections) { m_connectionsPerHost = connections; }
 
+    // Get number of active connections
+    size_t getActiveConnections();
+
     // Proxy support requires this callback.  It is expected to return an
     // array of candidate Proxy servers to handle the requested URI.
     // If none are returned the request will be performed directly

@@ -625,6 +625,33 @@ ConnectionCache::dropConnection(weak_ptr self,
     }
 }
 
+// Get the number of active connections
+// Can be used to determine throttling with multiple connections.
+size_t
+ConnectionCache::getActiveConnections()
+{
+    size_t result = 0;
+    size_t tmpCount;
+    FiberMutex::ScopedLock lock(m_mutex);
+    CachedConnectionMap::iterator it;
+    ConnectionList::iterator it2;
+    for (it = m_conns.begin(); it != m_conns.end(); it++) {
+        boost::shared_ptr<ConnectionInfo> info = it->second;
+        tmpCount = 0;
+        for (it2 = info->connections.begin();
+            it2 != info->connections.end();
+            ++it2) {
+            if (*it2 != NULL && (*it2)->outstandingRequests() > 0){
+                tmpCount++;
+            }
+        }
+        MORDOR_LOG_TRACE(g_cacheLog) << this << " Active connections to " << it->first.toString() << " - " << tmpCount;
+        result += tmpCount;
+    }
+    MORDOR_LOG_TRACE(g_cacheLog) << this << " Total connections " << result;
+    return result;
+}
+
 std::pair<ClientConnection::ptr, bool>
 MockConnectionBroker::getConnection(const URI &uri, bool forceNewConnection)
 {
