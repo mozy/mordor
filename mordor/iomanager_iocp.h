@@ -69,14 +69,34 @@ public:
     bool stopping();
 
     void registerFile(HANDLE handle);
+
+    // Callers who want to use the IOManager to manage Async IO
+    // must call this method to prepare the iomanager.  
+    // (e.g. WSASend or ReadDirectoryChanges)
+    // The IOManager will add context information to the AsyncEvent structure.
+    // The caller must then pass the AsyncEvent::overlapped member 
+    // as the lpOverlapped argument for the async IO call.
+    // After making the async call the caller will normally call yieldTo() to stop
+    // execution.  The IOManager will resume the caller fiber when the IO call completes.
+    // At that point the caller can use the AsyncEvent::overlapped member to learn
+    // the result of the IO call.
     void registerEvent(AsyncEvent *e);
-    // Only use if the async call failed, not for cancelling it
+
+    // If a caller has called registerEvent to prepare for an Async IO call
+    // but then the Async IO call fails this must be called so that the IOManager
+    // does not wait for the Async IO call to complete.
+    // This does not work to cancel a successfully launched Async IO call.
     void unregisterEvent(AsyncEvent *e);
     void registerEvent(HANDLE handle, boost::function<void ()> dg,
         bool recurring = false);
     void registerEvent(HANDLE handle, bool recurring = false)
     { registerEvent(handle, NULL, recurring); }
     size_t unregisterEvent(HANDLE handle);
+
+    // Cancel an Async IO call that has already been successfully launched.
+    // If successfully the fiber that is waiting for the result
+    // will be resumed and the AsyncEvent::overlapped will have the
+    // ERROR_OPERATION_ABORTED result.  
     void cancelEvent(HANDLE hFile, AsyncEvent *e);
 
 protected:
@@ -84,6 +104,10 @@ protected:
     void idle();
     void tickle();
 
+    // Call when a new timer is added that will be the next timer 
+    // to expire.  We have to tickle() the IOManager so that it can 
+    // adjust the timeout value in its blocking call to GetQueuedCompletionStatusEx
+    // so that it doesn't miss the timer
     void onTimerInsertedAtFront() { tickle(); }
 
 private:

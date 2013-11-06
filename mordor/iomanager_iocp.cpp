@@ -375,7 +375,11 @@ IOManager::cancelEvent(HANDLE hFile, AsyncEvent *e)
 bool
 IOManager::stopping(unsigned long long &nextTimeout)
 {
+    // Check when the next timer is expected to timeout
     nextTimeout = nextTimer();
+
+    // Even if the scheduler wants to stop we return false
+    // if there is any pending work
     if (nextTimeout == ~0ull && Scheduler::stopping()) {
         if (m_pendingEventCount != 0)
             return false;
@@ -385,6 +389,9 @@ IOManager::stopping(unsigned long long &nextTimeout)
     return false;
 }
 
+
+// Each thread of this IO manager runs this method as a fiber and it is active when there is nothing
+// to do.  It must process incoming Async IO calls, expired timers and any fiber scheduled.
 void
 IOManager::idle()
 {
@@ -395,8 +402,11 @@ IOManager::idle()
         if (stopping(nextTimeout))
             return;
         DWORD timeout = INFINITE;
-        if (nextTimeout != ~0ull)
+        if (nextTimeout != ~0ull) {
+            // The maximum time we can wait in GetQueuedCompletionStatusEx is
+            // up to the point that the next timer will expire
             timeout = (DWORD)(nextTimeout / 1000) + 1;
+        }
         count = 0;
         BOOL ret = pGetQueuedCompletionStatusEx(m_hCompletionPort,
             events,
@@ -410,11 +420,14 @@ IOManager::idle()
             << count << ") (" << error << ")";
         if (!ret && error) {
             if (error == WAIT_TIMEOUT) {
+                // No tickles or AsyncIO calls have happened so check for timers
+                // that need execution
                 std::vector<boost::function<void ()> > expired = processTimers();
                 if (!expired.empty()) {
                     schedule(expired.begin(), expired.end());
                     expired.clear();
                     try {
+                        // Let the timers execute
                         Fiber::yield();
                     } catch (OperationAbortedException &) {
                         return;
@@ -424,6 +437,8 @@ IOManager::idle()
             }
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetQueuedCompletionStatusEx");
         }
+
+        // Schedule any timers that are ready to execute
         std::vector<boost::function<void ()> > expired = processTimers();
         if (!expired.empty()) {
             schedule(expired.begin(), expired.end());
@@ -440,11 +455,16 @@ IOManager::idle()
                 ++tickles;
                 continue;
             }
+
+            // An Async IO call has completed, so wake up the fiber
+            // that called registerEvent()
             AsyncEvent *e = (AsyncEvent *)events[i].lpOverlapped;
 #ifndef NDEBUG
             if (!lock.owns_lock())
                 lock.lock();
 
+            // Verify that the API has been used properly,
+            // e.g. that registerEvent has been called
             std::map<OVERLAPPED *, AsyncEvent *>::iterator it =
                 m_pendingEvents.find(events[i].lpOverlapped);
             MORDOR_ASSERT(it != m_pendingEvents.end());
@@ -462,18 +482,25 @@ IOManager::idle()
             Scheduler *scheduler = e->m_scheduler;
             Fiber::ptr fiber;
             fiber.swap(e->m_fiber);
+
+            // Clean up the AsyncEvent structure which can
+            // be reused for the next Async IO call
             e->m_thread = emptytid();
             e->m_scheduler = NULL;
             scheduler->schedule(fiber);
         }
-        if (count != tickles)
+        if (count != tickles) {
+            // Subtract the number of completed Async IO calls
             atomicAdd(m_pendingEventCount, (size_t)(-(ptrdiff_t)(count - tickles)));
+        }
 #ifndef NDEBUG
         if (lock.owns_lock()) {
             MORDOR_ASSERT(m_pendingEventCount == m_pendingEvents.size());
             lock.unlock();
         }
 #endif
+        // Because we recieved either a tickle or a completed Async IO call
+        // we know that there must be some work lined up for the scheduler
         try {
             Fiber::yield();
         } catch (OperationAbortedException &) {
@@ -485,6 +512,9 @@ IOManager::idle()
 void
 IOManager::tickle()
 {
+    // Send a special message with distinct key ~0.  This message does not correspond to
+    // any real completed Async IO call, rather it is used to force the idle() method
+    // out of a GetQueuedCompletionStatusEx status
     BOOL bRet = PostQueuedCompletionStatus(m_hCompletionPort, 0, ~0, NULL);
     MORDOR_LOG_LEVEL(g_log, bRet ? Log::DEBUG : Log::ERROR) << this
         << " PostQueuedCompletionStatus(" << m_hCompletionPort
