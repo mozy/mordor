@@ -14,6 +14,12 @@ namespace Mordor {
 static Logger::ptr g_log = Log::lookup("mordor:iomanager");
 static Logger::ptr g_logWaitBlock = Log::lookup("mordor:iomanager:waitblock");
 
+boost::mutex IOManager::m_errorMutex;
+size_t IOManager::m_iocpAllowedErrorCount = 0;
+size_t IOManager::m_iocpErrorCountWindowInSeconds = 0;
+size_t IOManager::m_errorCount = 0;
+unsigned long long IOManager::m_firstErrorTime = 0;
+
 AsyncEvent::AsyncEvent()
 {
     memset(this, 0, sizeof(AsyncEvent));
@@ -509,6 +515,13 @@ IOManager::idle()
     }
 }
 
+void IOManager::setIOCPErrorTolerance(size_t count, size_t seconds)
+{
+    boost::mutex::scoped_lock lock(m_errorMutex);
+    m_iocpAllowedErrorCount = count;
+    m_iocpErrorCountWindowInSeconds = seconds;
+}
+
 void
 IOManager::tickle()
 {
@@ -519,8 +532,29 @@ IOManager::tickle()
     MORDOR_LOG_LEVEL(g_log, bRet ? Log::DEBUG : Log::ERROR) << this
         << " PostQueuedCompletionStatus(" << m_hCompletionPort
         << ", 0, ~0, NULL): " << bRet << " (" << lastError() << ")";
-    if (!bRet)
+
+    if (!bRet) {
+        boost::mutex::scoped_lock lock(m_errorMutex);
+
+        if (m_iocpAllowedErrorCount != 0) {
+            unsigned long long currentTime = ::GetTickCount64();
+            unsigned long long secondsElapsed = (currentTime - m_firstErrorTime) / 1000;
+            if (secondsElapsed > m_iocpErrorCountWindowInSeconds) {
+                // It's been a while since we started encountering errors
+                m_firstErrorTime = currentTime;
+                m_errorCount = 0;
+            }
+
+            if (++m_errorCount <= m_iocpAllowedErrorCount) {
+                // #112528 - Swallow these errors untill we exceed the error tolerance
+                MORDOR_LOG_INFO(g_logWaitBlock) << this << "  Ignoring PostQueuedCompletionStatus failure. Error tolerance = "
+                    << m_iocpAllowedErrorCount << " Error count = " << m_errorCount;
+                return;
+            }
+        }
+
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("PostQueuedCompletionStatus");
+    }
 }
 
 }

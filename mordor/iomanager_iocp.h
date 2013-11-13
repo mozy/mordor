@@ -99,6 +99,21 @@ public:
     // ERROR_OPERATION_ABORTED result.  
     void cancelEvent(HANDLE hFile, AsyncEvent *e);
 
+    // #111932
+    // HACK (hopefully temporary).
+    // This method allows the caller to specify the number of errors to ignore when
+    // calling PostQueuedCompletionStatus in the tickle() method. The default value is 0. 
+    // The Sync product has experienced some "Insufficient system resources" errors
+    // returned by PostQueuedCompletionStatus, possibly indicating the the IOCP queue is full.
+    // Be careful when using this method as it is possible for the corresponding
+    // GetQueuedCompletionStatusEx call in idle() to wait infinitely, which could cause deadlock if
+    // the PostQueuedCompletionStatus failure is ignored. (Sync makes use of many Timers which 
+    // should ensure that GetQueuedCompletionStatusEx will not ever wait infinitely.)
+    // Parameters
+    //   count: The number of errors to allow
+    //   seconds: The time span within which the number of errors must exceed the maximum specified in count.
+    static void setIOCPErrorTolerance(size_t count, size_t seconds);
+
 protected:
     bool stopping(unsigned long long &nextTimeout);
     void idle();
@@ -118,6 +133,14 @@ private:
     size_t m_pendingEventCount;
     boost::mutex m_mutex;
     std::list<WaitBlock::ptr> m_waitBlocks;
+
+    // These variables are part of the hack for #111932.
+    // See the comment for setIOCPErrorTolerance().
+    static boost::mutex m_errorMutex;
+    static size_t m_iocpAllowedErrorCount;
+    static size_t m_iocpErrorCountWindowInSeconds;
+    static size_t m_errorCount;
+    static unsigned long long m_firstErrorTime;
 };
 
 }
