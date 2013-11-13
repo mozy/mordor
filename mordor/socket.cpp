@@ -471,9 +471,10 @@ suckylsp:
                 }
                 Timer::ptr timeout;
                 if (m_sendTimeout != ~0ull)
-                    timeout = m_ioManager->registerTimer(m_sendTimeout,
+                    timeout = m_ioManager->registerConditionTimer(m_sendTimeout,
                         boost::bind(&Socket::cancelIo, this,
-                            boost::ref(m_cancelledSend), WSAETIMEDOUT));
+                            boost::ref(m_cancelledSend), WSAETIMEDOUT),
+                        weak_ptr(shared_from_this()));
                 Scheduler::yieldTo();
 
                 m_fiber.reset();
@@ -526,9 +527,10 @@ suckylsp:
             }
             Timer::ptr timeout;
             if (m_sendTimeout != ~0ull)
-                timeout = m_ioManager->registerTimer(m_sendTimeout, boost::bind(
-                    &Socket::cancelIo, this, IOManager::WRITE,
-                    boost::ref(m_cancelledSend), ETIMEDOUT));
+                timeout = m_ioManager->registerConditionTimer(m_sendTimeout,
+                    boost::bind(&Socket::cancelIo, this, IOManager::WRITE,
+                        boost::ref(m_cancelledSend), ETIMEDOUT),
+                    weak_ptr(shared_from_this()));
             Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
@@ -695,9 +697,10 @@ suckylsp:
                 m_unregistered = false;
                 Timer::ptr timeout;
                 if (m_receiveTimeout != ~0ull)
-                    timeout = m_ioManager->registerTimer(m_sendTimeout,
+                    timeout = m_ioManager->registerConditionTimer(m_sendTimeout,
                         boost::bind(&Socket::cancelIo, this,
-                        boost::ref(m_cancelledReceive), WSAETIMEDOUT));
+                            boost::ref(m_cancelledReceive), WSAETIMEDOUT),
+                        weak_ptr(shared_from_this()));
                 Scheduler::yieldTo();
                 m_fiber.reset();
                 m_scheduler = NULL;
@@ -757,9 +760,10 @@ suckylsp:
             }
             Timer::ptr timeout;
             if (m_receiveTimeout != ~0ull)
-                timeout = m_ioManager->registerTimer(m_receiveTimeout, boost::bind(
-                    &Socket::cancelIo, this, IOManager::READ,
-                    boost::ref(m_cancelledReceive), ETIMEDOUT));
+                timeout = m_ioManager->registerConditionTimer(m_receiveTimeout,
+                    boost::bind(&Socket::cancelIo, this, IOManager::READ,
+                        boost::ref(m_cancelledReceive), ETIMEDOUT),
+                    weak_ptr(shared_from_this()));
             Scheduler::yieldTo();
             if (timeout)
                 timeout->cancel();
@@ -963,9 +967,9 @@ Socket::doIO(iovec *buffers, size_t length, int &flags, Address *address)
         m_ioManager->registerEvent(m_sock, event);
         Timer::ptr timer;
         if (timeout != ~0ull)
-            timer = m_ioManager->registerTimer(timeout, boost::bind(
-                &Socket::cancelIo, this, event, boost::ref(cancelled),
-                ETIMEDOUT));
+            timer = m_ioManager->registerConditionTimer(timeout,
+                boost::bind(&Socket::cancelIo, this, event, boost::ref(cancelled), ETIMEDOUT),
+                weak_ptr(shared_from_this()));
         Scheduler::yieldTo();
         if (timer)
             timer->cancel();
