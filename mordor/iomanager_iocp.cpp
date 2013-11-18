@@ -537,7 +537,7 @@ IOManager::tickle()
         boost::mutex::scoped_lock lock(m_errorMutex);
 
         if (m_iocpAllowedErrorCount != 0) {
-            unsigned long long currentTime = ::GetTickCount64();
+            unsigned long long currentTime = Mordor::TimerManager::now() / 1000ULL;
             unsigned long long secondsElapsed = (currentTime - m_firstErrorTime) / 1000;
             if (secondsElapsed > m_iocpErrorCountWindowInSeconds) {
                 // It's been a while since we started encountering errors
