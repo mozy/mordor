@@ -225,7 +225,7 @@ IOManager::IOManager(size_t threads, bool useCaller, bool autoStart)
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
     MORDOR_LOG_LEVEL(g_log, m_hCompletionPort ? Log::VERBOSE : Log::ERROR) << this <<
         " CreateIoCompletionPort(): " << m_hCompletionPort << " ("
-        << lastError() << ")";
+        << (m_hCompletionPort ? ERROR_SUCCESS : lastError()) << ")";
     if (!m_hCompletionPort)
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
     if (autoStart) {
@@ -254,10 +254,12 @@ IOManager::stopping()
 void
 IOManager::registerFile(HANDLE handle)
 {
+    // Add the handle to the existing completion port
+    MORDOR_ASSERT(m_hCompletionPort != INVALID_HANDLE_VALUE);
     HANDLE hRet = CreateIoCompletionPort(handle, m_hCompletionPort, 0, 0);
-    MORDOR_LOG_LEVEL(g_log, m_hCompletionPort ? Log::DEBUG : Log::ERROR) << this <<
+    MORDOR_LOG_LEVEL(g_log, hRet ? Log::DEBUG : Log::ERROR) << this <<
         " CreateIoCompletionPort(" << handle << ", " << m_hCompletionPort
-        << "): " << hRet << " (" << lastError() << ")";
+        << "): " << hRet << " (" << (hRet ? ERROR_SUCCESS : lastError()) << ")";
     if (hRet != m_hCompletionPort) {
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CreateIoCompletionPort");
     }
@@ -423,7 +425,7 @@ IOManager::idle()
         error_t error = lastError();
         MORDOR_LOG_DEBUG(g_log) << this << " GetQueuedCompletionStatusEx("
             << m_hCompletionPort << ", " << timeout << "): " << ret << ", ("
-            << count << ") (" << error << ")";
+            << count << ") (" << (ret ? ERROR_SUCCESS : error) << ")";
         if (!ret && error) {
             if (error == WAIT_TIMEOUT) {
                 // No tickles or AsyncIO calls have happened so check for timers
@@ -531,7 +533,7 @@ IOManager::tickle()
     BOOL bRet = PostQueuedCompletionStatus(m_hCompletionPort, 0, ~0, NULL);
     MORDOR_LOG_LEVEL(g_log, bRet ? Log::DEBUG : Log::ERROR) << this
         << " PostQueuedCompletionStatus(" << m_hCompletionPort
-        << ", 0, ~0, NULL): " << bRet << " (" << lastError() << ")";
+        << ", 0, ~0, NULL): " << bRet << " (" << (bRet ? ERROR_SUCCESS : lastError()) << ")";
 
     if (!bRet) {
         boost::mutex::scoped_lock lock(m_errorMutex);

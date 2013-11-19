@@ -68,11 +68,15 @@ public:
 
     bool stopping();
 
+    // Associate the handle with the IOManagers completion port
+    // This must be called one per handle before making Windows
+    // system calls that use asynchronous IO
     void registerFile(HANDLE handle);
 
-    // Callers who want to use the IOManager to manage Async IO
-    // must call this method to prepare the iomanager.  
-    // (e.g. WSASend or ReadDirectoryChanges)
+    // Callers who have registered a handle with registerFile() must
+    // call this method to prepare the IOManager before performing a
+    // Windows system call on that handle that expects a OVERLAPPED structure
+    // (e.g. ConnectEx, WSASend, ReadDirectoryChanges etc)
     // The IOManager will add context information to the AsyncEvent structure.
     // The caller must then pass the AsyncEvent::overlapped member 
     // as the lpOverlapped argument for the async IO call.
@@ -87,10 +91,25 @@ public:
     // does not wait for the Async IO call to complete.
     // This does not work to cancel a successfully launched Async IO call.
     void unregisterEvent(AsyncEvent *e);
+
+    // Register a handle to an Windows Event.
+    // The callback "dg" will be scheduled once the event
+    // is signalled.
     void registerEvent(HANDLE handle, boost::function<void ()> dg,
         bool recurring = false);
+
+    // Register a handle to an Windows Event.
+    // Use this method when a fiber wants to sleep until an event is signalled.
+    // The caller will typically yield its fiber immediately after
+    // calling this method and the fiber will be rescheduled as
+    // soon as the event is signalled.
+    // (see CreateEventW, WaitForMultipleObjects, WSAEventSelect)
+    // Note: See FiberEvent for a cross platform event primitive.
     void registerEvent(HANDLE handle, bool recurring = false)
     { registerEvent(handle, NULL, recurring); }
+
+    // Cancel the registration of event handle that was previously
+    // registered with the IOManager
     size_t unregisterEvent(HANDLE handle);
 
     // Cancel an Async IO call that has already been successfully launched.
@@ -102,7 +121,7 @@ public:
     // #111932
     // HACK (hopefully temporary).
     // This method allows the caller to specify the number of errors to ignore when
-    // calling PostQueuedCompletionStatus in the tickle() method. The default value is 0. 
+    // calling PostQueuedCompletionStatus in the tickle() method. The default value is 0.
     // The Sync product has experienced some "Insufficient system resources" errors
     // returned by PostQueuedCompletionStatus, possibly indicating the the IOCP queue is full.
     // Be careful when using this method as it is possible for the corresponding
