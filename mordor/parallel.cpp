@@ -2,8 +2,11 @@
 
 #include "parallel.h"
 
+#include <boost/scoped_ptr.hpp>
+
 #include "assert.h"
 #include "atomic.h"
+#include "fibersynchronization.h"
 
 namespace Mordor {
 
@@ -13,8 +16,10 @@ static
 void
 parallel_do_impl(boost::function<void ()> dg, size_t &completed,
     size_t total, boost::exception_ptr &exception, Scheduler *scheduler,
-    Fiber::ptr caller)
+    Fiber::ptr caller, FiberSemaphore *sem)
 {
+    if (sem)
+        sem->wait();
     try {
         dg();
     } catch (boost::exception &ex) {
@@ -23,12 +28,15 @@ parallel_do_impl(boost::function<void ()> dg, size_t &completed,
     } catch (...) {
         exception = boost::current_exception();
     }
+    if (sem)
+        sem->notify();
     if (atomicIncrement(completed) == total)
         scheduler->schedule(caller);
 }
 
 void
-parallel_do(const std::vector<boost::function<void ()> > &dgs)
+parallel_do(const std::vector<boost::function<void ()> > &dgs,
+    int parallelism)
 {
     size_t completed = 0;
     Scheduler *scheduler = Scheduler::getThis();
@@ -42,6 +50,11 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
         return;
     }
 
+    MORDOR_ASSERT(parallelism != 0);
+    boost::scoped_ptr<FiberSemaphore> sem;
+    if (parallelism != -1)
+        sem.reset(new FiberSemaphore(parallelism));
+
     std::vector<Fiber::ptr> fibers;
     std::vector<boost::exception_ptr> exceptions;
     fibers.reserve(dgs.size());
@@ -49,7 +62,7 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
     for(size_t i = 0; i < dgs.size(); ++i) {
         Fiber::ptr f(new Fiber(boost::bind(&parallel_do_impl, dgs[i],
             boost::ref(completed), dgs.size(), boost::ref(exceptions[i]),
-            scheduler, caller)));
+            scheduler, caller, sem.get())));
         fibers.push_back(f);
         scheduler->schedule(f);
     }
@@ -67,7 +80,8 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs)
 
 void
 parallel_do(const std::vector<boost::function<void ()> > &dgs,
-            std::vector<Fiber::ptr> &fibers)
+            std::vector<Fiber::ptr> &fibers,
+            int parallelism)
 {
     MORDOR_ASSERT(fibers.size() >= dgs.size());
     size_t completed = 0;
@@ -82,12 +96,17 @@ parallel_do(const std::vector<boost::function<void ()> > &dgs,
         return;
     }
 
+    boost::scoped_ptr<FiberSemaphore> sem;
+    MORDOR_ASSERT(parallelism != 0);
+    if (parallelism != -1)
+        sem.reset(new FiberSemaphore(parallelism));
+
     std::vector<boost::exception_ptr> exceptions;
     exceptions.resize(dgs.size());
     for(size_t i = 0; i < dgs.size(); ++i) {
         fibers[i]->reset(boost::bind(&parallel_do_impl, dgs[i],
             boost::ref(completed), dgs.size(), boost::ref(exceptions[i]),
-            scheduler, caller));
+            scheduler, caller, sem.get()));
         scheduler->schedule(fibers[i]);
     }
     Scheduler::yieldTo();

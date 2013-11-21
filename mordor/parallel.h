@@ -31,15 +31,23 @@ namespace Mordor {
 
 /// @ingroup parallel_do
 /// @param dgs The functors to execute
+/// @param parallelism How many @p dgs could be executed in parallel at most
+/// @note  By default, all the @p dgs would be scheduled together and run with
+///        whatever concurrency is available from the Scheduler.
+///        If @p parallelism > 0, only at most @p parallelism @p dgs could be
+///        scheduled into Scheduler with later dgs not invoked until earlier
+///        dgs have completed.
 void
-parallel_do(const std::vector<boost::function<void ()> > &dgs);
+parallel_do(const std::vector<boost::function<void ()> > &dgs, int parallelism = -1);
 /// @ingroup parallel_do
 /// @param dgs The functors to execute
 /// @param fibers The Fibers to use to execute the functors
+/// @param parallelism How many @p fibers could be executed in parallel at most
 /// @pre dgs.size() <= fibers.size()
 void
 parallel_do(const std::vector<boost::function<void ()> > &dgs,
-            std::vector<Fiber::ptr> &fibers);
+            std::vector<Fiber::ptr> &fibers,
+            int parallelism = -1);
 
 namespace Detail {
 

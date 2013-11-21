@@ -1,6 +1,7 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
 #include <boost/bind.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "mordor/atomic.h"
 #include "mordor/fiber.h"
@@ -9,6 +10,7 @@
 #include "mordor/sleep.h"
 #include "mordor/test/test.h"
 #include "mordor/workerpool.h"
+#include "mordor/util.h"
 
 using namespace Mordor;
 using namespace Mordor::Test;
@@ -465,6 +467,55 @@ MORDOR_UNITTEST(Scheduler, tolerantExceptionInBatch)
     // the 3rd one should still have chance to get executed
     MORDOR_TEST_ASSERT_EQUAL(values[2], 3);
 }
+
+static void doSleeping(boost::mutex &mutex, int &count, int &reference, int &max, IOManager &ioManager)
+{
+    boost::mutex::scoped_lock lock(mutex);
+    ++reference;
+    ++count;
+    if (reference > max)
+        max = reference;
+    lock.unlock();
+    sleep(ioManager, 5000);
+    lock.lock();
+    --reference;
+}
+
+MORDOR_UNITTEST(Scheduler, parallelDoParallelism)
+{
+    IOManager ioManager(6, true);
+    int reference = 0, count = 0, max = 0;
+    boost::mutex mutex;
+    std::vector<boost::function<void ()> > dgs;
+    for (int i=0; i<1000; ++i) {
+        dgs.push_back(boost::bind(&doSleeping,
+                            boost::ref(mutex),
+                            boost::ref(count),
+                            boost::ref(reference),
+                            boost::ref(max),
+                            boost::ref(ioManager)));
+    }
+    // 6 threads in IOManager, but only parallel do with 4.
+    parallel_do(dgs, 4);
+    ioManager.stop();
+    MORDOR_TEST_ASSERT_EQUAL(reference, 0);
+    MORDOR_TEST_ASSERT_EQUAL(count, 1000);
+    MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(max, 4);
+}
+
+#ifndef NDEBUG
+MORDOR_UNITTEST(Scheduler, parallelDoEvilParallelism)
+{
+    WorkerPool pool(2, true);
+    std::vector<boost::function<void ()> > dgs;
+    for (int i=0; i<2; ++i) {
+        dgs.push_back(boost::bind(nop<int>, 1));
+    }
+    // doing something evil, no one can save you
+    MORDOR_TEST_ASSERT_ASSERTED(parallel_do(dgs, 0));
+    pool.stop();
+}
+#endif
 
 namespace {
     struct DummyClass {
