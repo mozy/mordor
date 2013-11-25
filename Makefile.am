@@ -200,8 +200,9 @@ mordor_libmordor_la_LDFLAGS=			\
 	-version-info $(LIBMORDOR_SO_VERSION)
 mordor_libmordor_la_LIBADD = \
 	$(OPENSSL_LIBS) 		\
-	$(BOOST_REGEX_LIB)		\
-	$(BOOST_THREAD_LIB)		\
+	$(BOOST_REGEX_LIB)			\
+	$(BOOST_THREAD_LIB)			\
+	$(BOOST_SYSTEM_LIB)                     \
 	$(LZMA_LIB)
 if HAVE_LZMA
 mordor_libmordor_la_SOURCES += \
