@@ -2,8 +2,11 @@
 
 #include <boost/bind.hpp>
 
+#include "mordor/atomic.h"
 #include "mordor/fiber.h"
 #include "mordor/fibersynchronization.h"
+#include "mordor/iomanager.h"
+#include "mordor/sleep.h"
 #include "mordor/test/test.h"
 #include "mordor/workerpool.h"
 
@@ -200,4 +203,41 @@ MORDOR_UNITTEST(FiberMutex, unlockUnique)
     Scheduler::yield();
     MORDOR_TEST_ASSERT(lock.unlockIfNotUnique());
     pool.dispatch();
+}
+
+static void lockAndHold(IOManager &ioManager, FiberMutex &mutex, Atomic<int> &counter)
+{
+    --counter;
+    FiberMutex::ScopedLock lock(mutex);
+    while(counter > 0)
+        Mordor::sleep(ioManager, 50000); // sleep 50ms
+}
+
+MORDOR_UNITTEST(FiberMutex, mutexPerformance)
+{
+    IOManager ioManager(2, true);
+    FiberMutex mutex;
+#ifdef X86_64
+#ifndef NDEBUG_PERF
+    int repeatness = 10000;
+#else
+    int repeatness = 50000;
+#endif
+#else
+    // on a 32bit system, a process can only have a 4GB virtual address
+    // each fiber wound take 1MB virtual address, this gives at most
+    // 4096 fibers can be alive simultaneously.
+    int repeatness = 1000;
+#endif
+    Atomic<int> counter = repeatness;
+    unsigned long long before = TimerManager::now();
+    for (int i=0; i<repeatness; ++i) {
+        ioManager.schedule(boost::bind(lockAndHold,
+                                boost::ref(ioManager),
+                                boost::ref(mutex),
+                                boost::ref(counter)));
+    }
+    ioManager.stop();
+    unsigned long long elapse = TimerManager::now() - before;
+    MORDOR_LOG_INFO(Mordor::Log::root()) << "elapse: " << elapse;
 }

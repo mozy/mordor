@@ -24,7 +24,7 @@ FiberMutex::lock()
     {
         boost::mutex::scoped_lock scopeLock(m_mutex);
         MORDOR_ASSERT(m_owner != Fiber::getThis());
-        MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
+        MORDOR_ASSERT_PERF(std::find(m_waiters.begin(), m_waiters.end(),
             std::make_pair(Scheduler::getThis(), Fiber::getThis()))
             == m_waiters.end());
         if (!m_owner) {
@@ -38,7 +38,7 @@ FiberMutex::lock()
 #ifndef NDEBUG
     boost::mutex::scoped_lock scopeLock(m_mutex);
     MORDOR_ASSERT(m_owner == Fiber::getThis());
-    MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
+    MORDOR_ASSERT_PERF(std::find(m_waiters.begin(), m_waiters.end(),
             std::make_pair(Scheduler::getThis(), Fiber::getThis()))
             == m_waiters.end());
 #endif
@@ -94,7 +94,7 @@ FiberSemaphore::wait()
     MORDOR_ASSERT(Scheduler::getThis());
     {
         boost::mutex::scoped_lock scopeLock(m_mutex);
-        MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
+        MORDOR_ASSERT_PERF(std::find(m_waiters.begin(), m_waiters.end(),
             std::make_pair(Scheduler::getThis(), Fiber::getThis()))
             == m_waiters.end());
         if (m_concurrency > 0u) {
@@ -105,9 +105,9 @@ FiberSemaphore::wait()
             Fiber::getThis()));
     }
     Scheduler::yieldTo();
-#ifndef NDEBUG
+#ifndef NDEBUG_PERF
     boost::mutex::scoped_lock scopeLock(m_mutex);
-    MORDOR_ASSERT(std::find(m_waiters.begin(), m_waiters.end(),
+    MORDOR_ASSERT_PERF(std::find(m_waiters.begin(), m_waiters.end(),
             std::make_pair(Scheduler::getThis(), Fiber::getThis()))
             == m_waiters.end());
 #endif
@@ -166,7 +166,7 @@ FiberCondition::signal()
     }
     boost::mutex::scoped_lock lock2(m_fiberMutex.m_mutex);
     MORDOR_ASSERT(m_fiberMutex.m_owner != next.second);
-    MORDOR_ASSERT(std::find(m_fiberMutex.m_waiters.begin(),
+    MORDOR_ASSERT_PERF(std::find(m_fiberMutex.m_waiters.begin(),
         m_fiberMutex.m_waiters.end(), next)
         == m_fiberMutex.m_waiters.end());
     if (!m_fiberMutex.m_owner) {
@@ -191,7 +191,7 @@ FiberCondition::broadcast()
         ++it) {
         std::pair<Scheduler *, Fiber::ptr> &next = *it;
         MORDOR_ASSERT(m_fiberMutex.m_owner != next.second);
-        MORDOR_ASSERT(std::find(m_fiberMutex.m_waiters.begin(),
+        MORDOR_ASSERT_PERF(std::find(m_fiberMutex.m_waiters.begin(),
             m_fiberMutex.m_waiters.end(), next)
             == m_fiberMutex.m_waiters.end());
         if (!m_fiberMutex.m_owner) {

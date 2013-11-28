@@ -39,6 +39,10 @@ private:
 
 #ifdef NDEBUG
 
+#ifndef NDEBUG_PERF
+#define NDEBUG_PERF
+#endif
+
 #define MORDOR_ASSERT(x) ((void)0)
 #define MORDOR_VERIFY(x) ((void)(x))
 #define MORDOR_NOTREACHED() ::std::terminate();
@@ -69,4 +73,18 @@ private:
     ::std::terminate();                                                         \
 }
 
+#endif
+
+/// MORDOR_ASSERT_PERF Macro is mostly the same as MORDOR_ASSERT except that
+/// - MORDOR_ASSERT can be only turned off by defining NDEBUG
+/// - MORDOR_ASSERT_PERF can be turned off by either NDEBUG or NDEBUG_PERF
+/// * MORDOR_ASSERT_PERF applies to those assertion that has significant
+///   performance impact.
+/// * NDEBUG_PERF can be defined When application don't want to disable all
+///   assertions but only to those which have big performance impact.
+/// * NOTE: if NDEBUG is defined, NDEBUG_PERF will be automatically defined.
+#ifndef NDEBUG_PERF
+#define MORDOR_ASSERT_PERF(x) MORDOR_ASSERT(x)
+#else
+#define MORDOR_ASSERT_PERF(x) ((void)0)
 #endif
