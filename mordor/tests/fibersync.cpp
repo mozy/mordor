@@ -187,6 +187,106 @@ MORDOR_UNITTEST(FiberEvent, manualResetMultiple)
     event.wait();
 }
 
+class EventOwner
+{
+public:
+    EventOwner()
+        : m_event(false)
+        , m_destroying(false)
+    {}
+
+    ~EventOwner()
+    {
+
+        // 1 thread case - we can't awake from yielding in the wait() call
+        // until the fiber for the scheduled setEvent call is complete
+        //
+        // Multi-thread case - We can wake up because event is signalled, but
+        //other thread might still be inside m_event.set() call,
+        //with m_event mutex still locked.  Destroying that mutex while
+        //set() is being called can cause crash
+        m_event.wait();
+        m_destroying = true;
+
+        // Note: in debug mode the FiberEvent will get blocked waiting
+        // for the lock help in FiberEvent::set, but NDEBUG build will not
+    }
+
+    void setEvent()
+    {
+        m_event.set();
+        if (m_destroying) {
+            MORDOR_NOTREACHED();
+        }
+    }
+
+    FiberEvent m_event;
+    bool m_destroying;
+};
+
+
+MORDOR_UNITTEST(FiberEvent, destroyAfterSet)
+{
+    // Demo risk of using an FiberEvent in multi-threaded enviroment
+#if 0
+    {
+        //Not safe - owner destruction can start while pool2 is still
+        //executing setEvent().  Even though we wait on event the
+        //destructor is allowed to proceed before setEvent() has finished.
+        WorkerPool pool;
+        WorkerPool pool2(1,false);
+        EventOwner owner;
+        pool2.schedule(boost::bind(&EventOwner::setEvent, &owner));
+    }
+#endif
+
+    {
+        // Safe multi-threaded scenario - pool2 is stopped before event owner is destroyed
+        // which ensures that scheduled event is complete
+        WorkerPool pool;
+        WorkerPool pool2(1,false);
+        EventOwner owner;
+        pool2.schedule(boost::bind(&EventOwner::setEvent, &owner));
+        pool2.stop();
+    }
+
+    {
+        // Safe multi-threaded scenario - variables are declared in correct order so
+        // that pool2 is stopped before event owner is destroyed
+        WorkerPool pool;
+        EventOwner owner;
+        WorkerPool pool2(1,false);
+        pool2.schedule(boost::bind(&EventOwner::setEvent, &owner));
+    }
+
+    {
+        // Safe single threaded scenario - pool stops itself before
+        // owner is destroyed
+        WorkerPool pool;
+        EventOwner owner;
+        pool.schedule(boost::bind(&EventOwner::setEvent, &owner));
+        pool.stop();
+    }
+
+    {
+        // Safe single threaded scenario - pool destruction automatically
+        // blocks until setEvent is complete, then owner is destroyed
+        EventOwner owner;
+        WorkerPool pool;
+        pool.schedule(boost::bind(&EventOwner::setEvent, &owner));
+    }
+
+    {
+        // This is the only case that the event is actually needed and useful!
+        // Because only one fiber executes at a time on the single thread
+        WorkerPool pool;
+        EventOwner owner;
+        pool.schedule(boost::bind(&EventOwner::setEvent, &owner));
+    }
+
+
+}
+
 static void lockIt(FiberMutex &mutex)
 {
     FiberMutex::ScopedLock lock(mutex);
