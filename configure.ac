@@ -63,15 +63,25 @@ AS_IF([test "x$with_yaml" != xno],
 		])],
 	[AM_CONDITIONAL([HAVE_LIBYAML], false)])
 AC_ARG_WITH([protobuf],
-	AS_HELP_STRING([--with-protobuf],
+	[AS_HELP_STRING([--with-protobuf],
 		[Enable Protobuf parsing and serialization support @<:@default=check@:>@])],
-		[],
-		[with_protobuf=check])
+	[],
+	[with_protobuf=check])
 AS_IF([test "x$with_protobuf" = xyes],
 	[PKG_CHECK_MODULES([PROTOBUF], [protobuf])],
 	[test "x$with_protobuf" = xcheck],
 	[PKG_CHECK_MODULES([PROTOBUF], [protobuf], [], [true])])
 AM_CONDITIONAL([HAVE_PROTOBUF], [test "x${PROTOBUF_CFLAGS}" != x])
+AC_ARG_WITH([icu],
+	[AS_HELP_STRING([--without-icu],
+		[disable ICU unicode support @<:@default=check@:>@])],
+	[],
+	[with_icu=check])
+AS_IF([test "x$with_icu" != xno],
+	[AX_CHECK_ICU([2.0],
+		[AC_DEFINE([HAVE_ICU], [1], [Define to 1 if you have ICU])],
+		[AS_IF([test "x$with_icu" != xcheck],
+			[AC_MSG_FAILURE([--with-icu was given, but test for it failed])])])])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h])
