@@ -90,7 +90,8 @@ utf16string toUtf16(const std::string &str);
 std::string toUtf8(CFStringRef string);
 utf16string toUtf16(const char *str, size_t len);
 utf16string toUtf16(const std::string &str);
-#elif defined (HAVE_ICU)
+#elif defined (LINUX)
+// toUtf16() on gnu/linux depends on libicu
 utf16string toUtf16(const char *str, size_t len);
 utf16string toUtf16(const std::string &str);
 #endif
