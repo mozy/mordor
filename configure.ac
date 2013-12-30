@@ -28,6 +28,7 @@ AC_SEARCH_LIBS([pthread_create], [pthread])
 AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_SEARCH_LIBS([backtrace], [execinfo])
 AC_CHECK_VALGRIND
+AM_ICONV
 AX_CHECK_OPENSSL
 AX_CHECK_ZLIB
 AX_CHECK_LZMA

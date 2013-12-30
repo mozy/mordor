@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS=-I m4
 AUTOMAKE_OPTIONS=nostdinc subdir-objects
-AM_CPPFLAGS=$(OPENSSL_INCLUDES) $(BOOST_CPPFLAGS) $(POSTGRESQL_CFLAGS) $(VALGRIND_CPPFLAGS) -I$(top_srcdir)
+AM_CPPFLAGS=$(OPENSSL_INCLUDES) $(BOOST_CPPFLAGS) $(POSTGRESQL_CFLAGS) $(INCICONV) $(VALGRIND_CPPFLAGS) -I$(top_srcdir)
 AM_CXXFLAGS=-Wall -Werror -fno-strict-aliasing
 
 nobase_include_HEADERS=			\
@@ -202,8 +202,10 @@ mordor_libmordor_la_LIBADD = \
 	$(OPENSSL_LIBS) 		\
 	$(BOOST_REGEX_LIB)			\
 	$(BOOST_THREAD_LIB)			\
-	$(BOOST_SYSTEM_LIB)                     \
-	$(LZMA_LIB)
+	$(BOOST_SYSTEM_LIB)			\
+	$(LZMA_LIB)					\
+	$(LTLIBICONV)
+
 if HAVE_LZMA
 mordor_libmordor_la_SOURCES += \
 	mordor/streams/lzma2.cpp

@@ -30,9 +30,11 @@ MORDOR_UNITTEST(Unicode, surrogatePairs)
     MORDOR_TEST_ASSERT_EQUAL(toUtf32(L'\xdbff', L'\xdffd'), 0x10fffd);
 }
 
-#if defined(WINDOWS) || defined(OSX)
+#if defined(WINDOWS) || defined(OSX) || defined(HAVE_ICONV)
+
 MORDOR_UNITTEST(Unicode, badUtf8Exception)
 {
     MORDOR_TEST_ASSERT_EXCEPTION(toUtf16("\xc0\xc1"), InvalidUnicodeException);
 }
+
 #endif

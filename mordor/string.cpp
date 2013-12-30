@@ -7,6 +7,13 @@
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 
+#ifdef HAVE_CONFIG_H
+#include "../config.h"
+#ifdef HAVE_ICONV
+#include <iconv.h>
+#endif
+#endif
+
 #include "mordor/string.h"
 #include "mordor/util.h"
 
@@ -651,6 +658,54 @@ toUtf16(const std::string &str)
 {
     return toUtf16(str.c_str(), str.size());
 }
+
+#elif defined(HAVE_ICONV)
+
+namespace {
+
+class Iconv {
+    iconv_t m_iconv;
+public:
+    Iconv(const char* from, const char* to)
+        : m_iconv(iconv_open(to, from))
+    {
+        MORDOR_ASSERT(m_iconv != (iconv_t)-1);
+    }
+    ~Iconv() {
+        iconv_close(m_iconv);
+    }
+    size_t operator()(char** inbuf, size_t* inlen, char** outbuf, size_t* outlen) {
+        return iconv(m_iconv, inbuf, inlen, outbuf, outlen);
+    }
+};
+}
+
+utf16string
+toUtf16(const char *str, size_t len)
+{
+    utf16string result;
+    if (len == 0u)
+        return result;
+    result.resize(len);        // way enough (paired surrogate also)
+    size_t out_left = len * sizeof(utf16string::value_type);
+    char *out_buf = (char *)&result[0];
+    Iconv conv("UTF-8", "UTF-16LE");
+    size_t n = conv((char **)&str, &len, &out_buf, &out_left);
+    if (n == (size_t)-1) {
+        MORDOR_ASSERT(errno != E2BIG);
+        MORDOR_THROW_EXCEPTION(InvalidUnicodeException());
+    }
+    MORDOR_ASSERT(out_left % sizeof(utf16string::value_type) == 0);
+    result.resize(result.size() - out_left/sizeof(utf16string::value_type));
+    return result;
+}
+
+utf16string
+toUtf16(const std::string &str)
+{
+    return toUtf16(str.data(), str.size());
+}
+
 #endif
 
 std::string
