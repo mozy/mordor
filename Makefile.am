@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS=-I m4
 AUTOMAKE_OPTIONS=nostdinc subdir-objects
-AM_CPPFLAGS=$(OPENSSL_INCLUDES) $(BOOST_CPPFLAGS) $(POSTGRESQL_CFLAGS) $(ICU_CPPFLAGS) $(VALGRIND_CPPFLAGS) -I$(top_srcdir)
+AM_CPPFLAGS=$(OPENSSL_INCLUDES) $(BOOST_CPPFLAGS) $(POSTGRESQL_CFLAGS) $(VALGRIND_CPPFLAGS) -I$(top_srcdir)
 AM_CXXFLAGS=-Wall -Werror -fno-strict-aliasing
 
 nobase_include_HEADERS=			\
@@ -193,7 +193,6 @@ mordor_libmordor_la_LDFLAGS=			\
 	$(OPENSSL_LDFLAGS)			\
 	$(BOOST_LDFLAGS)			\
 	$(LZMA_LDFLAGS)				\
-	$(ICU_LIBS)					\
 	$(CORESERVICES_FRAMEWORK_LIBS)		\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
 	$(SECURITY_FRAMEWORK_LIBS)		\
@@ -205,7 +204,6 @@ mordor_libmordor_la_LIBADD = \
 	$(BOOST_THREAD_LIB)			\
 	$(BOOST_SYSTEM_LIB)                     \
 	$(LZMA_LIB)
-
 if HAVE_LZMA
 mordor_libmordor_la_SOURCES += \
 	mordor/streams/lzma2.cpp
@@ -340,7 +338,6 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/timer.cpp				\
 	mordor/tests/transfer_stream.cpp		\
 	mordor/tests/uri.cpp				\
-	mordor/tests/unicode.cpp			\
 	mordor/tests/util.cpp				\
 	mordor/tests/xml.cpp				\
 	mordor/tests/zlib.cpp				\

@@ -121,7 +121,6 @@
 		5C8544DF1576710800589928 /* http_proxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8544DD157670FA00589928 /* http_proxy.cpp */; };
 		61AA83C6120A18D600D7B56B /* filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 61AA83C4120A18D600D7B56B /* filter.cpp */; };
 		61AA83C7120A18D600D7B56B /* singleplex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 61AA83C5120A18D600D7B56B /* singleplex.cpp */; };
-		94B2EC38186495EB0076067B /* unicode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B2EC37186495EB0076067B /* unicode.cpp */; };
 		C32025B811F949CF00E09E5A /* daemon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32025AD11F949CF00E09E5A /* daemon.cpp */; };
 		C32025B911F949CF00E09E5A /* daemon.h in Headers */ = {isa = PBXBuildFile; fileRef = C32025AE11F949CF00E09E5A /* daemon.h */; };
 		C32025BA11F949CF00E09E5A /* fibersynchronization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C32025AF11F949CF00E09E5A /* fibersynchronization.cpp */; };
@@ -422,7 +421,6 @@
 		5C8544DD157670FA00589928 /* http_proxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = http_proxy.cpp; sourceTree = "<group>"; };
 		61AA83C4120A18D600D7B56B /* filter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = filter.cpp; sourceTree = "<group>"; };
 		61AA83C5120A18D600D7B56B /* singleplex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = singleplex.cpp; path = streams/singleplex.cpp; sourceTree = "<group>"; };
-		94B2EC37186495EB0076067B /* unicode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unicode.cpp; sourceTree = "<group>"; };
 		C32025AD11F949CF00E09E5A /* daemon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = daemon.cpp; sourceTree = "<group>"; };
 		C32025AE11F949CF00E09E5A /* daemon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = daemon.h; sourceTree = "<group>"; };
 		C32025AF11F949CF00E09E5A /* fibersynchronization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fibersynchronization.cpp; sourceTree = "<group>"; };
@@ -813,7 +811,6 @@
 				3CAB2791112B096700607AEE /* temp_stream.cpp */,
 				3CAB2793112B096700607AEE /* timer.cpp */,
 				3CAB2794112B096700607AEE /* transfer_stream.cpp */,
-				94B2EC37186495EB0076067B /* unicode.cpp */,
 				3CAB2795112B096700607AEE /* uri.cpp */,
 				3CAB2796112B096700607AEE /* zlib.cpp */,
 			);
@@ -1101,7 +1098,6 @@
 				5C85449E15756FC700589928 /* timer.cpp in Sources */,
 				5C85449F15756FC700589928 /* transfer_stream.cpp in Sources */,
 				5C8544A015756FC700589928 /* uri.cpp in Sources */,
-				94B2EC38186495EB0076067B /* unicode.cpp in Sources */,
 				5C8544A115756FC700589928 /* zlib.cpp in Sources */,
 				5C8544DF1576710800589928 /* http_proxy.cpp in Sources */,
 				0E01DD2C15C0F2E400DC4F2B /* counter_stream.cpp in Sources */,

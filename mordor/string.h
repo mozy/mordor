@@ -84,15 +84,11 @@ typedef std::basic_string<utf32char> utf32string;
 #ifdef WINDOWS
 std::string toUtf8(const utf16char *str, size_t len = ~0);
 std::string toUtf8(const utf16string &str);
-utf16string toUtf16(const char *str, size_t len);
+utf16string toUtf16(const char *str, size_t len = ~0);
 utf16string toUtf16(const std::string &str);
 #elif defined (OSX)
 std::string toUtf8(CFStringRef string);
-utf16string toUtf16(const char *str, size_t len);
-utf16string toUtf16(const std::string &str);
-#elif defined (LINUX)
-// toUtf16() on gnu/linux depends on libicu
-utf16string toUtf16(const char *str, size_t len);
+utf16string toUtf16(const char *str, size_t len = ~0);
 utf16string toUtf16(const std::string &str);
 #endif
 std::string toUtf8(utf16char character);

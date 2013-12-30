@@ -7,13 +7,6 @@
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 
-#ifdef HAVE_CONFIG_H
-#include "../config.h"
-#ifdef HAVE_ICU
-#include <unicode/ustring.h>
-#endif
-#endif
-
 #include "mordor/string.h"
 #include "mordor/util.h"
 
@@ -576,11 +569,12 @@ toUtf8(const std::wstring &str)
 utf16string
 toUtf16(const char *str, size_t len)
 {
+    if (len == (size_t)~0)
+        len = strlen(str);
+    MORDOR_ASSERT(len < 0x80000000u);
     utf16string result;
     if (len == 0)
         return result;
-
-    MORDOR_ASSERT(len < 0x80000000u);
     int ret = MultiByteToWideChar(CP_UTF8, g_mbFlags, str, (int)len, NULL, 0);
     MORDOR_ASSERT(ret >= 0);
     if (ret == 0) {
@@ -605,7 +599,7 @@ utf16string
 toUtf16(const std::string &str)
 {
     MORDOR_ASSERT(str.size() < 0x80000000u);
-    return toUtf16(str.data(), str.size());
+    return toUtf16(str.c_str(), str.size());
 }
 #elif defined (OSX)
 
@@ -632,7 +626,6 @@ toUtf16(const char * str, size_t length)
     utf16string result;
     if (length == 0u)
         return result;
-
     ScopedCFRef<CFStringRef> cfUtf8Str = CFStringCreateWithBytesNoCopy(NULL,
         (const UInt8 *)str, (CFIndex)length, kCFStringEncodingUTF8, false,
         kCFAllocatorNull);
@@ -656,39 +649,8 @@ toUtf16(const char * str, size_t length)
 utf16string
 toUtf16(const std::string &str)
 {
-    return toUtf16(str.data(), str.size());
+    return toUtf16(str.c_str(), str.size());
 }
-
-#elif defined(HAVE_ICU)
-
-utf16string
-toUtf16(const char *str, size_t len)
-{
-    BOOST_STATIC_ASSERT(sizeof(UChar) == sizeof(utf16string::value_type));
-    utf16string result;
-    if (len == 0u)
-        return result;
-    int32_t dest_len;
-    UErrorCode error = U_ZERO_ERROR;
-    u_strFromUTF8(NULL, 0, &dest_len, str, (int32_t)len, &error);
-    if (U_FAILURE(error) && error != U_BUFFER_OVERFLOW_ERROR) {
-        MORDOR_THROW_EXCEPTION(InvalidUnicodeException());
-    }
-    error = U_ZERO_ERROR;
-    result.resize(dest_len);
-    u_strFromUTF8(&result[0], dest_len, NULL, str, (int32_t)len, &error);
-    if (U_FAILURE(error)) {
-        MORDOR_THROW_EXCEPTION(InvalidUnicodeException());
-    }
-    return result;
-}
-
-utf16string
-toUtf16(const std::string &str)
-{
-    return toUtf16(str.data(), str.size());
-}
-
 #endif
 
 std::string
