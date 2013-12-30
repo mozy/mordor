@@ -354,6 +354,9 @@ struct AcceptValue
 
     std::string value;
     unsigned int qvalue;
+
+    bool operator== (const AcceptValue &rhs) const;
+    bool operator!= (const AcceptValue &rhs) const { return !(*this == rhs); }
 };
 
 typedef std::vector<AcceptValue> AcceptList;
@@ -484,9 +487,14 @@ struct Response
 bool isAcceptable(const ChallengeList &list, const std::string &scheme);
 const AuthParams &challengeForSchemeAndRealm(const ChallengeList &list,
     const std::string &scheme, const std::string &realm = std::string());
+
 bool isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithParameters &value, bool defaultMissing = false);
-bool isPreferred(const AcceptListWithParameters &list, const AcceptValueWithParameters &lhs, const AcceptValueWithParameters &rhs);
+// @note the available MUST be sorted in descending order before sending to this function
 const AcceptValueWithParameters *preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters &available);
+
+bool isAcceptable(const AcceptList &list, const AcceptValue &value, bool defaultMissing = false);
+// @note the available MUST be sorted in descending order before sending to this function
+const AcceptValue *preferred(const AcceptList &accept, const AcceptList &available);
 
 std::ostream& operator<<(std::ostream& os, Status s);
 std::ostream& operator<<(std::ostream& os, Version v);

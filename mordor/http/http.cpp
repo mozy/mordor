@@ -274,6 +274,12 @@ const char *reason(Status s)
 }
 
 bool
+AcceptValue::operator ==(const AcceptValue &rhs) const
+{
+    return stricmp(value.c_str(), rhs.value.c_str()) == 0;
+}
+
+bool
 AcceptValueWithParameters::operator ==(const AcceptValueWithParameters &rhs) const
 {
     return stricmp(value.c_str(), rhs.value.c_str()) == 0 &&
@@ -311,13 +317,10 @@ challengeForSchemeAndRealm(const ChallengeList &list,
     MORDOR_NOTREACHED();
 }
 
-bool
-isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithParameters &value,
-                   bool defaultMissing)
+template<class T>
+static bool isAcceptable(const std::vector<T> &list, const T &value, bool defaultMissing)
 {
-    for (AcceptListWithParameters::const_iterator it(list.begin());
-        it != list.end();
-        ++it) {
+    for (typename std::vector<T>::const_iterator it(list.begin()); it != list.end(); ++it) {
         if (*it == value) {
             return it->qvalue > 0;
         }
@@ -326,70 +329,69 @@ isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithParamete
 }
 
 bool
-isPreferred(const AcceptListWithParameters &list, const AcceptValueWithParameters &lhs,
-                  const AcceptValueWithParameters &rhs)
+isAcceptable(const AcceptListWithParameters &list, const AcceptValueWithParameters &value,
+        bool defaultMissing)
 {
-    MORDOR_ASSERT(lhs != rhs);
-    unsigned int lQvalue = ~0u, rQvalue = ~0u;
-    for (AcceptListWithParameters::const_iterator it(list.begin());
-        it != list.end();
-        ++it) {
-        if (*it == lhs) {
-            lQvalue = it->qvalue;
-            if (lQvalue == ~0u)
-                lQvalue = 1000;
-        } else if (*it == rhs) {
-            rQvalue = it->qvalue;
-            if (rQvalue == ~0u)
-                rQvalue = 1000;
-        }
-        if (lQvalue != ~0u && rQvalue != ~0u)
-            break;
-    }
-    if (lQvalue == ~0u)
-        lQvalue = 0;
-    if (rQvalue == ~0u)
-        rQvalue = 0;
-    return lQvalue > rQvalue;
+    return isAcceptable<AcceptValueWithParameters>(list, value, defaultMissing);
 }
 
-const
-AcceptValueWithParameters *
-preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters &available)
+bool
+isAcceptable(const AcceptList &list, const AcceptValue &value, bool defaultMissing)
+{
+    return isAcceptable<AcceptValue>(list, value, defaultMissing);
+}
+
+template<class T>
+static const T* preferred(const std::vector<T> &accept, const std::vector<T> &available)
 {
     MORDOR_ASSERT(!available.empty());
-#ifdef _DEBUG
+#ifndef NDEBUG
     // Assert that the available list is ordered
-    for (AcceptListWithParameters::const_iterator it(available.begin());
-        it != available.end();
-        ++it) {
+    for (typename std::vector<T>::const_iterator it(available.begin()); it != available.end(); ++it) {
         MORDOR_ASSERT(it->qvalue <= 1000);
-        AcceptListWithParameters::const_iterator next(it);
+        typename std::vector<T>::const_iterator next(it);
         ++next;
         if (next != available.end())
             MORDOR_ASSERT(it->qvalue >= next->qvalue);
     }
 #endif
-    AcceptListWithParameters::const_iterator availableIt(available.begin());
+    const T* res = NULL;
+
+    typename std::vector<T>::const_iterator availableIt(available.begin());
     while (availableIt != available.end()) {
-        AcceptListWithParameters::const_iterator nextIt(availableIt);
+        // find highest qvalues in server's perspective
+        typename std::vector<T>::const_iterator nextIt(availableIt);
         ++nextIt;
         while (nextIt != available.end() && nextIt->qvalue == availableIt->qvalue)
             ++nextIt;
-        AcceptListWithParameters preferred;
-        for (;
-            availableIt != nextIt;
-            ++availableIt) {
-            if (isAcceptable(accept, *availableIt))
-                preferred.push_back(*availableIt);
+
+        // find highest qvalues in client's perspective
+        for (; availableIt != nextIt; ++availableIt) {
+            for (typename std::vector<T>::const_iterator it(accept.begin());
+                 it != accept.end(); ++it) {
+                // client wanna this, choose the highest one
+                if (*it == *availableIt && it->qvalue > 0) {
+                    if (!res || it->qvalue > res->qvalue)
+                        res = &*it;
+                    break;
+                }
+            }
         }
-        if (!preferred.empty()) {
-            std::stable_sort(preferred.begin(), preferred.end(), boost::bind(
-                &isPreferred, boost::ref(accept), _1, _2));
-            return &*std::find(available.begin(), nextIt, preferred.front());
-        }
+        if (res) break;
     }
-    return NULL;
+    return res;
+}
+
+const AcceptValueWithParameters *
+preferred(const AcceptListWithParameters &accept, const AcceptListWithParameters &available)
+{
+    return preferred<AcceptValueWithParameters>(accept, available);
+}
+
+const AcceptValue *
+preferred(const AcceptList &accept, const AcceptList &available)
+{
+    return preferred<AcceptValue>(accept, available);
 }
 
 std::ostream& operator<<(std::ostream& os, Status s)

@@ -862,3 +862,69 @@ MORDOR_UNITTEST(HTTP, authHeader)
     MORDOR_TEST_ASSERT(it != auth.parameters.end());
     MORDOR_TEST_ASSERT_EQUAL(it->second, "It's Bob \" pub key");
 }
+
+MORDOR_UNITTEST(HTTP, acceptEncodingHeader)
+{
+    Request request;
+    RequestParser parser(request);
+    std::ostringstream os;
+
+    parser.run("GET / HTTP/1.0\r\n"
+               "Accept-Encoding: identity, x-ciphertext;q=0.25, x-syzygy;q=0.800\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+
+    MORDOR_TEST_ASSERT_EQUAL(request.request.acceptEncoding.size(), 3u);
+    AcceptList::iterator it = request.request.acceptEncoding.begin();
+    MORDOR_TEST_ASSERT_EQUAL(it->value, "identity");
+    MORDOR_TEST_ASSERT_EQUAL(it->qvalue, ~0u);
+    ++it;
+    MORDOR_TEST_ASSERT_EQUAL(it->value, "x-ciphertext");
+    MORDOR_TEST_ASSERT_EQUAL(it->qvalue, 250u);
+    ++it;
+    MORDOR_TEST_ASSERT_EQUAL(it->value, "x-syzygy");
+    MORDOR_TEST_ASSERT_EQUAL(it->qvalue, 800u);
+
+    os << request;
+    MORDOR_TEST_ASSERT_EQUAL(os.str(),
+        "GET / HTTP/1.0\r\n"
+        "Accept-Encoding: identity, x-ciphertext;q=0.25, x-syzygy;q=0.8\r\n"
+        "\r\n");
+}
+
+MORDOR_UNITTEST(HTTP, preferredAcceptEncoding)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("GET / HTTP/1.0\r\n"
+               "Accept-Encoding: identity, x-ciphertext;q=0.25, x-syzygy;q=0.800, x-none;q=0\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+
+    const AcceptList &accept = request.request.acceptEncoding;
+
+    AcceptList available;
+    available.push_back(AcceptValue("x-ciphertext", 1000));
+    available.push_back(AcceptValue("x-syzygy", 1000));
+    available.push_back(AcceptValue("identity", 1000));
+    const AcceptValue *encoding = preferred(accept, available);
+    MORDOR_TEST_ASSERT(encoding);
+    MORDOR_TEST_ASSERT_EQUAL(encoding->value, "identity");
+
+    available.clear();
+    available.push_back(AcceptValue("x-none", 1000));
+    available.push_back(AcceptValue("x-ciphertext", 500));
+    available.push_back(AcceptValue("x-syzygy", 500));
+    encoding = preferred(accept, available);
+    MORDOR_TEST_ASSERT(encoding);
+    MORDOR_TEST_ASSERT_EQUAL(encoding->value, "x-syzygy");
+
+    available.clear();
+    available.push_back(AcceptValue("x-you-dont-know", 1000));
+    available.push_back(AcceptValue("x-none", 500));
+    encoding = preferred(accept, available);
+    MORDOR_TEST_ASSERT(!encoding);
+}
