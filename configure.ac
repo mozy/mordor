@@ -3,7 +3,7 @@
 
 AC_PREREQ(2.61)
 AC_INIT([libmordor],[1.3.0])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([foreign])
 LT_INIT
 AC_CONFIG_SRCDIR([mordor/fiber.cpp])
 AC_CONFIG_HEADERS([config.h])
