@@ -765,6 +765,8 @@ std::ostream& operator<<(std::ostream& os, const ResponseHeaders &r)
 std::ostream& operator<<(std::ostream& os, const EntityHeaders &e)
 {
     os.imbue(std::locale(os.getloc(), &rfc1123Facet_out));
+    if (!e.allow.empty())
+        os << "Allow: " << e.allow << "\r\n";
     if (!e.contentEncoding.empty())
         os << "Content-Encoding: " << e.contentEncoding << "\r\n";
     if (e.contentLength != ~0ull)

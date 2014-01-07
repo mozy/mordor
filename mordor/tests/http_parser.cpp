@@ -385,6 +385,26 @@ MORDOR_UNITTEST(HTTP, serverHeader)
         "HTTP/1.0 200 OK\r\n"
         "Server: (Some (nested) (comments ((are)) crazy))\r\n"
         "\r\n");
+
+    response = Response();
+    parser.run("HTTP/1.0 405 Method Not Allowed\r\n"
+        "Allow: GET, HEAD, PUT\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+    MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 0));
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, METHOD_NOT_ALLOWED);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.reason, "Method Not Allowed");
+    MORDOR_TEST_ASSERT_EQUAL(response.entity.allow.size(), (size_t)3);
+    MORDOR_TEST_ASSERT_EQUAL(response.entity.allow[0], "GET");
+    MORDOR_TEST_ASSERT_EQUAL(response.entity.allow[1], "HEAD");
+    MORDOR_TEST_ASSERT_EQUAL(response.entity.allow[2], "PUT");
+    os.str("");
+    os << response;
+    MORDOR_TEST_ASSERT_EQUAL(os.str(),
+        "HTTP/1.0 405 Method Not Allowed\r\n"
+        "Allow: GET, HEAD, PUT\r\n"
+        "\r\n");
 }
 
 MORDOR_UNITTEST(HTTP, teHeader)

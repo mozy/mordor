@@ -397,6 +397,11 @@ unquote(const std::string &str)
 
     general_header = Connection | Date | Proxy_Connection | Trailer | Transfer_Encoding | Upgrade;
 
+    action set_allow {
+        m_list = &m_entity->allow;
+        m_set = NULL;
+    }
+
     action set_content_encoding {
         m_list = &m_entity->contentEncoding;
         m_set = NULL;
@@ -449,6 +454,7 @@ unquote(const std::string &str)
         m_date = &m_entity->lastModified;
     }
 
+    Allow = 'Allow:'i @set_allow list;
     Content_Encoding = 'Content-Encoding:'i @set_content_encoding list;
     Content_Length = 'Content-Length:'i @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
 
@@ -464,7 +470,7 @@ unquote(const std::string &str)
     Expires = 'Expires:'i @set_expires LWS* HTTP_date LWS*;
     Last_Modified = 'Last-Modified:'i @set_last_modified LWS* HTTP_date LWS*;
 
-    entity_header = Content_Encoding | Content_Length | Content_Range | Content_Type | Expires | Last_Modified; # | message_header;
+    entity_header = Allow | Content_Encoding | Content_Length | Content_Range | Content_Type | Expires | Last_Modified; # | message_header;
 
 }%%
 

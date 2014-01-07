@@ -454,6 +454,7 @@ struct EntityHeaders
 {
     EntityHeaders() : contentLength(~0ull) {}
 
+    std::vector<std::string> allow; // "Allow"
     std::vector<std::string> contentEncoding; // "Content-Encoding"
     unsigned long long contentLength;         // "Content-Length"
     ContentRange contentRange;                // "Content-Range"
