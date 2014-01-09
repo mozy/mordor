@@ -919,7 +919,7 @@ MORDOR_UNITTEST(HTTP, preferredAcceptEncoding)
     RequestParser parser(request);
 
     parser.run("GET / HTTP/1.0\r\n"
-               "Accept-Encoding: identity, x-ciphertext;q=0.25, x-syzygy;q=0.800, x-none;q=0\r\n"
+               "Accept-Encoding: identity,x-ciphertext;q=0.25,x-syzygy;q=0.800,x-none;q=0\r\n"
                "\r\n");
     MORDOR_TEST_ASSERT(!parser.error());
     MORDOR_TEST_ASSERT(parser.complete());
@@ -947,4 +947,32 @@ MORDOR_UNITTEST(HTTP, preferredAcceptEncoding)
     available.push_back(AcceptValue("x-none", 500));
     encoding = preferred(accept, available);
     MORDOR_TEST_ASSERT(!encoding);
+
+    // [RFC2616] if q is not given, it will be the same as claiming "q=1".
+    // we should treat these explicit/implicit values in same way.
+    parser.run("GET / HTTP/1.0\r\n"
+               "Accept-Encoding: plaintext;q=1,identity\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+
+    available.clear();
+    available.push_back(AcceptValue("plaintext", 1000));
+    available.push_back(AcceptValue("identity", 1000));
+    encoding = preferred(request.request.acceptEncoding, available);
+    MORDOR_TEST_ASSERT(encoding);
+    MORDOR_TEST_ASSERT_EQUAL(encoding->value, "plaintext");
+
+    parser.run("GET / HTTP/1.0\r\n"
+               "Accept-Encoding: plaintext,identity;q=1\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+
+    available.clear();
+    available.push_back(AcceptValue("plaintext", 1000));
+    available.push_back(AcceptValue("identity", 1000));
+    encoding = preferred(request.request.acceptEncoding, available);
+    MORDOR_TEST_ASSERT(encoding);
+    MORDOR_TEST_ASSERT_EQUAL(encoding->value, "plaintext");
 }

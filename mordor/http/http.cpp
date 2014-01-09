@@ -359,19 +359,21 @@ static const T* preferred(const std::vector<T> &accept, const std::vector<T> &av
 
     typename std::vector<T>::const_iterator availableIt(available.begin());
     while (availableIt != available.end()) {
-        // find highest qvalues in server's perspective
+        // find the highest qvalues from server's perspective
         typename std::vector<T>::const_iterator nextIt(availableIt);
         ++nextIt;
         while (nextIt != available.end() && nextIt->qvalue == availableIt->qvalue)
             ++nextIt;
 
-        // find highest qvalues in client's perspective
+        // find the highest qvalues from client's perspective
         for (; availableIt != nextIt; ++availableIt) {
             for (typename std::vector<T>::const_iterator it(accept.begin());
                  it != accept.end(); ++it) {
-                // client wanna this, choose the highest one
+                // client wants this, choose the highest one
+                // if there are same qvalues, choose the 1st one we found
                 if (*it == *availableIt && it->qvalue > 0) {
-                    if (!res || it->qvalue > res->qvalue)
+                    // qvalue takes ~0u by default, which is equivalent to 1000
+                    if (!res || (std::min)(it->qvalue, 1000u) > (std::min)(res->qvalue, 1000u))
                         res = &*it;
                     break;
                 }
