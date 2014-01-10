@@ -1,6 +1,6 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
-#include "config.h"
+#include "mordor/config.h"
 
 #include <algorithm>
 

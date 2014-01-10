@@ -8,7 +8,7 @@
 #include <openssl/sha.h>
 
 #ifdef HAVE_CONFIG_H
-#include "../config.h"
+#include "autoconfig.h"
 #ifdef HAVE_ICONV
 #include <iconv.h>
 #endif

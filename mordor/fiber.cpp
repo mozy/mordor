@@ -5,7 +5,7 @@
 #include <boost/thread/tss.hpp>
 
 #include "assert.h"
-#include "config.h"
+#include "mordor/config.h"
 #include "exception.h"
 #include "statistics.h"
 #include "version.h"

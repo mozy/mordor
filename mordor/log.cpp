@@ -15,8 +15,8 @@
 #include <boost/regex.hpp>
 
 #include "assert.h"
-#include "config.h"
 #include "fiber.h"
+#include "mordor/config.h"
 #include "mordor/streams/file.h"
 #include "mordor/string.h"
 #include "timer.h"

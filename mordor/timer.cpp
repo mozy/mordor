@@ -11,7 +11,7 @@
 #include "log.h"
 #include "version.h"
 #include "util.h"
-#include "config.h"
+#include "mordor/config.h"
 
 #ifdef OSX
  #include <mach/mach_time.h>

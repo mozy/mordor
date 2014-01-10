@@ -6,7 +6,7 @@ AC_INIT([libmordor],[1.3.0])
 AM_INIT_AUTOMAKE([foreign])
 LT_INIT
 AC_CONFIG_SRCDIR([mordor/fiber.cpp])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADERS([autoconfig.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_SUBST([LIBMORDOR_SO_VERSION], [1:0:0])

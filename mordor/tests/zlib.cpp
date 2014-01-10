@@ -1,7 +1,7 @@
 #include "mordor/pch.h"
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "autoconfig.h"
 #endif
 
 #include "mordor/exception.h"

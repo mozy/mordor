@@ -10,7 +10,7 @@
 #include "iomanager.h"
 #include "string.h"
 #include "version.h"
-#include "config.h"
+#include "mordor/config.h"
 
 #ifdef WINDOWS
 #include <mswsock.h>
