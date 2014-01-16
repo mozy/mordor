@@ -15,6 +15,54 @@ class Scheduler;
 
 /// Scheduler based Mutex for Fibers
 
+/// Type that will lock the mutex on construction, and unlock on
+/// destruction
+template<class Mutex> struct ScopedLockImpl
+{
+public:
+    ScopedLockImpl(Mutex &mutex)
+        : m_mutex(mutex)
+    {
+        m_mutex.lock();
+        m_locked = true;
+    }
+    ~ScopedLockImpl()
+    { unlock(); }
+
+    void lock()
+    {
+        if (!m_locked) {
+            m_mutex.lock();
+            m_locked = true;
+        }
+    }
+
+    void unlock()
+    {
+        if (m_locked) {
+            m_mutex.unlock();
+            m_locked = false;
+        }
+    }
+
+    bool unlockIfNotUnique()
+    {
+        if (!m_locked) {
+            return true;
+        }
+        if (m_mutex.unlockIfNotUnique()) {
+            m_locked = false;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+private:
+    Mutex &m_mutex;
+    bool m_locked;
+};
+
 /// Mutex for use by Fibers that yields to a Scheduler instead of blocking
 /// if the mutex cannot be immediately acquired.  It also provides the
 /// additional guarantee that it is strictly FIFO, instead of random which
@@ -23,53 +71,7 @@ struct FiberMutex : boost::noncopyable
 {
     friend struct FiberCondition;
 public:
-    /// Type that will lock the mutex on construction, and unlock on
-    /// destruction
-    struct ScopedLock
-    {
-    public:
-        ScopedLock(FiberMutex &mutex)
-            : m_mutex(mutex)
-        {
-            m_mutex.lock();
-            m_locked = true;
-        }
-        ~ScopedLock()
-        { unlock(); }
-
-        void lock()
-        {
-            if (!m_locked) {
-                m_mutex.lock();
-                m_locked = true;
-            }
-        }
-
-        void unlock()
-        {
-            if (m_locked) {
-                m_mutex.unlock();
-                m_locked = false;
-            }
-        }
-
-        bool unlockIfNotUnique()
-        {
-            if (m_locked) {
-                if (m_mutex.unlockIfNotUnique()) {
-                    m_locked = false;
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-    private:
-        FiberMutex &m_mutex;
-        bool m_locked;
-    };
+    typedef ScopedLockImpl<FiberMutex> ScopedLock;
 
 public:
     ~FiberMutex();
@@ -98,6 +100,40 @@ private:
     boost::mutex m_mutex;
     boost::shared_ptr<Fiber> m_owner;
     std::list<std::pair<Scheduler *, boost::shared_ptr<Fiber> > > m_waiters;
+};
+
+struct RecursiveFiberMutex : boost::noncopyable
+{
+public:
+    typedef ScopedLockImpl<RecursiveFiberMutex> ScopedLock;
+public:
+    RecursiveFiberMutex() : m_recursion(0) {}
+    ~RecursiveFiberMutex();
+    /// @brief Locks the mutex
+    /// Note that it is possible for this Fiber to switch threads after this
+    /// method, though it is guaranteed to still be on the same Scheduler
+    /// @pre Scheduler::getThis() != NULL
+    /// @post Fiber::getThis() owns this mutex
+    void lock();
+    /// @brief Unlocks the mutex
+    /// @pre Fiber::getThis() owns this mutex
+    void unlock();
+    /// Unlocks the mutex if there are other Fibers waiting for the mutex.
+    /// This is useful if there is extra work should be done if there is no one
+    /// else waiting (such as flushing a buffer).
+    /// @return If the mutex was unlocked
+    /// @note the mutex is not completely released if current fiber is holding
+    ///       it muliple times at the mean time
+    bool unlockIfNotUnique();
+
+private:
+    void unlockNoLock();
+
+private:
+    boost::mutex m_mutex;
+    boost::shared_ptr<Fiber> m_owner;
+    std::list<std::pair<Scheduler *, boost::shared_ptr<Fiber> > > m_waiters;
+    unsigned m_recursion;
 };
 
 /// Scheduler based Semaphore for Fibers

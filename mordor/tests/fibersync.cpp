@@ -12,38 +12,42 @@
 
 using namespace Mordor;
 
-MORDOR_UNITTEST(FiberMutex, basic)
+template<typename M> void test_mutex_basic()
 {
     WorkerPool pool;
-    FiberMutex mutex;
+    M mutex;
 
-    FiberMutex::ScopedLock lock(mutex);
+    typename M::ScopedLock lock(mutex);
 }
 
+MORDOR_UNITTEST(FiberMutex, basic)
+{
+    test_mutex_basic<FiberMutex>();
+}
 
-static void contentionFiber(int fiberNo, FiberMutex &mutex, int &sequence)
+template<typename M> inline void contentionFiber(int fiberNo, M &mutex, int &sequence)
 {
     MORDOR_TEST_ASSERT_EQUAL(++sequence, fiberNo);
-    FiberMutex::ScopedLock lock(mutex);
+    typename M::ScopedLock lock(mutex);
     MORDOR_TEST_ASSERT_EQUAL(++sequence, fiberNo + 3 + 1);
 }
 
-MORDOR_UNITTEST(FiberMutex, contention)
+template<typename M> void test_mutex_contention()
 {
     WorkerPool pool;
-    FiberMutex mutex;
+    M mutex;
     int sequence = 0;
     Fiber::ptr fiber1(new Fiber(NULL)), fiber2(new Fiber(NULL)),
         fiber3(new Fiber(NULL));
-    fiber1->reset(boost::bind(&contentionFiber, 1, boost::ref(mutex),
+    fiber1->reset(boost::bind(&contentionFiber<M>, 1, boost::ref(mutex),
         boost::ref(sequence)));
-    fiber2->reset(boost::bind(&contentionFiber, 2, boost::ref(mutex),
+    fiber2->reset(boost::bind(&contentionFiber<M>, 2, boost::ref(mutex),
         boost::ref(sequence)));
-    fiber3->reset(boost::bind(&contentionFiber, 3, boost::ref(mutex),
+    fiber3->reset(boost::bind(&contentionFiber<M>, 3, boost::ref(mutex),
         boost::ref(sequence)));
 
     {
-        FiberMutex::ScopedLock lock(mutex);
+        typename M::ScopedLock lock(mutex);
         pool.schedule(fiber1);
         pool.schedule(fiber2);
         pool.schedule(fiber3);
@@ -52,6 +56,11 @@ MORDOR_UNITTEST(FiberMutex, contention)
     }
     pool.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 8);
+}
+
+MORDOR_UNITTEST(FiberMutex, contention)
+{
+    test_mutex_contention<FiberMutex>();
 }
 
 #ifndef NDEBUG
@@ -64,6 +73,105 @@ MORDOR_UNITTEST(FiberMutex, notRecursive)
     MORDOR_TEST_ASSERT_ASSERTED(mutex.lock());
 }
 #endif
+
+template<typename M> inline void lockIt(M &mutex)
+{
+    typename M::ScopedLock lock(mutex);
+}
+
+template<typename M> void test_mutex_unlockUnique()
+{
+    WorkerPool pool;
+    M mutex;
+
+    typename M::ScopedLock lock(mutex);
+    MORDOR_TEST_ASSERT(!lock.unlockIfNotUnique());
+    pool.schedule(boost::bind(&lockIt<M>, boost::ref(mutex)));
+    Scheduler::yield();
+    MORDOR_TEST_ASSERT(lock.unlockIfNotUnique());
+    pool.dispatch();
+}
+
+MORDOR_UNITTEST(FiberMutex, unlockUnique)
+{
+    test_mutex_unlockUnique<FiberMutex>();
+}
+
+template<typename M> inline void lockAndHold(IOManager &ioManager, M &mutex, Atomic<int> &counter)
+{
+    --counter;
+    typename M::ScopedLock lock(mutex);
+    while(counter > 0)
+        Mordor::sleep(ioManager, 50000); // sleep 50ms
+}
+
+template<typename M> void test_mutex_performance()
+{
+    IOManager ioManager(2, true);
+    M mutex;
+#ifdef X86_64
+#ifndef NDEBUG_PERF
+    int repeatness = 10000;
+#else
+    int repeatness = 50000;
+#endif
+#else
+    // on a 32bit system, a process can only have a 4GB virtual address
+    // each fiber wound take 1MB virtual address, this gives at most
+    // 4096 fibers can be alive simultaneously.
+    int repeatness = 1000;
+#endif
+    Atomic<int> counter = repeatness;
+    unsigned long long before = TimerManager::now();
+    for (int i=0; i<repeatness; ++i) {
+        ioManager.schedule(boost::bind(lockAndHold<M>,
+                                boost::ref(ioManager),
+                                boost::ref(mutex),
+                                boost::ref(counter)));
+    }
+    ioManager.stop();
+    unsigned long long elapse = TimerManager::now() - before;
+    MORDOR_LOG_INFO(Mordor::Log::root()) << "elapse: " << elapse;
+}
+
+MORDOR_UNITTEST(FiberMutex, mutexPerformance)
+{
+    test_mutex_performance<FiberMutex>();
+}
+
+MORDOR_UNITTEST(RecursiveFiberMutex, basic)
+{
+    test_mutex_basic<RecursiveFiberMutex>();
+}
+
+MORDOR_UNITTEST(RecursiveFiberMutex, recursive_basic)
+{
+    WorkerPool pool;
+    RecursiveFiberMutex mutex;
+
+    RecursiveFiberMutex::ScopedLock lock0(mutex);
+    {
+        RecursiveFiberMutex::ScopedLock lock1(mutex);
+        {
+            RecursiveFiberMutex::ScopedLock lock2(mutex);
+        }
+    }
+}
+
+MORDOR_UNITTEST(RecursiveFiberMutex, contention)
+{
+    test_mutex_contention<RecursiveFiberMutex>();
+}
+
+MORDOR_UNITTEST(RecursiveFiberMutex, mutexPerformance)
+{
+    test_mutex_performance<RecursiveFiberMutex>();
+}
+
+MORDOR_UNITTEST(RecursiveFiberMutex, unlockUnique)
+{
+    test_mutex_unlockUnique<RecursiveFiberMutex>();
+}
 
 static void signalMe(FiberCondition &condition, int &sequence)
 {
@@ -285,59 +393,4 @@ MORDOR_UNITTEST(FiberEvent, destroyAfterSet)
     }
 
 
-}
-
-static void lockIt(FiberMutex &mutex)
-{
-    FiberMutex::ScopedLock lock(mutex);
-}
-
-MORDOR_UNITTEST(FiberMutex, unlockUnique)
-{
-    WorkerPool pool;
-    FiberMutex mutex;
-
-    FiberMutex::ScopedLock lock(mutex);
-    MORDOR_TEST_ASSERT(!lock.unlockIfNotUnique());
-    pool.schedule(boost::bind(&lockIt, boost::ref(mutex)));
-    Scheduler::yield();
-    MORDOR_TEST_ASSERT(lock.unlockIfNotUnique());
-    pool.dispatch();
-}
-
-static void lockAndHold(IOManager &ioManager, FiberMutex &mutex, Atomic<int> &counter)
-{
-    --counter;
-    FiberMutex::ScopedLock lock(mutex);
-    while(counter > 0)
-        Mordor::sleep(ioManager, 50000); // sleep 50ms
-}
-
-MORDOR_UNITTEST(FiberMutex, mutexPerformance)
-{
-    IOManager ioManager(2, true);
-    FiberMutex mutex;
-#ifdef X86_64
-#ifndef NDEBUG_PERF
-    int repeatness = 10000;
-#else
-    int repeatness = 50000;
-#endif
-#else
-    // on a 32bit system, a process can only have a 4GB virtual address
-    // each fiber wound take 1MB virtual address, this gives at most
-    // 4096 fibers can be alive simultaneously.
-    int repeatness = 1000;
-#endif
-    Atomic<int> counter = repeatness;
-    unsigned long long before = TimerManager::now();
-    for (int i=0; i<repeatness; ++i) {
-        ioManager.schedule(boost::bind(lockAndHold,
-                                boost::ref(ioManager),
-                                boost::ref(mutex),
-                                boost::ref(counter)));
-    }
-    ioManager.stop();
-    unsigned long long elapse = TimerManager::now() - before;
-    MORDOR_LOG_INFO(Mordor::Log::root()) << "elapse: " << elapse;
 }

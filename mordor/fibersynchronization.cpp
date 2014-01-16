@@ -76,6 +76,86 @@ FiberMutex::unlockNoLock()
     }
 }
 
+RecursiveFiberMutex::~RecursiveFiberMutex()
+{
+#ifndef NDEBUG
+    boost::mutex::scoped_lock scopeLock(m_mutex);
+    MORDOR_ASSERT(!m_owner);
+    MORDOR_ASSERT(!m_recursion);
+    MORDOR_ASSERT(m_waiters.empty());
+#endif
+}
+
+void
+RecursiveFiberMutex::lock()
+{
+    MORDOR_ASSERT(Scheduler::getThis());
+    {
+        boost::mutex::scoped_lock scopeLock(m_mutex);
+        if (Fiber::getThis() == m_owner) {
+            ++m_recursion;
+            return;
+        }
+        MORDOR_ASSERT_PERF(std::find(m_waiters.begin(), m_waiters.end(),
+                                     std::make_pair(Scheduler::getThis(), Fiber::getThis())) ==
+                           m_waiters.end());
+        if (!m_owner) {
+            m_owner = Fiber::getThis();
+            m_recursion = 1;
+            return;
+        }
+        m_waiters.push_back(std::make_pair(Scheduler::getThis(),
+                                           Fiber::getThis()));
+    }
+    Scheduler::yieldTo();
+#ifndef NDEBUG
+    boost::mutex::scoped_lock scopeLock(m_mutex);
+    MORDOR_ASSERT(m_owner == Fiber::getThis());
+    MORDOR_ASSERT_PERF(std::find(m_waiters.begin(), m_waiters.end(),
+                                 std::make_pair(Scheduler::getThis(), Fiber::getThis())) ==
+                       m_waiters.end());
+#endif
+}
+
+void
+RecursiveFiberMutex::unlock()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    MORDOR_ASSERT(m_recursion > 0);
+    if (--m_recursion == 0) {
+        unlockNoLock();
+    }
+}
+
+bool
+RecursiveFiberMutex::unlockIfNotUnique()
+{
+    boost::mutex::scoped_lock lock(m_mutex);
+    MORDOR_ASSERT(m_owner == Fiber::getThis());
+    if (m_waiters.empty()) {
+        return false;
+    }
+    MORDOR_ASSERT(m_recursion > 0);
+    if (--m_recursion == 0) {
+        unlockNoLock();
+    }
+    return true;
+}
+
+void
+RecursiveFiberMutex::unlockNoLock()
+{
+    MORDOR_ASSERT(m_owner == Fiber::getThis());
+    m_owner.reset();
+    if (!m_waiters.empty()) {
+        std::pair<Scheduler *, Fiber::ptr> next = m_waiters.front();
+        m_waiters.pop_front();
+        m_owner = next.second;
+        m_recursion = 1;
+        next.first->schedule(next.second);
+    }
+}
+
 FiberSemaphore::FiberSemaphore(size_t initialConcurrency)
     : m_concurrency(initialConcurrency)
 {}
