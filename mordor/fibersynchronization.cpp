@@ -312,25 +312,31 @@ FiberEvent::wait()
 void
 FiberEvent::set()
 {
-    boost::mutex::scoped_lock lock(m_mutex);
-    if (!m_autoReset) {
-        m_signalled = true;
-
-        std::list<std::pair<Scheduler *, Fiber::ptr> >::iterator it;
-        for (it = m_waiters.begin();
-            it != m_waiters.end();
-            ++it) {
+    if (m_autoReset) {
+        std::pair<Scheduler *, Fiber::ptr> runnable;
+        {
+            boost::mutex::scoped_lock lock(m_mutex);
+            m_signalled = true;
+            if (m_waiters.empty()) {
+                return;
+            }
+            runnable = m_waiters.front();
+            m_waiters.pop_front();
+        }
+        runnable.first->schedule(runnable.second);
+    } else {
+        std::list<std::pair<Scheduler *, Fiber::ptr> > runnables;
+        {
+            boost::mutex::scoped_lock lock(m_mutex);
+            m_signalled = true;
+            runnables.swap(m_waiters);
+        }
+        for (std::list<std::pair<Scheduler *, Fiber::ptr> >::iterator it = runnables.begin();
+             it != runnables.end();
+             ++it) {
             it->first->schedule(it->second);
         }
-        m_waiters.clear();
-        return;
     }
-    if (m_waiters.empty()) {
-        m_signalled = true;
-        return;
-    }
-    m_waiters.front().first->schedule(m_waiters.front().second);
-    m_waiters.pop_front();
 }
 
 void

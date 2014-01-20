@@ -225,7 +225,8 @@ public:
 
 private:
     boost::mutex m_mutex;
-    bool m_signalled, m_autoReset;
+    bool m_signalled;
+    const bool m_autoReset;
     std::list<std::pair<Scheduler *, boost::shared_ptr<Fiber> > > m_waiters;
 };
 
