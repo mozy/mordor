@@ -949,7 +949,7 @@ Buffer::opCmp(const char *string, size_t length) const
 void
 Buffer::invariant() const
 {
-#ifndef NDEBUG
+#ifndef NDEBUG_PERF
     size_t read = 0;
     size_t write = 0;
     bool seenWrite = false;
