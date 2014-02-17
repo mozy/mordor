@@ -491,3 +491,20 @@ MORDOR_UNITTEST(URI, queryStringConvenience)
     MORDOR_TEST_ASSERT_EQUAL(qs.size(), 4u);
     MORDOR_TEST_ASSERT_EQUAL(qs.toString(), "a=3&a=4&a2=5&b");
 }
+
+MORDOR_UNITTEST(URI, decodeOK)
+{
+    std::string str("https%3A%2F%2Fredmine.mozycorp.com%2Fissues%2F118200");
+    MORDOR_TEST_ASSERT_EQUAL(URI::decode(str), "https://redmine.mozycorp.com/issues/118200");
+}
+
+MORDOR_UNITTEST(URI, decodeInvalidURL)
+{
+    std::vector<std::string> invalidStr;
+    invalidStr.push_back("%4"); // invalid length, should have 2 chars after %
+    invalidStr.push_back("%3xpath"); // invalid first char after %
+    invalidStr.push_back("%x3path"); // invalid second char after %
+    for (std::vector<std::string>::iterator it = invalidStr.begin(); it != invalidStr.end(); ++it) {
+        MORDOR_TEST_ASSERT_EXCEPTION(URI::decode(*it), std::invalid_argument);
+    }
+}

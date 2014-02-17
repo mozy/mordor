@@ -74,7 +74,8 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
     while (c < end)
     {
         if (*c == '%') {
-            MORDOR_ASSERT(c + 2 < end);
+            if (c + 2 >= end)
+                MORDOR_THROW_EXCEPTION(std::invalid_argument("str"));
             if (!differed) {
                 result.resize(c - str.c_str());
                 differed = true;
@@ -86,7 +87,8 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
             else if (*c >= 'A' && *c <= 'F')
                 decoded = (*c - 'A' + 10) << 4;
             else {
-                MORDOR_ASSERT(*c >= '0' && *c <='9');
+                if (*c < '0' || *c > '9')
+                    MORDOR_THROW_EXCEPTION(std::invalid_argument("str"));
                 decoded = (*c - '0') << 4;
             }
             ++c;
@@ -95,7 +97,8 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
             else if (*c >= 'A' && *c <= 'F')
                 decoded |= *c - 'A' + 10;
             else {
-                MORDOR_ASSERT(*c >= '0' && *c <='9');
+                if (*c < '0' || *c > '9')
+                    MORDOR_THROW_EXCEPTION(std::invalid_argument("str"));
                 decoded |= *c - '0';
             }
             result.append(1, decoded);
