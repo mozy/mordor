@@ -38,7 +38,7 @@ static std::string escape(const std::string& str, const std::string& allowedChar
     {
         if (allowedChars.find(*c) == std::string::npos) {
             if (!differed) {
-                result.resize(c - str.c_str());
+                result.erase(c - str.c_str());
                 differed = true;
             }
             if (*c == ' ' && spaceAsPlus) {
@@ -77,7 +77,7 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
             if (c + 2 >= end)
                 MORDOR_THROW_EXCEPTION(std::invalid_argument("str"));
             if (!differed) {
-                result.resize(c - str.c_str());
+                result.erase(c - str.c_str());
                 differed = true;
             }
             char decoded;
@@ -104,7 +104,7 @@ std::string unescape(const std::string& str, bool spaceAsPlus = false)
             result.append(1, decoded);
         } else if (*c == '+' && spaceAsPlus) {
             if (!differed) {
-                result.resize(c - str.c_str());
+                result.erase(c - str.c_str());
                 differed = true;
             }
             result.append(1, ' ');
