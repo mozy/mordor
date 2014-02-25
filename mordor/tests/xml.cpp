@@ -262,6 +262,21 @@ MORDOR_UNITTEST(XMLParser, domParserInvalid)
         std::invalid_argument);
 }
 
+MORDOR_UNITTEST(XMLParser, domParserUnmatchedEndTag)
+{
+    DOM::XMLParser parser;
+    MORDOR_TEST_ASSERT_EXCEPTION(parser.loadDocument(
+        "<?xml version='1.0' encoding='UTF-8'?>\n"
+        "<hello></goodbye>"),
+        std::invalid_argument);
+    MORDOR_TEST_ASSERT_EXCEPTION(parser.loadDocument(
+        "<?xml version='1.0' encoding='UTF-8'?>\n"
+        "<hello>\n"
+        "  <bonjour>\n"
+        "  </ciao>\n"
+        "</goodbye>"),
+        std::invalid_argument);
+}
 
 #if 0
 // Disabled until comment support fixed

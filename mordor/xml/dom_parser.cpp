@@ -87,6 +87,12 @@ void XMLParser::onStartTag(const std::string &tag, Document *doc) {
 }
 
 void XMLParser::onEndTag(const std::string &tag, Document *doc) {
+    // choke on unmatched end tag
+    if (tag != m_element->nodeName()) {
+        MORDOR_THROW_EXCEPTION(
+            std::invalid_argument(
+                std::string("failed to parse: unmatched end tag: ") + tag));
+    }
     // ignore white space by default
     boost::trim(m_text);
     if (!m_text.empty()) {
