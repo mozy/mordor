@@ -327,12 +327,12 @@ public:
     const sockaddr *name() const { return (sockaddr*)&sun; }
     sockaddr *name() { return (sockaddr*)&sun; }
     socklen_t nameLen() const { return length; }
-    void nameLen(size_t len) { length = len; }
+    void nameLen(socklen_t len) { length = len; }
 
     std::ostream & insert(std::ostream &os) const;
     static const size_t MAX_PATH_LEN;
 private:
-    size_t length;
+    socklen_t length;
     struct sockaddr_un sun;
 };
 #endif
