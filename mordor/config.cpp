@@ -40,6 +40,8 @@ isValidConfigVarName(const std::string &name, bool allowDot)
         return boost::regex_match(name, regname);
 }
 
+bool Config::s_locked = false;
+
 void
 Config::loadFromCommandLine(int &argc, char *argv[])
 {

@@ -118,14 +118,17 @@ public:
     typedef boost::shared_ptr<ConfigVarBase> ptr;
 
 public:
-    ConfigVarBase(const std::string &name, const std::string &description = "")
+    ConfigVarBase(const std::string &name, const std::string &description = "",
+            bool lockable = false)
         : m_name(name),
-          m_description(description)
+          m_description(description),
+          m_lockable(lockable)
     {}
     virtual ~ConfigVarBase() {}
 
     std::string name() const { return m_name; }
     std::string description() const { return m_description; }
+    bool isLockable() const { return m_lockable; }
 
     /// onChange should not throw any exceptions
     boost::signals2::signal<void ()> onChange;
@@ -138,7 +141,11 @@ public:
 
 private:
     std::string m_name, m_description;
+    bool m_lockable;
 };
+
+template <class T>
+bool isConfigNotLocked(const T &);
 
 template <class T>
 class ConfigVar : public ConfigVarBase
@@ -166,10 +173,14 @@ public:
 
 public:
     ConfigVar(const std::string &name, const T &defaultValue,
-        const std::string &description = "")
-        : ConfigVarBase(name, description),
+        const std::string &description = "", bool lockable = false)
+        : ConfigVarBase(name, description, lockable),
           m_val(defaultValue)
-    {}
+    {
+        // if Config is locked, should reject changes to lockable ConfigVars
+        if (isLockable())
+            beforeChange.connect(&isConfigNotLocked<T>);
+    }
 
     std::string toString() const
     {
@@ -260,14 +271,15 @@ public:
     ///         if the value is not valid.
     template <class T>
     static typename ConfigVar<T>::ptr lookup(const std::string &name,
-        const T &defaultValue, const std::string &description = "")
+        const T &defaultValue, const std::string &description = "",
+        bool lockable = false)
     {
         if (!isValidConfigVarName(name))
             MORDOR_THROW_EXCEPTION(std::invalid_argument(name));
 
         MORDOR_ASSERT(vars().find(name) == vars().end());
         typename ConfigVar<T>::ptr v(new ConfigVar<T>(name, defaultValue,
-            description));
+            description, lockable));
         vars().insert(v);
         return v;
     }
@@ -311,13 +323,27 @@ public:
         const std::wstring &subKey);
 #endif
 
+    /// Set lock flag of the Config
+    /// @param locked If set to true, it will lock those lockable Configvars from
+    ///               updating their values.
+    static void lock(bool locked) { s_locked = locked; }
+    static bool isLocked() { return s_locked; }
+
 private:
     static ConfigVarSet &vars()
     {
         static ConfigVarSet vars;
         return vars;
     }
+    static bool s_locked;
 };
+
+
+template <class T>
+bool isConfigNotLocked(const T &)
+{
+    return !Config::isLocked();
+}
 
 class Timer;
 class TimerManager;

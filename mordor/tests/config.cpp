@@ -250,3 +250,23 @@ MORDOR_UNITTEST(Config, configVarNameFromJSONInvalid)
 }
 #endif
 
+MORDOR_UNITTEST(Config, lockConfigVar)
+{
+    ConfigVar<int>::ptr var1 = Config::lookup(
+            "test.lockable", 100, "configvar can be locked", true);
+    ConfigVar<int>::ptr var2 = Config::lookup(
+            "test.unlockable", 200, "configvar can't be locked", false);
+
+    MORDOR_TEST_ASSERT_EQUAL(Config::isLocked(), false);
+    MORDOR_TEST_ASSERT_EQUAL(var1->val(101), true);
+    MORDOR_TEST_ASSERT_EQUAL(var2->val(202), true);
+    MORDOR_TEST_ASSERT_EQUAL(var1->val(), 101);
+    MORDOR_TEST_ASSERT_EQUAL(var2->val(), 202);
+
+    Config::lock(true);
+    MORDOR_TEST_ASSERT_EQUAL(Config::isLocked(), true);
+    MORDOR_TEST_ASSERT_EQUAL(var1->val(111), false);
+    MORDOR_TEST_ASSERT_EQUAL(var2->val(222), true);
+    MORDOR_TEST_ASSERT_EQUAL(var1->val(), 101);
+    MORDOR_TEST_ASSERT_EQUAL(var2->val(), 222);
+}
