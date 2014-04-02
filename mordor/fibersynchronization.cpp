@@ -316,8 +316,8 @@ FiberEvent::set()
         std::pair<Scheduler *, Fiber::ptr> runnable;
         {
             boost::mutex::scoped_lock lock(m_mutex);
-            m_signalled = true;
             if (m_waiters.empty()) {
+                m_signalled = true;
                 return;
             }
             runnable = m_waiters.front();
