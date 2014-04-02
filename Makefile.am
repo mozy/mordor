@@ -380,7 +380,7 @@ noinst_PROGRAMS=			\
 	mordor/examples/tunnel		\
 	mordor/examples/udpstats
 
-if BOOST_PROGRAM_OPTIONS
+if HAVE_BOOST_PROGRAM_OPTIONS
 noinst_PROGRAMS += mordor/examples/wget
 endif
 
