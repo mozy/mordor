@@ -457,6 +457,7 @@ struct EntityHeaders
     std::vector<std::string> allow; // "Allow"
     std::vector<std::string> contentEncoding; // "Content-Encoding"
     unsigned long long contentLength;         // "Content-Length"
+    std::string contentMD5;                   // "Content-MD5"
     ContentRange contentRange;                // "Content-Range"
     MediaType contentType;                    // "Content-Type"
     boost::posix_time::ptime expires;         // "Expires"

@@ -487,6 +487,31 @@ MORDOR_UNITTEST(HTTP, rangeHeader)
     MORDOR_TEST_ASSERT_EQUAL(it->second, 600u);
 }
 
+MORDOR_UNITTEST(HTTP, contentMD5Header)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("CONNECT mozy.com:443 HTTP/1.1\r\n"
+               "Content-MD5: p5/WA/oEr30qrEEl21PAqw==\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+    MORDOR_TEST_ASSERT_EQUAL(request.entity.contentMD5, "p5/WA/oEr30qrEEl21PAqw==");
+
+    // invalid MD5
+    {
+        Request request;
+        RequestParser parser(request);
+        parser.run("CONNECT mozy.com:443 HTTP/1.1\r\n"
+                   "Content-MD5: invalid\r\n"
+                   "\r\n");
+        MORDOR_TEST_ASSERT(!parser.error());
+        MORDOR_TEST_ASSERT(parser.complete());
+        MORDOR_TEST_ASSERT_EQUAL(request.entity.contentMD5, "");
+    }
+}
+
 MORDOR_UNITTEST(HTTP, contentTypeHeader)
 {
     Response response;

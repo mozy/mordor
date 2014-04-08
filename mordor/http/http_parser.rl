@@ -411,6 +411,10 @@ unquote(const std::string &str)
         m_ulong = &m_entity->contentLength;
     }
 
+    action set_content_md5 {
+        m_string = &m_entity->contentMD5;
+    }
+
     action save_cr_first_byte_pos {
         m_entity->contentRange.first = strtoull(mark, NULL, 10);
         mark = NULL;
@@ -457,6 +461,7 @@ unquote(const std::string &str)
     Allow = 'Allow:'i @set_allow list;
     Content_Encoding = 'Content-Encoding:'i @set_content_encoding list;
     Content_Length = 'Content-Length:'i @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
+    Content_MD5 = 'Content-MD5:'i @set_content_md5 LWS* base64 >mark %save_string LWS*;
 
     byte_range_resp_spec = (DIGIT+ >mark %save_cr_first_byte_pos '-' DIGIT+ >mark %save_cr_last_byte_pos) | '*' %save_blank_cr;
     content_range_spec = bytes_unit SP byte_range_resp_spec '/' ( DIGIT+ >mark %save_instance_length | '*');
@@ -470,7 +475,7 @@ unquote(const std::string &str)
     Expires = 'Expires:'i @set_expires LWS* HTTP_date LWS*;
     Last_Modified = 'Last-Modified:'i @set_last_modified LWS* HTTP_date LWS*;
 
-    entity_header = Allow | Content_Encoding | Content_Length | Content_Range | Content_Type | Expires | Last_Modified; # | message_header;
+    entity_header = Allow | Content_Encoding | Content_Length | Content_MD5 | Content_Range | Content_Type | Expires | Last_Modified; # | message_header;
 
 }%%
 
