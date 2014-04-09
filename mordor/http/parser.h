@@ -8,12 +8,22 @@
 namespace Mordor {
 namespace HTTP {
 
+struct BadFieldValueException : virtual Exception
+{
+    const std::string name;
+    const std::string value;
+    BadFieldValueException(const std::string& k,
+                           const std::string& v)
+        : name(k), value(v) {}
+    ~BadFieldValueException() throw() {}
+};
+
 class Parser : public RagelParserWithStack
 {
 public:
     void init();
 protected:
-    Parser() { init(); }
+    Parser(bool strict) : m_strict(strict) { init(); }
 
     const char *earliestPointer() const;
     void adjustPointers(ptrdiff_t offset);
@@ -34,17 +44,19 @@ protected:
     std::set<ETag> *m_eTagSet;
     ProductAndCommentList *m_productAndCommentList;
     boost::posix_time::ptime *m_date;
+    const bool m_strict;
 
     // Temp storage
     std::string m_temp1, m_temp2, m_genericHeaderName;
     const char *mark2;
+    bool m_isBadValue;
     ETag m_tempETag;
 };
 
 class RequestParser : public Parser
 {
 public:
-    RequestParser(Request& request);
+    RequestParser(Request& request, bool strict = false);
 
     void init();
     bool final() const;
@@ -64,7 +76,7 @@ private:
 class ResponseParser : public Parser
 {
 public:
-    ResponseParser(Response& response);
+    ResponseParser(Response& response, bool strict = false);
 
     void init();
     bool final() const;
@@ -84,7 +96,7 @@ private:
 class TrailerParser : public Parser
 {
 public:
-    TrailerParser(EntityHeaders& entity);
+    TrailerParser(EntityHeaders& entity, bool strict = false);
 
     void init();
     bool final() const;

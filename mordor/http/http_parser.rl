@@ -131,6 +131,7 @@ unquote(const std::string &str)
     action mark2 { mark2 = fpc; }
     action clearmark2 { mark2 = NULL; }
     action done { fbreak; }
+    action bad_header { if (m_strict) m_isBadValue = true; }
     prepush { prepush(); }
     postpop { postpop(); }
 
@@ -267,18 +268,24 @@ unquote(const std::string &str)
         mark2 = NULL;
     }
     action save_field_value {
-        if (mark2) {
-            std::string fieldValue = unfold((char*)mark2, (char*)fpc);
+        if (!mark2) break;
 
-            StringMap::iterator it = m_entity->extension.find(m_genericHeaderName);
-            if (it == m_entity->extension.end()) {
-                m_entity->extension[m_genericHeaderName] = fieldValue;
-            } else {
-                it->second.append(", ");
-                it->second.append(fieldValue);
-            }
-            mark2 = NULL;
+        std::string fieldValue = unfold((char*)mark2, (char*)fpc);
+
+        if (m_isBadValue) {
+            MORDOR_THROW_EXCEPTION(BadFieldValueException(m_genericHeaderName, fieldValue));
+            m_isBadValue = false;
+            fbreak;
         }
+
+        StringMap::iterator it = m_entity->extension.find(m_genericHeaderName);
+        if (it == m_entity->extension.end()) {
+            m_entity->extension[m_genericHeaderName] = fieldValue;
+        } else {
+            it->second.append(", ");
+            it->second.append(fieldValue);
+        }
+        mark2 = NULL;
     }
 
     field_chars = OCTET -- (CTL | CR LF SP HT);
@@ -388,7 +395,7 @@ unquote(const std::string &str)
     }
 
     Connection = 'Connection:'i @set_connection list;
-    Date = 'Date:'i @set_date LWS* HTTP_date LWS*;
+    Date = 'Date:'i @set_date LWS* HTTP_date $lerr(bad_header) LWS*;
     # NON-STANDARD!!!
     Proxy_Connection = 'Proxy-Connection:'i @set_proxy_connection list;
     Trailer = 'Trailer:'i @set_trailer list;
@@ -460,20 +467,20 @@ unquote(const std::string &str)
 
     Allow = 'Allow:'i @set_allow list;
     Content_Encoding = 'Content-Encoding:'i @set_content_encoding list;
-    Content_Length = 'Content-Length:'i @set_content_length LWS* DIGIT+ >mark %save_ulong LWS*;
-    Content_MD5 = 'Content-MD5:'i @set_content_md5 LWS* base64 >mark %save_string LWS*;
+    Content_Length = 'Content-Length:'i @set_content_length LWS* DIGIT+ >mark $lerr(bad_header) %save_ulong $lerr(bad_header) LWS*;
+    Content_MD5 = 'Content-MD5:'i @set_content_md5 LWS* base64 >mark $lerr(bad_header) %save_string LWS*;
 
     byte_range_resp_spec = (DIGIT+ >mark %save_cr_first_byte_pos '-' DIGIT+ >mark %save_cr_last_byte_pos) | '*' %save_blank_cr;
     content_range_spec = bytes_unit SP byte_range_resp_spec '/' ( DIGIT+ >mark %save_instance_length | '*');
-    Content_Range = 'Content-Range:'i LWS* content_range_spec LWS*;
+    Content_Range = 'Content-Range:'i LWS* content_range_spec $lerr(bad_header) LWS*;
 
     type = token >mark %save_type;
     subtype = token >mark %save_subtype;
     media_type = type '/' subtype (';' LWS* parameter)*;
     Content_Type = 'Content-Type:'i @set_content_type LWS* media_type LWS*;
 
-    Expires = 'Expires:'i @set_expires LWS* HTTP_date LWS*;
-    Last_Modified = 'Last-Modified:'i @set_last_modified LWS* HTTP_date LWS*;
+    Expires = 'Expires:'i @set_expires LWS* HTTP_date $lerr(bad_header) LWS*;
+    Last_Modified = 'Last-Modified:'i @set_last_modified LWS* HTTP_date $lerr(bad_header) LWS*;
 
     entity_header = Allow | Content_Encoding | Content_Length | Content_MD5 | Content_Range | Content_Type | Expires | Last_Modified; # | message_header;
 
@@ -682,7 +689,7 @@ unquote(const std::string &str)
     suffix_byte_range_spec = '-' DIGIT+ > mark %save_suffix_byte_pos;
     byte_range_set = LWS* (byte_range_spec | suffix_byte_range_spec) ( LWS* ',' LWS* (byte_range_spec | suffix_byte_range_spec))* LWS*;
     ranges_specifier = bytes_unit '=' byte_range_set;
-    Range = 'Range:'i LWS* ranges_specifier;
+    Range = 'Range:'i LWS* ranges_specifier $lerr(bad_header);
 
     Referer = 'Referer:'i @set_referer LWS* (absolute_URI | relative_URI);
 
@@ -729,6 +736,7 @@ Parser::init()
     m_eTagSet = NULL;
     m_productAndCommentList = NULL;
     mark2 = NULL;
+    m_isBadValue = false;
     RagelParser::init();
 }
 
@@ -751,8 +759,9 @@ Parser::adjustPointers(ptrdiff_t offset)
     RagelParser::adjustPointers(offset);
 }
 
-RequestParser::RequestParser(Request& request)
-: m_request(&request),
+RequestParser::RequestParser(Request& request, bool strict)
+: Parser(strict),
+  m_request(&request),
   m_ver(&request.requestLine.ver),
   m_segments(&request.requestLine.uri.path.segments),
   m_authority(&request.requestLine.uri.authority),
@@ -855,8 +864,9 @@ RequestParser::exec()
     write data;
 }%%
 
-ResponseParser::ResponseParser(Response& response)
-: m_response(&response),
+ResponseParser::ResponseParser(Response& response, bool strict)
+: Parser(strict),
+  m_response(&response),
   m_ver(&response.status.ver),
   m_uri(&response.response.location),
   m_segments(&response.response.location.path.segments),
@@ -908,8 +918,8 @@ ResponseParser::exec()
     write data;
 }%%
 
-TrailerParser::TrailerParser(EntityHeaders& entity)
-: m_entity(&entity)
+TrailerParser::TrailerParser(EntityHeaders& entity, bool strict)
+: Parser(strict), m_entity(&entity)
 {}
 
 void

@@ -486,6 +486,21 @@ MORDOR_UNITTEST(HTTP, rangeHeader)
     ++it;
     MORDOR_TEST_ASSERT_EQUAL(it->first, 500u);
     MORDOR_TEST_ASSERT_EQUAL(it->second, 600u);
+
+    {
+        RequestParser parser(request, true);
+        MORDOR_TEST_ASSERT_EXCEPTION(
+            parser.run("GET / HTTP/1.1\r\n"
+                       "Range: bites=0-499, 500-999, -500, 9500-, 0-0,-1\r\n"
+                       " ,500-600\r\n"
+                       "\r\n"),
+            BadFieldValueException);
+        MORDOR_TEST_ASSERT_EXCEPTION(
+            parser.run("GET / HTTP/1.1\r\n"
+                       "Range: bytes=0-Agg\r\n"
+                       "\r\n"),
+            BadFieldValueException);
+    }
 }
 
 MORDOR_UNITTEST(HTTP, contentMD5Header)
@@ -506,16 +521,27 @@ MORDOR_UNITTEST(HTTP, contentMD5Header)
     MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(request.entity),
                              (boost::format(formatter) % md5).str());
 
-    // invalid MD5
+    // invalid MD5, non-strict
     {
         Request request;
-        RequestParser parser(request);
+        RequestParser parser(request, false);
         parser.run("CONNECT mozy.com:443 HTTP/1.1\r\n"
                    "Content-MD5: invalid\r\n"
                    "\r\n");
         MORDOR_TEST_ASSERT(!parser.error());
         MORDOR_TEST_ASSERT(parser.complete());
         MORDOR_TEST_ASSERT_EQUAL(request.entity.contentMD5, "");
+    }
+
+    // invalid MD5, strict
+    {
+        Request request;
+        RequestParser parser(request, true);
+        MORDOR_TEST_ASSERT_EXCEPTION(
+            parser.run("CONNECT mozy.com:443 HTTP/1.1\r\n"
+                       "Content-MD5: invalid\r\n"
+                       "\r\n"),
+            BadFieldValueException);
     }
 }
 
@@ -689,6 +715,16 @@ MORDOR_UNITTEST(HTTP, responseWithInvalidStandardHeader)
     MORDOR_TEST_ASSERT(response.entity.extension.find("Expires") !=
         response.entity.extension.end());
     MORDOR_TEST_ASSERT_EQUAL(response.entity.extension["Expires"], "-1");
+
+    {
+        ResponseParser parser(response, true);
+        MORDOR_TEST_ASSERT_EXCEPTION(
+            parser.run("HTTP/1.1 200 OK\r\n"
+                       "Expires: -1\r\n"
+                       "\r\n"),
+            BadFieldValueException);
+    }
+
 }
 
 MORDOR_UNITTEST(HTTP, versionComparison)
