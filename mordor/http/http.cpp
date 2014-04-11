@@ -773,6 +773,8 @@ std::ostream& operator<<(std::ostream& os, const EntityHeaders &e)
         os << "Content-Encoding: " << e.contentEncoding << "\r\n";
     if (e.contentLength != ~0ull)
         os << "Content-Length: " << e.contentLength << "\r\n";
+    if (!e.contentMD5.empty())
+        os << "Content-MD5: " << e.contentMD5 << "\r\n";
     if (e.contentRange.first != ~0ull || e.contentRange.last != ~0ull || e.contentRange.instance != ~0ull)
         os << "Content-Range: " << e.contentRange << "\r\n";
     if (!e.contentType.type.empty() && !e.contentType.subtype.empty())

@@ -1,6 +1,7 @@
 // Copyright (c) 2009 - Mozy, Inc.
 
 #include <boost/bind.hpp>
+#include <boost/format.hpp>
 
 #include "mordor/http/parser.h"
 #include "mordor/streams/buffered.h"
@@ -492,12 +493,18 @@ MORDOR_UNITTEST(HTTP, contentMD5Header)
     Request request;
     RequestParser parser(request);
 
-    parser.run("CONNECT mozy.com:443 HTTP/1.1\r\n"
-               "Content-MD5: p5/WA/oEr30qrEEl21PAqw==\r\n"
+    const std::string md5("p5/WA/oEr30qrEEl21PAqw==");
+    const std::string formatter("Content-MD5: %1%\r\n");
+    parser.run(std::string("CONNECT mozy.com:443 HTTP/1.1\r\n") +
+               (boost::format(formatter) % md5).str() +
                "\r\n");
     MORDOR_TEST_ASSERT(!parser.error());
     MORDOR_TEST_ASSERT(parser.complete());
-    MORDOR_TEST_ASSERT_EQUAL(request.entity.contentMD5, "p5/WA/oEr30qrEEl21PAqw==");
+    MORDOR_TEST_ASSERT_EQUAL(request.entity.contentMD5, md5);
+
+    // check output
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(request.entity),
+                             (boost::format(formatter) % md5).str());
 
     // invalid MD5
     {
