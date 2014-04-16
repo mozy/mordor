@@ -44,7 +44,7 @@ Typical usages of Configuration Variables include:
 -Variables to control the frequency of periodic timers
 -Variables to enable experimental features or debugging tools
 
-The key name of a ConfigVar can only contain lower case letters
+The key name of a ConfigVar can only contain lower case letters and digits
 and the "." separator.  When defined using an environmental variable
 upper case characters are converted to lower case, and the "_" character
 can be used in place of ".".
@@ -102,6 +102,15 @@ to a test server rather than a default server or to increase the frequency of
 a periodic operation.  But they should not be used as a replacement for clean
 APIs used during the regular software flow.
 */
+
+/// check if the name is a valid ConfigVar name
+/// @param name     ConfigVar name
+/// @param allowDot Whether dot is allowed in the ConfigVar name
+/// @note ConfigVar name rule when allowDot value is
+///   - true:  [a-z][a-z0-9]*(\.[a-z0-9]+)*
+///   - false: [a-z][a-z0-9]*
+/// @return if @p name is a valid ConfigVar name
+bool isValidConfigVarName(const std::string &name, bool allowDot = true);
 
 class ConfigVarBase : public boost::noncopyable
 {
@@ -253,8 +262,7 @@ public:
     static typename ConfigVar<T>::ptr lookup(const std::string &name,
         const T &defaultValue, const std::string &description = "")
     {
-        if (name.find_first_not_of("abcdefghijklmnopqrstuvwxyz.") !=
-            std::string::npos)
+        if (!isValidConfigVarName(name))
             MORDOR_THROW_EXCEPTION(std::invalid_argument(name));
 
         MORDOR_ASSERT(vars().find(name) == vars().end());

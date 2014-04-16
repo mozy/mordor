@@ -4,6 +4,7 @@
 
 #include <algorithm>
 
+#include <boost/regex.hpp>
 #include <boost/thread/thread.hpp>
 
 #include "json.h"
@@ -27,6 +28,17 @@ extern char **environ;
 namespace Mordor {
 
 static Logger::ptr g_log = Log::lookup("mordor:config");
+
+bool
+isValidConfigVarName(const std::string &name, bool allowDot)
+{
+    static const boost::regex regname("[a-z][a-z0-9]*");
+    static const boost::regex regnameDot("[a-z][a-z0-9]*(\\.[a-z0-9]+)*");
+    if (allowDot)
+        return boost::regex_match(name, regnameDot);
+    else
+        return boost::regex_match(name, regname);
+}
 
 void
 Config::loadFromCommandLine(int &argc, char *argv[])
@@ -111,7 +123,7 @@ Config::loadFromEnvironment()
 #endif
         std::transform(key.begin(), key.end(), key.begin(), tolower);
         replace(key, '_', '.');
-        if (key.find_first_not_of("abcdefghijklmnopqrstuvwxyz.") != std::string::npos)
+        if (!isValidConfigVarName(key))
             continue;
         ConfigVarBase::ptr var = lookup(key);
         if (var)
@@ -133,7 +145,7 @@ public:
             ++it) {
             std::string key = it->first;
             std::transform(key.begin(), key.end(), key.begin(), tolower);
-            if (key.find_first_not_of("abcdefghijklmnopqrstuvwxyz") != std::string::npos)
+            if (!isValidConfigVarName(key, false))
                 continue;
             m_toCheck.push_back(std::make_pair(prefix + key, &it->second));
         }
@@ -180,8 +192,7 @@ public:
             ConfigVarBase::ptr var = Config::lookup(m_current);
             if (var) {
                 var->fromString(boost::lexical_cast<std::string>(v));
-            } else if (m_current.find_first_not_of("abcdefghijklmnopqrstuvwxyz.")
-                == std::string::npos) {
+            } else if (isValidConfigVarName(m_current)) {
                 Config::lookup(m_current, v, "Come from config file!");
             }
         }

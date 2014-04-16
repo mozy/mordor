@@ -3,6 +3,10 @@
 #include "mordor/config.h"
 #include "mordor/test/test.h"
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #ifdef HAVE_LIBYAML
 #include "mordor/yaml.h"
 #endif
@@ -183,6 +187,24 @@ MORDOR_UNITTEST(Config, loadFromCommandLineNoConfigVarsAfterDashDash)
     MORDOR_TEST_ASSERT_EQUAL(g_testVar1->val(), 1);
 }
 
+MORDOR_UNITTEST(Config, configVarNameRules)
+{
+    // valid name
+    MORDOR_TEST_ASSERT(Config::lookup("validname1.test", 0));
+    MORDOR_TEST_ASSERT(Config::lookup("a1.2x", 0));
+    // This is a little corner case that still valid
+    // Currently I don't think we are trying to use this specific case,
+    // but it could be still useful, for example, some env var can be
+    // named as A_2.
+    MORDOR_TEST_ASSERT(Config::lookup("a.2", 0));
+
+    MORDOR_TEST_ASSERT_EXCEPTION(Config::lookup("1a", 0), std::invalid_argument);
+    MORDOR_TEST_ASSERT_EXCEPTION(Config::lookup("Aa", 0), std::invalid_argument);
+    MORDOR_TEST_ASSERT_EXCEPTION(Config::lookup("a_", 0), std::invalid_argument);
+    MORDOR_TEST_ASSERT_EXCEPTION(Config::lookup("a.", 0), std::invalid_argument);
+    MORDOR_TEST_ASSERT_EXCEPTION(Config::lookup("a_b", 0), std::invalid_argument);
+}
+
 #ifdef HAVE_LIBYAML
 MORDOR_UNITTEST(Config, loadFromJSON)
 {
@@ -203,6 +225,28 @@ MORDOR_UNITTEST(Config, loadFromJSON)
 
     MORDOR_TEST_ASSERT_EQUAL(Config::lookup("http.host")->toString(), "192.168.0.1");
     MORDOR_TEST_ASSERT_EQUAL(Config::lookup("price")->toString(), "800.34");
+}
+
+MORDOR_UNITTEST(Config, configVarNameFromJSONValid)
+{
+    std::ostringstream ss;
+    ss << "s3:\n"
+       << "    host: 192.168.1.1\n";
+    JSON::Value json = YAML::parse(ss.str());
+    MORDOR_TEST_ASSERT(!json["s3"]["host"].isBlank());
+    Config::loadFromJSON(json);
+    MORDOR_TEST_ASSERT(Config::lookup("s3.host"));
+    MORDOR_TEST_ASSERT_EQUAL(Config::lookup("s3.host")->toString(), "192.168.1.1");
+}
+
+MORDOR_UNITTEST(Config, configVarNameFromJSONInvalid)
+{
+    // dot (.) can't be used as ConfigVar name in loadFromJSON case
+    std::ostringstream ss("s3.host: 192.168.1.1\n");
+    JSON::Value json = YAML::parse(ss.str());
+    MORDOR_TEST_ASSERT(json.find("s3.host") != json.end());
+    Config::loadFromJSON(json);
+    MORDOR_TEST_ASSERT(!Config::lookup("s3.host"));
 }
 #endif
 
