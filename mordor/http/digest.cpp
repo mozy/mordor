@@ -58,7 +58,7 @@ void authorize(const AuthParams &challenge, AuthParams &authorization,
     std::string A2 = os.str();
 
     authorization.scheme = "Digest";
-    authorization.base64.clear();
+    authorization.param.clear();
     authorization.parameters["username"] = username;
     authorization.parameters["realm"] = realm;
     authorization.parameters["nonce"] = nonce;

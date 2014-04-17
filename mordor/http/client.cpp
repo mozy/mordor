@@ -452,9 +452,9 @@ void ClientRequest::RequestLogger::logRequest(size_t connNum, long long requestN
         if (basicAuth || basicProxyAuth) {
             Request censoredRequest(request);
             if (basicAuth)
-                censoredRequest.request.authorization.base64 = "<hidden>";
+                censoredRequest.request.authorization.param = "<hidden>";
             if (basicProxyAuth)
-                censoredRequest.request.proxyAuthorization.base64 = "<hidden>";
+                censoredRequest.request.proxyAuthorization.param = "<hidden>";
             os << censoredRequest;
         } else {
             os << request;

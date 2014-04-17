@@ -889,7 +889,7 @@ MORDOR_UNITTEST(HTTP, proxyAuthorizationHeader)
         "\r\n");
 
     MORDOR_TEST_ASSERT_EQUAL(request.request.proxyAuthorization.scheme, "NTLM");
-    MORDOR_TEST_ASSERT_EQUAL(request.request.proxyAuthorization.base64, "TlRMTVNTUAABAAAAt4II4gAAAAAAAAAAAAAAAAAAAAAGAbAdAAAADw==");
+    MORDOR_TEST_ASSERT_EQUAL(request.request.proxyAuthorization.param, "TlRMTVNTUAABAAAAt4II4gAAAAAAAAAAAAAAAAAAAAAGAbAdAAAADw==");
 }
 
 MORDOR_UNITTEST(HTTP, boundary)
@@ -926,7 +926,7 @@ MORDOR_UNITTEST(HTTP, boundary)
     MORDOR_TEST_ASSERT_EQUAL(mt2.parameters["boundary"], boundary);
 }
 
-MORDOR_UNITTEST(HTTP, authHeader)
+MORDOR_UNITTEST(HTTP, authHeaderOAuth)
 {
     Request request;
     RequestParser parser(request);
@@ -949,6 +949,40 @@ MORDOR_UNITTEST(HTTP, authHeader)
     it = auth.parameters.find("oauth_consumer_key");
     MORDOR_TEST_ASSERT(it != auth.parameters.end());
     MORDOR_TEST_ASSERT_EQUAL(it->second, "It's Bob \" pub key");
+}
+
+MORDOR_UNITTEST(HTTP, authHeaderBasic)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("GET / HTTP/1.1\r\n"
+               "Authorization: Basic dXNlcm5hbWU6cGFzc3dvcmQ=\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.final());
+
+    AuthParams & auth = request.request.authorization;
+    MORDOR_TEST_ASSERT_EQUAL(auth.scheme, "Basic");
+    MORDOR_TEST_ASSERT_EQUAL(auth.param, "dXNlcm5hbWU6cGFzc3dvcmQ=");
+    MORDOR_TEST_ASSERT_EQUAL(auth.parameters.size(), 0u);
+}
+
+MORDOR_UNITTEST(HTTP, authHeaderAWS)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("GET / HTTP/1.1\r\n"
+               "Authorization: AWS accesskey:c2lnbmF0dXJl\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.final());
+
+    AuthParams & auth = request.request.authorization;
+    MORDOR_TEST_ASSERT_EQUAL(auth.scheme, "AWS");
+    MORDOR_TEST_ASSERT_EQUAL(auth.param, "accesskey:c2lnbmF0dXJl");
+    MORDOR_TEST_ASSERT_EQUAL(auth.parameters.size(), 0u);
 }
 
 MORDOR_UNITTEST(HTTP, acceptEncodingHeader)

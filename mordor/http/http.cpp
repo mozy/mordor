@@ -490,10 +490,10 @@ std::ostream& operator<<(std::ostream& os, const ParameterizedList &l)
 
 std::ostream &operator<<(std::ostream &os, const AuthParams &a)
 {
-    MORDOR_ASSERT(a.base64.empty() || a.parameters.empty());
+    MORDOR_ASSERT(a.param.empty() || a.parameters.empty());
     os << a.scheme;
-    if (!a.base64.empty())
-        os << ' ' << a.base64;
+    if (!a.param.empty())
+        os << ' ' << a.param;
     if (!a.parameters.empty())
         os << ' ' << serializeStringMapWithRequiredValue(a.parameters, ", ", false);
     return os;

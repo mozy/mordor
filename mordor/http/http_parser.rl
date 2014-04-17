@@ -354,16 +354,19 @@ unquote(const std::string &str)
         mark = NULL;
     }
 
-    action save_base64_param {
-        m_auth->base64 = std::string(mark, fpc - mark);
+    action save_token_param {
+        m_auth->param = std::string(mark, fpc - mark);
         mark = NULL;
     }
 
     auth_param = attribute '=' value;
     auth_scheme = token;
-    base64_auth_param = base64 %save_base64_param;
-    challenge = auth_scheme >mark %save_auth_scheme (SP ((auth_param ( LWS* ',' LWS* auth_param )*) | base64_auth_param))? LWS*;
-    credentials = auth_scheme >mark %save_auth_scheme (LWS+ ((auth_param (LWS* ',' LWS* auth_param )*) | base64_auth_param))? LWS*;
+    auth_param_list = auth_param (LWS* ',' LWS* auth_param )*;
+    auth_param_base64 = base64 %save_token_param;
+    auth_param_aws = token ':' base64 %save_token_param;
+    auth_params = auth_param_list | auth_param_base64 | auth_param_aws;
+    challenge = auth_scheme >mark %save_auth_scheme (SP auth_params)? LWS*;
+    credentials = auth_scheme >mark %save_auth_scheme (LWS+ auth_params)? LWS*;
     challengeList = LWS* challenge ( LWS* ',' LWS* challenge)* LWS*;
 
     action set_connection {

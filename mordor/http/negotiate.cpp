@@ -45,7 +45,7 @@ NegotiateAuth::authorize(const AuthParams &challenge, AuthParams &authorization,
 {
     SECURITY_STATUS status;
     std::wstring packageW = toUtf16(challenge.scheme);
-    std::string param = challenge.base64;
+    std::string param = challenge.param;
 
     std::string outboundBuffer;
     SecBufferDesc outboundBufferDesc;
@@ -148,7 +148,7 @@ NegotiateAuth::authorize(const AuthParams &challenge, AuthParams &authorization,
 
     outboundBuffer.resize(outboundSecBuffer.cbBuffer);
     authorization.scheme = challenge.scheme;
-    authorization.base64 = base64encode(outboundBuffer);
+    authorization.param = base64encode(outboundBuffer);
     authorization.parameters.clear();
     return true;
 }

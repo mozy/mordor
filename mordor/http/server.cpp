@@ -483,20 +483,20 @@ ServerRequest::doRequest()
             std::string webAuth, proxyAuth;
             bool hideAuth = false, hideProxyAuth = false;
             if (stricmp(m_request.request.authorization.scheme.c_str(), "Basic") == 0) {
-                webAuth = m_request.request.authorization.base64;
-                m_request.request.authorization.base64 = "<hidden>";
+                webAuth = m_request.request.authorization.param;
+                m_request.request.authorization.param = "<hidden>";
                 hideAuth = true;
             }
             if (stricmp(m_request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0) {
-                proxyAuth = m_request.request.proxyAuthorization.base64;
-                m_request.request.proxyAuthorization.base64 = "<hidden>";
+                proxyAuth = m_request.request.proxyAuthorization.param;
+                m_request.request.proxyAuthorization.param = "<hidden>";
                 hideProxyAuth = true;
             }
             MORDOR_LOG_DEBUG(g_log) << m_context << " " << m_request;
             if (hideAuth)
-                m_request.request.authorization.base64 = webAuth;
+                m_request.request.authorization.param = webAuth;
             if (hideProxyAuth)
-                m_request.request.proxyAuthorization.base64 = proxyAuth;
+                m_request.request.proxyAuthorization.param = proxyAuth;
         } else {
             MORDOR_LOG_VERBOSE(g_log) << m_context
                 << " " << m_request.requestLine;

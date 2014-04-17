@@ -14,7 +14,7 @@ namespace OAuth2 {
 
         AuthParams &authorization = nextRequest.request.authorization;
         authorization.scheme = "Bearer";
-        authorization.base64 = base64encode(token);
+        authorization.param = base64encode(token);
         authorization.parameters.clear();
     }
 

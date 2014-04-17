@@ -168,7 +168,7 @@ authorize(Request &nextRequest, const std::string &signatureMethod,
 
     AuthParams &authorization = nextRequest.request.authorization;
     authorization.scheme = "OAuth";
-    authorization.base64.clear();
+    authorization.param.clear();
     authorization.parameters.clear();
     authorization.parameters["oauth_consumer_key"] = clientCredentials.first;
     authorization.parameters["oauth_token"] = tokenCredentials.first;
