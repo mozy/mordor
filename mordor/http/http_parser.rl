@@ -158,6 +158,9 @@ unquote(const std::string &str)
     # some basic tokens
     separators = "(" | ")" | "<" | ">" | "@" | "," | ";" | ":" | "\\" | "\"" | "/" | "[" | "]" | "?" | "=" | "{" | "}" | SP | HT;
     token = (CHAR -- (separators | CTL))+;
+    # token68 is from http://tools.ietf.org/html/draft-ietf-httpbis-p7-auth-26
+    # token68 represents a set of 68 chars, we add ":" to support AWS and "@", "'" to support email address
+    token68 = (ALPHA | DIGIT | "-" | "." | "_" | "~" | "+" | "/" | ":" | "@" | "'")+ "="*;
     quoted_pair = "\\" CHAR;
     ctext = TEXT -- ("(" | ")");
     comment = "(" @{fcall parse_comment;};
@@ -325,7 +328,7 @@ unquote(const std::string &str)
         m_temp1 = std::string(mark, fpc - mark);
         // Don't NULL out here; could be base64 later
     }
-    
+
     action save_parameter_attribute_unquote {
         m_temp1 = unquote(mark, fpc - mark);
         // Don't NULL out here; could be base64 later
@@ -361,12 +364,10 @@ unquote(const std::string &str)
 
     auth_param = attribute '=' value;
     auth_scheme = token;
-    auth_param_list = auth_param (LWS* ',' LWS* auth_param )*;
-    auth_param_base64 = base64 %save_token_param;
-    auth_param_aws = token ':' base64 %save_token_param;
-    auth_params = auth_param_list | auth_param_base64 | auth_param_aws;
-    challenge = auth_scheme >mark %save_auth_scheme (SP auth_params)? LWS*;
-    credentials = auth_scheme >mark %save_auth_scheme (LWS+ auth_params)? LWS*;
+    auth_params = auth_param (LWS* ',' LWS* auth_param)*;
+    auth_token68 = token68 >mark %save_token_param;
+    credentials = auth_scheme >mark %save_auth_scheme (SP+ (auth_token68 | auth_params))?;
+    challenge = credentials;
     challengeList = LWS* challenge ( LWS* ',' LWS* challenge)* LWS*;
 
     action set_connection {

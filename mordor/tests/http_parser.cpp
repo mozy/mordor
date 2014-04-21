@@ -892,6 +892,102 @@ MORDOR_UNITTEST(HTTP, proxyAuthorizationHeader)
     MORDOR_TEST_ASSERT_EQUAL(request.request.proxyAuthorization.param, "TlRMTVNTUAABAAAAt4II4gAAAAAAAAAAAAAAAAAAAAAGAbAdAAAADw==");
 }
 
+MORDOR_UNITTEST(HTTP, wwwAuthenticateEmpty)
+{
+    Response response;
+    ResponseParser parser(response);
+
+    parser.run("HTTP/1.1 401 Unauthorized\r\n"
+        "WWW-Authenticate: NTLM\r\n"
+        "\r\n");
+
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+    MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, UNAUTHORIZED);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.reason, "Unauthorized");
+    ChallengeList cl = response.response.wwwAuthenticate;
+    MORDOR_TEST_ASSERT_EQUAL(cl.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].scheme, "NTLM");
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].param, "");
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].parameters.size(), 0u);
+}
+
+MORDOR_UNITTEST(HTTP, wwwAuthenticateParam)
+{
+    Response response;
+    ResponseParser parser(response);
+
+    parser.run("HTTP/1.1 401 Unauthorized\r\n"
+        "WWW-Authenticate: anyscheme  abcdefg\r\n"
+        "\r\n");
+
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+    MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, UNAUTHORIZED);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.reason, "Unauthorized");
+    ChallengeList cl = response.response.wwwAuthenticate;
+    MORDOR_TEST_ASSERT_EQUAL(cl.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].scheme, "anyscheme");
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].param, "abcdefg");
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].parameters.size(), 0u);
+}
+
+MORDOR_UNITTEST(HTTP, wwwAuthenticateParamList)
+{
+    Response response;
+    ResponseParser parser(response);
+
+    parser.run("HTTP/1.1 401 Unauthorized\r\n"
+        "WWW-Authenticate: anyscheme  a=b,  c=\"d\"\r\n"
+        "\r\n");
+
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+    MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, UNAUTHORIZED);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.reason, "Unauthorized");
+    ChallengeList cl = response.response.wwwAuthenticate;
+    MORDOR_TEST_ASSERT_EQUAL(cl.size(), 1u);
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].scheme, "anyscheme");
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].param, "");
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].parameters.size(), 2u);
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].parameters["a"], "b");
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].parameters["c"], "d");
+}
+
+MORDOR_UNITTEST(HTTP, wwwAuthenticateMixed)
+{
+    Response response;
+    ResponseParser parser(response);
+
+    parser.run("HTTP/1.1 401 Unauthorized\r\n"
+        "WWW-Authenticate: a, b anystring, c d=e, f=\"g\"\r\n"
+        "\r\n");
+
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+    MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, UNAUTHORIZED);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.reason, "Unauthorized");
+    ChallengeList cl = response.response.wwwAuthenticate;
+    MORDOR_TEST_ASSERT_EQUAL(cl.size(), 3u);
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].scheme, "a");
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].param, "");
+    MORDOR_TEST_ASSERT_EQUAL(cl[0].parameters.size(), 0u);
+
+    MORDOR_TEST_ASSERT_EQUAL(cl[1].scheme, "b");
+    MORDOR_TEST_ASSERT_EQUAL(cl[1].param, "anystring");
+    MORDOR_TEST_ASSERT_EQUAL(cl[1].parameters.size(), 0u);
+
+    MORDOR_TEST_ASSERT_EQUAL(cl[2].scheme, "c");
+    MORDOR_TEST_ASSERT_EQUAL(cl[2].param, "");
+    MORDOR_TEST_ASSERT_EQUAL(cl[2].parameters.size(), 2u);
+    MORDOR_TEST_ASSERT_EQUAL(cl[2].parameters["d"], "e");
+    MORDOR_TEST_ASSERT_EQUAL(cl[2].parameters["f"], "g");
+}
+
 MORDOR_UNITTEST(HTTP, boundary)
 {
     std::string type = "multipart";
@@ -983,6 +1079,73 @@ MORDOR_UNITTEST(HTTP, authHeaderAWS)
     MORDOR_TEST_ASSERT_EQUAL(auth.scheme, "AWS");
     MORDOR_TEST_ASSERT_EQUAL(auth.param, "accesskey:c2lnbmF0dXJl");
     MORDOR_TEST_ASSERT_EQUAL(auth.parameters.size(), 0u);
+}
+
+MORDOR_UNITTEST(HTTP, authHeaderAnyEmpty)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("GET / HTTP/1.1\r\n"
+               "Authorization: any-scheme\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.final());
+
+    AuthParams & auth = request.request.authorization;
+    MORDOR_TEST_ASSERT_EQUAL(auth.scheme, "any-scheme");
+    MORDOR_TEST_ASSERT_EQUAL(auth.param, "");
+    MORDOR_TEST_ASSERT_EQUAL(auth.parameters.size(), 0u);
+}
+
+MORDOR_UNITTEST(HTTP, authHeaderAnyParam)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("GET / HTTP/1.1\r\n"
+               "Authorization: any-scheme  any-:string\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.final());
+
+    AuthParams & auth = request.request.authorization;
+    MORDOR_TEST_ASSERT_EQUAL(auth.scheme, "any-scheme");
+    MORDOR_TEST_ASSERT_EQUAL(auth.param, "any-:string");
+    MORDOR_TEST_ASSERT_EQUAL(auth.parameters.size(), 0u);
+}
+
+MORDOR_UNITTEST(HTTP, authHeaderAnyParamList)
+{
+    Request request;
+    RequestParser parser(request);
+
+    parser.run("GET / HTTP/1.1\r\n"
+               "Authorization: any-scheme  "
+               "quotedParam=\"quotedValue\", "
+               "unquotedParam=unquotedValue,  "
+               "numParam=23456\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.final());
+
+    AuthParams & auth = request.request.authorization;
+    MORDOR_TEST_ASSERT_EQUAL(auth.scheme, "any-scheme");
+    MORDOR_TEST_ASSERT_EQUAL(auth.param, "");
+    MORDOR_TEST_ASSERT_EQUAL(auth.parameters.size(), 3u);
+
+    StringMap::iterator it;
+    it = auth.parameters.find("quotedParam");
+    MORDOR_TEST_ASSERT(it != auth.parameters.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "quotedValue");
+
+    it = auth.parameters.find("unquotedParam");
+    MORDOR_TEST_ASSERT(it != auth.parameters.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "unquotedValue");
+
+    it = auth.parameters.find("numParam");
+    MORDOR_TEST_ASSERT(it != auth.parameters.end());
+    MORDOR_TEST_ASSERT_EQUAL(it->second, "23456");
 }
 
 MORDOR_UNITTEST(HTTP, acceptEncodingHeader)
