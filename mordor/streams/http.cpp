@@ -15,6 +15,7 @@ namespace Mordor {
 HTTPStream::HTTPStream(const URI &uri, RequestBroker::ptr requestBroker,
     boost::function<bool (size_t)> delayDg)
 : FilterStream(Stream::ptr(), false),
+  m_hasResponse(false),
   m_requestBroker(requestBroker),
   m_pos(0),
   m_size(-1),
@@ -35,6 +36,7 @@ HTTPStream::HTTPStream(const Request &requestHeaders, RequestBroker::ptr request
     boost::function<bool (size_t)> delayDg)
 : FilterStream(Stream::ptr(), false),
   m_requestHeaders(requestHeaders),
+  m_hasResponse(false),
   m_requestBroker(requestBroker),
   m_pos(0),
   m_size(-1),
@@ -129,6 +131,7 @@ HTTPStream::start(size_t length)
             case OK:
             case PARTIAL_CONTENT:
                 m_response = response;
+                m_hasResponse = true;
                 if (response.entity.contentRange.instance != ~0ull)
                     m_size = (long long)response.entity.contentRange.instance;
                 else if (response.entity.contentLength != ~0ull)
@@ -204,6 +207,7 @@ HTTPStream::checkModified()
         case PARTIAL_CONTENT:
         case NOT_MODIFIED:
             m_response = response;
+            m_hasResponse = true;
             if (response.entity.contentRange.instance != ~0ull)
                 m_size = (long long)response.entity.contentRange.instance;
             else if (response.entity.contentLength != ~0ull)
@@ -239,6 +243,9 @@ HTTPStream::checkModified()
 const HTTP::Response &
 HTTPStream::response()
 {
+    if (m_hasResponse)
+        return m_response;
+    // NOTE: if m_writeInProgress == true, the write operation will be aborted
     stat();
     return m_response;
 }
@@ -452,6 +459,7 @@ HTTPStream::stat()
         switch (response.status.status) {
             case OK:
                 m_response = response;
+                m_hasResponse = true;
                 if (response.entity.contentLength != ~0ull)
                     m_size = (long long)response.entity.contentLength;
                 else
@@ -519,6 +527,8 @@ HTTPStream::close(CloseType type)
         switch (request->response().status.status) {
             case OK:
             case CREATED:
+                m_response = request->response();
+                m_hasResponse = true;
                 break;
             default:
                 MORDOR_THROW_EXCEPTION(InvalidResponseException(m_writeRequest));
@@ -544,6 +554,7 @@ HTTPStream::close(CloseType type)
             case CREATED:
             case 207: // Partial Update OK, from http://www.hpl.hp.com/personal/ange/archives/archives-97/http-wg-archive/2530.html
                 m_response = m_writeRequest->response();
+                m_hasResponse = true;
                 try {
                     m_writeRequest->finish();
                 } catch (...) {

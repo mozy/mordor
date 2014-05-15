@@ -289,6 +289,7 @@ private:
             MORDOR_TEST_ASSERT_EQUAL(contentRange, ContentRange());
             MORDOR_TEST_ASSERT_EQUAL(transferStream(request->requestStream(),
                 NullStream::get()), 1024 * 1024ull);
+            request->response().entity.extension["X-UT-ECHO-URI"] = requestUri.toString();
         } else if (requestUri == "/writeWriteAdvice") {
             MORDOR_TEST_ASSERT_LESS_THAN_OR_EQUAL(++sequence, 16);
             MORDOR_TEST_ASSERT(chunked);
@@ -334,6 +335,7 @@ private:
         } else if (requestUri == "/writeZeroLength") {
             MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);
             MORDOR_TEST_ASSERT_EQUAL(contentLength, 0ull);
+            request->response().entity.extension["X-UT-ECHO-URI"] = requestUri.toString();
         } else {
             MORDOR_NOTREACHED();
         }
@@ -367,6 +369,10 @@ MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, writeSizeAdvice)
     RandomStream random;
     transferStream(random, stream, 1024 * 1024);
     stream.close();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+
+    Response response = stream.response();
+    MORDOR_TEST_ASSERT_EQUAL(response.entity.extension["X-UT-ECHO-URI"], "/writeSizeAdvice");
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }
 
@@ -414,5 +420,9 @@ MORDOR_UNITTEST_FIXTURE(WriteAdviceFixture, HTTPStream, writeZeroLength)
     HTTPStream stream("http://localhost/writeZeroLength", requestBroker);
     stream.adviseSize(0);
     stream.close();
+    MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
+
+    Response response = stream.response();
+    MORDOR_TEST_ASSERT_EQUAL(response.entity.extension["X-UT-ECHO-URI"], "/writeZeroLength");
     MORDOR_TEST_ASSERT_EQUAL(sequence, 1);
 }

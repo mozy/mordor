@@ -41,6 +41,8 @@ public:
     /// This will abandon any current transfer in progress.  If it returns
     /// true, the transfer will have already begun at the current position
     bool checkModified();
+    /// @note In WRITE mode, HTTP response is not available until stream close.
+    /// It will cause write abortion if this interface is invoked before stream close
     const HTTP::Response &response();
 
     bool supportsRead() { return true; }
@@ -97,6 +99,7 @@ private:
 private:
     HTTP::Request m_requestHeaders;
     HTTP::Response m_response;
+    bool m_hasResponse;
     HTTP::RequestBroker::ptr m_requestBroker;
     HTTP::ETag m_eTag;
     long long m_pos, m_size, m_sizeAdvice;
