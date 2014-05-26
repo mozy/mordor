@@ -343,6 +343,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/util.cpp				\
 	mordor/tests/xml.cpp				\
 	mordor/tests/zlib.cpp				\
+	mordor/tests/unicode.cpp			\
 	mordor/tests/crypto.cpp
 
 mordor_tests_run_tests_CPPFLAGS=-I$(top_builddir) -include mordor/pch.h $(AM_CPPFLAGS)
