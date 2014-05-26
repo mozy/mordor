@@ -38,3 +38,15 @@ MORDOR_UNITTEST(Unicode, badUtf8Exception)
 }
 
 #endif
+
+#if defined(OSX)
+MORDOR_UNITTEST(Unicode, toUtf8OSX)
+{
+    // Two characters, each requiring 3 bytes for utf8 representation (see rm122624)
+    char chinese[] = {0xE4, 0xBD, 0xA0, 0xE5, 0xA5, 0xBD, 0};
+    CFStringRef cfStr = CFStringCreateWithCString(kCFAllocatorDefault, chinese, kCFStringEncodingUTF8);
+    std::string converted = toUtf8(cfStr);
+    MORDOR_TEST_ASSERT_EQUAL(converted, std::string(chinese));
+    CFRelease(cfStr);
+}
+#endif

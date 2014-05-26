@@ -618,7 +618,8 @@ toUtf8(CFStringRef string)
         return bytes;
     std::string result;
     CFIndex length = CFStringGetLength(string);
-    length = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8);
+    // Include extra byte for null termination
+    length = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8) + 1;
     result.resize(length);
     if (!CFStringGetCString(string, &result[0], length, kCFStringEncodingUTF8)) {
         MORDOR_NOTREACHED();
