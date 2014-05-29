@@ -1241,3 +1241,25 @@ MORDOR_UNITTEST(HTTP, preferredAcceptEncoding)
     MORDOR_TEST_ASSERT(encoding);
     MORDOR_TEST_ASSERT_EQUAL(encoding->value, "plaintext");
 }
+
+MORDOR_UNITTEST(HTTP, multipleHeadersSameName)
+{
+    Request request;
+    RequestParser parser(request);
+    std::ostringstream os;
+    parser.run("GET / HTTP/1.0\r\n"
+               "x-amz-user: john\r\n"
+               "X-AMZ-USER: bruce\r\n"
+               "X-Amz-User: tom\r\n"
+               "\r\n");
+    MORDOR_TEST_ASSERT(!parser.error());
+    MORDOR_TEST_ASSERT(parser.complete());
+
+    MORDOR_TEST_ASSERT_EQUAL(request.entity.extension["x-amz-user"], "john,bruce,tom");
+
+    os << request;
+    MORDOR_TEST_ASSERT_EQUAL(os.str(),
+        "GET / HTTP/1.0\r\n"
+        "x-amz-user: john,bruce,tom\r\n"
+        "\r\n");
+}

@@ -285,7 +285,7 @@ unquote(const std::string &str)
         if (it == m_entity->extension.end()) {
             m_entity->extension[m_genericHeaderName] = fieldValue;
         } else {
-            it->second.append(", ");
+            it->second.append(",");
             it->second.append(fieldValue);
         }
         mark2 = NULL;
