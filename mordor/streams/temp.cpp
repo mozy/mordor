@@ -7,7 +7,6 @@
 #include "mordor/log.h"
 
 namespace Mordor {
-
 static ConfigVar<std::string>::ptr g_tempDir = Config::lookup(
     "mordor.tempdir",
     std::string(""),
@@ -38,7 +37,6 @@ static bool EnsureFolderExist(const std::wstring & wtempdir)
         MORDOR_LOG_ERROR(g_log) << "Fail to create folder (" << wtempdir.c_str() << "), LastError:" << error;
         return false;
     }
-
 }
 #endif
 
@@ -94,7 +92,6 @@ TempStream::TempStream(const std::string &prefix, bool deleteOnClose,
             MORDOR_LOG_ERROR(g_log) << "GetTempFileNameW(" << wtempdir.c_str() << "," << prefixW.c_str() << ") fails with LastError:" << error;
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("GetTempFileNameW");
         }
-
     }
     tempfile.resize(wcslen(tempfile.c_str()));
     init(tempfile, FileStream::READWRITE,
@@ -102,10 +99,20 @@ TempStream::TempStream(const std::string &prefix, bool deleteOnClose,
             (deleteOnClose ? FileStream::DELETE_ON_CLOSE : 0)),
         ioManager, scheduler);
 #else
+    if (!absolutePath && tempdir.empty()) {
+        const char* tmpdirenv = getenv("TMPDIR");
+        if (tmpdirenv != NULL) {
+            tempdir = tmpdirenv;
+        }
+    }
+
     if (!absolutePath && tempdir.empty())
         tempdir = "/tmp/" + prefix + "XXXXXX";
-    else if (!absolutePath)
+    else if (!absolutePath) {
+        if (tempdir[tempdir.length()-1] != '/')
+            tempdir += "/";
         tempdir += prefix + "XXXXXX";
+    }
     else
         tempdir = prefix + "XXXXXX";
     int fd = mkstemp(&tempdir[0]);
@@ -120,5 +127,4 @@ TempStream::TempStream(const std::string &prefix, bool deleteOnClose,
     m_path = tempdir;
 #endif
 }
-
 }
