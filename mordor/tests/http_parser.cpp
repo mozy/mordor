@@ -1263,3 +1263,91 @@ MORDOR_UNITTEST(HTTP, multipleHeadersSameName)
         "x-amz-user: john,bruce,tom\r\n"
         "\r\n");
 }
+
+MORDOR_UNITTEST(HTTPDate, parseHttpDateOK)
+{
+    std::vector<std::string> tc;
+    tc.push_back("Fri, 25 Jun 2010 15:31:48 GMT");  // RFC1123
+    tc.push_back("Friday, 25-Jun-10 15:31:48 GMT"); // RFC850
+    tc.push_back("Fri Jun 25 15:31:48 2010");      // ANSI
+    using namespace boost::posix_time;
+    ptime p = from_time_t((time_t)1277479908);
+    for (std::vector<std::string>::iterator it = tc.begin();
+        it != tc.end(); ++it) {
+        ptime a = parseHttpDate(it->c_str(), it->size());
+        MORDOR_TEST_ASSERT_EQUAL(a, p);
+    }
+}
+
+MORDOR_UNITTEST(HTTPDate, parseHttpDateInvalid)
+{
+    std::vector<std::string> tc;
+    // invalid day
+    tc.push_back("Fri, 31 Jun 2010 15:31:48 GMT");
+    // invalid format (need a comma followed by week)
+    tc.push_back("Fri 25 Jun 2010 15:31:48 GMT");
+    // invalid format (need additional space before day 5)
+    tc.push_back("Fri Jun 5 15:31:48 2010");
+    // invalid month
+    tc.push_back("Fri, 25 Des 2010 15:31:48 GMT");
+    // invalid year, year should be 2-digit
+    tc.push_back("Friday, 25-Jun-2010 15:31:48 GMT");
+    // invalid week (should be long format)
+    tc.push_back("Fri, 25-Jun-10 15:31:48 GMT");
+    // empty string
+    tc.push_back("");
+    // truncate string
+    tc.push_back("25 Jun 2010");
+    tc.push_back("15:31:48");
+    for (std::vector<std::string>::iterator it = tc.begin(); it != tc.end(); ++it) {
+        boost::posix_time::ptime p1 = parseHttpDate(it->c_str(), it->size());
+        MORDOR_TEST_ASSERT(p1.is_not_a_date_time());
+    }
+}
+
+MORDOR_UNITTEST(HTTPDate, parseHttpDateKnownIssues)
+{
+    boost::posix_time::ptime p1, p;
+    p = boost::posix_time::from_time_t((time_t)1277479908);
+    std::string testStr;
+
+    // no GMT
+    // - acceptable by parseHttpDate()
+    testStr = "Fri, 25 Jun 2010 15:31:48";
+    p1 = parseHttpDate(testStr.c_str(), testStr.size());
+    MORDOR_TEST_ASSERT(!p1.is_not_a_date_time());
+    MORDOR_TEST_ASSERT_EQUAL(p1, p);
+
+    // wrong weekday in rfc 1123 format
+    // - weekday will be just ignored
+    testStr = "Thu, 25 Jun 2010 15:31:48 GMT";
+    p1 = parseHttpDate(testStr.c_str(), testStr.size());
+    MORDOR_TEST_ASSERT(!p1.is_not_a_date_time());
+    MORDOR_TEST_ASSERT_EQUAL(p1, p);
+
+    // invalid month (should be abbr. format)
+    // - Full month name is acceptable
+    testStr = "Fri, 25 June 2010 15:31:48 GMT";
+    p1 = parseHttpDate(testStr.c_str(), testStr.size());
+    MORDOR_TEST_ASSERT(!p1.is_not_a_date_time());
+    MORDOR_TEST_ASSERT_EQUAL(p1, p);
+
+    // invalid time, should be separated by ':'
+    // - acceptable by parseHttpDate()
+    testStr = "Fri, 25 June 2010 15?31?48 GMT";
+    p1 = parseHttpDate(testStr.c_str(), testStr.size());
+    MORDOR_TEST_ASSERT(!p1.is_not_a_date_time());
+    MORDOR_TEST_ASSERT_EQUAL(p1, p);
+
+    // unmatch date/weekday in ansi format
+    // - acceptable by parseHttpDate()
+    testStr = "Fri Jun  5 15:31:48 2010";
+    p1 = parseHttpDate(testStr.c_str(), testStr.size());
+    MORDOR_TEST_ASSERT(!p1.is_not_a_date_time());
+
+    // invalid format, no leading zero for day
+    // - acceptable by parseHttpDate()
+    testStr = "Fri Jun 05 15:31:48 2010";
+    p1 = parseHttpDate(testStr.c_str(), testStr.size());
+    MORDOR_TEST_ASSERT(!p1.is_not_a_date_time());
+}

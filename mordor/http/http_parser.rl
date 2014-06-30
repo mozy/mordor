@@ -33,6 +33,13 @@ static boost::posix_time::time_input_facet rfc850Facet_in("%A, %d-%b-%y %H:%M:%S
         1 /* starting refcount, so this never gets deleted */);
 static boost::posix_time::time_input_facet ansiFacet_in("%a %b %e %H:%M:%S %Y",
         1 /* starting refcount, so this never gets deleted */);
+// in case ansiFacet_in failed due to %e unsupported on some platform
+// we will use %d instead
+// However, %d needs leading zero, we might alter the input string
+// ansi format refer to: http://www.ietf.org/rfc/rfc2616.txt
+// boost facet flag refer to: http://www.boost.org/doc/libs/1_55_0/doc/html/date_time/date_time_io.html#date_time.format_flags
+static boost::posix_time::time_input_facet ansiFacet2_in("%a %b %d %H:%M:%S %Y",
+        1 /* starting refcount, so this never gets deleted */);
 
 boost::posix_time::ptime
 parseHttpDate(const char *str, size_t size)
@@ -52,6 +59,11 @@ parseHttpDate(const char *str, size_t size)
     ATTEMPT_WITH_FACET(&rfc1123Facet_in);
     ATTEMPT_WITH_FACET(&rfc850Facet_in);
     ATTEMPT_WITH_FACET(&ansiFacet_in);
+    // change SP to leading zero for %d to parse
+    if (size > 8 && val[8] == ' ') {
+        val[8] = '0';
+    }
+    ATTEMPT_WITH_FACET(&ansiFacet2_in);
     return result;
 }
 
