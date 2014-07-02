@@ -135,8 +135,12 @@ void XMLParser::onReference(const std::string &reference) {
     else if (reference == "&apos;")
         m_text.append("\'");
     else
-        // Real code should also look for character references like ~S&#38;~T
-        MORDOR_NOTREACHED();
+        // TODO: Real code should convert escaped characters of specific encodings to UTF-8.
+        // Preserve original text for now, and consider converting following escaped
+        // characters to UTF-8 later:
+        // 1. UTF-* encoding character, such as: &#x30C6
+        // 2. Code point number, such as: &#931
+        m_text.append(reference);
 }
 }
 }

@@ -278,6 +278,16 @@ MORDOR_UNITTEST(XMLParser, domParserUnmatchedEndTag)
         std::invalid_argument);
 }
 
+MORDOR_UNITTEST(XMLParser, domParserReferenceError)
+{
+    const std::string xmlstr =
+        "<Object>&#x394;&#x3BF;&#x3BA;&#x3B9;&#x3BC;&#x3AE;&#931;</Object>";
+    DOM::XMLParser parser;
+    DOM::Document::ptr doc = parser.loadDocument(xmlstr);
+    DOM::Node *obj = doc->getElementsByTagName("Object")[0];
+    MORDOR_TEST_ASSERT_EQUAL(obj->text(), "&#x394;&#x3BF;&#x3BA;&#x3B9;&#x3BC;&#x3AE;&#931;");
+}
+
 #if 0
 // Disabled until comment support fixed
 MORDOR_UNITTEST(XMLParser, parsecomment)
