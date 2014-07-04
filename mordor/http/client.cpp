@@ -37,6 +37,7 @@ ClientConnection::ClientConnection(Stream::ptr stream, TimerManager *timerManage
   m_allowNewRequests(true),
   m_priorRequestFailed(false),
   m_requestCount(0),
+  m_maxRequestCount(~0ull),
   m_priorResponseFailed(~0ull),
   m_priorResponseClosed(~0ull)
 {
@@ -84,7 +85,8 @@ ClientConnection::newRequestsAllowed()
 {
     boost::mutex::scoped_lock lock(m_mutex);
     return m_allowNewRequests && m_priorResponseClosed == ~0ull &&
-        !m_priorRequestFailed && m_priorResponseFailed == ~0ull;
+        !m_priorRequestFailed && m_priorResponseFailed == ~0ull &&
+        m_requestCount < m_maxRequestCount;
 }
 
 size_t

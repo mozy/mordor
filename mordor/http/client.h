@@ -168,6 +168,7 @@ public:
     void readTimeout(unsigned long long us);
     void writeTimeout(unsigned long long us);
     void idleTimeout(unsigned long long us, boost::function<void ()> dg);
+    void maxRequestCount(unsigned long long count) { m_maxRequestCount = count; }
 
 private:
     void scheduleNextRequest(ClientRequest *currentRequest);
@@ -187,7 +188,8 @@ private:
     std::set<ClientRequest *> m_waitingResponses;
     bool m_allowNewRequests;
     bool m_priorRequestFailed;
-    unsigned long long m_requestCount, m_priorResponseFailed, m_priorResponseClosed;
+    unsigned long long m_requestCount, m_maxRequestCount;
+    unsigned long long m_priorResponseFailed, m_priorResponseClosed;
     size_t m_connectionNumber;
 
     void invariant() const;

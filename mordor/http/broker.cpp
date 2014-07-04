@@ -51,6 +51,7 @@ createRequestBroker(const RequestBrokerOptions &options)
         connectionCache->proxyForURI(options.proxyForURIDg);
         connectionCache->proxyRequestBroker(options.proxyRequestBroker);
         connectionCache->connectionsPerHost(options.connectionsPerHost);
+        connectionCache->requestsPerConnection(options.requestsPerConnection);
         connectionBroker = boost::static_pointer_cast<ConnectionBroker>(connectionCache);
     }
     connectionBroker->httpReadTimeout(options.httpReadTimeout);
@@ -409,6 +410,7 @@ ConnectionCache::getConnectionViaProxy(const URI &uri, const URI &proxy,
             new ClientConnection(stream, m_timerManager)), proxied);
         MORDOR_LOG_TRACE(g_cacheLog) << this << " connection " << result.first
             << " to " << endpoint << " established";
+        result.first->maxRequestCount(m_requestsPerConnection);
         stream->onRemoteClose(boost::bind(&ConnectionCache::dropConnection,
             this, weak_ptr(shared_from_this()), endpoint, result.first.get()));
         if (m_httpReadTimeout != ~0ull)

@@ -163,6 +163,7 @@ protected:
     ConnectionCache(StreamBroker::ptr streamBroker, TimerManager *timerManager = NULL)
         : m_streamBroker(streamBroker),
           m_connectionsPerHost(1u),
+          m_requestsPerConnection((size_t)~0),
           m_closed(false)
     {
         m_timerManager = timerManager;
@@ -175,6 +176,7 @@ public:
     // Specify the maximum number of seperate connections to allow to a specific host (or proxy)
     // at a time
     void connectionsPerHost(size_t connections) { m_connectionsPerHost = connections; }
+    void requestsPerConnection(size_t requests) { m_requestsPerConnection = requests; }
 
     // Get number of active connections
     size_t getActiveConnections();
@@ -235,7 +237,7 @@ private:
 private:
     FiberMutex m_mutex;
     StreamBroker::ptr m_streamBroker;
-    size_t m_connectionsPerHost;
+    size_t m_connectionsPerHost, m_requestsPerConnection;
 
     CachedConnectionMap m_conns;
     bool m_closed;
@@ -484,6 +486,7 @@ struct RequestBrokerOptions
         httpWriteTimeout(~0ull),
         idleTimeout(~0ull),
         connectionsPerHost(1u),
+        requestsPerConnection((size_t)~0),
         sslCtx(NULL),
         verifySslCertificate(false),
         verifySslCertificateHost(true),
@@ -512,7 +515,7 @@ struct RequestBrokerOptions
     unsigned long long httpReadTimeout;
     unsigned long long httpWriteTimeout;
     unsigned long long idleTimeout;
-    size_t connectionsPerHost;
+    size_t connectionsPerHost, requestsPerConnection;
 
     // Callback to find proxy for an URI, see ConnectionCache::proxyForURI
     boost::function<std::vector<URI> (const URI &)> proxyForURIDg;

@@ -2725,6 +2725,96 @@ MORDOR_UNITTEST(HTTPConnectionCache, remoteClose)
     }
 }
 
+MORDOR_UNITTEST(HTTPConnectionCache, selectConnection)
+{
+    IOManager ioManager;
+    Request headers;
+    headers.requestLine.uri = "/";
+
+    StreamBroker::ptr broker(new DummyStreamBroker());
+    ConnectionCache::ptr cache = ConnectionCache::create(broker, &ioManager);
+    cache->connectionsPerHost(2); // 2 connections at most
+
+    ClientConnection::ptr conn1 = cache->getConnection("http://localhost/").first;
+    ClientConnection::ptr conn2 = cache->getConnection("http://localhost/").first;
+    MORDOR_TEST_ASSERT_NOT_EQUAL(conn1->stream().get(), conn2->stream().get());
+
+    // return one of the 2 cached connections
+    {
+        ClientConnection::ptr conn = cache->getConnection("http://localhost/").first;
+        MORDOR_TEST_ASSERT(conn->stream().get() == conn1->stream().get() ||
+                conn->stream().get() == conn2->stream().get());
+    }
+
+    // conn1 is handling 1 request, conn2 is handling 0 request, choose conn2
+    ClientRequest::ptr req11 = conn1->request(headers);
+    {
+        ClientConnection::ptr conn = cache->getConnection("http://localhost/").first;
+        MORDOR_TEST_ASSERT(conn->stream().get() == conn2->stream().get());
+        conn = cache->getConnection("http://localhost/").first;
+        MORDOR_TEST_ASSERT(conn->stream().get() == conn2->stream().get());
+    }
+    req11->doRequest();
+    req11->finish();
+
+    // conn1 is handling 0 request, conn2 is handling 1 request, choose conn1
+    ClientRequest::ptr req21 = conn2->request(headers);
+    {
+        ClientConnection::ptr conn = cache->getConnection("http://localhost/").first;
+        MORDOR_TEST_ASSERT(conn->stream().get() == conn1->stream().get());
+    }
+    req21->doRequest();
+    req21->finish();
+}
+
+MORDOR_UNITTEST(HTTPConnectionCache, maxRequestsOnConnection)
+{
+    IOManager ioManager;
+    Request headers;
+    headers.requestLine.method = GET;
+    headers.requestLine.uri = "/";
+    headers.entity.contentLength = 0;
+
+    StreamBroker::ptr broker(new DummyStreamBroker());
+    ConnectionCache::ptr cache = ConnectionCache::create(broker, &ioManager);
+    cache->connectionsPerHost(2); // 2 connections at most
+    cache->requestsPerConnection(2); // 2 requests at most
+
+    ClientConnection::ptr conn1 = cache->getConnection("http://localhost/").first;
+    ClientConnection::ptr conn2 = cache->getConnection("http://localhost/").first;
+    MORDOR_TEST_ASSERT_NOT_EQUAL(conn1->stream().get(), conn2->stream().get());
+
+    // conn1 is handling 0 request, conn2 is handling 1 request, choose conn1
+    ClientRequest::ptr req21 = conn2->request(headers);
+    {
+        ClientConnection::ptr conn = cache->getConnection("http://localhost/").first;
+        MORDOR_TEST_ASSERT(conn->stream().get() == conn1->stream().get());
+    }
+
+    // let conn1 handle 2 requests to reach its limit
+    ClientRequest::ptr req11 = conn1->request(headers);
+    req11->doRequest();
+    req11->finish();
+    ClientRequest::ptr req12 = conn1->request(headers);
+    req12->doRequest();
+    req12->finish();
+
+    // conn1 already handled 2 requests, can't reuse it any more
+    // new conn3 is then created to replace it
+    ClientConnection::ptr conn3 = cache->getConnection("http://localhost/").first;
+    MORDOR_TEST_ASSERT(conn3->stream().get() != conn1->stream().get() &&
+            conn3->stream().get() != conn2->stream().get());
+
+    // conn2 is still handling 1 request, conn3 is handling 0 request, choose conn3
+    {
+        ClientConnection::ptr conn = cache->getConnection("http://localhost/").first;
+        MORDOR_TEST_ASSERT(conn->stream().get() == conn3->stream().get());
+    }
+
+    req21->doRequest();
+    req21->finish();
+}
+
 MORDOR_UNITTEST(HTTPConnectionNoCache, getDifferentConnection)
 {
     IOManager ioManager;
