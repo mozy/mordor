@@ -381,7 +381,8 @@ noinst_PROGRAMS=			\
 	mordor/examples/iombench	\
 	mordor/examples/simpleappserver	\
 	mordor/examples/tunnel		\
-	mordor/examples/udpstats
+	mordor/examples/udpstats    \
+	mordor/examples/zipstreaming
 
 if HAVE_BOOST_PROGRAM_OPTIONS
 noinst_PROGRAMS += mordor/examples/wget
@@ -439,3 +440,11 @@ mordor_examples_wget_LDADD=mordor/libmordor.la $(BOOST_PROGRAM_OPTIONS_LIB)	\
 	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
 	$(SECURITY_FRAMEWORK_LIBS)		\
 	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+
+mordor_examples_zipstreaming_SOURCES=mordor/examples/zipstreaming.cpp
+mordor_examples_zipstreaming_LDADD=mordor/libmordor.la	\
+	$(CORESERVICES_FRAMEWORK_LIBS)		\
+	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
+	$(SECURITY_FRAMEWORK_LIBS)		\
+	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+
