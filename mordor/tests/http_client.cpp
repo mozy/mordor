@@ -2881,3 +2881,36 @@ MORDOR_UNITTEST(HTTPConnectionCache, pendingConnectionsFailTogether)
     pool.schedule(boost::bind(&expectPriorFail, cache));
     pool.dispatch();
 }
+
+MORDOR_UNITTEST(HTTPClient, multipartRequest)
+{
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.method = GET;
+    requestHeaders.entity.contentType.type = "multipart";
+    requestHeaders.entity.contentType.subtype = "form-data";
+    requestHeaders.entity.contentType.parameters["boundary"] = "boundary4ut";
+    requestHeaders.requestLine.uri = "http://localhost/mockrequest";
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    MORDOR_TEST_ASSERT_EQUAL(request.use_count(), 1);
+
+    Multipart::ptr m = request->requestMultipart();
+    MORDOR_TEST_ASSERT(m);
+    MORDOR_TEST_ASSERT_EQUAL(request.use_count(), 2);
+    BodyPart::ptr b = m->nextPart();
+    b->stream()->write("test", 4);
+    b->stream()->close();
+    m->finish();
+
+    // will fail if we have circular reference
+    MORDOR_TEST_ASSERT_EQUAL(request.use_count(), 1);
+}

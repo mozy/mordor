@@ -98,8 +98,10 @@ Multipart::nextPart()
         }
 
         if (m_finished) {
-            if (multipartFinished)
+            if (multipartFinished) {
                 multipartFinished();
+                multipartFinished = NULL;
+            }
             return m_currentPart;
         }
         m_currentPart.reset(new BodyPart(shared_from_this()));
@@ -115,8 +117,10 @@ Multipart::finish()
     std::string finalBoundary = m_boundary + "--\r\n";
     m_stream->write(finalBoundary.c_str(), finalBoundary.size());
     m_finished = true;
-    if (multipartFinished)
+    if (multipartFinished) {
         multipartFinished();
+        multipartFinished = NULL;
+    }
 }
 
 void
