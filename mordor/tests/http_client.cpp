@@ -241,7 +241,7 @@ static void validateMultipartStream(
     MORDOR_TEST_ASSERT(body.buffer() == data);
 }
 
-MORDOR_UNITTEST(HTTPClient, multipartResponseBody)
+MORDOR_UNITTEST(HTTPClient, multipartResponseBodyWithLeadingCRLF)
 {
     std::string boundary = Multipart::randomBoundary();
     MemoryStream::ptr requestStream(new MemoryStream());
@@ -293,6 +293,131 @@ MORDOR_UNITTEST(HTTPClient, multipartResponseBody)
 #ifndef NDEBUG
     MORDOR_TEST_ASSERT_ASSERTED(request->responseMultipart());
 #endif
+    request->finish();
+}
+
+MORDOR_UNITTEST(HTTPClient, multipartResponseBodyWithoutLeadingCRLF)
+{
+    std::string boundary = Multipart::randomBoundary();
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: multipart/bytesrange; boundary=\"" + boundary + "\"\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "--" + boundary + "\r\n"
+        "\r\n"
+        "This is the first part.\r\n"
+        "--" + boundary + "\r\n"
+        "\r\n"
+        "This is the second part.\r\n"
+        "--" + boundary + "--\r\n")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT(request->hasResponseBody());
+
+    Multipart::ptr response = request->responseMultipart();
+    BodyPart::ptr part = response->nextPart();
+    MORDOR_TEST_ASSERT(part);
+    Stream::ptr stream = part->stream();
+    validateMultipartStream(stream, "This is the first part.");
+
+    part = response->nextPart();
+    MORDOR_TEST_ASSERT(part);
+    stream = part->stream();
+    validateMultipartStream(stream, "This is the second part.");
+
+    part = response->nextPart();
+    MORDOR_TEST_ASSERT(!part);
+
+    request->finish();
+}
+
+MORDOR_UNITTEST(HTTPClient, multipartResponseBodyWithPreambleAndEpilogue)
+{
+    std::string boundary = Multipart::randomBoundary();
+    MemoryStream::ptr requestStream(new MemoryStream());
+    MemoryStream::ptr responseStream(new MemoryStream(Buffer(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: multipart/bytesrange; boundary=\"" + boundary + "\"\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "this is preamble that will be ignored\r\n"
+        "--" + boundary + "\r\n"
+        "Content-Encoding: x-syzygy\r\n"
+        "Content-Type: text/plain\r\n"
+        "Content-Length: 10\r\n"
+        "Content-MD5: mgNkuembtIDdJeHwKEyFVQ==\r\n"
+        "Expires: Thu, 01 Dec 1994 16:00:00 GMT\r\n"
+        "Cache-Control: no-cache\r\n"
+        "Content-Disposition: attathment; filename=1.txt\r\n"
+        "\r\n"
+        "This is the first part with entity header.\r\n"
+        "--" + boundary + "\r\n"
+        "Content-Type: multipart/bytesrange; boundary=123\r\n"
+        "\r\n"
+        "--123\r\n"
+        "This is the second part.\r\n"
+        "Which is also a multipart.\r\n"
+        "--123--\r\n"
+        "\r\n--" + boundary + "--\r\n"
+        "this is epilogue that also will be ignored")));
+    DuplexStream::ptr duplexStream(new DuplexStream(responseStream, requestStream));
+    ClientConnection::ptr conn(new ClientConnection(duplexStream));
+
+    Request requestHeaders;
+    requestHeaders.requestLine.uri = "/";
+    requestHeaders.general.connection.insert("close");
+
+    ClientRequest::ptr request = conn->request(requestHeaders);
+    request->doRequest();
+    MORDOR_TEST_ASSERT(requestStream->buffer() ==
+        "GET / HTTP/1.0\r\n"
+        "Connection: close\r\n"
+        "\r\n");
+    MORDOR_TEST_ASSERT_EQUAL(request->response().status.status, OK);
+    MORDOR_TEST_ASSERT(request->hasResponseBody());
+
+    Multipart::ptr response = request->responseMultipart();
+    BodyPart::ptr part = response->nextPart();
+    MORDOR_TEST_ASSERT(part);
+    MORDOR_TEST_ASSERT_EQUAL(part->headers().contentEncoding[0], "x-syzygy");
+    MORDOR_TEST_ASSERT_EQUAL(part->headers().contentType.type, "text");
+    MORDOR_TEST_ASSERT_EQUAL(part->headers().contentType.subtype, "plain");
+    MORDOR_TEST_ASSERT_EQUAL(part->headers().contentLength, 10u);
+    MORDOR_TEST_ASSERT_EQUAL(part->headers().contentMD5, "mgNkuembtIDdJeHwKEyFVQ==");
+    MORDOR_TEST_ASSERT(!part->headers().expires.is_not_a_date_time());
+    MORDOR_TEST_ASSERT_EQUAL(part->headers().extension["Cache-Control"],
+                             "no-cache");
+    MORDOR_TEST_ASSERT_EQUAL(part->headers().extension["Content-Disposition"],
+                             "attathment; filename=1.txt");
+    Stream::ptr stream = part->stream();
+    validateMultipartStream(stream, "This is the first part with entity header.");
+
+    part = response->nextPart();
+    MORDOR_TEST_ASSERT(part);
+    stream = part->stream();
+    validateMultipartStream(stream,
+        "--123\r\n"
+        "This is the second part.\r\n"
+        "Which is also a multipart.\r\n"
+        "--123--\r\n");
+
+    part = response->nextPart();
+    MORDOR_TEST_ASSERT(!part);
+
     request->finish();
 }
 

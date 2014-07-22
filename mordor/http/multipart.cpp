@@ -30,7 +30,8 @@ Multipart::randomBoundary()
 Multipart::Multipart(Stream::ptr stream, std::string boundary)
 : m_stream(stream),
   m_boundary(boundary),
-  m_finished(false)
+  m_finished(false),
+  m_firstPart(true)
 {
     MORDOR_ASSERT(m_stream);
     MORDOR_ASSERT(m_stream->supportsRead() || m_stream->supportsWrite());
@@ -46,7 +47,7 @@ Multipart::Multipart(Stream::ptr stream, std::string boundary)
             MORDOR_THROW_EXCEPTION(InvalidMultipartBoundaryException());
         }
     }
-    m_boundary = "\r\n--" + m_boundary;
+    m_boundary = "--" + m_boundary;
     if (m_stream->supportsRead()) {
         if (!m_stream->supportsFind())
             m_stream.reset(new BufferedStream(m_stream));
@@ -64,6 +65,10 @@ Multipart::nextPart()
         m_currentPart.reset(new BodyPart(shared_from_this()));
         std::string boundary = m_boundary + "\r\n";
         m_stream->write(boundary.c_str(), boundary.size());
+        if (m_firstPart) {
+            m_firstPart = false;
+            m_boundary = "\r\n" + m_boundary;
+        }
         return m_currentPart;
     } else {
         if (m_finished) {
@@ -80,6 +85,12 @@ Multipart::nextPart()
         Buffer b;
         MORDOR_VERIFY(m_stream->read(b, offsetToBoundary + m_boundary.size()) ==
                       offsetToBoundary + m_boundary.size());
+
+        if (m_firstPart) {
+            m_firstPart = false;
+            m_boundary = "\r\n" + m_boundary;
+        }
+
         b.clear();
         m_stream->read(b, 2);
         if (b == "--") {

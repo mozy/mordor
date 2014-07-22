@@ -1,7 +1,7 @@
 #ifndef __MORDOR_MULTIPART_H__
 #define __MORDOR_MULTIPART_H__
 // Copyright (c) 2009 - Mozy, Inc.
-
+// This implementation comply with http://www.rfc-editor.org/rfc/rfc2046.txt
 #include <string>
 
 #include <boost/enable_shared_from_this.hpp>
@@ -44,6 +44,7 @@ private:
     std::string m_boundary;
     boost::shared_ptr<BodyPart> m_currentPart;
     bool m_finished;
+    bool m_firstPart;
 };
 
 class BodyPart
