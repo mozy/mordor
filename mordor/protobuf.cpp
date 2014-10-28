@@ -18,6 +18,7 @@
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 
+#undef TYPE_BOOL // avoid collision from Mac OS X's ConditionalMacros.h
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/io/zero_copy_stream.h>
 #include <google/protobuf/message.h>

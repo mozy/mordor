@@ -158,6 +158,9 @@
     <ClCompile Include="string.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="tar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="streams\temp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

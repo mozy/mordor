@@ -693,6 +693,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\tar.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\streams\temp.cpp"
 				>
 			</File>

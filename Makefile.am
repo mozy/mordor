@@ -179,6 +179,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/streams/zlib.cpp			\
 	mordor/streams/crypto.cpp		\
 	mordor/string.cpp			\
+	mordor/tar.cpp 				\
 	mordor/thread.cpp			\
 	mordor/timer.cpp			\
 	mordor/uri.cpp				\
@@ -334,6 +335,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/statistics.cpp			\
 	mordor/tests/stream.cpp				\
 	mordor/tests/string.cpp				\
+	mordor/tests/tar.cpp	    		\
 	mordor/tests/temp_stream.cpp			\
 	mordor/tests/thread.cpp				\
 	mordor/tests/timeout_stream.cpp			\
