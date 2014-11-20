@@ -100,6 +100,7 @@ utf32char toUtf32(utf16char highSurrogate, utf16char lowSurrogate);
 std::string toUtf8(utf16char highSurrogate, utf16char lowSurrogate);
 bool isHighSurrogate(utf16char character);
 bool isLowSurrogate(utf16char character);
+bool validateUtf8(const std::string &str);
 
 struct caseinsensitiveless
 {

@@ -765,6 +765,78 @@ bool isLowSurrogate(utf16char character)
     return character >= 0xdc00 && character <= 0xdfff;
 }
 
+// following content is nearly copied from glib completely.
+// get more info, please refer to https://git.gnome.org/browse/glib/tree/glib/gutf8.c,
+// as well as http://en.wikipedia.org/wiki/UTF-8
+typedef unsigned char guchar;
+
+bool
+validateUtf8(const std::string &str)
+{
+    unsigned int val = 0;
+    unsigned int min = 0;
+    const char *begin = str.data();
+    const size_t len = str.size();
+
+#define CONTINUATION_CHAR                           \
+    do {                                     \
+        if ((*(guchar *)p & 0xc0) != 0x80) /* 10xxxxxx */ \
+        return (false);                   \
+        val <<= 6;                                        \
+        val |= (*(guchar *)p) & 0x3f;                     \
+    } while(0)
+
+#define CONTINUATION_CHARS(Count) \
+    for(int i = 0; i < Count; i++) {\
+        pos++; \
+        if (pos >= len) \
+        return false; \
+        p++; \
+        CONTINUATION_CHAR; \
+    }
+
+    size_t pos = 0;
+    for (const char *p = begin; pos < len; pos++, p = begin + pos) {
+        if (*(guchar *)p < 128)
+          /* done */;
+        else {
+            if ((*(guchar *)p & 0xe0) == 0xc0) /* 110xxxxx */ {
+                if ((*(guchar *)p & 0x1e) == 0)
+                  return false;
+                pos++;
+                if (pos >= len)
+                  return false;
+                p++;
+                if ((*(guchar *)p & 0xc0) != 0x80) /* 10xxxxxx */
+                  return false;
+            } else {
+                if ((*(guchar *)p & 0xf0) == 0xe0) /* 1110xxxx */ {
+                    min = (1 << 11);
+                    val = *(guchar *)p & 0x0f;
+                    CONTINUATION_CHARS(2);
+                } else if ((*(guchar *)p & 0xf8) == 0xf0) /* 11110xxx */ {
+                    min = (1 << 16);
+                    val = *(guchar *)p & 0x07;
+                    CONTINUATION_CHARS(3);
+                } else if ((*(guchar *)p & 0xfc) == 0xf8) /* 111110xx */ {
+                    min = (1 << 21);
+                    val = *(guchar *)p & 0x03;
+                    CONTINUATION_CHARS(4);
+                } else if ((*(guchar *)p & 0xfe) == 0xfc) /* 1111110x */ {
+                    min = (1 << 26);
+                    val = *(guchar *)p & 0x01;
+                    CONTINUATION_CHARS(5);
+                } else
+                  return false;
+
+                if (val < min)
+                  return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool
 caseinsensitiveless::operator ()(const std::string &lhs, const std::string &rhs) const
 {
