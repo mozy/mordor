@@ -4,15 +4,18 @@
 
 #include "stream.h"
 
-// a stream to generate random data
-// uses CryptGenRandom() on WINDOWS; OpenSSL RAND_bytes elsewhere (seeded automatically by /dev/urandom)
-
 #ifdef WINDOWS
 #include <wincrypt.h>
 #endif
 
 namespace Mordor {
 
+/// a stream to generate random data
+/// uses CryptGenRandom() on WINDOWS; OpenSSL RAND_bytes elsewhere (seeded automatically by /dev/urandom)
+/// @note RandomStream is not guaranteed to be thread safety.
+///   On Windows platform, the thread safety depends on the cryptographic service provider implementation
+///   On Linux/MacOS platform, it depends on openssl thread safety. By default it isn't, use OpensslLockManager
+///   to ensure the thread safety.
 class RandomStream : public Stream
 {
 public:
