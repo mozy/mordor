@@ -18,7 +18,7 @@ namespace HTTP {
 
 static Logger::ptr g_log = Log::lookup("mordor:http:server");
 
-ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg)
+ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (ServerRequest::ptr)> dg, const std::string &id)
 : Connection(stream),
   m_dg(dg),
   m_requestCount(0),
@@ -27,6 +27,9 @@ ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (Ser
   m_priorResponseClosed(~0ull)
 {
     MORDOR_ASSERT(m_dg);
+    std::ostringstream os;
+    os << id << std::hex << (unsigned long long) this;
+    m_context = os.str();
 }
 
 void
@@ -63,8 +66,7 @@ ServerConnection::scheduleNextRequest(ServerRequest *request)
         m_priorResponseClosed == ~0ull)) {
         ServerRequest::ptr nextRequest(new ServerRequest(shared_from_this()));
         m_pendingRequests.push_back(nextRequest.get());
-        MORDOR_LOG_TRACE(g_log) << this << "-" << nextRequest->m_requestNumber
-            << " scheduling request";
+        MORDOR_LOG_TRACE(g_log) << nextRequest->context() << " scheduling request";
         Scheduler::getThis()->schedule(boost::bind(&ServerRequest::doRequest,
             nextRequest));
     }
@@ -82,8 +84,7 @@ ServerConnection::requestComplete(ServerRequest *request)
         MORDOR_ASSERT(request == m_pendingRequests.back());
         MORDOR_ASSERT(request->m_requestState == ServerRequest::HEADERS ||
             request->m_requestState == ServerRequest::BODY);
-        MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
-            << " request complete";
+        MORDOR_LOG_TRACE(g_log) << request->context() << " request complete";
         request->m_requestState = ServerRequest::COMPLETE;
         close = request->m_willClose;
         if (request->m_responseState >= ServerRequest::COMPLETE) {
@@ -97,7 +98,7 @@ ServerConnection::requestComplete(ServerRequest *request)
                 scheduleNextRequest(request);
         } else {
             m_priorRequestClosed = request->m_requestNumber;
-            MORDOR_LOG_TRACE(g_log) << this << " closing";
+            MORDOR_LOG_TRACE(g_log) << m_context << " closing";
         }
     }
     if (close && m_stream->supportsHalfClose())
@@ -108,18 +109,18 @@ void
 ServerConnection::responseComplete(ServerRequest *request)
 {
     if (request->m_willClose) {
-        MORDOR_LOG_TRACE(g_log) << this << " closing";
+        MORDOR_LOG_TRACE(g_log) << m_context << " closing";
         try {
             m_stream->close();
         } catch (...) {
-            MORDOR_LOG_DEBUG(g_log) << this << " " << request->context()
+            MORDOR_LOG_DEBUG(g_log) << request->context()
                 << " Unexpected exception: "
                 << boost::current_exception_diagnostic_information();
             request->cancel();
             throw;
         }
     } else {
-        MORDOR_LOG_TRACE(g_log) << this << " flushing";
+        MORDOR_LOG_TRACE(g_log) << m_context << " flushing";
         m_stream->flush();
     }
     {
@@ -128,8 +129,7 @@ ServerConnection::responseComplete(ServerRequest *request)
         MORDOR_ASSERT(request->m_responseState == ServerRequest::HEADERS ||
             ServerRequest::BODY);
         MORDOR_ASSERT(!m_pendingRequests.empty());
-        MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
-            << " response complete";
+        MORDOR_LOG_TRACE(g_log) << request->context() << " response complete";
         std::list<ServerRequest *>::iterator it = m_pendingRequests.begin();
         MORDOR_ASSERT(request == *it);
         ++it;
@@ -144,8 +144,7 @@ ServerConnection::responseComplete(ServerRequest *request)
                 request = *it;
                 request->m_responseState = ServerRequest::HEADERS;
                 m_waitingResponses.erase(waitIt);
-                MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
-                    << " scheduling response";
+                MORDOR_LOG_TRACE(g_log) << request->context() << " scheduling response";
                 request->m_scheduler->schedule(request->m_fiber);
                 return;
             }
@@ -173,8 +172,7 @@ ServerConnection::responseComplete(ServerRequest *request)
         if (waitIt != m_waitingResponses.end()) {
             m_waitingResponses.erase(waitIt);
             request->m_responseState = ServerRequest::HEADERS;
-            MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
-                << " scheduling response";
+            MORDOR_LOG_TRACE(g_log) << request->context() << " scheduling response";
             request->m_scheduler->schedule(request->m_fiber);
             return;
         }
@@ -186,7 +184,7 @@ ServerConnection::scheduleAllWaitingResponses()
 {
     MORDOR_ASSERT(m_priorRequestFailed != ~0ull || m_priorResponseClosed != ~0ull);
     // MORDOR_ASSERT(m_mutex.locked());
-    MORDOR_LOG_TRACE(g_log) << this << " scheduling all responses";
+    MORDOR_LOG_TRACE(g_log) << m_context << " scheduling all responses";
 
     unsigned long long firstFailedRequest = (std::min)(m_priorRequestFailed,
         m_priorResponseClosed);
@@ -198,8 +196,7 @@ ServerConnection::scheduleAllWaitingResponses()
             continue;
         std::set<ServerRequest *>::iterator waiting = m_waitingResponses.find(request);
         if (waiting != m_waitingResponses.end()) {
-            MORDOR_LOG_TRACE(g_log) << this << "-" << request->m_requestNumber
-                << " scheduling response";
+            MORDOR_LOG_TRACE(g_log) << request->context() << " scheduling response";
             request->m_scheduler->schedule(request->m_fiber);
             it = m_pendingRequests.erase(it);
             --it;
@@ -242,7 +239,7 @@ void
 ServerConnection::cancel()
 {
     boost::recursive_mutex::scoped_lock lock(m_mutex);
-    MORDOR_LOG_VERBOSE(g_log) << this << " server connection cancelled";
+    MORDOR_LOG_VERBOSE(g_log) << m_context << " server connection cancelled";
     m_stream->cancelRead();
     m_stream->cancelWrite();
 }
@@ -259,7 +256,7 @@ ServerRequest::ServerRequest(ServerConnection::ptr conn)
   m_startTime(0)
 {
     std::ostringstream os;
-    os << m_conn << "-" << m_requestNumber;
+    os << m_conn->context() << "-" << m_requestNumber;
     m_context = os.str();
 }
 
@@ -392,7 +389,7 @@ ServerRequest::cancel()
     if (m_requestState >= COMPLETE && m_responseState >= COMPLETE)
         return;
     boost::recursive_mutex::scoped_lock lock(m_conn->m_mutex);
-    MORDOR_LOG_INFO(g_log) << " " << m_context
+    MORDOR_LOG_INFO(g_log) << m_context
         << " aborting with requestState: " << m_requestState
         << " responseState: " << m_responseState
         << " priorRequestFailed: " << m_conn->m_priorRequestFailed;
@@ -418,17 +415,17 @@ ServerRequest::finish()
 {
     if (m_responseState < COMPLETE) {
         if (hasResponseBody())
-            MORDOR_LOG_WARNING(g_log) << " " << m_context
+            MORDOR_LOG_WARNING(g_log) << m_context
                 << " incomplete response";
         if (committed() && hasResponseBody()) {
-            MORDOR_LOG_INFO(g_log) << " " << m_context
+            MORDOR_LOG_INFO(g_log) << m_context
                 << " committed and hasResponseBody, cancel...";
             cancel();
             return;
         }
         commit();
         if (hasResponseBody()) {
-            MORDOR_LOG_INFO(g_log) << " " << m_context
+            MORDOR_LOG_INFO(g_log) << m_context
                 << " commit and hasResponseBody, cancel...";
             cancel();
             return;
@@ -450,12 +447,12 @@ ServerRequest::doRequest()
             m_startTime = TimerManager::now();
             if (consumed == 0 && !parser.error() && !parser.complete()) {
                 // EOF
-                MORDOR_LOG_TRACE(g_log) << m_conn << " No more request";
+                MORDOR_LOG_TRACE(g_log) << m_conn->context() << " No more request";
                 cancel();
                 return;
             }
             if (parser.error() || !parser.complete()) {
-                MORDOR_LOG_WARNING(g_log) << " " << m_context
+                MORDOR_LOG_WARNING(g_log) << m_context
                     << " parser error: " << parser.error()
                     << " parser complete: " << parser.complete();
                 m_requestState = ERROR;
@@ -464,17 +461,17 @@ ServerRequest::doRequest()
                 return;
             }
         } catch (SocketException &) {
-            MORDOR_LOG_WARNING(g_log) << " " << m_context
+            MORDOR_LOG_WARNING(g_log) << m_context
                 << " Unexpected SocketException";
             cancel();
             return;
         } catch (BrokenPipeException &) {
-            MORDOR_LOG_WARNING(g_log) << " " << m_context
+            MORDOR_LOG_WARNING(g_log) << m_context
                 << " Unexpected BrokenPipeException";
             cancel();
             return;
         } catch (UnexpectedEofException &) {
-            MORDOR_LOG_WARNING(g_log) << " " << m_context
+            MORDOR_LOG_WARNING(g_log) << m_context
                 << " Unexpected BrokenPipeException";
             cancel();
             return;

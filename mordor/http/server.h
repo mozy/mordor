@@ -151,8 +151,11 @@ public:
 private:
     friend class ServerRequest;
 public:
+    /// @param id   the unique id that helps to identify the ServerConnection,
+    ///           useful for trouble shoot
     ServerConnection(boost::shared_ptr<Stream> stream,
-        boost::function<void (ServerRequest::ptr)> dg);
+        boost::function<void (ServerRequest::ptr)> dg,
+        const std::string &idi = std::string());
 
     /// Does not block; simply schedules a new fiber to read the first request
     void processRequests();
@@ -176,6 +179,12 @@ private:
         m_priorRequestClosed, m_priorResponseClosed;
 
     void invariant() const;
+
+private:
+    const std::string & context() const { return m_context; }
+
+private:
+    std::string m_context;
 };
 
 // Helper functions
