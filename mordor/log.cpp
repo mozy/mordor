@@ -57,6 +57,9 @@ static ConfigVar<std::string>::ptr g_logSyslogFacility =
     Config::lookup("log.syslogfacility", std::string(), "Log to syslog using facility");
 #endif
 
+static ConfigVar<bool>::ptr g_logLocalTime =
+    Config::lookup<bool>("log.localtime", false, "Use local time instead of UTC");
+
 static FiberLocalStorage<bool> f_logDisabled;
 
 static unsigned long long g_start;
@@ -467,6 +470,9 @@ Logger::log(Log::Level level, const std::string &str,
     LogDisabler disable;
     unsigned long long elapsed = TimerManager::now() - g_start;
     boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
+    if (g_logLocalTime->val()) {
+        now = boost::posix_time::microsec_clock::local_time();
+    }
     Logger::ptr _this = shared_from_this();
     tid_t thread = gettid();
     void *fiber = Fiber::getThis().get();
