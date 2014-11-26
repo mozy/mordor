@@ -19,14 +19,14 @@ void parseFromBuffer(google::protobuf::Message &proto,
 
 // reflection utils
 void serializeToJsonObject(const google::protobuf::Message &proto,
-    Mordor::JSON::Object &object, bool validate=false);
+    Mordor::JSON::Object &object, bool validate=false, bool includeNull=false);
 
 void parseFromJsonObject(google::protobuf::Message *proto,
     const Mordor::JSON::Object &object, bool validate=false);
 
 google::protobuf::Message* forName(const std::string& typeName);
 
-std::string toJson(const google::protobuf::Message &proto, bool validate=false);
+std::string toJson(const google::protobuf::Message &proto, bool validate=false, bool includeNull=false);
 
 google::protobuf::Message * fromJson(const Mordor::Buffer &buffer,
     bool validate=false);

@@ -4,6 +4,7 @@
 
 #include "mordor/assert.h"
 #include "mordor/streams/buffer.h"
+#include "mordor/string.h"
 
 #ifdef MSVC
 // Disable some warnings, but only while
@@ -175,7 +176,7 @@ void setFieldValue(Message *message, const FieldDescriptor *descriptor, const Va
 
     const Reflection* reflection = message->GetReflection();
 
-#define SET_FIELD(setter, type, proto_type)\
+#define SET_FIELD(setter, type, proto_type, converter)\
     /*BOOST_STATIC_ASSERT(\
         (#setter == "Int32" && #type == "long long") ||\
         (#setter == "UInt32" && #type == "long long") ||\
@@ -186,15 +187,15 @@ void setFieldValue(Message *message, const FieldDescriptor *descriptor, const Va
         (#setter == "Bool" && #type == "bool") ||\
         (#setter == "String" && #type == "std::string"));*/\
     if (descriptor->label() != FieldDescriptor::LABEL_REPEATED) {\
-        type value = boost::get<type>(fieldValue);\
+        type value = converter(boost::get<type>(fieldValue));\
         reflection->Set##setter(message, descriptor, (proto_type)value);\
     } else if (index >= 0) {\
-        type value = boost::get<type>(fieldValue);\
+        type value = converter(boost::get<type>(fieldValue));\
         reflection->SetRepeated##setter(message, descriptor, index, (proto_type)value);\
     } else {\
         const Array &array = boost::get<Array>(fieldValue);\
         BOOST_FOREACH(Value v, array) {\
-            type value = boost::get<type>(v);\
+            type value = converter(boost::get<type>(v));\
             reflection->Add##setter(message, descriptor, (proto_type)value);\
         }\
     }
@@ -203,39 +204,50 @@ void setFieldValue(Message *message, const FieldDescriptor *descriptor, const Va
     try {
         switch (descriptor->cpp_type()) {
             case FieldDescriptor::CPPTYPE_INT32:
-                SET_FIELD(Int32, long long, int32_t)
+                SET_FIELD(Int32, long long, int32_t, )
                 break;
             case FieldDescriptor::CPPTYPE_INT64:
-                SET_FIELD(Int64, long long, int64_t)
+                SET_FIELD(Int64, long long, int64_t, )
                 break;
             case FieldDescriptor::CPPTYPE_UINT32:
-                SET_FIELD(UInt32, long long, uint32_t)
+                SET_FIELD(UInt32, long long, uint32_t, )
                 break;
             case FieldDescriptor::CPPTYPE_UINT64:
-                SET_FIELD(UInt64, long long, uint64_t)
+                SET_FIELD(UInt64, long long, uint64_t, )
                 break;
             case FieldDescriptor::CPPTYPE_FLOAT:
-                SET_FIELD(Float, double, float)
+                SET_FIELD(Float, double, float, )
                 break;
             case FieldDescriptor::CPPTYPE_DOUBLE:
-                SET_FIELD(Double, double, double)
+                SET_FIELD(Double, double, double, )
                 break;
             case FieldDescriptor::CPPTYPE_BOOL:
-                SET_FIELD(Bool, bool, bool)
+                SET_FIELD(Bool, bool, bool, )
                 break;
             case FieldDescriptor::CPPTYPE_STRING:
-                SET_FIELD(String, std::string, std::string)
+                // convert hexstring bytes to data
+                if (descriptor->type() == FieldDescriptor::TYPE_BYTES) {
+                    SET_FIELD(String, std::string, std::string, dataFromHexstring)
+                } else {
+                    SET_FIELD(String, std::string, std::string, )
+                }
                 break;
             case FieldDescriptor::CPPTYPE_ENUM:
                 if (descriptor->label() != FieldDescriptor::LABEL_REPEATED) {
                     std::string value = boost::get<std::string>(fieldValue);
-                    const EnumValueDescriptor * val = message->GetDescriptor()->FindEnumValueByName(value);
+                    const EnumValueDescriptor * val = descriptor->enum_type()->FindValueByName(value);
+                    if (!val) {
+                        throw std::runtime_error("invalid enum " + value);
+                    }
                     reflection->SetEnum(message, descriptor, val);
                 } else {
                     const Array &array = boost::get<Array>(fieldValue);
                     BOOST_FOREACH(Value v, array) {
                         std::string value = boost::get<std::string>(v);
-                        const EnumValueDescriptor * val = message->GetDescriptor()->FindEnumValueByName(value);
+                        const EnumValueDescriptor * val = descriptor->enum_type()->FindValueByName(value);
+                        if (!val) {
+                            throw std::runtime_error("invalid enum " + value);
+                        }
                         reflection->AddEnum(message, descriptor, val);
                     }
                 }
@@ -254,23 +266,23 @@ Value getFieldValue(const Message &message, const FieldDescriptor *descriptor, i
 {
     const Reflection *reflection = message.GetReflection();
 
-#define GET_FIELD(getter_type, type)\
+#define GET_FIELD(getter_type, type, converter)\
     if (descriptor->label() != FieldDescriptor::LABEL_REPEATED) {\
         if (reflection->HasField(message, descriptor)) {\
             type value = reflection->Get##getter_type(message, descriptor);\
-            return value;\
+            return converter(value);\
         } else {\
             return boost::blank();\
         }\
     } else if (index >= 0) {\
         type value = reflection->GetRepeated##getter_type(message, descriptor, index);\
-        return value;\
+        return converter(value);\
     } else {\
         Array array;\
         int field_size = reflection->FieldSize(message, descriptor);\
         for (int i = 0; i < field_size; i++) {\
             type value = reflection->GetRepeated##getter_type(message, descriptor, i);\
-            array.push_back(value);\
+            array.push_back(converter(value));\
         }\
         return array;\
     }
@@ -278,21 +290,26 @@ Value getFieldValue(const Message &message, const FieldDescriptor *descriptor, i
     try {
         switch (descriptor->cpp_type()) {
             case FieldDescriptor::CPPTYPE_INT32:
-                GET_FIELD(Int32, long long)
+                GET_FIELD(Int32, long long, )
             case FieldDescriptor::CPPTYPE_INT64:
-                GET_FIELD(Int64, long long)
+                GET_FIELD(Int64, long long, )
             case FieldDescriptor::CPPTYPE_UINT32:
-                GET_FIELD(UInt32, long long)
+                GET_FIELD(UInt32, long long, )
             case FieldDescriptor::CPPTYPE_UINT64:
-                GET_FIELD(UInt64, long long)
+                GET_FIELD(UInt64, long long, )
             case FieldDescriptor::CPPTYPE_FLOAT:
-                GET_FIELD(Float, double)
+                GET_FIELD(Float, double, )
             case FieldDescriptor::CPPTYPE_DOUBLE:
-                GET_FIELD(Double, double)
+                GET_FIELD(Double, double, )
             case FieldDescriptor::CPPTYPE_BOOL:
-                GET_FIELD(Bool, bool)
+                GET_FIELD(Bool, bool, )
             case FieldDescriptor::CPPTYPE_STRING:
-                GET_FIELD(String, std::string)
+                if (descriptor->type() == FieldDescriptor::TYPE_BYTES) {
+                    // convert to hexstring
+                    GET_FIELD(String, std::string, hexstringFromData);
+                } else {
+                    GET_FIELD(String, std::string, )
+                }
             case FieldDescriptor::CPPTYPE_ENUM:
                 if (descriptor->label() != FieldDescriptor::LABEL_REPEATED) {\
                     if (reflection->HasField(message, descriptor)) {
@@ -369,7 +386,7 @@ const FieldDescriptor *getFieldDescription(Message *msg, const std::string &fiel
 } // end of anonymous ns
 
 
-void serializeToJsonObject(const Message &message, Object &object, bool validate)
+void serializeToJsonObject(const Message &message, Object &object, bool validate, bool includeNull)
 {
 
     const Reflection* reflection = message.GetReflection();
@@ -383,7 +400,7 @@ void serializeToJsonObject(const Message &message, Object &object, bool validate
                 if (reflection->HasField(message, descriptor)) {
                     const Message &subMessage = reflection->GetMessage(message, descriptor,
                             MessageFactory::generated_factory());
-                    serializeToJsonObject(subMessage, msgObj, validate);
+                    serializeToJsonObject(subMessage, msgObj, validate, includeNull);
                 }
                 else if (validate && descriptor->is_required()) {
                     throw std::runtime_error(message.GetDescriptor()->name() + "." + descriptor->name() + " is required");
@@ -395,7 +412,7 @@ void serializeToJsonObject(const Message &message, Object &object, bool validate
                 for (int i = 0; i < field_size; i++) {
                     Object msgObj;
                     const Message &subMessage = reflection->GetRepeatedMessage(message, descriptor, i);
-                    serializeToJsonObject(subMessage, msgObj, validate);
+                    serializeToJsonObject(subMessage, msgObj, validate, includeNull);
                     array.push_back(msgObj);
                 }
                 object[fieldName] = array;
@@ -405,7 +422,9 @@ void serializeToJsonObject(const Message &message, Object &object, bool validate
 
         // other value types
         Value value = getFieldValue(message, descriptor);
-        object[fieldName] = value;
+        if (includeNull || !value.isBlank()) {
+            object[fieldName] = value;
+        }
     }
 }
 
@@ -465,11 +484,11 @@ Message* forName(const std::string& typeName)
     return message;
 }
 
-std::string toJson(const Message &message, bool validate)
+std::string toJson(const Message &message, bool validate, bool includeNull)
 {
     Object root, msgObj;
 
-    serializeToJsonObject(message, msgObj, validate);
+    serializeToJsonObject(message, msgObj, validate, includeNull);
     root[message.GetDescriptor()->full_name()] = msgObj;
 
     std::ostringstream os;
