@@ -145,7 +145,7 @@ PreparedStatement::bind(size_t param, double value)
 static const boost::posix_time::ptime postgres_epoch(boost::gregorian::date(2000, 1, 1));
 
 void
-PreparedStatement::bind(size_t param, const boost::posix_time::ptime &value)
+PreparedStatement::bind(size_t param, const boost::posix_time::ptime &value, bool timezone)
 {
     if (value.is_not_a_date_time()) {
         bind(param, Null());
@@ -158,7 +158,7 @@ PreparedStatement::bind(size_t param, const boost::posix_time::ptime &value)
     m_params[param - 1] = m_paramValues[param - 1].c_str();
     m_paramLengths[param - 1] = m_paramValues[param - 1].size();
     m_paramFormats[param - 1] = 1;
-    setType(param, TIMESTAMPOID);
+    setType(param, timezone ? TIMESTAMPTZOID : TIMESTAMPOID);
 }
 
 void

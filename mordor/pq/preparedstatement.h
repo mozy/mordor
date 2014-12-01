@@ -58,7 +58,7 @@ public:
     void bind(size_t param, long long value);
     void bind(size_t param, float value);
     void bind(size_t param, double value);
-    void bind(size_t param, const boost::posix_time::ptime &value);
+    void bind(size_t param, const boost::posix_time::ptime &value, bool timezone = false);
     void bindUntyped(size_t param, const std::string &value);
 
     Result execute();
