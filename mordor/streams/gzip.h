@@ -9,12 +9,12 @@ namespace Mordor {
 class GzipStream : public ZlibStream
 {
 public:
-    GzipStream(Stream::ptr parent, int level, int windowBits, int memlevel, Strategy strategy, bool own = true)
-        : ZlibStream(parent, own, GZIP, level, windowBits, memlevel, strategy)
+    GzipStream(Stream::ptr parent, int level, int windowBits, int memlevel, Strategy strategy, bool own = true, bool invert = false)
+        : ZlibStream(parent, own, GZIP, level, windowBits, memlevel, strategy, invert)
     {}
 
-    GzipStream(Stream::ptr parent, bool own = true)
-        : ZlibStream(parent, own, GZIP)
+    GzipStream(Stream::ptr parent, bool own = true, bool invert = false)
+        : ZlibStream(parent, own, GZIP, Z_DEFAULT_COMPRESSION, 15, 8, DEFAULT, invert)
     {}
 };
 

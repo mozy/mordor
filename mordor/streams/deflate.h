@@ -9,12 +9,12 @@ namespace Mordor {
 class DeflateStream : public ZlibStream
 {
 public:
-    DeflateStream(Stream::ptr parent, int level, int windowBits, int memlevel, Strategy strategy, bool own = true)
-        : ZlibStream(parent, own, DEFLATE, level, windowBits, memlevel, strategy)
+    DeflateStream(Stream::ptr parent, int level, int windowBits, int memlevel, Strategy strategy, bool own = true, bool invert = false)
+        : ZlibStream(parent, own, DEFLATE, level, windowBits, memlevel, strategy, invert)
     {}
 
-    DeflateStream(Stream::ptr parent, bool own = true)
-        : ZlibStream(parent, own, DEFLATE)
+    DeflateStream(Stream::ptr parent, bool own = true, bool invert = false)
+        : ZlibStream(parent, own, DEFLATE, Z_DEFAULT_COMPRESSION, 15, 8, DEFAULT, invert)
     {}
 };
 

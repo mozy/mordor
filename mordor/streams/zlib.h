@@ -55,18 +55,19 @@ protected:
         DEFLATE,
         GZIP
     };
-
+    // Inverse means compress on read, decompress on write;
+    // Non-inverse means decompress on read, compress on write, the default way.
     ZlibStream(Stream::ptr parent, bool own, Type type, int level = Z_DEFAULT_COMPRESSION,
-        int windowBits = 15, int memlevel = 8, Strategy strategy = DEFAULT);
+        int windowBits = 15, int memlevel = 8, Strategy strategy = DEFAULT, bool invert = false);
 
 private:
     void init(Type type, int level = Z_DEFAULT_COMPRESSION, int windowBits = 15,
-        int memlevel = 8, Strategy strategy = DEFAULT);
+        int memlevel = 8, Strategy strategy = DEFAULT, bool invert = false);
 
 public:
     ZlibStream(Stream::ptr parent, int level, int windowBits, int memlevel, Strategy strategy,
-        bool own = true);
-    ZlibStream(Stream::ptr parent, bool own = true);
+        bool own = true, bool invert = false);
+    ZlibStream(Stream::ptr parent, bool own = true, bool invert = false);
     ~ZlibStream();
 
     void reset();
@@ -85,6 +86,10 @@ public:
 private:
     void flush(int flush);
     void flushBuffer();
+    size_t doInflateForRead(Buffer &b, size_t len);
+    size_t doDeflateForRead(Buffer &b, size_t len);
+    size_t doInflateForWrite(const Buffer &b, size_t len);
+    size_t doDeflateForWrite(const Buffer &b, size_t len);
 
 private:
     static const size_t m_bufferSize = 64 * 1024;
@@ -93,6 +98,7 @@ private:
     Buffer m_inBuffer, m_outBuffer;
     z_stream m_strm;
     bool m_closed;
+    bool m_doInflate;  //m_doInflate determines the stream to do inflate or deflate.
 };
 
 }

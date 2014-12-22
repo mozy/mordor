@@ -153,35 +153,93 @@ void testCompress()
     MORDOR_TEST_ASSERT( origData == decomp );
 }
 
+// for decompression in inverse mode of operation, we will take the pre-compressed test data
+// for the compression method, decompress it, and compare it to the original data.
+template <class StreamType>
+void testDecompressInverse(const unsigned char *test_data, size_t data_size)
+{
+    Buffer compressed;
+    compressed.copyIn(test_data, data_size);
+    Buffer controlBuf;
+    controlBuf.copyIn(test_uncompressed, sizeof(test_uncompressed));
+
+    // decompress from compressed to decomp
+    boost::shared_ptr<MemoryStream> memstream(new MemoryStream());
+    Stream::ptr writeplex(new SingleplexStream(memstream, SingleplexStream::WRITE));
+    StreamType teststream(writeplex, true, true);
+    teststream.write(compressed, 4096);
+    teststream.close();
+
+    Buffer decomp = memstream->buffer();
+    MORDOR_TEST_ASSERT( controlBuf == decomp );
+}
+
+// for compression in inverse mode of operation, we will compress some data, decompress it,
+// and compare to the original.
+template <class StreamType>
+void testCompressInverse(size_t buffer_size)
+{
+    Buffer uncompressed;
+    uncompressed.copyIn(test_uncompressed, sizeof(test_uncompressed));
+
+    //compress on read
+    Stream::ptr memstream(new MemoryStream(uncompressed));
+    Stream::ptr readplex(new SingleplexStream(memstream, SingleplexStream::READ));
+    StreamType teststream(readplex, true, true);
+    Buffer testBuf;
+    while(0 < teststream.read(testBuf, buffer_size));
+    teststream.close();
+
+    // decompress from compressed to decomp
+    boost::shared_ptr<MemoryStream> memstream2(new MemoryStream());
+    Stream::ptr writeplex(new SingleplexStream(memstream2, SingleplexStream::WRITE));
+    StreamType teststream2(writeplex, true, true);
+    teststream2.write(testBuf, 4096);
+
+    Buffer decomp = memstream2->buffer();
+    // compare decomp to original Data
+    MORDOR_TEST_ASSERT( uncompressed == decomp );
+}
 
 MORDOR_UNITTEST(ZlibStream, compress)
 {
     testCompress<ZlibStream>();
+    //big buffer
+    testCompressInverse<ZlibStream>(4096);
+    //set small buffer, multiple read call test in ZlibStream Inverse Mode.
+    testCompressInverse<ZlibStream>(50);
 }
 
 MORDOR_UNITTEST(ZlibStream, decompress)
 {
     testDecompress<ZlibStream>(test_zlib, sizeof(test_zlib));
+    testDecompressInverse<ZlibStream>(test_zlib, sizeof(test_zlib));
 }
 
 MORDOR_UNITTEST(GzipStream, compress)
 {
     testCompress<GzipStream>();
+    testCompressInverse<GzipStream>(4096);
+    testCompressInverse<GzipStream>(50);
 }
 
 MORDOR_UNITTEST(GzipStream, decompress)
 {
     testDecompress<GzipStream>(test_gzip, sizeof(test_gzip));
+    testDecompressInverse<GzipStream>(test_gzip, sizeof(test_gzip));
 }
 
 MORDOR_UNITTEST(DeflateStream, compress)
 {
     testCompress<DeflateStream>();
+    testCompressInverse<DeflateStream>(4096);
+    testCompressInverse<DeflateStream>(50);
 }
 
 MORDOR_UNITTEST(DeflateStream, decompress)
 {
     testDecompress<DeflateStream>(test_deflate, sizeof(test_deflate));
+    testDecompressInverse<DeflateStream>(test_deflate, sizeof(test_deflate));
 }
 
 #if !defined(HAVE_CONFIG_H) || defined(HAVE_LIBLZMA)
