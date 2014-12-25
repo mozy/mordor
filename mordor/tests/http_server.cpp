@@ -12,6 +12,7 @@
 #include "mordor/streams/limited.h"
 #include "mordor/streams/null.h"
 #include "mordor/streams/memory.h"
+#include "mordor/streams/pipe.h"
 #include "mordor/streams/random.h"
 #include "mordor/streams/test.h"
 #include "mordor/streams/transfer.h"
@@ -87,6 +88,95 @@ doSingleRequest(const char *request, Response &response)
     parser.run(output->buffer());
     MORDOR_TEST_ASSERT(parser.complete());
     MORDOR_TEST_ASSERT(!parser.error());
+}
+
+static void catchExceptionInRespond(ServerRequest::ptr request, bool expect)
+{
+    try {
+        respondError(request, OK);
+        if (expect) {
+            MORDOR_TEST_ASSERT(!"expect exception thrown");
+        }
+    }
+    catch (DummyException &) {
+        if (!expect) {
+            MORDOR_TEST_ASSERT(!"unexpected exception thrown");
+        }
+    }
+    catch (...) {
+        MORDOR_TEST_ASSERT(!"unknown exception thrown");
+    }
+}
+
+static void throwDummyException(Stream::CloseType type)
+{
+    if (type == Stream::BOTH) {
+        MORDOR_THROW_EXCEPTION(DummyException());
+    }
+}
+
+static void processClientRequest(bool closeClient)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+    pipe.first->write("GET / HTTP/1.0\r\n\r\n");
+
+    TestStream::ptr testStream(new TestStream(pipe.second));
+    // always throw DummyException when server stream close
+    testStream->onClose(throwDummyException);
+
+    // if client closed, server should not throw exception
+    // otherwise, server should throw exception
+    bool expectExceptionInServer = true;
+    if (closeClient) {
+        expectExceptionInServer = false;
+    }
+
+    ServerConnection::ptr conn(
+        new ServerConnection(
+            testStream,
+            boost::bind(&catchExceptionInRespond, _1, expectExceptionInServer)
+        )
+    );
+
+    WorkerPool pool;
+    pool.schedule(boost::bind(&ServerConnection::processRequests, conn));
+
+    // yield so that onRemoteClose is called in ServerConnection::processRequests
+    Scheduler::yield();
+
+    if (closeClient) {
+        pipe.first->close();
+    }
+}
+
+MORDOR_UNITTEST(HTTPServer, closeClientBeforeServer)
+{
+    processClientRequest(true);
+    processClientRequest(false);
+}
+
+MORDOR_UNITTEST(HTTPServer, ServerConnectionDestroyedBeforeRemoteClose)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+    pipe.first->write("GET / HTTP/1.0\r\n\r\n");
+
+    {
+        ServerConnection::ptr conn(
+            new ServerConnection(
+                pipe.second,
+                boost::bind(&catchExceptionInRespond, _1, false)
+            )
+        );
+        WorkerPool pool;
+        pool.schedule(boost::bind(&ServerConnection::processRequests, conn));
+        pool.dispatch();
+    }
+    try {
+        pipe.first->close();
+    }
+    catch (...) {
+        MORDOR_TEST_ASSERT(!"Crashed caused by remote close!");
+    }
 }
 
 MORDOR_UNITTEST(HTTPServer, badRequest)

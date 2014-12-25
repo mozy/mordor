@@ -24,7 +24,8 @@ ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (Ser
   m_requestCount(0),
   m_priorRequestFailed(~0ull),
   m_priorRequestClosed(~0ull),
-  m_priorResponseClosed(~0ull)
+  m_priorResponseClosed(~0ull),
+  m_clientClosed(false)
 {
     MORDOR_ASSERT(m_dg);
     std::ostringstream os;
@@ -33,8 +34,20 @@ ServerConnection::ServerConnection(Stream::ptr stream, boost::function<void (Ser
 }
 
 void
+ServerConnection::onClientConnectionClose(weak_ptr self)
+{
+    ServerConnection::ptr strongSelf = self.lock();
+    if (!strongSelf) {
+        return;
+    }
+    MORDOR_LOG_TRACE(g_log) << m_context << " remote closed";
+    m_clientClosed = true;
+}
+
+void
 ServerConnection::processRequests()
 {
+    m_stream->onRemoteClose(boost::bind(&ServerConnection::onClientConnectionClose, this, weak_ptr(shared_from_this())));
     boost::recursive_mutex::scoped_lock lock(m_mutex);
     invariant();
     scheduleNextRequest(NULL);
@@ -116,8 +129,13 @@ ServerConnection::responseComplete(ServerRequest *request)
             MORDOR_LOG_DEBUG(g_log) << request->context()
                 << " Unexpected exception: "
                 << boost::current_exception_diagnostic_information();
-            request->cancel();
-            throw;
+            if (m_clientClosed) {
+                MORDOR_LOG_DEBUG(g_log) << request->context()
+                    << " exception ignored: client already closed";
+            } else {
+                request->cancel();
+                throw;
+            }
         }
     } else {
         MORDOR_LOG_TRACE(g_log) << m_context << " flushing";
@@ -1084,8 +1102,8 @@ respondStream(ServerRequest::ptr request, Stream &response)
             }
 
             bool isHead = (request->request().requestLine.method == HEAD);
-            
-            // Seek to the correct position            
+
+            // Seek to the correct position
             // Skip the seek if it's a HEAD, and we don't need to check for
             // out-of-range because we already know the size
             if (!isHead || trailers) {

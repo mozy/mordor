@@ -169,6 +169,7 @@ private:
     void requestComplete(ServerRequest *currentRequest);
     void responseComplete(ServerRequest *currentRequest);
     void scheduleAllWaitingResponses();
+    void onClientConnectionClose(weak_ptr self);
 
 private:
     boost::function<void (ServerRequest::ptr)> m_dg;
@@ -185,6 +186,7 @@ private:
 
 private:
     std::string m_context;
+    bool m_clientClosed;
 };
 
 // Helper functions
