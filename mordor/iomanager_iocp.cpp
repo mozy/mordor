@@ -177,6 +177,13 @@ IOManager::WaitBlock::run()
 
                     if (--m_inUseCount == 0) {
                         --m_inUseCount;
+
+                        // if IOManager (m_outer) is still running in unregisterEvent function,
+                        // and waiting for m_reconfigured event,
+                        // let unregisterEvent go ahead,
+                        // otherwise, lock(m_outer.m_mutex) run into deadlock.
+                        if (!SetEvent(m_reconfigured))
+                            MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SetEvent");
                         break;
                     }
                     count = m_inUseCount + 1;
