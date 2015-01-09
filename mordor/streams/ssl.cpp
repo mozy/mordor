@@ -288,56 +288,16 @@ SSLStream::close(CloseType type)
         flush(false);
     }
 
+    // follow apache to call SSL_shutdown blindly without error handling
+    int count = 0;
     while (!(sslCallWithLock(boost::bind(SSL_get_shutdown, m_ssl.get()), NULL) & SSL_RECEIVED_SHUTDOWN)) {
         unsigned long error = SSL_ERROR_NONE;
         const int result = sslCallWithLock(boost::bind(SSL_shutdown, m_ssl.get()), &error);
         MORDOR_LOG_DEBUG(g_log) << this << " SSL_shutdown(" << m_ssl.get()
-            << "): " << result << " (" << error << ")";
-        if (result > 0) {
+            << "): " << result << " (" << error << "), count=" << count;
+        if (result > 0 || ++count == 3) {
             break;
         }
-        switch (error) {
-            case SSL_ERROR_NONE:
-            case SSL_ERROR_ZERO_RETURN:
-                break;
-            case SSL_ERROR_WANT_READ:
-                flush();
-                wantRead();
-                continue;
-            case SSL_ERROR_WANT_WRITE:
-            case SSL_ERROR_WANT_CONNECT:
-            case SSL_ERROR_WANT_ACCEPT:
-            case SSL_ERROR_WANT_X509_LOOKUP:
-                MORDOR_NOTREACHED();
-            case SSL_ERROR_SYSCALL:
-                if (hasOpenSSLError()) {
-                    std::string message = getOpenSSLErrorMessage();
-                    MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown("
-                        << m_ssl.get() << "): " << result << " (" << error
-                        << ", " << message << ")";
-                    MORDOR_THROW_EXCEPTION(OpenSSLException(message))
-                        << boost::errinfo_api_function("SSL_shutdown");
-                }
-                MORDOR_LOG_WARNING(g_log) << this << " SSL_shutdown(" << m_ssl.get()
-                    << "): " << result << " (" << error << ")";
-                if (result == 0) {
-                    break;
-                }
-                MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("SSL_shutdown");
-            case SSL_ERROR_SSL:
-                {
-                    MORDOR_ASSERT(hasOpenSSLError());
-                    std::string message = getOpenSSLErrorMessage();
-                    MORDOR_LOG_ERROR(g_log) << this << " SSL_shutdown("
-                        << m_ssl.get() << "): " << result << " (" << error
-                        << ", " << message << ")";
-                    MORDOR_THROW_EXCEPTION(OpenSSLException(message))
-                        << boost::errinfo_api_function("SSL_shutdown");
-                }
-            default:
-                MORDOR_NOTREACHED();
-        }
-        break;
     }
     parent()->close();
 }
