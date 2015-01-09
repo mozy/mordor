@@ -346,12 +346,18 @@ TarEntry::close()
         commit();
     }
 
+    // check data size when closing
     if (m_outer->m_dataStream) {
         if (m_outer->m_stream->supportsSeek()) { // tell (seek) on limited stream
-            MORDOR_ASSERT(m_outer->m_dataStream->tell() - m_dataOffset == m_size);
+            if (m_outer->m_dataStream->tell() - m_dataOffset != m_size) {
+                MORDOR_THROW_EXCEPTION(UnexpectedTarSizeException());
+            }
         } else {
-            MORDOR_ASSERT(m_outer->m_dataStream->tell() == m_size);
+            if (m_outer->m_dataStream->tell() != m_size) {
+                MORDOR_THROW_EXCEPTION(UnexpectedTarSizeException());
+            }
         }
+        m_outer->m_dataStream.reset();
     }
 
     // padding nulls to block boundary

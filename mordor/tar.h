@@ -15,6 +15,7 @@ class Tar;
 struct CorruptTarException : virtual Exception {};
 struct UnsupportedTarFormatException : virtual Exception {};
 struct IncompleteTarHeaderException : virtual Exception {};
+struct UnexpectedTarSizeException : virtual Exception {};
 
 /// A single file within a Tar archive
 class TarEntry

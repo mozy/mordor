@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "mordor/streams/buffer.h"
+#include "mordor/streams/crypto.h"
 #include "mordor/streams/file.h"
 #include "mordor/streams/memory.h"
 #include "mordor/streams/temp.h"
@@ -21,7 +22,8 @@ using namespace Mordor;
 class TarTestFixture
 {
 public:
-    TarTestFixture() {
+    TarTestFixture()
+        : m_key("12345678123456781234567812345678") {
         // create temp test folder
         m_testFolder = TempStream("tar_test_folder").path() + "/"; // get a temp name
         int rc = mkdir(m_testFolder.c_str(), 0755);
@@ -34,6 +36,7 @@ public:
     }
 
 protected:
+    std::string m_key;
     std::string m_testFolder;
 };
 
@@ -315,6 +318,130 @@ MORDOR_UNITTEST_FIXTURE(TarTestFixture, Tar, metaWrite)
     MemoryStream buf;
     transferStream(file, buf);
     MORDOR_TEST_ASSERT(buf.buffer() == data);
+}
+
+MORDOR_UNITTEST_FIXTURE(TarTestFixture, Tar, encrypt)
+{
+    const char* data1 = "this is temp1 file for encrypted tar test";
+    MemoryStream temp1((Buffer(data1)));
+    std::string path1 = m_testFolder + "tartest1";
+
+    const char* data2 = "this is temp2 file for encrypted tar test";
+    MemoryStream temp2((Buffer(data2)));
+    std::string path2 = m_testFolder + "tartest2";
+
+    std::string path3 = m_testFolder + "tartest_dir/";
+    std::string path4 = m_testFolder + "tartest_symlnk";
+
+    std::string encrytedfile = m_testFolder + "test.tar.x";
+    std::string tarfile = m_testFolder + "test.tar";
+    Stream::ptr stream(new FileStream(encrytedfile, FileStream::WRITE, FileStream::OVERWRITE_OR_CREATE));
+    stream.reset(new CryptoStream(stream, EVP_aes_256_cbc(), m_key));
+    Tar tar(stream);
+    {
+        TarEntry& entry = tar.addFile();
+        entry.filename(path1);
+        entry.size(strlen(data1));
+        entry.mode(0644);
+        entry.mtime(time(NULL));
+        entry.filetype(TarEntry::REGULAR);
+        transferStream(temp1, entry.stream());
+        temp1.close();
+    }
+    {
+        TarEntry& entry = tar.addFile();
+        entry.filename(path2);
+        entry.size(strlen(data2));
+        entry.mode(0644);
+        entry.mtime(time(NULL));
+        entry.filetype(TarEntry::REGULAR);
+        transferStream(temp2, entry.stream());
+        temp2.close();
+    }
+    {
+        TarEntry& entry = tar.addFile();
+        entry.filename(path3);
+        entry.mode(0755);
+        entry.mtime(time(NULL));
+        entry.filetype(TarEntry::DIRECTORY);
+        MORDOR_TEST_ASSERT(!entry.stream());
+    }
+    {
+        TarEntry& entry = tar.addFile();
+        entry.filename(path4);
+        entry.linkname(path1);
+        entry.mode(0777);
+        entry.mtime(time(NULL));
+        entry.filetype(TarEntry::SYMLINK);
+        MORDOR_TEST_ASSERT(!entry.stream());
+    }
+    tar.close();
+
+    {
+        // decrypt to tar first
+        Stream::ptr in(new FileStream(encrytedfile, FileStream::READ));
+        in.reset(new CryptoStream(in, EVP_aes_256_cbc(), m_key));
+
+        Stream::ptr out(new FileStream(tarfile, FileStream::WRITE, FileStream::OVERWRITE_OR_CREATE));
+        transferStream(in, out);
+    }
+
+    int rc = system(("tar -P -xf " + tarfile).c_str());
+    MORDOR_TEST_ASSERT_EQUAL(rc, 0);
+
+    {
+        FileStream::ptr file(new FileStream(path1, FileStream::READ));
+        MemoryStream buf;
+        transferStream(file, buf);
+        MORDOR_TEST_ASSERT(buf.buffer() == data1);
+    }
+    {
+        FileStream::ptr file(new FileStream(path2, FileStream::READ));
+        MemoryStream buf;
+        transferStream(file, buf);
+        MORDOR_TEST_ASSERT(buf.buffer() == data2);
+    }
+
+    struct stat st;
+    rc = stat(path3.c_str(), &st);
+    MORDOR_TEST_ASSERT_EQUAL(rc, 0);
+    MORDOR_TEST_ASSERT(st.st_mode & S_IFDIR);
+
+    rc = stat(path4.c_str(), &st);
+    MORDOR_TEST_ASSERT_EQUAL(rc, 0);
+    MORDOR_TEST_ASSERT(st.st_mode & S_IFLNK);
+}
+
+MORDOR_UNITTEST_FIXTURE(TarTestFixture, Tar, brokenData)
+{
+    const char* data = "this is temp file for tar test";
+    MemoryStream temp((Buffer(data)));
+    std::string path = m_testFolder + "tartest";
+    std::string tarfile = m_testFolder + "test.tar";
+    Stream::ptr stream(new FileStream(tarfile, FileStream::WRITE, FileStream::OVERWRITE_OR_CREATE));
+    Tar tar(stream);
+    {
+        TarEntry& entry = tar.addFile();
+        entry.filename(path);
+        entry.size(strlen(data));
+        entry.filetype(TarEntry::REGULAR);
+        transferStream(temp, entry.stream(), entry.size() - 1);
+        temp.close();
+    }
+    MORDOR_TEST_ASSERT_EXCEPTION(tar.addFile(), UnexpectedTarSizeException);
+}
+
+MORDOR_UNITTEST_FIXTURE(TarTestFixture, Tar, incompleteHeader)
+{
+    std::string tarfile = m_testFolder + "test.tar";
+    Stream::ptr stream(new FileStream(tarfile, FileStream::WRITE, FileStream::OVERWRITE_OR_CREATE));
+    Tar tar(stream);
+    {
+        TarEntry& entry = tar.addFile();
+        entry.filetype(TarEntry::REGULAR);
+        // filename/size not set
+    }
+    MORDOR_TEST_ASSERT_EXCEPTION(tar.addFile(), IncompleteTarHeaderException);
 }
 
 #endif
