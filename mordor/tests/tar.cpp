@@ -412,6 +412,108 @@ MORDOR_UNITTEST_FIXTURE(TarTestFixture, Tar, encrypt)
     MORDOR_TEST_ASSERT(st.st_mode & S_IFLNK);
 }
 
+MORDOR_UNITTEST_FIXTURE(TarTestFixture, Tar, decrypt)
+{
+    const char* data1 = "this is temp1 file for decrypted tar test";
+    MemoryStream temp1((Buffer(data1)));
+    std::string path1 = m_testFolder + "tartest1";
+
+    const char* data2 = "this is temp2 file for decrypted tar test";
+    MemoryStream temp2((Buffer(data2)));
+    std::string path2 = m_testFolder + "tartest2";
+
+    std::string path3 = m_testFolder + "tartest_dir/";
+    std::string path4 = m_testFolder + "tartest_symlnk";
+
+    std::string encrytedfile = m_testFolder + "test.tar.x";
+    std::string tarfile = m_testFolder + "test.tar";
+
+    {
+        Stream::ptr stream(new FileStream(encrytedfile, FileStream::WRITE, FileStream::OVERWRITE_OR_CREATE));
+        stream.reset(new CryptoStream(stream, EVP_aes_256_cbc(), m_key));
+        Tar tar(stream);
+        {
+            TarEntry& entry = tar.addFile();
+            entry.filename(path1);
+            entry.size(strlen(data1));
+            entry.mode(0644);
+            entry.mtime(time(NULL));
+            entry.filetype(TarEntry::REGULAR);
+            transferStream(temp1, entry.stream());
+            temp1.close();
+        }
+        {
+            TarEntry& entry = tar.addFile();
+            entry.filename(path2);
+            entry.size(strlen(data2));
+            entry.mode(0644);
+            entry.mtime(time(NULL));
+            entry.filetype(TarEntry::REGULAR);
+            transferStream(temp2, entry.stream());
+            temp2.close();
+        }
+        {
+            TarEntry& entry = tar.addFile();
+            entry.filename(path3);
+            entry.mode(0755);
+            entry.mtime(time(NULL));
+            entry.filetype(TarEntry::DIRECTORY);
+            MORDOR_TEST_ASSERT(!entry.stream());
+        }
+        {
+            TarEntry& entry = tar.addFile();
+            entry.filename(path4);
+            entry.linkname(path1);
+            entry.mode(0777);
+            entry.mtime(time(NULL));
+            entry.filetype(TarEntry::SYMLINK);
+            MORDOR_TEST_ASSERT(!entry.stream());
+        }
+        tar.close();
+    }
+
+    {
+        Stream::ptr stream(new FileStream(encrytedfile, FileStream::READ));
+        stream.reset(new CryptoStream(stream, EVP_aes_256_cbc(), m_key));
+        Tar tar(stream);
+        {
+            const TarEntry* entry = tar.getNextEntry();
+            MORDOR_TEST_ASSERT_EQUAL(entry->filename(), path1);
+            Stream::ptr stream = entry->stream();
+            MORDOR_TEST_ASSERT(stream);
+            MemoryStream buf;
+            transferStream(stream, buf);
+            MORDOR_TEST_ASSERT(buf.buffer() == data1);
+        }
+        {
+            const TarEntry* entry = tar.getNextEntry();
+            MORDOR_TEST_ASSERT_EQUAL(entry->filename(), path2);
+            Stream::ptr stream = entry->stream();
+            MORDOR_TEST_ASSERT(stream);
+            MemoryStream buf;
+            transferStream(stream, buf);
+            MORDOR_TEST_ASSERT(buf.buffer() == data2);
+        }
+        {
+            const TarEntry* entry = tar.getNextEntry();
+            MORDOR_TEST_ASSERT_EQUAL(entry->filename(), path3);
+            MORDOR_TEST_ASSERT_EQUAL(entry->filetype(), TarEntry::DIRECTORY);
+            Stream::ptr stream = entry->stream();
+            MORDOR_TEST_ASSERT(!stream);
+        }
+        {
+            const TarEntry* entry = tar.getNextEntry();
+            MORDOR_TEST_ASSERT_EQUAL(entry->filename(), path4);
+            MORDOR_TEST_ASSERT_EQUAL(entry->linkname(), path1);
+            MORDOR_TEST_ASSERT_EQUAL(entry->filetype(), TarEntry::SYMLINK);
+            Stream::ptr stream = entry->stream();
+            MORDOR_TEST_ASSERT(!stream);
+        }
+        MORDOR_TEST_ASSERT(!tar.getNextEntry());
+        tar.close();
+    }
+}
+
 MORDOR_UNITTEST_FIXTURE(TarTestFixture, Tar, brokenData)
 {
     const char* data = "this is temp file for tar test";

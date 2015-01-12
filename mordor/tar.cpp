@@ -472,8 +472,10 @@ Tar::getNextEntry()
         // find next file
         if (!m_stream->supportsSeek()) {
             Stream::ptr stream = static_cast<const TarEntry*>(m_currentEntry)->stream();
-            transferStream(stream, NullStream::get());
-            transferStream(m_stream, NullStream::get(), BLOCK_SIZE - m_currentEntry->m_size % BLOCK_SIZE);
+            if (stream) {
+                transferStream(stream, NullStream::get());
+                transferStream(m_stream, NullStream::get(), BLOCK_SIZE - m_currentEntry->m_size % BLOCK_SIZE);
+            }
         } else {
             m_stream->seek(m_currentEntry->m_dataOffset + blockSize(m_currentEntry->m_size));
         }
@@ -672,7 +674,10 @@ Tar::addFile()
 void
 Tar::close()
 {
-    MORDOR_ASSERT(m_mode == WRITE);
+    if (m_mode == READ) {
+        return; // ignore for read mode
+    }
+
     if (m_currentEntry) {
         MORDOR_ASSERT(m_currentEntry == &m_scratchEntry);
         m_scratchEntry.close();
