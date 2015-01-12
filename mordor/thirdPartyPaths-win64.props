@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <IncludePath>$(winclientlib)\boost\boost_1_57_0;$(winclientlib)\openssl\openssl-1.0.1e-x64\include;$(winclientlib)\zlib\include;$(IncludePath)</IncludePath>
+    <ExecutablePath>$(winclientlib)\tools;$(ExecutablePath)</ExecutablePath>
+    <LibraryPath>$(winclientlib)\boost\boost_1_57_0\lib64-msvc-12.0;$(winclientlib)\openssl\openssl-1.0.1e-x64\lib;$(winclientlib)\zlib\lib64;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup />
+  <ItemGroup />
+</Project>

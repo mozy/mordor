@@ -1,0 +1,335 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}</ProjectGuid>
+    <RootNamespace>mordor</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="ragel.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="thirdPartyPaths-win64.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="thirdPartyPaths-win64.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\v12\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <TargetName>mordor</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <TargetName>mordor</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <TargetName>mordor</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <TargetName>mordor</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MORDOR_INCLUDE);..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>mordor/pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DisableSpecificWarnings>4345</DisableSpecificWarnings>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <DebugInformationFormat Condition="'$(Platform)'=='Win32'">EditAndContinue</DebugInformationFormat>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">mordor/pch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</MultiProcessorCompilation>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MultiProcessorCompilation>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Zm200 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Zm200 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">mordor/pch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">mordor/pch.h</ForcedIncludeFiles>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</MultiProcessorCompilation>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</MultiProcessorCompilation>
+      <MinimalRebuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</MinimalRebuild>
+      <MinimalRebuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</MinimalRebuild>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Zm200 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Zm200 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="assert.cpp" />
+    <ClCompile Include="fibersynchronization.cpp" />
+    <ClCompile Include="http\auth.cpp" />
+    <ClCompile Include="http\basic.cpp" />
+    <ClCompile Include="http\broker.cpp" />
+    <ClCompile Include="http\oauth2.cpp" />
+    <ClCompile Include="http\servlet.cpp" />
+    <ClCompile Include="http\servlets\config.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)config_servlet.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)config_servlet.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)config_servlet.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)config_servlet.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="daemon.cpp" />
+    <ClCompile Include="openssl_lock.cpp" />
+    <ClCompile Include="parallel.cpp" />
+    <ClCompile Include="protobuf.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="socks.cpp" />
+    <ClCompile Include="streams\buffer.cpp" />
+    <ClCompile Include="streams\buffered.cpp" />
+    <ClCompile Include="streams\cat.cpp" />
+    <ClCompile Include="streams\counter.cpp" />
+    <ClCompile Include="http\chunked.cpp" />
+    <ClCompile Include="http\client.cpp" />
+    <ClCompile Include="config.cpp" />
+    <ClCompile Include="http\connection.cpp" />
+    <ClCompile Include="date_time.cpp" />
+    <ClCompile Include="http\digest.cpp" />
+    <ClCompile Include="streams\crypto.cpp" />
+    <ClCompile Include="streams\efs.cpp" />
+    <ClCompile Include="eventloop.cpp" />
+    <ClCompile Include="exception.cpp" />
+    <ClCompile Include="fiber.cpp" />
+    <ClCompile Include="streams\file.cpp" />
+    <ClCompile Include="streams\filter.cpp" />
+    <ClCompile Include="streams\handle.cpp" />
+    <ClCompile Include="streams\hash.cpp" />
+    <ClCompile Include="streams\http.cpp">
+      <ObjectFileName>$(IntDir)http_stream.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="http\http.cpp" />
+    <ClCompile Include="iomanager_iocp.cpp" />
+    <ClCompile Include="streams\limited.cpp" />
+    <ClCompile Include="log.cpp" />
+    <ClCompile Include="streams\lzma2.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="streams\memory.cpp" />
+    <ClCompile Include="http\multipart.cpp" />
+    <ClCompile Include="streams\namedpipe.cpp" />
+    <ClCompile Include="http\negotiate.cpp" />
+    <ClCompile Include="streams\null.cpp" />
+    <ClCompile Include="http\oauth.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="streams\pipe.cpp" />
+    <ClCompile Include="http\proxy.cpp" />
+    <ClCompile Include="ragel.cpp" />
+    <ClCompile Include="streams\random.cpp" />
+    <ClCompile Include="runtime_linking.cpp" />
+    <ClCompile Include="scheduler.cpp" />
+    <ClCompile Include="semaphore.cpp" />
+    <ClCompile Include="http\server.cpp" />
+    <ClCompile Include="sleep.cpp" />
+    <ClCompile Include="streams\singleplex.cpp" />
+    <ClCompile Include="streams\socket.cpp">
+      <ObjectFileName>$(IntDir)socket_stream.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="socket.cpp" />
+    <ClCompile Include="streams\ssl.cpp" />
+    <ClCompile Include="statistics.cpp" />
+    <ClCompile Include="streams\std.cpp" />
+    <ClCompile Include="streams\stream.cpp" />
+    <ClCompile Include="string.cpp" />
+    <ClCompile Include="streams\temp.cpp" />
+    <ClCompile Include="streams\test.cpp" />
+    <ClCompile Include="streams\throttle.cpp" />
+    <ClCompile Include="streams\timeout.cpp" />
+    <ClCompile Include="thread.cpp" />
+    <ClCompile Include="timer.cpp" />
+    <ClCompile Include="streams\transfer.cpp" />
+    <ClCompile Include="streams\zlib.cpp" />
+    <ClCompile Include="streams\zero.cpp" />
+    <ClCompile Include="util.cpp" />
+    <ClCompile Include="workerpool.cpp" />
+    <ClCompile Include="xml\dom_parser.cpp" />
+    <ClCompile Include="zip.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="anymap.h" />
+    <ClInclude Include="assert.h" />
+    <ClInclude Include="atomic.h" />
+    <ClInclude Include="fibersynchronization.h" />
+    <ClInclude Include="http\auth.h" />
+    <ClInclude Include="http\basic.h" />
+    <ClInclude Include="http\broker.h" />
+    <ClInclude Include="factory.h" />
+    <ClInclude Include="http\oauth2.h" />
+    <ClInclude Include="http\servlet.h" />
+    <ClInclude Include="http\servlets\config.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="daemon.h" />
+    <ClInclude Include="openssl_lock.h" />
+    <ClInclude Include="parallel.h" />
+    <ClInclude Include="protobuf.h" />
+    <ClInclude Include="socks.h" />
+    <ClInclude Include="streams\buffer.h" />
+    <ClInclude Include="streams\buffered.h" />
+    <ClInclude Include="streams\cat.h" />
+    <ClInclude Include="streams\counter.h" />
+    <ClInclude Include="http\chunked.h" />
+    <ClInclude Include="http\client.h" />
+    <ClInclude Include="config.h" />
+    <ClInclude Include="http\connection.h" />
+    <ClInclude Include="coroutine.h" />
+    <ClInclude Include="date_time.h" />
+    <ClInclude Include="streams\crypto.h" />
+    <ClInclude Include="streams\deflate.h" />
+    <ClInclude Include="http\digest.h" />
+    <ClInclude Include="streams\duplex.h" />
+    <ClInclude Include="streams\efs.h" />
+    <ClInclude Include="endian.h" />
+    <ClInclude Include="eventloop.h" />
+    <ClInclude Include="exception.h" />
+    <ClInclude Include="fiber.h" />
+    <ClInclude Include="streams\file.h" />
+    <ClInclude Include="streams\filter.h" />
+    <ClInclude Include="future.h" />
+    <ClInclude Include="streams\gzip.h" />
+    <ClInclude Include="streams\handle.h" />
+    <ClInclude Include="streams\hash.h" />
+    <ClInclude Include="streams\hashfwd.h" />
+    <ClInclude Include="http\http.h" />
+    <ClInclude Include="streams\http.h" />
+    <ClInclude Include="iomanager.h" />
+    <ClInclude Include="iomanager_iocp.h" />
+    <ClInclude Include="json.h" />
+    <ClInclude Include="streams\limited.h" />
+    <ClInclude Include="streams\lzma2.h" />
+    <ClInclude Include="log.h" />
+    <ClInclude Include="streams\memory.h" />
+    <ClInclude Include="http\multipart.h" />
+    <ClInclude Include="streams\namedpipe.h" />
+    <ClInclude Include="http\negotiate.h" />
+    <ClInclude Include="streams\notify.h" />
+    <ClInclude Include="streams\null.h" />
+    <ClInclude Include="http\oauth.h" />
+    <ClInclude Include="http\parser.h" />
+    <ClInclude Include="thread.h" />
+    <ClInclude Include="workerpool.h" />
+    <ClInclude Include="xml\parser.h" />
+    <ClInclude Include="xml\dom_parser.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="streams\pipe.h" />
+    <ClInclude Include="predef.h" />
+    <ClInclude Include="streams\progress.h" />
+    <ClInclude Include="http\proxy.h" />
+    <ClInclude Include="ragel.h" />
+    <ClInclude Include="streams\random.h" />
+    <ClInclude Include="runtime_linking.h" />
+    <ClInclude Include="scheduler.h" />
+    <ClInclude Include="streams\scheduler.h" />
+    <ClInclude Include="semaphore.h" />
+    <ClInclude Include="http\server.h" />
+    <ClInclude Include="streams\singleplex.h" />
+    <ClInclude Include="sleep.h" />
+    <ClInclude Include="streams\socket.h" />
+    <ClInclude Include="socket.h" />
+    <ClInclude Include="streams\ssl.h" />
+    <ClInclude Include="statistics.h" />
+    <ClInclude Include="streams\std.h" />
+    <ClInclude Include="streams\stream.h" />
+    <ClInclude Include="string.h" />
+    <ClInclude Include="streams\temp.h" />
+    <ClInclude Include="streams\test.h" />
+    <ClInclude Include="thread_local_storage.h" />
+    <ClInclude Include="streams\throttle.h" />
+    <ClInclude Include="streams\timeout.h" />
+    <ClInclude Include="timer.h" />
+    <ClInclude Include="streams\transfer.h" />
+    <ClInclude Include="uri.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="version.h" />
+    <ClInclude Include="streams\zlib.h" />
+    <ClInclude Include="streams\zero.h" />
+    <ClInclude Include="zip.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Ragel Include="http\http_parser.rl">
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">http</IncludePaths>
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">http</IncludePaths>
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">http</IncludePaths>
+      <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Release|x64'">http</IncludePaths>
+    </Ragel>
+    <Ragel Include="json.rl" />
+    <Ragel Include="uri.rl" />
+    <Ragel Include="xml\xml_parser.rl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="ragel.targets" />
+  </ImportGroup>
+</Project>
