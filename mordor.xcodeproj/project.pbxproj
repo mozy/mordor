@@ -1150,6 +1150,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -1157,8 +1159,8 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_MISSING_PARENTHESES = NO;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/include\"";
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
+				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				VALID_ARCHS = x86_64;
@@ -1169,14 +1171,16 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_MISSING_PARENTHESES = NO;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/include\"";
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
+				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = "-DNDEBUG";
 				SDKROOT = macosx;
 				VALID_ARCHS = "i386 x86_64";
@@ -1187,6 +1191,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_MODEL_TUNING = G5;
@@ -1208,6 +1214,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				GCC_MODEL_TUNING = G5;
 				GCC_PREFIX_HEADER = mordor/pch.h;
 				HEADER_SEARCH_PATHS = (
@@ -1234,7 +1242,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(THIRDPARTY_LIB_ROOT)/protobuf/protobuf-2.4.1/include\"",
+					"\"$(THIRDPARTY_LIB_ROOT)/protobuf/protobuf-2.5.0/include\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
@@ -1251,7 +1259,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(THIRDPARTY_LIB_ROOT)/protobuf/protobuf-2.4.1/include\"",
+					"\"$(THIRDPARTY_LIB_ROOT)/protobuf/protobuf-2.5.0/include\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
@@ -1270,18 +1278,19 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				HEADER_SEARCH_PATHS = (
-					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/include\"",
+					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/include\"",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_LDFLAGS = (
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libcrypto-1.0.0e.a",
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libssl-1.0.0e.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_filesystem-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_regex-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_program_options-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_system-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_thread-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_date_time-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_filesystem-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_regex-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_program_options-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_system-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_thread-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_date_time-mt.a",
 					"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/lib/liblzma.a",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1301,18 +1310,19 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				HEADER_SEARCH_PATHS = (
-					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/include\"",
+					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/include\"",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_LDFLAGS = (
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libcrypto-1.0.0e.a",
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libssl-1.0.0e.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_filesystem-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_regex-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_program_options-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_system-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_thread-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/lib/libboost_date_time-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_filesystem-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_regex-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_program_options-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_system-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_thread-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_date_time-mt.a",
 					"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/lib/liblzma.a",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1327,7 +1337,7 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/include\"";
+				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"";
 				PRODUCT_NAME = mordortest;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 			};
@@ -1339,7 +1349,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.45.0/include\"";
+				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"";
 				PRODUCT_NAME = mordortest;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				ZERO_LINK = NO;
