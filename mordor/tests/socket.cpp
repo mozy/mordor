@@ -250,6 +250,23 @@ MORDOR_UNITTEST(Address, parseIPv6Address)
     }
 }
 
+// Test the address prefix length is 32 (IPv4), 128 (IPv6)
+MORDOR_UNITTEST(Address, fullPrefixLength)
+{
+    IPv4Address ipv4("127.0.0.1");
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(*ipv4.subnetMask(32)), "255.255.255.255:0");
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(*ipv4.broadcastAddress(32)), "127.0.0.1:0");
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(*ipv4.networkAddress(32)), "127.0.0.1:0");
+
+    IPv6Address ipv6("2001:470::273:20c:0:0:5ddf");
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(*ipv6.subnetMask(128)),
+                             "[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:0");
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(*ipv6.broadcastAddress(128)),
+                             "[2001:470::273:20c:0:0:5ddf]:0");
+    MORDOR_TEST_ASSERT_EQUAL(boost::lexical_cast<std::string>(*ipv6.networkAddress(128)),
+                             "[2001:470::273:20c:0:0:5ddf]:0");
+}
+
 static void cancelMe(Socket::ptr sock)
 {
     sock->cancelAccept();

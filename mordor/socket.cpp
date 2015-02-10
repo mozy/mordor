@@ -1866,10 +1866,12 @@ IPv6Address::broadcastAddress(unsigned int prefixLength)
 {
     MORDOR_ASSERT(prefixLength <= 128);
     sockaddr_in6 baddr(sin);
-    baddr.sin6_addr.s6_addr[prefixLength / 8] |=
-        createMask<unsigned char>(prefixLength % 8);
-    for (unsigned int i = prefixLength / 8 + 1; i < 16; ++i)
-        baddr.sin6_addr.s6_addr[i] = 0xffu;
+    if (prefixLength < 128) {
+        baddr.sin6_addr.s6_addr[prefixLength / 8] |=
+            createMask<unsigned char>(prefixLength % 8);
+        for (unsigned int i = prefixLength / 8 + 1; i < 16; ++i)
+            baddr.sin6_addr.s6_addr[i] = 0xffu;
+    }
     return boost::static_pointer_cast<IPv6Address>(
         Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in6)));
 }
@@ -1879,10 +1881,12 @@ IPv6Address::networkAddress(unsigned int prefixLength)
 {
     MORDOR_ASSERT(prefixLength <= 128);
     sockaddr_in6 baddr(sin);
-    baddr.sin6_addr.s6_addr[prefixLength / 8] &=
-        ~createMask<unsigned char>(prefixLength % 8);
-    for (unsigned int i = prefixLength / 8 + 1; i < 16; ++i)
-        baddr.sin6_addr.s6_addr[i] = 0x00u;
+    if (prefixLength < 128) {
+        baddr.sin6_addr.s6_addr[prefixLength / 8] &=
+            ~createMask<unsigned char>(prefixLength % 8);
+        for (unsigned int i = prefixLength / 8 + 1; i < 16; ++i)
+            baddr.sin6_addr.s6_addr[i] = 0x00u;
+    }
     return boost::static_pointer_cast<IPv6Address>(
         Address::create((const sockaddr *)&baddr, sizeof(sockaddr_in6)));
 }
@@ -1894,9 +1898,11 @@ IPv6Address::createSubnetMask(unsigned int prefixLength)
     sockaddr_in6 subnet;
     memset(&subnet, 0, sizeof(sockaddr_in6));
     subnet.sin6_family = AF_INET6;
-    subnet.sin6_addr.s6_addr[prefixLength / 8] =
-        ~createMask<unsigned char>(prefixLength % 8);
-    for (unsigned int i = 0; i < prefixLength / 8; ++i)
+    if (prefixLength < 128) {
+        subnet.sin6_addr.s6_addr[prefixLength / 8] =
+            ~createMask<unsigned char>(prefixLength % 8);
+    }
+    for (unsigned int i = 0; i < prefixLength / 8 && i < 16; ++i)
         subnet.sin6_addr.s6_addr[i] = 0xffu;
     return boost::static_pointer_cast<IPv6Address>(
         Address::create((const sockaddr *)&subnet, sizeof(sockaddr_in6)));
