@@ -121,6 +121,8 @@
 		5C8544DF1576710800589928 /* http_proxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8544DD157670FA00589928 /* http_proxy.cpp */; };
 		61AA83C6120A18D600D7B56B /* filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 61AA83C4120A18D600D7B56B /* filter.cpp */; };
 		61AA83C7120A18D600D7B56B /* singleplex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 61AA83C5120A18D600D7B56B /* singleplex.cpp */; };
+		6D71EE861A84C15E001316BB /* tar.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D71EE841A84C15E001316BB /* tar.cpp */; };
+		6D71EE871A84C15E001316BB /* tar.h in Headers */ = {isa = PBXBuildFile; fileRef = 6D71EE851A84C15E001316BB /* tar.h */; };
 		7EF15AB41904FFC0004BBDE1 /* http_parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7EF15AB31904FFC0004BBDE1 /* http_parser.cpp */; };
 		B7EA53811933CCE3006DCF84 /* unicode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B7E545FF192FA02E0020BAFD /* unicode.cpp */; };
 		B7EA53821933CCE9006DCF84 /* statistics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0EF3018915E4BEF40020B13A /* statistics.cpp */; };
@@ -424,6 +426,8 @@
 		5C8544DD157670FA00589928 /* http_proxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = http_proxy.cpp; sourceTree = "<group>"; };
 		61AA83C4120A18D600D7B56B /* filter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = filter.cpp; sourceTree = "<group>"; };
 		61AA83C5120A18D600D7B56B /* singleplex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = singleplex.cpp; path = streams/singleplex.cpp; sourceTree = "<group>"; };
+		6D71EE841A84C15E001316BB /* tar.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tar.cpp; sourceTree = "<group>"; };
+		6D71EE851A84C15E001316BB /* tar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tar.h; sourceTree = "<group>"; };
 		7EF15AB31904FFC0004BBDE1 /* http_parser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = http_parser.cpp; sourceTree = "<group>"; };
 		B7E545FF192FA02E0020BAFD /* unicode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unicode.cpp; sourceTree = "<group>"; };
 		C32025AD11F949CF00E09E5A /* daemon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = daemon.cpp; sourceTree = "<group>"; };
@@ -542,6 +546,8 @@
 		3CAB26D4112B096700607AEE /* mordor */ = {
 			isa = PBXGroup;
 			children = (
+				6D71EE841A84C15E001316BB /* tar.cpp */,
+				6D71EE851A84C15E001316BB /* tar.h */,
 				FC1BF5021694A05E00B8D291 /* openssl_lock.cpp */,
 				FC1BF5031694A05E00B8D291 /* openssl_lock.h */,
 				3F4296EF1385DADC007EC0C7 /* util.cpp */,
@@ -841,6 +847,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6D71EE871A84C15E001316BB /* tar.h in Headers */,
 				E29FD2AB1136FD1D004BC293 /* timeout.h in Headers */,
 				3CC4CE561138646D001C21F2 /* progress.h in Headers */,
 				C34893CB11BEB1300044E9C8 /* socks.h in Headers */,
@@ -991,6 +998,7 @@
 			files = (
 				3CAB29B5112B347400607AEE /* json.rl in Sources */,
 				3CAB29B6112B347400607AEE /* http_parser.rl in Sources */,
+				6D71EE861A84C15E001316BB /* tar.cpp in Sources */,
 				3CAB29B7112B347400607AEE /* xml_parser.rl in Sources */,
 				3CAB29B8112B347400607AEE /* uri.rl in Sources */,
 				3CAB29B9112B347400607AEE /* assert.cpp in Sources */,
