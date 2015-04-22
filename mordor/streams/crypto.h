@@ -12,6 +12,8 @@ namespace Mordor {
 // supports all four permutations of (encrypt, decrypt) and (read, write),
 // although only one per instance
 
+// NOTE: if WRITE, close() must be called when finish!!!
+
 class CryptoStream : public MutatingFilterStream
 {
 public:
