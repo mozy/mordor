@@ -307,6 +307,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/config.cpp				\
 	mordor/tests/coroutine.cpp			\
 	mordor/tests/counter_stream.cpp		\
+	mordor/tests/crypto.cpp             \
 	mordor/tests/endian.cpp				\
 	mordor/tests/fibers.cpp				\
 	mordor/tests/fibersync.cpp			\
@@ -341,12 +342,12 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/timeout_stream.cpp			\
 	mordor/tests/timer.cpp				\
 	mordor/tests/transfer_stream.cpp		\
+	mordor/tests/unicode.cpp			\
 	mordor/tests/uri.cpp				\
 	mordor/tests/util.cpp				\
 	mordor/tests/xml.cpp				\
-	mordor/tests/zlib.cpp				\
-	mordor/tests/unicode.cpp			\
-	mordor/tests/crypto.cpp
+	mordor/tests/zip.cpp				\
+	mordor/tests/zlib.cpp
 
 mordor_tests_run_tests_CPPFLAGS=-I$(top_builddir) -include mordor/pch.h $(AM_CPPFLAGS)
 mordor_tests_run_tests_LDADD=mordor/libmordor.la mordor/test/libmordortest.la \

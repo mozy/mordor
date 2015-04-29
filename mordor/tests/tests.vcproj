@@ -550,6 +550,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\zip.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\zlib.cpp"
 				>
 			</File>

@@ -32,7 +32,8 @@ private:
           m_outer(&outer),
           m_crc(0),
           m_flags(0x0800),
-          m_extraFieldsLength(0)
+          m_extraFieldsLength(0),
+          m_compressionMethod(8) // DEFLATED
     {}
 
 public:
@@ -46,6 +47,12 @@ public:
     /// Providing size is optional; if it is not provided, Zip64 extensions are
     /// assumed
     void size(long long size);
+
+    /// Supported method:
+    /// 0 - no compression
+    /// 8 - deflate
+    unsigned short compressionMethod() const { return m_compressionMethod; }
+    void compressionMethod(unsigned short method);
 
     long long compressedSize() const { return m_compressedSize; }
 
@@ -71,6 +78,7 @@ private:
     unsigned int m_crc;
     unsigned short m_flags;
     unsigned short m_extraFieldsLength;
+    unsigned short m_compressionMethod;
 };
 
 class ZipEntries : public std::multimap<std::string, ZipEntry>, boost::noncopyable
