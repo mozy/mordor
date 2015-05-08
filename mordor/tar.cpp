@@ -59,6 +59,7 @@ const unsigned int HEADER_PREFIX_LEN = 155;
 char zeroBlock[BLOCK_SIZE] = {0};
 char zeroMagic[TMAGLEN] = {0};
 const std::string GNU_LONGLINK_TAG = "././@LongLink";
+const std::string PAX_GLOBAL_HEADER_NAME_TAG = "/tmp/GlobalHead";
 const std::string PAX_HEADER_NAME_TAG = "./PaxHeaders/";
 
 // GNU extension types
@@ -197,6 +198,8 @@ void parsePaxAttributes(const std::string& paxAttrs, Mordor::TarEntry& entry)
                     entry.ctime(boost::lexical_cast<time_t>(value));
                 } else if (key == PAX_ATTR_MTIME) {
                     entry.mtime(boost::lexical_cast<time_t>(value));
+                } else {
+                    entry.setAttribute(key, value);
                 }
             } else {
                 break;
@@ -207,11 +210,14 @@ void parsePaxAttributes(const std::string& paxAttrs, Mordor::TarEntry& entry)
     }
 }
 
-long long blockSize(long long size)
+inline long long blockSize(long long size)
 {
-    long long blocks = (size / BLOCK_SIZE) +
-        (size % BLOCK_SIZE ? 1 : 0);
-    return blocks * BLOCK_SIZE;
+    return (size + BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1);
+}
+
+inline long long padSize(long long size)
+{
+    return blockSize(size) - size;
 }
 
 unsigned int calChecksum(const TarHeader& header)
@@ -250,7 +256,31 @@ TarEntry::commit()
     strncpy(header.magic, TMAGIC, TMAGLEN);
     strncpy(header.version, TVERSION, TVERSLEN);
 
-    // set pax content
+    // set pax global attrs
+    if (!m_outer->m_defaults.m_attrs.empty()) {
+        strncpy(header.name, PAX_GLOBAL_HEADER_NAME_TAG.c_str(), sizeof(header.name));
+        header.typeflag = PAX_GLOBAL_TYPE;
+
+        std::string global;
+        for (std::map<std::string, std::string>::iterator it = m_outer->m_defaults.m_attrs.begin();
+            it != m_outer->m_defaults.m_attrs.end(); ++it) {
+            global += fillPaxAttribute(it->first, it->second);
+        }
+
+        fillHeaderNumber(header.size, sizeof(header.size), global.length());
+        fillHeaderNumber(header.chksum, sizeof(header.chksum), calChecksum(header), 2);
+        header.chksum[7] = ' ';
+
+        m_outer->m_stream->write(&header, BLOCK_SIZE);
+        m_outer->m_stream->write(global.data(), global.length());
+        // padding nulls to block boundary
+        transferStream(ZeroStream::get_ptr(), m_outer->m_stream, padSize(global.length()));
+
+        // reset that do not fill them next time unless they're set again
+        m_outer->m_defaults.m_attrs.clear();
+    }
+
+    // set pax content, ignore local m_attrs currently
     std::string pax;
     if (m_filename.length() > HEADER_NAME_LEN) {
         pax += fillPaxAttribute(PAX_ATTR_PATH, m_filename);
@@ -298,8 +328,7 @@ TarEntry::commit()
         m_outer->m_stream->write(&header, BLOCK_SIZE);
         m_outer->m_stream->write(pax.data(), pax.length());
         // padding nulls to block boundary
-        transferStream(ZeroStream::get_ptr(), m_outer->m_stream,
-            (BLOCK_SIZE - pax.length() % BLOCK_SIZE) % BLOCK_SIZE);
+        transferStream(ZeroStream::get_ptr(), m_outer->m_stream, padSize(pax.length()));
     }
 
     strncpy(header.name, m_filename.data(), sizeof(header.name));
@@ -361,9 +390,7 @@ TarEntry::close()
     }
 
     // padding nulls to block boundary
-    transferStream(ZeroStream::get_ptr(), m_outer->m_stream,
-        (BLOCK_SIZE - m_size % BLOCK_SIZE) % BLOCK_SIZE);
-
+    transferStream(ZeroStream::get_ptr(), m_outer->m_stream, padSize(m_size));
     MORDOR_LOG_DEBUG(g_log) << "tar (" << m_outer << ") adding file done: " << m_filename;
 }
 
@@ -409,6 +436,17 @@ TarEntry::clear()
     m_dataOffset = 0;
 }
 
+void
+TarEntry::setAttribute(const std::string& key, const std::string& value) {
+    m_attrs[key] = value;
+}
+
+std::string
+TarEntry::getAttribute(const std::string& key) const {
+    std::map<std::string, std::string>::const_iterator it = m_attrs.find(key);
+    return it == m_attrs.end() ? std::string() : it->second;
+}
+
 std::ostream& operator <<(std::ostream& os, const TarEntry& entry)
 {
     const static int width = 10;
@@ -441,7 +479,8 @@ Tar::Tar(Stream::ptr stream, OpenMode mode)
 #ifdef MSVC
 #pragma warning(pop)
 #endif
-      m_defaults(NULL)
+      m_defaults(NULL),
+      m_firstEntry(false)
 {
     if (!m_stream->supportsTell()) {
         m_stream.reset(new LimitedStream(m_stream, 0x7fffffffffffffffll));
@@ -455,6 +494,9 @@ Tar::Tar(Stream::ptr stream, OpenMode mode)
     switch (mode) {
     case READ:
         MORDOR_ASSERT(m_stream->supportsRead());
+        // try to get first global entry
+        getNextEntry();
+        m_firstEntry = true;
         break;
     case WRITE:
         MORDOR_ASSERT(m_stream->supportsWrite());
@@ -468,13 +510,16 @@ Tar::Tar(Stream::ptr stream, OpenMode mode)
 const TarEntry*
 Tar::getNextEntry()
 {
-    if (m_currentEntry) {
+    if (m_firstEntry) {
+        m_firstEntry = false;
+        return m_currentEntry;
+    } else if (m_currentEntry) {
         // find next file
         if (!m_stream->supportsSeek()) {
             Stream::ptr stream = static_cast<const TarEntry*>(m_currentEntry)->stream();
             if (stream) {
                 transferStream(stream, NullStream::get());
-                transferStream(m_stream, NullStream::get(), BLOCK_SIZE - m_currentEntry->m_size % BLOCK_SIZE);
+                transferStream(m_stream, NullStream::get(), padSize(m_currentEntry->m_size));
             }
         } else {
             m_stream->seek(m_currentEntry->m_dataOffset + blockSize(m_currentEntry->m_size));
@@ -636,7 +681,6 @@ Tar::getNextEntry()
     return NULL;
 }
 
-
 void
 Tar::getContentString(long long size, std::string& str)
 {
@@ -688,6 +732,16 @@ Tar::close()
     transferStream(ZeroStream::get_ptr(), m_stream, BLOCK_SIZE * 2);
     m_stream->close();
     MORDOR_LOG_DEBUG(g_log) << "all files done, tar archive (" << this << ") closed";
+}
+
+void
+Tar::setGlobalAttribute(const std::string& key, const std::string& value) {
+    m_defaults.setAttribute(key, value);
+}
+
+std::string
+Tar::getGlobalAttribute(const std::string& key) const {
+    return m_defaults.getAttribute(key);
 }
 
 }

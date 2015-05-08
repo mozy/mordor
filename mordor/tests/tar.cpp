@@ -546,5 +546,53 @@ MORDOR_UNITTEST_FIXTURE(TarTestFixture, Tar, incompleteHeader)
     MORDOR_TEST_ASSERT_EXCEPTION(tar.addFile(), IncompleteTarHeaderException);
 }
 
+MORDOR_UNITTEST_FIXTURE(TarTestFixture, Tar, globalAttribute)
+{
+    const char* data = "this is temp file for global attribute test";
+    MemoryStream temp((Buffer(data)));
+    std::string path = m_testFolder + "tartest";
+    std::string tarfile = m_testFolder + "test.tar";
+    Stream::ptr stream(new FileStream(tarfile, FileStream::WRITE, FileStream::OVERWRITE_OR_CREATE));
+    Tar tar(stream);
+    std::string key = "testkey";
+    std::string value = "testvalue";
+    tar.setGlobalAttribute(key, value);
+    {
+        TarEntry& entry = tar.addFile();
+        entry.filename(path);
+        entry.size(strlen(data));
+        entry.filetype(TarEntry::REGULAR);
+        entry.mode(0755);
+        entry.mtime(time(NULL));
+        transferStream(temp, entry.stream());
+        temp.close();
+    }
+    tar.close();
+
+    int rc = system(("tar -P -xf " + tarfile).c_str());
+    MORDOR_TEST_ASSERT_EQUAL(rc, 0);
+
+    FileStream::ptr file(new FileStream(path, FileStream::READ));
+    MemoryStream buf;
+    transferStream(file, buf);
+    MORDOR_TEST_ASSERT(buf.buffer() == data);
+
+    {
+        Stream::ptr stream(new FileStream(tarfile, FileStream::READ));
+        Tar tar(stream);
+        MORDOR_TEST_ASSERT_EQUAL(tar.getGlobalAttribute(key), value);
+        MORDOR_TEST_ASSERT_EQUAL(tar.getGlobalAttribute(key + "not found"), "");
+        const TarEntry* entry = tar.getNextEntry();
+        MORDOR_TEST_ASSERT(entry);
+        MORDOR_TEST_ASSERT_EQUAL(entry->filename(), path);
+        Stream::ptr entryStream = entry->stream();
+        MORDOR_TEST_ASSERT(entryStream);
+        MemoryStream buf;
+        transferStream(entryStream, buf);
+        MORDOR_TEST_ASSERT(buf.buffer() == data);
+        MORDOR_TEST_ASSERT(!tar.getNextEntry());
+    }
+}
+
 #endif
 

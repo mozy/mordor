@@ -4,6 +4,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <map>
 
 #include "exception.h"
 
@@ -70,6 +71,10 @@ public:
     time_t mtime() const { return m_mtime; }
     void mtime(time_t mtime) { m_mtime = mtime; }
 
+    /// other attrs
+    void setAttribute(const std::string& key, const std::string& value);
+    std::string getAttribute(const std::string& key) const;
+
     /// Gets stream for writing file to tar archive entry
     /// @note Only one TarEntry stream can be accessed at any one time from a
     /// single Tar; accessing the stream() of another TarEntry will implicitly
@@ -120,6 +125,7 @@ private:
     time_t m_atime;
     time_t m_ctime;
     time_t m_mtime;
+    std::map<std::string, std::string> m_attrs;
 
     long long m_startOffset;
     long long m_dataOffset;
@@ -190,6 +196,12 @@ public:
     /// @pre stream->supportsRead()
     const TarEntry* getNextEntry();
 
+    /// Set an attribute in pax global header,
+    /// all values will be reset after an (global) entry header is written
+    void setGlobalAttribute(const std::string& key, const std::string& value);
+    /// Get an attribute in pax global header
+    std::string getGlobalAttribute(const std::string& key) const;
+
 private:
     void getContentString(long long size, std::string& str);
 
@@ -199,6 +211,7 @@ private:
     TarEntry m_scratchEntry;
     TarEntry m_defaults; // pax global defaults
     OpenMode m_mode;
+    bool m_firstEntry; // first entry read
 };
 
 }
