@@ -248,11 +248,12 @@ MORDOR_UNITTEST(FiberEvent, autoResetSetWithoutExistingWaiters)
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
 }
 
-static void signalMe3(TimerManager &manager, FiberEvent &event,
+static void signalMe3(TimerManager &manager, FiberEvent &event, FiberEvent &timer,
                       int &sequence, unsigned long long awhile)
 {
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 2);
     event.set();
+    timer.wait();
     Mordor::sleep(manager, awhile);
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 4);
     // a fiber is already waiting for a while
@@ -263,14 +264,15 @@ MORDOR_UNITTEST(FiberEvent, autoResetSetWithExistingWaiters)
 {
     int sequence = 0;
     IOManager manager; // for a timer-enabled scheduler
-    FiberEvent event;
+    FiberEvent event, timer;
     static const unsigned long long awhile = 50000ULL; // sleep for 50ms
 
     manager.schedule(boost::bind(&signalMe3, boost::ref(manager),
-        boost::ref(event), boost::ref(sequence), awhile));
+        boost::ref(event), boost::ref(timer), boost::ref(sequence), awhile));
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 1);
     event.wait();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 3);
+    timer.set();
     Test::TakesAtLeast _(awhile);
     // the first set() call should not leave the event signaled, so this fiber
     // should be blocked until signalMe3() allows it to move on.
