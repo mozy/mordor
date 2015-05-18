@@ -209,14 +209,19 @@ size_t ZlibStream::doDeflateForRead(Buffer &buffer, size_t length)
     m_strm.avail_out = outbuf.iov_len;
 
     while (true) {
-        if (m_inBuffer.readAvailable() == 0)
-            parent()->read(m_inBuffer, m_bufferSize);
+        bool parentEof = false;
+        if (m_inBuffer.readAvailable() == 0) {
+            size_t result = parent()->read(m_inBuffer, m_bufferSize);
+            if (result == 0) {
+                parentEof = true;
+            }
+        }
         struct iovec inbuf = m_inBuffer.readBuffer((size_t)~0, true);
         m_strm.next_in = (Bytef*)inbuf.iov_base;
         m_strm.avail_in = inbuf.iov_len;
-        int rc = deflate(&m_strm, Z_FINISH);
+        int rc = deflate(&m_strm, parentEof?Z_FINISH:Z_NO_FLUSH);
         MORDOR_LOG_DEBUG(g_log) << this << " deflate((" << inbuf.iov_len << ", "
-            << outbuf.iov_len << "), Z_FINISH): " << rc << " ("
+            << outbuf.iov_len << "), " << (parentEof?"Z_FINISH":"Z_NO_FLUSH") << "): " << rc << " ("
             << m_strm.avail_in << ", " << m_strm.avail_out << ")";
         // We are always providing both input and output
         MORDOR_ASSERT(rc != Z_BUF_ERROR);

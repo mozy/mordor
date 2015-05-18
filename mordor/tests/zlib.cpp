@@ -10,6 +10,7 @@
 #include "mordor/streams/gzip.h"
 #include "mordor/streams/lzma2.h"
 #include "mordor/streams/memory.h"
+#include "mordor/streams/random.h"
 #include "mordor/streams/singleplex.h"
 #include "mordor/streams/zlib.h"
 #include "mordor/test/test.h"
@@ -180,7 +181,8 @@ template <class StreamType>
 void testCompressInverse(size_t buffer_size)
 {
     Buffer uncompressed;
-    uncompressed.copyIn(test_uncompressed, sizeof(test_uncompressed));
+    RandomStream rand;
+    rand.read(uncompressed, buffer_size);
 
     //compress on read
     Stream::ptr memstream(new MemoryStream(uncompressed));
@@ -191,12 +193,12 @@ void testCompressInverse(size_t buffer_size)
     teststream.close();
 
     // decompress from compressed to decomp
-    boost::shared_ptr<MemoryStream> memstream2(new MemoryStream());
-    Stream::ptr writeplex(new SingleplexStream(memstream2, SingleplexStream::WRITE));
-    StreamType teststream2(writeplex, true, true);
-    teststream2.write(testBuf, 4096);
+    Buffer decomp;
+    Stream::ptr memstream2(new MemoryStream(testBuf));
+    Stream::ptr readplex2(new SingleplexStream(memstream2, SingleplexStream::READ));
+    StreamType teststream2(readplex2);
+    while(0 < teststream2.read(decomp, buffer_size));
 
-    Buffer decomp = memstream2->buffer();
     // compare decomp to original Data
     MORDOR_TEST_ASSERT( uncompressed == decomp );
 }
@@ -208,6 +210,8 @@ MORDOR_UNITTEST(ZlibStream, compress)
     testCompressInverse<ZlibStream>(4096);
     //set small buffer, multiple read call test in ZlibStream Inverse Mode.
     testCompressInverse<ZlibStream>(50);
+    //larger than max buffer size(65536)
+    testCompressInverse<ZlibStream>(409600);
 }
 
 MORDOR_UNITTEST(ZlibStream, decompress)
