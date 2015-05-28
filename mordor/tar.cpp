@@ -212,7 +212,7 @@ void parsePaxAttributes(const std::string& paxAttrs, Mordor::TarEntry& entry)
 
 inline long long blockSize(long long size)
 {
-    return (size + BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1);
+    return (size + BLOCK_SIZE - 1) & ~((long long)BLOCK_SIZE - 1);
 }
 
 inline long long padSize(long long size)
