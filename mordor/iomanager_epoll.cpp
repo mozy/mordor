@@ -197,6 +197,13 @@ IOManager::IOManager(size_t threads, bool useCaller, bool autoStart)
         close(m_epfd);
         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
     }
+    rc = fcntl(m_tickleFds[1], F_SETFL, O_NONBLOCK);
+    if (rc == -1) {
+        close(m_tickleFds[0]);
+        close(m_tickleFds[1]);
+        close(m_epfd);
+        MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("fcntl");
+    }
     rc = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
     MORDOR_LOG_LEVEL(g_log, rc ? Log::ERROR : Log::VERBOSE) << this
         << " epoll_ctl(" << m_epfd << ", EPOLL_CTL_ADD, " << m_tickleFds[0]
@@ -488,7 +495,7 @@ IOManager::tickle()
     int rc = write(m_tickleFds[1], "T", 1);
     MORDOR_LOG_VERBOSE(g_log) << this << " write(" << m_tickleFds[1] << ", 1): "
         << rc << " (" << lastError() << ")";
-    MORDOR_VERIFY(rc == 1);
+    MORDOR_VERIFY(rc == 1 || (rc < 0 && errno == EAGAIN));
 }
 
 }
