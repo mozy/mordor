@@ -616,7 +616,7 @@ ConnectionCache::dropConnection(weak_ptr self,
     CachedConnectionMap::iterator it = m_conns.find(uri);
     if (it == m_conns.end())
     {
-        MORDOR_LOG_TRACE(g_cacheLog) << this << " Failed to drop connection to " << uri << "not found in our cache "; 
+        MORDOR_LOG_TRACE(g_cacheLog) << this << " Failed to drop connection to " << uri << "not found in our cache ";
         return;
     }
     ConnectionList::iterator it2 = std::find_if(it->second->connections.begin(),
