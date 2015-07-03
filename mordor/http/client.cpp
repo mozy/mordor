@@ -223,8 +223,11 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
             request->m_scheduler = NULL;
             request->m_fiber.reset();
         } else {
-            if (m_timeoutStream)
+            if (m_timeoutStream) {
+                lock.unlock();
                 m_timeoutStream->readTimeout(m_readTimeout);
+                lock.lock();
+            }
         }
     }
     if (closetype != Stream::NONE) {
@@ -845,8 +848,11 @@ ClientRequest::waitForRequest()
             --m_conn->m_currentRequest;
             m_requestState = HEADERS;
             // Disable read timeouts while a request is in progress
-            if (m_conn->m_timeoutStream)
+            if (m_conn->m_timeoutStream) {
+                lock.unlock();
                 m_conn->m_timeoutStream->readTimeout(~0ull);
+                lock.lock();
+            }
             MORDOR_LOG_TRACE(g_log) << m_conn->m_connectionNumber << "-" << m_requestNumber << " requesting";
         } else {
             m_scheduler = Scheduler::getThis();
