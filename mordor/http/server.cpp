@@ -429,6 +429,22 @@ ServerRequest::cancel()
 }
 
 void
+ServerRequest::readFinish()
+{
+    boost::recursive_mutex::scoped_lock lock(m_conn->m_mutex);
+    MORDOR_LOG_INFO(g_log) << m_context << " server request read finish";
+    m_conn->invariant();
+    m_requestState = COMPLETE;
+    m_responseState = COMPLETE;
+    m_conn->m_stream->cancelRead();
+    std::list<ServerRequest *>::iterator it =
+        std::find(m_conn->m_pendingRequests.begin(),
+            m_conn->m_pendingRequests.end(), this);
+    if (it != m_conn->m_pendingRequests.end())
+        m_conn->m_pendingRequests.erase(it);
+}
+
+void
 ServerRequest::finish()
 {
     if (m_responseState < COMPLETE) {
@@ -466,7 +482,7 @@ ServerRequest::doRequest()
             if (consumed == 0 && !parser.error() && !parser.complete()) {
                 // EOF
                 MORDOR_LOG_TRACE(g_log) << m_conn->context() << " No more request";
-                cancel();
+                readFinish();
                 return;
             }
             if (parser.error() || !parser.complete()) {

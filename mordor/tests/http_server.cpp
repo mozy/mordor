@@ -443,6 +443,99 @@ MORDOR_UNITTEST(HTTPServer, pipelineResponseWhilePriorResponseFlushing)
     pool.dispatch();
 }
 
+enum ReadFinishPos
+{
+    BEFORE,
+    RESPOND1,
+    RESPOND2,
+    AFTER1,
+    AFTER2
+};
+
+static void readFinishServer(ServerRequest::ptr request, Stream::ptr client, ReadFinishPos pos)
+{
+    if (pos == BEFORE) {
+        client->close(Stream::WRITE);
+    }
+
+    request->processNextRequest();
+
+    if (request->request().requestLine.uri == "/1") {
+        if (pos == RESPOND1) {
+            client->close(Stream::WRITE);
+        }
+        respondError(request, ACCEPTED);
+        if (pos == AFTER1) {
+            client->close(Stream::WRITE);
+        }
+        return;
+    }
+
+    if (pos == RESPOND2) {
+        client->close(Stream::WRITE);
+    }
+    respondError(request, OK);
+    if (pos == AFTER2) {
+        client->close(Stream::WRITE);
+    }
+}
+
+static void testPipelineReadFinish(ReadFinishPos pos)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+    pipe.first->write("GET /1 HTTP/1.1\r\nHost: localhost\r\n\r\n");
+    pipe.first->write("GET /2 HTTP/1.1\r\nHost: localhost\r\n\r\n");
+
+    ServerConnection::ptr conn(new ServerConnection(pipe.second,
+                               boost::bind(&readFinishServer, _1, pipe.first, pos)));
+
+    WorkerPool pool;
+    pool.schedule(boost::bind(&ServerConnection::processRequests, conn));
+
+    Buffer firstResponse;
+    pipe.first->read(firstResponse, 100);
+    MORDOR_TEST_ASSERT_EQUAL(firstResponse.toString(),
+                             "HTTP/1.1 202 Accepted\r\nContent-Length: 0\r\n\r\n");
+
+    Buffer secondResponse;
+    pipe.first->read(secondResponse, 100);
+    MORDOR_TEST_ASSERT_EQUAL(secondResponse.toString(),
+                             "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
+}
+
+MORDOR_UNITTEST(HTTPServer, pipelineReadFinish)
+{
+    testPipelineReadFinish(BEFORE);
+    testPipelineReadFinish(RESPOND1);
+    testPipelineReadFinish(RESPOND2);
+    testPipelineReadFinish(AFTER1);
+    testPipelineReadFinish(AFTER2);
+}
+
+static void testNonePipelineReadFinish(ReadFinishPos pos)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+    pipe.first->write("GET /1 HTTP/1.0\r\nHost: localhost\r\n\r\n");
+
+    ServerConnection::ptr conn(new ServerConnection(pipe.second,
+                               boost::bind(&readFinishServer, _1, pipe.first, pos)));
+
+    WorkerPool pool;
+    pool.schedule(boost::bind(&ServerConnection::processRequests, conn));
+
+    Buffer firstResponse;
+    pipe.first->read(firstResponse, 100);
+    MORDOR_TEST_ASSERT_EQUAL(firstResponse.toString(),
+                             "HTTP/1.0 202 Accepted\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+}
+
+MORDOR_UNITTEST(HTTPServer, nonePipelineReadFinish)
+{
+    testNonePipelineReadFinish(BEFORE);
+    testNonePipelineReadFinish(RESPOND1);
+    testNonePipelineReadFinish(AFTER1);
+}
+
 namespace {
 class UnseekableStream : public FilterStream
 {

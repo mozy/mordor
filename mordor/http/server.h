@@ -103,6 +103,7 @@ private:
     void requestDone();
     void responseMultipartDone();
     void responseDone();
+    void readFinish();
 
 private:
     boost::shared_ptr<ServerConnection> m_conn;
