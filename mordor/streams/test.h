@@ -20,7 +20,8 @@ public:
           m_maxReadSize(~0),
           m_maxWriteSize(~0),
           m_onReadBytes(0),
-          m_onWriteBytes(0)
+          m_onWriteBytes(0),
+          m_afterReadBytes(0)
     {}
 
     size_t maxReadSize() const { return m_maxReadSize; }
@@ -33,6 +34,8 @@ public:
     { m_onClose = dg; }
     void onRead(boost::function<void ()> dg, long long bytes = 0)
     { m_onRead = dg; m_onReadBytes = bytes; }
+    void afterRead(boost::function<void ()> dg, size_t bytes = 0)
+    { m_afterRead = dg; m_afterReadBytes = bytes; }
     void onWrite(boost::function<void ()> dg, long long bytes = 0)
     { m_onWrite = dg; m_onWriteBytes = bytes; }
     void onFlush(boost::function<void (bool)> dg)
@@ -48,9 +51,10 @@ public:
 private:
     size_t m_maxReadSize, m_maxWriteSize;
     boost::function<void (CloseType)> m_onClose;
-    boost::function<void ()> m_onRead, m_onWrite;
+    boost::function<void ()> m_onRead, m_onWrite, m_afterRead;
     boost::function<void (bool)> m_onFlush;
     long long m_onReadBytes, m_onWriteBytes;
+    size_t m_afterReadBytes;
 };
 
 }

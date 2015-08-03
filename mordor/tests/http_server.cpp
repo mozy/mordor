@@ -480,13 +480,23 @@ static void readFinishServer(ServerRequest::ptr request, Stream::ptr client, Rea
     }
 }
 
-static void testPipelineReadFinish(ReadFinishPos pos)
+static void throwTimedOutException()
+{
+    MORDOR_THROW_EXCEPTION(TimedOutException());
+}
+
+static void testPipelineReadFinish(ReadFinishPos pos, bool needThrow)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
     pipe.first->write("GET /1 HTTP/1.1\r\nHost: localhost\r\n\r\n");
     pipe.first->write("GET /2 HTTP/1.1\r\nHost: localhost\r\n\r\n");
 
-    ServerConnection::ptr conn(new ServerConnection(pipe.second,
+    TestStream::ptr testStream(new TestStream(pipe.second));
+    if (needThrow) {
+        testStream->afterRead(throwTimedOutException);
+    }
+
+    ServerConnection::ptr conn(new ServerConnection(testStream,
                                boost::bind(&readFinishServer, _1, pipe.first, pos)));
 
     WorkerPool pool;
@@ -505,19 +515,33 @@ static void testPipelineReadFinish(ReadFinishPos pos)
 
 MORDOR_UNITTEST(HTTPServer, pipelineReadFinish)
 {
-    testPipelineReadFinish(BEFORE);
-    testPipelineReadFinish(RESPOND1);
-    testPipelineReadFinish(RESPOND2);
-    testPipelineReadFinish(AFTER1);
-    testPipelineReadFinish(AFTER2);
+    testPipelineReadFinish(BEFORE, true);
+    testPipelineReadFinish(BEFORE, false);
+
+    testPipelineReadFinish(RESPOND1, true);
+    testPipelineReadFinish(RESPOND1, false);
+
+    testPipelineReadFinish(RESPOND2, true);
+    testPipelineReadFinish(RESPOND2, false);
+
+    testPipelineReadFinish(AFTER1, true);
+    testPipelineReadFinish(AFTER1, false);
+
+    testPipelineReadFinish(AFTER2, true);
+    testPipelineReadFinish(AFTER2, false);
 }
 
-static void testNonePipelineReadFinish(ReadFinishPos pos)
+static void testNonePipelineReadFinish(ReadFinishPos pos, bool needThrow)
 {
     std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
     pipe.first->write("GET /1 HTTP/1.0\r\nHost: localhost\r\n\r\n");
 
-    ServerConnection::ptr conn(new ServerConnection(pipe.second,
+    TestStream::ptr testStream(new TestStream(pipe.second));
+    if (needThrow) {
+        testStream->afterRead(throwTimedOutException);
+    }
+
+    ServerConnection::ptr conn(new ServerConnection(testStream,
                                boost::bind(&readFinishServer, _1, pipe.first, pos)));
 
     WorkerPool pool;
@@ -531,9 +555,77 @@ static void testNonePipelineReadFinish(ReadFinishPos pos)
 
 MORDOR_UNITTEST(HTTPServer, nonePipelineReadFinish)
 {
-    testNonePipelineReadFinish(BEFORE);
-    testNonePipelineReadFinish(RESPOND1);
-    testNonePipelineReadFinish(AFTER1);
+    testNonePipelineReadFinish(BEFORE, true);
+    testNonePipelineReadFinish(BEFORE, false);
+
+    testNonePipelineReadFinish(RESPOND1, true);
+    testNonePipelineReadFinish(RESPOND1, false);
+
+    testNonePipelineReadFinish(AFTER1, true);
+    testNonePipelineReadFinish(AFTER1, false);
+}
+
+static void testPipelineTimeout(ReadFinishPos pos)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+    pipe.first->write("GET /1 HTTP/1.1\r\nHost: localhost\r\n\r\n");
+    pipe.first->write("GET /2 HTTP/1.1\r\nHost");
+
+    TestStream::ptr testStream(new TestStream(pipe.second));
+    testStream->afterRead(throwTimedOutException);
+
+    ServerConnection::ptr conn(new ServerConnection(testStream,
+                               boost::bind(&readFinishServer, _1, pipe.first, pos)));
+
+    WorkerPool pool;
+    pool.schedule(boost::bind(&ServerConnection::processRequests, conn));
+
+    Buffer firstResponse;
+    pipe.first->read(firstResponse, 100);
+    MORDOR_TEST_ASSERT_EQUAL(firstResponse.toString(),
+                             "HTTP/1.1 202 Accepted\r\nContent-Length: 0\r\n\r\n");
+
+    Buffer secondResponse;
+    pipe.first->read(secondResponse, 200);
+    MORDOR_TEST_ASSERT_EQUAL(secondResponse.toString(),
+                             "HTTP/1.1 408 Request Time-out\r\n"
+                             "Connection: close\r\n"
+                             "Content-Length: 30\r\n"
+                             "Content-Type: text/plain\r\n"
+                             "\r\n"
+                             "Time out when parsing request.");
+}
+
+MORDOR_UNITTEST(HTTPServer, pipelineTimeOut)
+{
+    testPipelineTimeout(BEFORE);
+    testPipelineTimeout(RESPOND1);
+    testPipelineTimeout(AFTER1);
+}
+
+MORDOR_UNITTEST(HTTPServer, nonePipelineTimeOut)
+{
+    std::pair<Stream::ptr, Stream::ptr> pipe = pipeStream();
+    pipe.first->write("GET /1 HTTP/1.1\r\nHost");
+    pipe.first->close(Stream::WRITE);
+
+    TestStream::ptr testStream(new TestStream(pipe.second));
+    testStream->afterRead(throwTimedOutException);
+
+    ServerConnection::ptr conn(new ServerConnection(testStream, &httpRequest));
+
+    WorkerPool pool;
+    pool.schedule(boost::bind(&ServerConnection::processRequests, conn));
+
+    Buffer firstResponse;
+    pipe.first->read(firstResponse, 200);
+    MORDOR_TEST_ASSERT_EQUAL(firstResponse.toString(),
+                             "HTTP/1.1 408 Request Time-out\r\n"
+                             "Connection: close\r\n"
+                             "Content-Length: 30\r\n"
+                             "Content-Type: text/plain\r\n"
+                             "\r\n"
+                             "Time out when parsing request.");
 }
 
 namespace {

@@ -494,6 +494,15 @@ ServerRequest::doRequest()
                 respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
                 return;
             }
+        } catch (TimedOutException &) {
+            MORDOR_LOG_WARNING(g_log) << m_context
+                << " Unexpected TimedOutException";
+            if (m_request.requestLine.uri.isDefined()) {
+                respondError(shared_from_this(), REQUEST_TIMEOUT, "Time out when parsing request.", true);
+            } else {
+                readFinish();
+            }
+            return;
         } catch (SocketException &) {
             MORDOR_LOG_WARNING(g_log) << m_context
                 << " Unexpected SocketException";
