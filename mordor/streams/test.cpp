@@ -27,11 +27,6 @@ TestStream::read(Buffer &b, size_t len)
     size_t result = parent()->read(b, len);
     if (m_onRead && m_onReadBytes > 0)
         m_onReadBytes -= result;
-    if (m_afterRead) {
-        if (m_afterReadBytes == result) {
-            m_afterRead();
-        }
-    }
     return result;
 }
 
