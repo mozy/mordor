@@ -90,10 +90,19 @@ MORDOR_UNITTEST(Scheduler, stopScheduledHijack)
     pool.dispatch();
 }
 
+static void delayStop(Scheduler * s)
+{
+    // sleep 10 ms so that main thread can yieldTo() before
+    // scheduled stop running, otherwise ASSERT will fail since
+    // m_callingFiber not set in new thread
+    Mordor::sleep(10);
+    s->stop();
+}
+
 MORDOR_UNITTEST(Scheduler, stopScheduledHybrid)
 {
     WorkerPool pool(2);
-    pool.schedule(boost::bind(&Scheduler::stop, &pool));
+    pool.schedule(boost::bind(&delayStop, &pool));
     pool.yieldTo();
 }
 
