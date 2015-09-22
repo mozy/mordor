@@ -3,29 +3,11 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/bind.hpp>
 #include "mordor/assert.h"
+#include "mordor/streams/memory.h"
 #include "mordor/xml/dom_parser.h"
 
 namespace Mordor {
 namespace DOM {
-
-#define PARSE_DOC(xml) \
-    Document *doc = new Document(); \
-    m_element = doc->documentElement(); \
-    CallbackXMLParserEventHandler handler( \
-        boost::bind(&XMLParser::onStartTag, this, _1, doc), \
-        boost::bind(&XMLParser::onEndTag, this, _1, doc), \
-        boost::bind(&XMLParser::onEmptyTag, this), \
-        boost::bind(&XMLParser::onAttributeName, this, _1), \
-        boost::bind(&XMLParser::onAttributeValue, this, _1), \
-        boost::bind(&XMLParser::onInnerText, this, _1), \
-        boost::bind(&XMLParser::onReference, this, _1)); \
-        Mordor::XMLParser parser(handler); \
-    parser.run(xml); \
-    if (!parser.final() || parser.error()) { \
-        delete doc; \
-        MORDOR_THROW_EXCEPTION(std::invalid_argument("failed to parse: Invalid xml")); \
-    } \
-    return Document::ptr(doc);
 
 NodeList Element::getElementsByTagName(const std::string &tagName) {
     NodeList l;
@@ -58,19 +40,38 @@ Element * Element::getElementById(const std::string &id) {
 }
 
 Document::ptr XMLParser::loadDocument(const std::string& str) {
-    PARSE_DOC(str)
+    return loadDocument(MemoryStream::ptr(new MemoryStream(Buffer(str))));
 }
+
 Document::ptr XMLParser::loadDocument(const char *str) {
-    PARSE_DOC(str)
+    return loadDocument(MemoryStream::ptr(new MemoryStream(Buffer(str))));
 }
+
 Document::ptr XMLParser::loadDocument(const Buffer& buffer) {
-    PARSE_DOC(buffer)
+    return loadDocument(MemoryStream::ptr(new MemoryStream(buffer)));
 }
+
 Document::ptr XMLParser::loadDocument(Stream& stream) {
-    PARSE_DOC(stream)
+    Document::ptr doc(new Document());
+    m_element = doc->documentElement();
+    CallbackXMLParserEventHandler handler(
+        boost::bind(&XMLParser::onStartTag, this, _1, doc.get()),
+        boost::bind(&XMLParser::onEndTag, this, _1, doc.get()),
+        boost::bind(&XMLParser::onEmptyTag, this),
+        boost::bind(&XMLParser::onAttributeName, this, _1),
+        boost::bind(&XMLParser::onAttributeValue, this, _1),
+        boost::bind(&XMLParser::onInnerText, this, _1),
+        boost::bind(&XMLParser::onReference, this, _1));
+    Mordor::XMLParser parser(handler);
+    parser.run(stream);
+    if (!parser.final() || parser.error()) {
+        MORDOR_THROW_EXCEPTION(std::invalid_argument("failed to parse: Invalid xml"));
+    }
+    return doc;
 }
+
 Document::ptr XMLParser::loadDocument(boost::shared_ptr<Stream> stream) {
-    PARSE_DOC(*stream)
+    return loadDocument(*stream);
 }
 
 void XMLParser::onStartTag(const std::string &tag, Document *doc) {
