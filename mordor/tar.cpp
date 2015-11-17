@@ -602,15 +602,7 @@ Tar::getNextEntry()
             break;
         }
 
-        if (size > 0) {
-            m_dataStream.reset(new LimitedStream(m_stream, size, false));
-        }
         m_scratchEntry.m_size = size;
-        m_scratchEntry.m_dataOffset = m_stream->tell();
-        if (m_scratchEntry.m_dataOffset % BLOCK_SIZE != 0) {
-            MORDOR_THROW_EXCEPTION(UnexpectedEofException());
-        }
-
         m_scratchEntry.m_filename = (header.name[HEADER_NAME_LEN - 1] == 0 ?
             std::string(header.name) : std::string(header.name, HEADER_NAME_LEN));
         std::string prefix = (header.prefix[HEADER_PREFIX_LEN - 1] == 0 ?
@@ -673,6 +665,15 @@ Tar::getNextEntry()
 
         // local ext overrides
         parsePaxAttributes(paxAttrs, m_scratchEntry);
+
+        // set data stream after size properly set
+        if (m_scratchEntry.m_size > 0) {
+            m_dataStream.reset(new LimitedStream(m_stream, m_scratchEntry.m_size, false));
+        }
+        m_scratchEntry.m_dataOffset = m_stream->tell();
+        if (m_scratchEntry.m_dataOffset % BLOCK_SIZE != 0) {
+            MORDOR_THROW_EXCEPTION(UnexpectedEofException());
+        }
 
         MORDOR_LOG_DEBUG(g_log) << "get file entry: " << m_scratchEntry.m_filename;
         m_currentEntry = &m_scratchEntry;
