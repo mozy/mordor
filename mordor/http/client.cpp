@@ -448,17 +448,19 @@ ClientConnection::invariant() const
 #endif
 }
 
-void ClientRequest::RequestLogger::logRequest(size_t connNum, long long requestNum, const Request &request, bool censorBasicAuth)
+void ClientRequest::RequestLogger::logRequest(size_t connNum, long long requestNum, const Request &request, bool censorAuth)
 {
     if (g_log->enabled(Log::DEBUG)) {
         std::ostringstream os;
-        bool basicAuth = censorBasicAuth ? (stricmp(request.request.authorization.scheme.c_str(), "Basic") == 0) : false;
-        bool basicProxyAuth = censorBasicAuth ? (stricmp(request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0) : false;
-        if (basicAuth || basicProxyAuth) {
+        bool basicAuth = censorAuth ? (stricmp(request.request.authorization.scheme.c_str(), "Basic") == 0) : false;
+        bool basicProxyAuth = censorAuth ? (stricmp(request.request.proxyAuthorization.scheme.c_str(), "Basic") == 0) : false;
+        bool oauth = censorAuth ? (stricmp(request.request.authorization.scheme.c_str(), "Bearer") == 0) : false;
+        bool oauthProxy = censorAuth ? (stricmp(request.request.proxyAuthorization.scheme.c_str(), "Bearer") == 0) : false;
+        if (basicAuth || basicProxyAuth || oauth || oauthProxy) {
             Request censoredRequest(request);
-            if (basicAuth)
+            if (basicAuth || oauth)
                 censoredRequest.request.authorization.param = "<hidden>";
-            if (basicProxyAuth)
+            if (basicProxyAuth || oauthProxy)
                 censoredRequest.request.proxyAuthorization.param = "<hidden>";
             os << censoredRequest;
         } else {

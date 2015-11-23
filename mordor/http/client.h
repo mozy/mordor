@@ -87,8 +87,8 @@ public:
     struct RequestLogger {
         virtual ~RequestLogger() {}
         // default implementation logs request (>=DEBUG) or request.requestline (VERBOSE),
-        // censoring HTTP Basic auth
-        virtual void logRequest(size_t connectionNum, long long requestNum, const Request &request, bool censorBasicAuth = true);
+        // censoring HTTP Basic/Bearer auth
+        virtual void logRequest(size_t connectionNum, long long requestNum, const Request &request, bool censorAuth = true);
 
         // default implementation logs response (>=DEBUG) or response.status (VERBOSE);
         // derivations are welcome to examine the request also
