@@ -1171,7 +1171,10 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_MISSING_PARENTHESES = NO;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"";
+				HEADER_SEARCH_PATHS = (
+					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
+					"\"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/include\"",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -1191,7 +1194,10 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_MISSING_PARENTHESES = NO;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"";
+				HEADER_SEARCH_PATHS = (
+					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
+					"\"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/include\"",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = "-DNDEBUG";
 				SDKROOT = macosx;
@@ -1212,7 +1218,6 @@
 				GCC_PREFIX_HEADER = mordor/pch.h;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/include\"",
 				);
 				INSTALL_PATH = /usr/local/lib;
@@ -1232,7 +1237,6 @@
 				GCC_PREFIX_HEADER = mordor/pch.h;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/include\"",
 				);
 				INSTALL_PATH = /usr/local/lib;
@@ -1290,13 +1294,14 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
 					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/include\"",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_LDFLAGS = (
-					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libcrypto-1.0.0e.a",
-					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libssl-1.0.0e.a",
+					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/libcrypto.a",
+					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/libssl.a",
 					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_filesystem-mt.a",
 					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_regex-mt.a",
 					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_program_options-mt.a",
@@ -1322,13 +1327,14 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
 					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/include\"",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_LDFLAGS = (
-					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libcrypto-1.0.0e.a",
-					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.0e/libssl-1.0.0e.a",
+					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/libcrypto.a",
+					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/libssl.a",
 					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_filesystem-mt.a",
 					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_regex-mt.a",
 					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_program_options-mt.a",
@@ -1349,7 +1355,6 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"";
 				PRODUCT_NAME = mordortest;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 			};
@@ -1361,7 +1366,6 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				HEADER_SEARCH_PATHS = "\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"";
 				PRODUCT_NAME = mordortest;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				ZERO_LINK = NO;
