@@ -32,6 +32,10 @@
 /* http://msdn.microsoft.com/en-us/library/windows/desktop/ms683196(v=vs.85).aspx */
 #define PSAPI_VERSION (1)
 
+// 'inet_addr' is deprecated but will break xp machines if we replace it.
+//  Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+
 #include <ws2tcpip.h>
 
 // Take things out of the preprocessor, and put into the global namespace

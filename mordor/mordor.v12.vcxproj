@@ -208,6 +208,7 @@
     <ClCompile Include="streams\test.cpp" />
     <ClCompile Include="streams\throttle.cpp" />
     <ClCompile Include="streams\timeout.cpp" />
+    <ClCompile Include="tar.cpp" />
     <ClCompile Include="thread.cpp" />
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="streams\transfer.cpp" />
