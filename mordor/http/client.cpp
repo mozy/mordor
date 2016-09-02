@@ -224,9 +224,16 @@ ClientConnection::scheduleNextRequest(ClientRequest *request)
             request->m_fiber.reset();
         } else {
             if (m_timeoutStream) {
-                lock.unlock();
-                m_timeoutStream->readTimeout(m_readTimeout);
-                lock.lock();
+                if (lock.owns_lock()) {
+                    // m_timeoutStream can be yield out. unlock the boost locker to avoid
+                    // holding a boost thread lock while not occupying the thread which can lead
+                    // to thread re-enter and deadlock refs #138359
+                    lock.unlock();
+                    m_timeoutStream->readTimeout(m_readTimeout);
+                    lock.lock();
+                } else {
+                    m_timeoutStream->readTimeout(m_readTimeout);
+                }
             }
         }
     }
