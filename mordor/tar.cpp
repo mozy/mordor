@@ -193,11 +193,11 @@ void parsePaxAttributes(const std::string& paxAttrs, Mordor::TarEntry& entry)
                 } else if (key == PAX_ATTR_GNAME) {
                     entry.gname(value);
                 } else if (key == PAX_ATTR_ATIME) {
-                    entry.atime(boost::lexical_cast<time_t>(value));
+                    entry.atime((time_t)boost::lexical_cast<double>(value));
                 } else if (key == PAX_ATTR_CTIME) {
-                    entry.ctime(boost::lexical_cast<time_t>(value));
+                    entry.ctime((time_t)boost::lexical_cast<double>(value));
                 } else if (key == PAX_ATTR_MTIME) {
-                    entry.mtime(boost::lexical_cast<time_t>(value));
+                    entry.mtime((time_t)boost::lexical_cast<double>(value));
                 } else {
                     entry.setAttribute(key, value);
                 }
