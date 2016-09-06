@@ -89,7 +89,7 @@ static const unsigned char key[32] = {
 0x65, 0x26
 };
 
-std::string keyString()
+static std::string keyString()
 {
     std::string ret;
     ret.assign((const char *)key, sizeof(key));
@@ -101,7 +101,7 @@ static const unsigned char iv[16] = {
 0x5c, 0x19, 0xaf, 0x84, 0x2b, 0x75
 };
 
-std::string ivString()
+static std::string ivString()
 {
     std::string ret;
     ret.assign((const char *)iv, sizeof(iv));

@@ -329,7 +329,7 @@ MORDOR_UNITTEST(PipeStream, cancelOnBlockingWriter)
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 5);
 }
 
-void threadStress(Stream::ptr stream)
+static void threadStress(Stream::ptr stream)
 {
     size_t totalRead = 0;
     size_t totalWritten = 0;

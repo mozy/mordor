@@ -71,7 +71,7 @@ MORDOR_UNITTEST(NotifyStream, basic)
     stream.notifyOnClose(NULL);
 }
 
-void onNotifyClose(int &sequence, Stream::CloseType type, Stream::CloseType expected)
+static void onNotifyClose(int &sequence, Stream::CloseType type, Stream::CloseType expected)
 {
     MORDOR_TEST_ASSERT_EQUAL(type, expected);
     ++sequence;
