@@ -178,7 +178,7 @@ atomicSwap(volatile T &t, T newvalue)
     return comparand;
 }
 #endif
-#elif (__GNUC__ == 4 && __GNUC_MINOR__ >= 1 && !defined(__arm__))
+#elif ((__GNUC__ > 4 || __GNUC__ == 4 && __GNUC_MINOR__ >= 1) && !defined(__arm__))
 template <class T>
 typename boost::enable_if_c<sizeof(T) <= sizeof(void *), T>::type
 atomicDecrement(volatile T& t) { return __sync_sub_and_fetch(&t, 1); }
