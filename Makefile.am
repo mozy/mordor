@@ -93,6 +93,7 @@ nobase_include_HEADERS=			\
 	mordor/streams/zero.h		\
 	mordor/streams/zlib.h		\
 	mordor/streams/crypto.h		\
+	mordor/streams/stdcrypto.h	\
 	mordor/streams/lzma2.h		\
 	mordor/string.h			\
 	mordor/test/antxmllistener.h	\
@@ -178,6 +179,7 @@ mordor_libmordor_la_SOURCES=			\
 	mordor/streams/zero.cpp			\
 	mordor/streams/zlib.cpp			\
 	mordor/streams/crypto.cpp		\
+	mordor/streams/stdcrypto.cpp	\
 	mordor/string.cpp			\
 	mordor/tar.cpp 				\
 	mordor/thread.cpp			\
@@ -308,6 +310,7 @@ mordor_tests_run_tests_SOURCES=				\
 	mordor/tests/coroutine.cpp			\
 	mordor/tests/counter_stream.cpp		\
 	mordor/tests/crypto.cpp             \
+	mordor/tests/stdcrypto.cpp          \
 	mordor/tests/endian.cpp				\
 	mordor/tests/fibers.cpp				\
 	mordor/tests/fibersync.cpp			\

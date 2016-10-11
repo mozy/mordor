@@ -41,6 +41,9 @@ public:
     // WARNING: due to older versions of OpenSSL reporting a nonzero IV size
     //   for ECB cipher contexts, you should explicitly supply an empty IV
     //   instead of RANDOM_IV when operating in ECB mode
+    // WARNING: using RANDOM_IV will cause the generated cipher data incompatible
+    //   with openssl tool implementation, hence no 3rdparty tool can decrypt the
+    //   cipher data directly except Mordor::CryptoStream itself
     CryptoStream(Stream::ptr parent, const EVP_CIPHER *cipher, const std::string &key,
         const std::string &iv = RANDOM_IV, Direction = INFER, Operation = AUTO,
         bool own = true);

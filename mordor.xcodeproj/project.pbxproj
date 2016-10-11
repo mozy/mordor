@@ -15,6 +15,9 @@
 		0E01DD3015C0F30200DC4F2B /* timeout_stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E01DD2F15C0F30200DC4F2B /* timeout_stream.cpp */; };
 		0E8A702A15594EE900607636 /* hashfwd.h in Headers */ = {isa = PBXBuildFile; fileRef = 0E8A702915594EE900607636 /* hashfwd.h */; };
 		0E8FB6FA1B004EED000AD550 /* zip.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E8FB6F91B004EED000AD550 /* zip.cpp */; };
+		0EBB5F6B1DAF39C200E0F657 /* stdcrypto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0EBB5F691DAF39C200E0F657 /* stdcrypto.cpp */; };
+		0EBB5F6C1DAF39C200E0F657 /* stdcrypto.h in Headers */ = {isa = PBXBuildFile; fileRef = 0EBB5F6A1DAF39C200E0F657 /* stdcrypto.h */; };
+		0EBB5F6E1DAF39E300E0F657 /* stdcrypto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0EBB5F6D1DAF39E300E0F657 /* stdcrypto.cpp */; };
 		0EF3018A15E4BEF40020B13A /* statistics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0EF3018915E4BEF40020B13A /* statistics.cpp */; };
 		24BDA181151D1D7D00E0A646 /* oauth2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 24BDA17F151D1D7D00E0A646 /* oauth2.cpp */; };
 		24BDA182151D1D7D00E0A646 /* oauth2.h in Headers */ = {isa = PBXBuildFile; fileRef = 24BDA180151D1D7D00E0A646 /* oauth2.h */; };
@@ -212,6 +215,9 @@
 		0E01DD2F15C0F30200DC4F2B /* timeout_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timeout_stream.cpp; sourceTree = "<group>"; };
 		0E8A702915594EE900607636 /* hashfwd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hashfwd.h; sourceTree = "<group>"; };
 		0E8FB6F91B004EED000AD550 /* zip.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = zip.cpp; sourceTree = "<group>"; };
+		0EBB5F691DAF39C200E0F657 /* stdcrypto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = stdcrypto.cpp; sourceTree = "<group>"; };
+		0EBB5F6A1DAF39C200E0F657 /* stdcrypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stdcrypto.h; sourceTree = "<group>"; };
+		0EBB5F6D1DAF39E300E0F657 /* stdcrypto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = stdcrypto.cpp; sourceTree = "<group>"; };
 		0EC278D31526562700F8AC65 /* hash_stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hash_stream.cpp; sourceTree = "<group>"; };
 		0EF3018915E4BEF40020B13A /* statistics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = statistics.cpp; sourceTree = "<group>"; };
 		0EF8669115333584009205E8 /* ragel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ragel.cpp; sourceTree = "<group>"; };
@@ -700,6 +706,8 @@
 		3CAB2737112B096700607AEE /* streams */ = {
 			isa = PBXGroup;
 			children = (
+				0EBB5F691DAF39C200E0F657 /* stdcrypto.cpp */,
+				0EBB5F6A1DAF39C200E0F657 /* stdcrypto.h */,
 				0E01DD2915C0F29700DC4F2B /* delay.h */,
 				0E01DD2415C0F28B00DC4F2B /* counter.cpp */,
 				0E01DD2515C0F28B00DC4F2B /* counter.h */,
@@ -791,6 +799,7 @@
 		3CAB2777112B096700607AEE /* tests */ = {
 			isa = PBXGroup;
 			children = (
+				0EBB5F6D1DAF39E300E0F657 /* stdcrypto.cpp */,
 				0E8FB6F91B004EED000AD550 /* zip.cpp */,
 				0EF3018915E4BEF40020B13A /* statistics.cpp */,
 				0E01DD2F15C0F30200DC4F2B /* timeout_stream.cpp */,
@@ -867,6 +876,7 @@
 				24BDA182151D1D7D00E0A646 /* oauth2.h in Headers */,
 				0E8A702A15594EE900607636 /* hashfwd.h in Headers */,
 				0E01DD2715C0F28B00DC4F2B /* counter.h in Headers */,
+				0EBB5F6C1DAF39C200E0F657 /* stdcrypto.h in Headers */,
 				0E01DD2A15C0F29700DC4F2B /* delay.h in Headers */,
 				46AA782C15E685AC0052192D /* zero.h in Headers */,
 				4620C41C1613FB91006114F3 /* lzma2.h in Headers */,
@@ -1035,6 +1045,7 @@
 				3CAB29D6112B347400607AEE /* fd.cpp in Sources */,
 				3CAB29D7112B347400607AEE /* file.cpp in Sources */,
 				3CAB29D8112B347400607AEE /* hash.cpp in Sources */,
+				0EBB5F6B1DAF39C200E0F657 /* stdcrypto.cpp in Sources */,
 				3CAB29D9112B347400607AEE /* http.cpp in Sources */,
 				3CAB29DA112B347400607AEE /* limited.cpp in Sources */,
 				3CAB29DB112B347400607AEE /* memory.cpp in Sources */,
@@ -1110,6 +1121,7 @@
 				5C85449515756FC700589928 /* pch.cpp in Sources */,
 				5C85449615756FC700589928 /* pipe_stream.cpp in Sources */,
 				5C85449715756FC700589928 /* ragel.cpp in Sources */,
+				0EBB5F6E1DAF39E300E0F657 /* stdcrypto.cpp in Sources */,
 				5C85449815756FC700589928 /* run_tests.cpp in Sources */,
 				5C85449915756FC700589928 /* scheduler.cpp in Sources */,
 				5C85449A15756FC700589928 /* socket.cpp in Sources */,
