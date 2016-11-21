@@ -310,9 +310,21 @@ IOManager::idle()
                 if (rc2) {
                     try {
                         MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("kevent");
-                    } catch (boost::exception &) {
+                    } catch (boost::exception &ex) {
+#ifdef OSX
+                        int *err = boost::get_error_info<errinfo_nativeerror>(ex);
+                        if (err != NULL && *err == EINPROGRESS) {
+                            MORDOR_LOG_VERBOSE(g_log) << this << " kevent(" << m_kqfd << ", (" << event.ident
+                                << ", " << event.filter << ", EV_DELETE)): " << rc2 << " ("
+                                << lastError() << ") ignored";
+                        } else {
+                            exception = boost::current_exception();
+                            continue;
+                        }
+#else
                         exception = boost::current_exception();
                         continue;
+#endif
                     }
                 }
             }

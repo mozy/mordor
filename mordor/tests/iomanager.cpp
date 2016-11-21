@@ -7,6 +7,7 @@
 #include "mordor/test/test.h"
 #include "mordor/thread.h"
 #include "mordor/version.h"
+#include "mordor/socket.h"
 
 using namespace Mordor;
 using namespace Mordor::Test;
@@ -168,5 +169,74 @@ MORDOR_UNITTEST(IOManager, tickleDeadlock)
     manager.schedule(boost::bind(switchThreadFiber,
                                  boost::ref(sequence), tidA, tidB),
                      tidB);
+    manager.stop();
+}
+
+namespace {
+    struct Connection
+    {
+        Socket::ptr connect;
+        Socket::ptr listen;
+        Socket::ptr accept;
+        IPAddress::ptr address;
+    };
+}
+
+static Connection establishConn(IOManager &ioManager)
+{
+    Connection result;
+    std::vector<Address::ptr> addresses = Address::lookup("localhost");
+    MORDOR_TEST_ASSERT(!addresses.empty());
+    result.address = boost::dynamic_pointer_cast<IPAddress>(addresses.front());
+    result.listen = result.address->createSocket(ioManager, SOCK_STREAM);
+    unsigned int opt = 1;
+    result.listen->setOption(SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    while (true) {
+        try {
+            // Random port > 1000
+            result.address->port(rand() % 50000 + 1000);
+            result.listen->bind(result.address);
+            break;
+        } catch (AddressInUseException &) {
+        }
+    }
+    result.listen->listen();
+    result.connect = result.address->createSocket(ioManager, SOCK_STREAM);
+    return result;
+}
+
+static void connect(IOManager &manager)
+{
+    try {
+        Connection conns = establishConn(manager);
+        conns.connect->sendTimeout(30000000);
+        conns.connect->receiveTimeout(30000000);
+        conns.listen->receiveTimeout(30000000);
+        conns.connect->connect(conns.address);
+        conns.connect->shutdown();
+    } catch (TimedOutException &) {
+    }
+}
+
+#ifdef OSX
+#define THREADCOUNT 100U
+#else
+#define THREADCOUNT 10U
+#endif
+
+//Use 100 threads creating sockets, add/delete kevent into/from kqueue at same time,
+//overwhelm the system so that it cannot respond to all the events,
+//This could easily make kqueue return with EINPROGRESS (deferred deletion) error
+//and we make sure error ignored in MacOS -- redmine #145605
+MORDOR_UNITTEST(IOManager, ignoreEinprogressErrorOnMac)
+{
+    IOManager manager(THREADCOUNT, false);
+
+    const std::vector<boost::shared_ptr<Thread> > threads = manager.threads();
+    MORDOR_TEST_ASSERT_EQUAL(threads.size(), THREADCOUNT);
+
+    for(size_t i=0; i<threads.size(); i++) {
+        manager.schedule(boost::bind(connect, boost::ref(manager)), threads[i]->tid());
+    }
     manager.stop();
 }
