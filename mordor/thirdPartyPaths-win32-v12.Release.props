@@ -2,9 +2,9 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup>
-    <IncludePath>$(winclientlib)\zlib\include;$(winclientlib)\openssl\openssl-1.0.1e\include;$(winclientlib)\boost\boost_1_61_0;$(winclientlib)\libs\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(winclientlib)\zlib\include;$(winclientlib)\openssl\openssl-1.0.1e\include;$(winclientlib)\boost\boost_1_61_0;$(winclientlib)\lzma\include;$(winclientlib)\protobuf\protobuf-3.0.0\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup>
-    <LibraryPath>$(winclientlib)\openssl\openssl-1.0.1e\openssl-1.0.1e-vc12-x86-release;$(winclientlib)\zlib\zlib-vc12-x86-release;$(winclientlib)\boost\boost_1_61_0\lib32-msvc-12.0;$(winclientlib)\libs\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(winclientlib)\openssl\openssl-1.0.1e\openssl-1.0.1e-vc12-x86-release;$(winclientlib)\zlib\zlib-vc12-x86-release;$(winclientlib)\boost\boost_1_61_0\lib32-msvc-12.0;$(winclientlib)\protobuf\protobuf-3.0.0\vc12-x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
 </Project>
