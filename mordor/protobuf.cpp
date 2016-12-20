@@ -32,7 +32,7 @@ using namespace Mordor::JSON;
 
 #ifdef MSVC
 #ifdef _DEBUG
-#pragma comment(lib, "libprotobuf-d.lib")
+#pragma comment(lib, "libprotobufd.lib")
 #else
 #pragma comment(lib, "libprotobuf.lib")
 #endif
