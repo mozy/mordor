@@ -145,7 +145,6 @@ static void mkcert(boost::shared_ptr<X509> &cert,
 
 void add_ext(X509 *cert, int nid, const char *value)
 {
-    X509_EXTENSION *ex = NULL;
     X509V3_CTX ctx;
     /* This sets the 'context' of the extensions. */
     /* No configuration database */
@@ -154,7 +153,8 @@ void add_ext(X509 *cert, int nid, const char *value)
      * no request and no CRL
      */
     X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
-    MORDOR_VERIFY(X509V3_EXT_conf_nid(NULL, &ctx, nid, (char*) value));
+    X509_EXTENSION *ex = X509V3_EXT_conf_nid(NULL, &ctx, nid, (char*) value);
+    MORDOR_VERIFY(ex);
 
     X509_add_ext(cert,ex,-1);
     X509_EXTENSION_free(ex);
