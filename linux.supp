@@ -73,3 +73,12 @@
    fun:__strftime_internal
    fun:strftime_l
 }
+{
+  getpwuid_r glibc
+  Memcheck:Leak
+  fun:malloc
+  fun:nss_parse_service_list
+  fun:__nss_database_lookup
+  obj:*
+  fun:getpwuid_r@@GLIBC*
+}
