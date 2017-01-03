@@ -86,6 +86,7 @@ struct IsNotDirectoryException : virtual UnresolvablePathException {};
 struct TooManySymbolicLinksException : virtual UnresolvablePathException {};
 struct OutOfDiskSpaceException : virtual NativeException {};
 struct InvalidUnicodeException : virtual NativeException {};
+struct WrongProtocolTypeException : virtual NativeException {};
 
 error_t lastError();
 void lastError(error_t error);

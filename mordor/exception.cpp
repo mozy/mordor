@@ -223,6 +223,9 @@ static void throwSocketException(error_t error)
 #endif
             throw boost::enable_current_exception(NetworkUnreachableException())
                 << errinfo_nativeerror(error);
+        case WSA(EPROTOTYPE):
+            throw boost::enable_current_exception(WrongProtocolTypeException())
+                << errinfo_nativeerror(error);
         case WSA(ETIMEDOUT):
             throw boost::enable_current_exception(TimedOutException())
                 << errinfo_nativeerror(error);

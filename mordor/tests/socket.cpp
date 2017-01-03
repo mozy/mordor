@@ -169,6 +169,11 @@ MORDOR_UNITTEST(Socket, sendAfterCloseOtherEnd)
         // Could also be ConnectionReset on BSDs
     } catch (ConnectionResetException)
     {}
+#ifdef OSX
+    // EPROTOTYPE may be thrown out on mac os 10
+    catch (WrongProtocolTypeException)
+    {}
+#endif
 #endif
 }
 
