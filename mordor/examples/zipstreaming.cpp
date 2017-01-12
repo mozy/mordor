@@ -155,7 +155,7 @@ MORDOR_MAIN(int argc, char* argv[])
 
             std::cout << "start sending " << files.size() << " files in "
                 << SENDING_DELAY << " seconds" << std::endl;
-            ioManager.registerTimer(SENDING_DELAY * 1000000, bind(&requestFiles, ref(ioManager), ref(files)));
+            ioManager.registerTimer(SENDING_DELAY * 1000000, boost::bind(&requestFiles, boost::ref(ioManager), boost::ref(files)));
             ioManager.dispatch();
         } else {
             std::cout << "no file provided, usage:\n"
