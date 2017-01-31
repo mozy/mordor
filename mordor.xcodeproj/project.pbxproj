@@ -145,6 +145,7 @@
 		C32854BF120A1E750079C4A2 /* thread.h in Headers */ = {isa = PBXBuildFile; fileRef = C32854BD120A1E750079C4A2 /* thread.h */; };
 		C34893CA11BEB1300044E9C8 /* socks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C34893C811BEB1300044E9C8 /* socks.cpp */; };
 		C34893CB11BEB1300044E9C8 /* socks.h in Headers */ = {isa = PBXBuildFile; fileRef = C34893C911BEB1300044E9C8 /* socks.h */; };
+		E25A0C531E411B940037ED46 /* dom_parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E25A0C521E411B940037ED46 /* dom_parser.cpp */; };
 		E29FD2AA1136FD1D004BC293 /* timeout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E29FD2A81136FD1D004BC293 /* timeout.cpp */; };
 		E29FD2AB1136FD1D004BC293 /* timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = E29FD2A91136FD1D004BC293 /* timeout.h */; };
 		E2DE14B311E67ADD00D9622F /* antxmllistener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E2DE14B111E67ADD00D9622F /* antxmllistener.cpp */; };
@@ -453,6 +454,7 @@
 		C32854BD120A1E750079C4A2 /* thread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = thread.h; sourceTree = "<group>"; };
 		C34893C811BEB1300044E9C8 /* socks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = socks.cpp; sourceTree = "<group>"; };
 		C34893C911BEB1300044E9C8 /* socks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socks.h; sourceTree = "<group>"; };
+		E25A0C521E411B940037ED46 /* dom_parser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = dom_parser.cpp; path = mordor/xml/dom_parser.cpp; sourceTree = "<group>"; };
 		E29FD2A81136FD1D004BC293 /* timeout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timeout.cpp; sourceTree = "<group>"; };
 		E29FD2A91136FD1D004BC293 /* timeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timeout.h; sourceTree = "<group>"; };
 		E2DE14A811E67AB400D9622F /* libmordortest.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libmordortest.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -520,6 +522,7 @@
 		0867D691FE84028FC02AAC07 /* mordor */ = {
 			isa = PBXGroup;
 			children = (
+				E25A0C521E411B940037ED46 /* dom_parser.cpp */,
 				5C8544DB157666D400589928 /* CoreServices.framework */,
 				5C8544D9157666AC00589928 /* libssl.dylib */,
 				5C8544D71576669500589928 /* CoreFoundation.framework */,
@@ -1026,6 +1029,7 @@
 				3CAB29C2112B347400607AEE /* client.cpp in Sources */,
 				3CAB29C3112B347400607AEE /* connection.cpp in Sources */,
 				3CAB29C4112B347400607AEE /* digest.cpp in Sources */,
+				E25A0C531E411B940037ED46 /* dom_parser.cpp in Sources */,
 				3CAB29C5112B347400607AEE /* http.cpp in Sources */,
 				3CAB29C6112B347400607AEE /* multipart.cpp in Sources */,
 				3CAB29C7112B347400607AEE /* oauth.cpp in Sources */,
