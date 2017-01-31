@@ -5,15 +5,24 @@
 
 #ifdef WINDOWS
 // Get Win7+ APIs
+#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0601
+#endif
+
 // Don't include tons of crap from windows.h
 #define WIN32_LEAN_AND_MEAN
 // Define this so security.h works
 #define SECURITY_WIN32
 // Shut up, CRT
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
+#ifndef _CRT_NONSTDC_NO_WARNINGS
 #define _CRT_NONSTDC_NO_WARNINGS
+#endif
+#ifndef _SCL_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
+#endif
 
 // Use more common names for functions
 // (cross-platform 64-bit, strip the underscores)

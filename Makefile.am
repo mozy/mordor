@@ -41,6 +41,7 @@ nobase_include_HEADERS=			\
 	mordor/iomanager_kqueue.h	\
 	mordor/json.h			\
 	mordor/log.h			\
+	mordor/log_base.h		\
 	mordor/main.h			\
 	mordor/openssl_lock.h		\
 	mordor/parallel.h		\

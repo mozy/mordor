@@ -65,23 +65,15 @@ protected:
     void init(const std::string &path,
         AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
         IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
-#ifdef WINDOWS
-    void init(const std::wstring &path,
-        AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
-        IOManager *ioManager = NULL, Scheduler *scheduler = NULL);
-#endif
+
+    void setSupportFlags(AccessFlags flags);
+    void setPath(const std::string & path) { m_path = path; }
 
 public:
     FileStream(const std::string &path,
         AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
         IOManager *ioManager = NULL, Scheduler *scheduler = NULL)
     { init(path, accessFlags, createFlags, ioManager, scheduler); }
-#ifdef WINDOWS
-    FileStream(const std::wstring &path,
-        AccessFlags accessFlags = READWRITE, CreateFlags createFlags = OPEN,
-        IOManager *ioManager = NULL, Scheduler *scheduler = NULL)
-    { init(path, accessFlags, createFlags, ioManager, scheduler); }
-#endif
 
     bool supportsRead() { return m_supportsRead && NativeStream::supportsRead(); }
     bool supportsWrite() { return m_supportsWrite && NativeStream::supportsWrite(); }

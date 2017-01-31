@@ -229,6 +229,7 @@
     <ClInclude Include="http\oauth2.h" />
     <ClInclude Include="http\servlet.h" />
     <ClInclude Include="http\servlets\config.h" />
+    <ClInclude Include="log_base.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="daemon.h" />
     <ClInclude Include="openssl_lock.h" />

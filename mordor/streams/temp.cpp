@@ -94,7 +94,7 @@ TempStream::TempStream(const std::string &prefix, bool deleteOnClose,
         }
     }
     tempfile.resize(wcslen(tempfile.c_str()));
-    init(tempfile, FileStream::READWRITE,
+    init(Mordor::toUtf8(tempfile), FileStream::READWRITE,
         (FileStream::CreateFlags)(FileStream::OPEN |
             (deleteOnClose ? FileStream::DELETE_ON_CLOSE : 0)),
         ioManager, scheduler);

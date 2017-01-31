@@ -535,6 +535,9 @@
     <ClInclude Include="protobuf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="log_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Ragel Include="http\http_parser.rl" />

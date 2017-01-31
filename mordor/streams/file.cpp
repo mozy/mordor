@@ -36,17 +36,12 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
     if (ioManager)
         flags |= FILE_FLAG_OVERLAPPED;
     MORDOR_ASSERT(createFlags >= CREATE_NEW && createFlags <= TRUNCATE_EXISTING);
-    handle = CreateFileW(toUtf16(path).c_str(),
-        access,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL,
-        createFlags,
-        flags,
-        NULL);
+    unsigned long  shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+    handle = ::CreateFileW(Mordor::toUtf16(path).c_str(), access, shareMode, NULL, createFlags, flags, NULL);
     error_t error = lastError();
-    MORDOR_LOG_VERBOSE(g_log) << "CreateFileW(" << path << ", " << access
-        << ", " << createFlags << ", " << flags << "): " << handle << " ("
-        << error << ")";
+    MORDOR_LOG_VERBOSE(g_log) << "CreateFileW(" << path << ", "
+        << access << ", " << createFlags << ", " << flags << "): " << handle
+        << " (" << error << ")";
     if (handle == INVALID_HANDLE_VALUE) {
         try {
             MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CreateFileW");
@@ -96,61 +91,17 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
         }
     }
 #endif
+
     NativeStream::init(handle, ioManager, scheduler);
-    m_supportsRead = accessFlags == READ || accessFlags == READWRITE;
-    m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||
-        accessFlags == APPEND;
-    m_supportsSeek = accessFlags != APPEND;
-    m_path = path;
+    setSupportFlags(accessFlags);
+    setPath(m_path);
 }
 
-#ifdef WINDOWS
-void
-FileStream::init(const std::wstring &path, AccessFlags accessFlags,
-    CreateFlags createFlags, IOManager *ioManager, Scheduler *scheduler)
+void FileStream::setSupportFlags(AccessFlags accessFlags)
 {
-    NativeHandle handle;
-    DWORD access = 0;
-    if (accessFlags & READ)
-        access |= GENERIC_READ;
-    if (accessFlags & WRITE)
-        access |= GENERIC_WRITE;
-    if (accessFlags == APPEND)
-        access = FILE_APPEND_DATA | SYNCHRONIZE;
-    DWORD flags = 0;
-    if (createFlags & DELETE_ON_CLOSE) {
-        flags |= FILE_FLAG_DELETE_ON_CLOSE;
-        createFlags = (CreateFlags)(createFlags & ~DELETE_ON_CLOSE);
-    }
-    if (ioManager)
-        flags |= FILE_FLAG_OVERLAPPED;
-    MORDOR_ASSERT(createFlags >= CREATE_NEW && createFlags <= TRUNCATE_EXISTING);
-    handle = CreateFileW(path.c_str(),
-        access,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL,
-        createFlags,
-        flags,
-        NULL);
-    error_t error = lastError();
-    MORDOR_LOG_VERBOSE(g_log) << "CreateFileW(" << toUtf8(path) << ", "
-        << access << ", " << createFlags << ", " << flags << "): " << handle
-        << " (" << error << ")";
-    if (handle == INVALID_HANDLE_VALUE) {
-        try {
-            MORDOR_THROW_EXCEPTION_FROM_ERROR_API(error, "CreateFileW");
-        } catch (boost::exception &ex) {
-            ex << boost::errinfo_file_name(toUtf8(path));
-            throw;
-        }
-    }
-    NativeStream::init(handle, ioManager, scheduler);
     m_supportsRead = accessFlags == READ || accessFlags == READWRITE;
-    m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE ||
-        accessFlags == APPEND;
+    m_supportsWrite = accessFlags == WRITE || accessFlags == READWRITE || accessFlags == APPEND;
     m_supportsSeek = accessFlags != APPEND;
-    m_path = toUtf8(path);
 }
-#endif
 
 }
