@@ -94,7 +94,7 @@ FileStream::init(const std::string &path, AccessFlags accessFlags,
 
     NativeStream::init(handle, ioManager, scheduler);
     setSupportFlags(accessFlags);
-    setPath(m_path);
+    m_path = path;
 }
 
 void FileStream::setSupportFlags(AccessFlags accessFlags)
