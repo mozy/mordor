@@ -1,47 +1,79 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordor", "mordor\mordor.vcproj", "{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cat", "mordor\examples\cat.vcproj", "{05A7ECD4-456F-43FE-9CEA-68213832E9AD}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simpleclient", "mordor\examples\simpleclient.vcproj", "{EAD0A645-D849-44FA-82B5-74A1055AE3AA}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wget", "mordor\examples\wget.vcproj", "{6CC00BFB-5A32-4033-BF7E-64D524B2A247}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echoserver", "mordor\examples\echoserver.vcproj", "{35655735-9C38-4255-81E8-F8CDABEB358E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordortest", "mordor\test\mordortest.vcproj", "{CD888334-383F-4DB6-BE16-153BA25D98FB}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "mordor\tests\tests.vcproj", "{5C6B7FB7-B009-423F-BC44-89E70163AFCB}"
-	ProjectSection(ProjectDependencies) = postProject
-		{CD888334-383F-4DB6-BE16-153BA25D98FB} = {CD888334-383F-4DB6-BE16-153BA25D98FB}
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tunnel", "mordor\examples\tunnel.vcproj", "{41B0154E-EBCA-4518-8957-47623868F2FA}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
-	EndProjectSection
-EndProject
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{466AF846-D383-4A5B-8BD5-4CF6071C31F3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iombench", "mordor\examples\iombench.vcproj", "{C96B814F-E7C2-4465-8FFB-C49105929E68}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cat", "mordor\examples\cat.vcxproj", "{05A7ECD4-456F-43FE-9CEA-68213832E9AD}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simpleclient", "mordor\examples\simpleclient.vcxproj", "{EAD0A645-D849-44FA-82B5-74A1055AE3AA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wget", "mordor\examples\wget.vcxproj", "{6CC00BFB-5A32-4033-BF7E-64D524B2A247}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echoserver", "mordor\examples\echoserver.vcxproj", "{35655735-9C38-4255-81E8-F8CDABEB358E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "mordor\tests\tests.vcxproj", "{5C6B7FB7-B009-423F-BC44-89E70163AFCB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{AA400C25-A416-4513-ABAB-07FFC3C36355} = {AA400C25-A416-4513-ABAB-07FFC3C36355}
+		{44E7C3E4-F91C-4FE0-BA81-072F88914F16} = {44E7C3E4-F91C-4FE0-BA81-072F88914F16}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tunnel", "mordor\examples\tunnel.vcxproj", "{41B0154E-EBCA-4518-8957-47623868F2FA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iombench", "mordor\examples\iombench.vcxproj", "{C96B814F-E7C2-4465-8FFB-C49105929E68}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "decodebacktrace", "mordor\examples\decodebacktrace.vcxproj", "{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pqtests", "mordor\pq\tests\pqtests.vcxproj", "{935A3C00-3771-41B7-81C3-8E543DC8191A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A5020D4B-0E75-4DF9-9EEC-501394520228} = {A5020D4B-0E75-4DF9-9EEC-501394520228}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordorpq", "mordor\pq\mordorpq.vcxproj", "{A5020D4B-0E75-4DF9-9EEC-501394520228}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordoryaml", "mordor\mordoryaml.vcxproj", "{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordor.v12", "mordor\mordor.v12.vcxproj", "{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordorprotobuf.v12", "mordor\mordorprotobuf.v12.vcxproj", "{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordortest.v12", "mordor\test\mordortest.v12.vcxproj", "{AA400C25-A416-4513-ABAB-07FFC3C36355}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A} = {FEAC089A-CC93-49C3-8F22-A9AB96F6273A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "installprep", "buildtools\installprep.vcxproj", "{44E7C3E4-F91C-4FE0-BA81-072F88914F16}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,14 +83,6 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Debug|Win32.ActiveCfg = Debug|Win32
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Debug|Win32.Build.0 = Debug|Win32
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Debug|x64.ActiveCfg = Debug|x64
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Debug|x64.Build.0 = Debug|x64
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|Win32.ActiveCfg = Release|Win32
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|Win32.Build.0 = Release|Win32
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|x64.ActiveCfg = Release|x64
-		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|x64.Build.0 = Release|x64
 		{05A7ECD4-456F-43FE-9CEA-68213832E9AD}.Debug|Win32.ActiveCfg = Debug|Win32
 		{05A7ECD4-456F-43FE-9CEA-68213832E9AD}.Debug|Win32.Build.0 = Debug|Win32
 		{05A7ECD4-456F-43FE-9CEA-68213832E9AD}.Debug|x64.ActiveCfg = Debug|x64
@@ -91,14 +115,6 @@ Global
 		{35655735-9C38-4255-81E8-F8CDABEB358E}.Release|Win32.Build.0 = Release|Win32
 		{35655735-9C38-4255-81E8-F8CDABEB358E}.Release|x64.ActiveCfg = Release|x64
 		{35655735-9C38-4255-81E8-F8CDABEB358E}.Release|x64.Build.0 = Release|x64
-		{CD888334-383F-4DB6-BE16-153BA25D98FB}.Debug|Win32.ActiveCfg = Debug|Win32
-		{CD888334-383F-4DB6-BE16-153BA25D98FB}.Debug|Win32.Build.0 = Debug|Win32
-		{CD888334-383F-4DB6-BE16-153BA25D98FB}.Debug|x64.ActiveCfg = Debug|x64
-		{CD888334-383F-4DB6-BE16-153BA25D98FB}.Debug|x64.Build.0 = Debug|x64
-		{CD888334-383F-4DB6-BE16-153BA25D98FB}.Release|Win32.ActiveCfg = Release|Win32
-		{CD888334-383F-4DB6-BE16-153BA25D98FB}.Release|Win32.Build.0 = Release|Win32
-		{CD888334-383F-4DB6-BE16-153BA25D98FB}.Release|x64.ActiveCfg = Release|x64
-		{CD888334-383F-4DB6-BE16-153BA25D98FB}.Release|x64.Build.0 = Release|x64
 		{5C6B7FB7-B009-423F-BC44-89E70163AFCB}.Debug|Win32.ActiveCfg = Debug|Win32
 		{5C6B7FB7-B009-423F-BC44-89E70163AFCB}.Debug|Win32.Build.0 = Debug|Win32
 		{5C6B7FB7-B009-423F-BC44-89E70163AFCB}.Debug|x64.ActiveCfg = Debug|x64
@@ -123,16 +139,70 @@ Global
 		{C96B814F-E7C2-4465-8FFB-C49105929E68}.Release|Win32.Build.0 = Release|Win32
 		{C96B814F-E7C2-4465-8FFB-C49105929E68}.Release|x64.ActiveCfg = Release|x64
 		{C96B814F-E7C2-4465-8FFB-C49105929E68}.Release|x64.Build.0 = Release|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|Win32.Build.0 = Debug|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|x64.ActiveCfg = Debug|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Debug|x64.Build.0 = Debug|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|Win32.ActiveCfg = Release|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|Win32.Build.0 = Release|Win32
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|x64.ActiveCfg = Release|x64
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67}.Release|x64.Build.0 = Release|x64
+		{935A3C00-3771-41B7-81C3-8E543DC8191A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{935A3C00-3771-41B7-81C3-8E543DC8191A}.Debug|x64.ActiveCfg = Debug|x64
+		{935A3C00-3771-41B7-81C3-8E543DC8191A}.Release|Win32.ActiveCfg = Release|Win32
+		{935A3C00-3771-41B7-81C3-8E543DC8191A}.Release|x64.ActiveCfg = Release|x64
+		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Debug|x64.ActiveCfg = Debug|x64
+		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Release|Win32.ActiveCfg = Release|Win32
+		{A5020D4B-0E75-4DF9-9EEC-501394520228}.Release|x64.ActiveCfg = Release|x64
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Debug|x64.ActiveCfg = Debug|x64
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Release|Win32.ActiveCfg = Release|Win32
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Release|Win32.Build.0 = Release|Win32
+		{F62BDA0A-95E6-4A57-987C-EDFE5F90F4B6}.Release|x64.ActiveCfg = Release|x64
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Debug|Win32.Build.0 = Debug|Win32
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Debug|x64.ActiveCfg = Debug|x64
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Debug|x64.Build.0 = Debug|x64
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|Win32.ActiveCfg = Release|Win32
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|Win32.Build.0 = Release|Win32
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|x64.ActiveCfg = Release|x64
+		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|x64.Build.0 = Release|x64
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Debug|Win32.Build.0 = Debug|Win32
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Debug|x64.ActiveCfg = Debug|x64
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Debug|x64.Build.0 = Debug|x64
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Release|Win32.ActiveCfg = Release|Win32
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Release|Win32.Build.0 = Release|Win32
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Release|x64.ActiveCfg = Release|x64
+		{B20A254C-E8B2-49DD-B570-B6125BBBC9AB}.Release|x64.Build.0 = Release|x64
+		{AA400C25-A416-4513-ABAB-07FFC3C36355}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AA400C25-A416-4513-ABAB-07FFC3C36355}.Debug|Win32.Build.0 = Debug|Win32
+		{AA400C25-A416-4513-ABAB-07FFC3C36355}.Debug|x64.ActiveCfg = Debug|x64
+		{AA400C25-A416-4513-ABAB-07FFC3C36355}.Debug|x64.Build.0 = Debug|x64
+		{AA400C25-A416-4513-ABAB-07FFC3C36355}.Release|Win32.ActiveCfg = Release|Win32
+		{AA400C25-A416-4513-ABAB-07FFC3C36355}.Release|Win32.Build.0 = Release|Win32
+		{AA400C25-A416-4513-ABAB-07FFC3C36355}.Release|x64.ActiveCfg = Release|x64
+		{AA400C25-A416-4513-ABAB-07FFC3C36355}.Release|x64.Build.0 = Release|x64
+		{44E7C3E4-F91C-4FE0-BA81-072F88914F16}.Debug|Win32.ActiveCfg = Debug|Win32
+		{44E7C3E4-F91C-4FE0-BA81-072F88914F16}.Debug|Win32.Build.0 = Debug|Win32
+		{44E7C3E4-F91C-4FE0-BA81-072F88914F16}.Debug|x64.ActiveCfg = Debug|x64
+		{44E7C3E4-F91C-4FE0-BA81-072F88914F16}.Debug|x64.Build.0 = Debug|x64
+		{44E7C3E4-F91C-4FE0-BA81-072F88914F16}.Release|Win32.ActiveCfg = Release|Win32
+		{44E7C3E4-F91C-4FE0-BA81-072F88914F16}.Release|Win32.Build.0 = Release|Win32
+		{44E7C3E4-F91C-4FE0-BA81-072F88914F16}.Release|x64.ActiveCfg = Release|x64
+		{44E7C3E4-F91C-4FE0-BA81-072F88914F16}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{05A7ECD4-456F-43FE-9CEA-68213832E9AD} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
-		{35655735-9C38-4255-81E8-F8CDABEB358E} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
-		{C96B814F-E7C2-4465-8FFB-C49105929E68} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
 		{EAD0A645-D849-44FA-82B5-74A1055AE3AA} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
-		{41B0154E-EBCA-4518-8957-47623868F2FA} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
 		{6CC00BFB-5A32-4033-BF7E-64D524B2A247} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{35655735-9C38-4255-81E8-F8CDABEB358E} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{41B0154E-EBCA-4518-8957-47623868F2FA} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{C96B814F-E7C2-4465-8FFB-C49105929E68} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
+		{C7B7CBD7-5D43-4FA5-9970-8C4A09BFAF67} = {466AF846-D383-4A5B-8BD5-4CF6071C31F3}
 	EndGlobalSection
 EndGlobal

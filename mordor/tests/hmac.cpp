@@ -26,9 +26,9 @@ MORDOR_UNITTEST(HMAC, HMAC_MD5_2)
 MORDOR_UNITTEST(HMAC, HMAC_MD5_3)
 {
     std::string key;
-    key.append(16, 0xaa);
+    key.append(16, (uint8_t)0xaa);
     std::string data;
-    data.append(50, 0xdd);
+    data.append(50, (uint8_t)0xdd);
     MORDOR_TEST_ASSERT(hmacMd5(data, key) ==
         "\x56\xbe\x34\x52\x1d\x14\x4c\x88\xdb\xb8\xc7\x33\xf0\xe8\xb3\xf6");
 }

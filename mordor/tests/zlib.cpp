@@ -246,7 +246,7 @@ MORDOR_UNITTEST(DeflateStream, decompress)
     testDecompressInverse<DeflateStream>(test_deflate, sizeof(test_deflate));
 }
 
-#if !defined(HAVE_CONFIG_H) || defined(HAVE_LIBLZMA)
+#if defined(HAVE_LIBLZMA)
 
 // enable lzma by default
 

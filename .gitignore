@@ -47,7 +47,11 @@ obj*
 stamp-h1
 Win32
 x64
+Debug
+Release
 *.pc
 xcuserdata
 tags
 test-results/
+/ipch/
+/packages/
