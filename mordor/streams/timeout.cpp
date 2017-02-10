@@ -57,8 +57,9 @@ TimeoutHandler::setTimeout(unsigned long long timeout, TimeoutDg dg)
             // start new timer if read/write is ongoing
             // OR auto start is set
             if (m_lastTimedOut == TIMING || m_autoStart) {
-                m_timer = m_timerManager.registerTimer(timeout,
-                        boost::bind(&TimeoutHandler::onTimeout, this));
+                m_timer = m_timerManager.registerConditionTimer(timeout,
+                        boost::bind(&TimeoutHandler::onTimeout, this),
+                        shared_from_this());
             }
         }
     }
@@ -73,8 +74,9 @@ TimeoutHandler::startTimer()
     MORDOR_ASSERT(!m_timer);
     m_lastTimedOut = TIMING;
     if (isTimeoutSet())
-        m_timer = m_timerManager.registerTimer(m_timeout,
-            boost::bind(&TimeoutHandler::onTimeout, this));
+        m_timer = m_timerManager.registerConditionTimer(m_timeout,
+            boost::bind(&TimeoutHandler::onTimeout, this),
+            shared_from_this());
 }
 
 bool
@@ -106,21 +108,21 @@ void
 TimeoutStream::readTimeout(unsigned long long readTimeout)
 {
     FiberMutex::ScopedLock lock(m_mutex);
-    m_reader.setTimeout(readTimeout, boost::bind(&cancelReadLocal, parent()));
+    m_reader->setTimeout(readTimeout, boost::bind(&cancelReadLocal, parent()));
 }
 
 void
 TimeoutStream::writeTimeout(unsigned long long writeTimeout)
 {
     FiberMutex::ScopedLock lock(m_mutex);
-    m_writer.setTimeout(writeTimeout, boost::bind(&cancelWriteLocal, parent()));
+    m_writer->setTimeout(writeTimeout, boost::bind(&cancelWriteLocal, parent()));
 }
 
 void
 TimeoutStream::idleTimeout(unsigned long long idleTimeout)
 {
     FiberMutex::ScopedLock lock(m_mutex);
-    m_idler.setTimeout(idleTimeout, boost::bind(&cancelReadWriteLocal, parent()));
+    m_idler->setTimeout(idleTimeout, boost::bind(&cancelReadWriteLocal, parent()));
 }
 
 size_t
@@ -128,27 +130,27 @@ TimeoutStream::read(Buffer &buffer, size_t length)
 {
     FiberMutex::ScopedLock lock(m_mutex);
     // start read timer & tickle idle
-    m_reader.startTimer();
-    m_idler.refreshTimer();
+    m_reader->startTimer();
+    m_idler->refreshTimer();
     lock.unlock();
     size_t result;
     try {
         result = parent()->read(buffer, length);
     } catch (OperationAbortedException &) {
         lock.lock();
-        if (m_reader.cancelTimer() || m_idler.cancelTimer())
+        if (m_reader->cancelTimer() || m_idler->cancelTimer())
             MORDOR_THROW_EXCEPTION(TimedOutException());
         throw;
     } catch (...) {
         lock.lock();
-        m_reader.cancelTimer();
-        m_idler.cancelTimer();
+        m_reader->cancelTimer();
+        m_idler->cancelTimer();
         throw;
     }
     lock.lock();
     // read done, stop read timer & tickle idle
-    m_reader.cancelTimer();
-    m_idler.refreshTimer();
+    m_reader->cancelTimer();
+    m_idler->refreshTimer();
     return result;
 }
 
@@ -157,27 +159,27 @@ TimeoutStream::write(const Buffer &buffer, size_t length)
 {
     FiberMutex::ScopedLock lock(m_mutex);
     // start write timer & tickle idle
-    m_writer.startTimer();
-    m_idler.refreshTimer();
+    m_writer->startTimer();
+    m_idler->refreshTimer();
     lock.unlock();
     size_t result;
     try {
         result = parent()->write(buffer, length);
     } catch (OperationAbortedException &) {
         lock.lock();
-        if (m_writer.cancelTimer() || m_idler.cancelTimer())
+        if (m_writer->cancelTimer() || m_idler->cancelTimer())
             MORDOR_THROW_EXCEPTION(TimedOutException());
         throw;
     } catch (...) {
         lock.lock();
-        m_writer.cancelTimer();
-        m_idler.cancelTimer();
+        m_writer->cancelTimer();
+        m_idler->cancelTimer();
         throw;
     }
     lock.lock();
     // write done, stop write timer & tickle idle
-    m_writer.cancelTimer();
-    m_idler.refreshTimer();
+    m_writer->cancelTimer();
+    m_idler->refreshTimer();
     return result;
 }
 

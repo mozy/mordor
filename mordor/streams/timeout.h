@@ -2,6 +2,8 @@
 #define __MORDOR_TIMEOUT_STREAM__
 // Copyright (c) 2010 - Mozy, Inc.
 
+#include <boost/enable_shared_from_this.hpp>
+
 #include "filter.h"
 #include "mordor/fibersynchronization.h"
 
@@ -10,7 +12,7 @@ namespace Mordor {
 class TimerManager;
 class Timer;
 
-class TimeoutHandler
+class TimeoutHandler : public boost::enable_shared_from_this<TimeoutHandler>
 {
 public:
     typedef boost::function<void ()> TimeoutDg;
@@ -46,7 +48,7 @@ public:
     bool cancelTimer();
 
     /// refresh the timer to restart
-    /// @return if it already timed out befreo refreshing
+    /// @return if it already timed out before refreshing
     bool refreshTimer();
 
 private:
@@ -76,16 +78,16 @@ public:
 public:
     TimeoutStream(Stream::ptr parent, TimerManager &timerManager, bool own = true)
         : FilterStream(parent, own),
-          m_reader(timerManager, false),
-          m_writer(timerManager, false),
-          m_idler(timerManager, true)
+          m_reader(new TimeoutHandler(timerManager, false)),
+          m_writer(new TimeoutHandler(timerManager, false)),
+          m_idler(new TimeoutHandler(timerManager, true))
     {}
 
-    unsigned long long readTimeout() const { return m_reader.getTimeout(); }
+    unsigned long long readTimeout() const { return m_reader->getTimeout(); }
     void readTimeout(unsigned long long readTimeout);
-    unsigned long long writeTimeout() const { return m_writer.getTimeout(); }
+    unsigned long long writeTimeout() const { return m_writer->getTimeout(); }
     void writeTimeout(unsigned long long writeTimeout);
-    unsigned long long idleTimeout() const { return m_idler.getTimeout(); }
+    unsigned long long idleTimeout() const { return m_idler->getTimeout(); }
     void idleTimeout(unsigned long long idleTimeout);
 
     using FilterStream::read;
@@ -94,7 +96,7 @@ public:
     size_t write(const Buffer &buffer, size_t length);
 
 private:
-    TimeoutHandler m_reader, m_writer, m_idler;
+    boost::shared_ptr<TimeoutHandler> m_reader, m_writer, m_idler;
     FiberMutex m_mutex;
 };
 
