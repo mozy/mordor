@@ -1188,7 +1188,7 @@
 				GCC_WARN_MISSING_PARENTHESES = NO;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
+					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/include\"",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
@@ -1211,7 +1211,7 @@
 				GCC_WARN_MISSING_PARENTHESES = NO;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
+					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/include\"",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
@@ -1311,19 +1311,18 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/include\"",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_LDFLAGS = (
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/libcrypto.a",
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/libssl.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_filesystem-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_regex-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_program_options-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_system-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_thread-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_date_time-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_filesystem-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_regex-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_program_options-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_system-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_thread-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_date_time-mt.a",
 					"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/lib/liblzma.a",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1344,19 +1343,18 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/include\"",
 					"\"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/include\"",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_LDFLAGS = (
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/libcrypto.a",
 					"$(THIRDPARTY_LIB_ROOT)/openssl/openssl-1.0.1g/libssl.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_filesystem-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_regex-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_program_options-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_system-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_thread-mt.a",
-					"$(THIRDPARTY_LIB_ROOT)/boost/boost-1.57.0/lib/libboost_date_time-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_filesystem-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_regex-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_program_options-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_system-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_thread-mt.a",
+					"$(THIRDPARTY_LIB_ROOT)/boost/boost_1_61_0/lib/libboost_date_time-mt.a",
 					"$(THIRDPARTY_LIB_ROOT)/xz/5.0.4/lib/liblzma.a",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
