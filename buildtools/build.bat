@@ -1,15 +1,13 @@
 @SETLOCAL
+
+@SET SOLUTION=Mordor.sln
 @SET CONFIG=Release
-@IF "%1" EQU "debug" SET CONFIG=Debug
-@IF "%1" EQU "coverage" SET CONFIG=Debug
-@IF NOT DEFINED PLATFORM (
-  IF "%arch%" EQU "i386" (
-    SET PLATFORM=Win32
-  ) ELSE IF "%arch%" EQU "amd64" (
-    SET PLATFORM=x64
-  ) ELSE (
-    SET PLATFORM=Win32
-  )
+@SET BUILD32=1
+
+FOR %%A IN (%*) DO (
+    @IF /i "%%A" EQU "debug" SET CONFIG=Debug
+    @IF /i "%%A" EQU "coverage" SET CONFIG=Debug
+    @IF /i "%%A" EQU "no32" SET BUILD32=0
 )
 
 @IF "%PROCESSOR_ARCHITECTURE%" EQU "AMD64" (
@@ -21,38 +19,73 @@
   SET REG_BINARY=REG
 )
 
-@IF "%PLATFORM%" EQU "Win32" (
-  SET VCVARSPLATFORM=x86
-) ELSE IF "%PLATFORM%" EQU "x64" (
-  SET VCVARSPLATFORM=%X64PLATFORM%
-)
+@SET VSVER=12.0
 
 @SET LaunchVCVars=
-@IF NOT DEFINED CXX (
-  FOR /F "usebackq tokens=2*" %%A IN (`%REG_BINARY% QUERY "HKLM\SOFTWARE\Microsoft\VisualStudio\10.0\Setup\VC" /v "ProductDir" 2^> NUL`) DO @CALL SET LaunchVCVars=%%~dpBvcvarsall.bat
-  SET CXX=vc10
-  IF NOT DEFINED LaunchVCVars (
-    FOR /F "usebackq tokens=2*" %%A IN (`%REG_BINARY% QUERY "HKLM\SOFTWARE\Microsoft\VisualStudio\9.0\Setup\VC" /v "ProductDir" 2^> NUL`) DO @CALL SET LaunchVCVars=%%~dpBvcvarsall.bat
-    SET CXX=vc9
-  )
-) ELSE IF "%CXX%" EQU "vc10" (
-  FOR /F "usebackq tokens=2*" %%A IN (`%REG_BINARY% QUERY "HKLM\SOFTWARE\Microsoft\VisualStudio\10.0\Setup\VC" /v "ProductDir" 2^> NUL`) DO @CALL SET LaunchVCVars=%%~dpBvcvarsall.bat
-) ELSE IF "%CXX%" EQU "vc9" (
-  FOR /F "usebackq tokens=2*" %%A IN (`%REG_BINARY% QUERY "HKLM\SOFTWARE\Microsoft\VisualStudio\9.0\Setup\VC" /v "ProductDir" 2^> NUL`) DO @CALL SET LaunchVCVars=%%~dpBvcvarsall.bat
-)
+  FOR /F "usebackq tokens=2*" %%A IN (`%REG_BINARY% QUERY "HKLM\SOFTWARE\Microsoft\VisualStudio\%VSVER%\Setup\VC" /v "ProductDir" 2^> NUL`) DO @CALL SET LaunchVCVars=%%~dpBvcvarsall.bat
 
 @IF NOT DEFINED LaunchVCVars (
   @ECHO Visual Studio not found!
   EXIT /B 1
 )
 
-@CALL "%LaunchVCVars%" %VCVARSPLATFORM%
-IF "%CXX%" EQU "vc9" (
-  devenv mordor.sln /Build "%CONFIG%|%PLATFORM%"
-) ELSE IF "%CXX%" EQU "vc10" (
-  MSBuild /maxcpucount -P:configuration=%CONFIG% -P:platform=%PLATFORM% mordor2010.sln
+if "%winclientlib%" == "" (
+    REM winclientlib variable is needed to find the third party libs
+    REM see thirdPartyPaths-win64.props
+    REM Normally it should be set as a global env variable if not set
+    REM we default to assumption that it is located in the root of the profile.
+    REM See winclientlib git project for details
+
+    SET winclientlib=%USERPROFILE%\winclientlib
 )
+
+ECHO Adding winclientlib tools to path
+REM This is based on knowledge of where happens to be installed on the build machine
+REM see winclientlib git project for details
+SET PATH=%winclientlib%\tools;%PATH%
+
+@IF "%BUILD32%" EQU "0" (
+    ECHO Skipping 32-bit build
+    GOTO :build64
+)
+
+REM Remember PATH before running LaunchVCVars
+SET ROOTPATH=%PATH%
+
+
+ECHO Building %SOLUTION% Win32
+@SET VCVARSPLATFORM=x86
+@SET PLATFORM=Win32
+@CALL "%LaunchVCVars%" %VCVARSPLATFORM%
+
+MSBuild /maxcpucount -P:configuration=%CONFIG% -P:platform=%PLATFORM% %SOLUTION%
 @IF ERRORLEVEL 1 EXIT /B
 
-MKDIR packages
-COPY /y %PLATFORM%\%CONFIG%\tests.exe packages\tests.exe
+REM Remove the values added by 32-Bit LaunchVCVars so we don't get both
+SET PATH=%ROOTPATH%
+SET LIB=
+SET LIBPATH=
+SET INCLUDE=
+
+:build64
+
+ECHO Building %SOLUTION% x64
+
+@SET PLATFORM=x64
+@SET VCVARSPLATFORM=%X64PLATFORM%
+@CALL "%LaunchVCVars%" %VCVARSPLATFORM%
+
+MSBuild /maxcpucount -P:configuration=%CONFIG% -P:platform=%PLATFORM% %SOLUTION%
+@IF ERRORLEVEL 1 EXIT /B
+
+ECHO Copying 64-bit unit tests to package directory
+
+@IF NOT EXIST packages (
+  MKDIR packages
+)
+
+COPY /Y %PLATFORM%\%CONFIG%\tests.exe packages\tests.exe
+
+REM Copy openssl, zlib dlls needed by tests
+COPY /Y %PLATFORM%\%CONFIG%\*.dll packages
+

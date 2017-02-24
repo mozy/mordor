@@ -33,6 +33,9 @@
     <ClCompile Include="preparedstatement.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="connectionpool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="connection.h">
