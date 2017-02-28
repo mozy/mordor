@@ -1,9 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <IncludePath>$(winclientlib)\zlib\include;$(winclientlib)\openssl\openssl-1.0.1e\include;$(winclientlib)\boost\boost_1_61_0;$(winclientlib)\lzma\include;$(winclientlib)\protobuf\protobuf-3.0\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(winclientlib)\zlib\include;$(winclientlib)\openssl\openssl-1.0.1e\include;$(winclientlib)\boost\boost_1_61_0;$(winclientlib)\lzma\include;$(winclientlib)\protobuf\protobuf-3.0\include;$(winclientlib)\horizon;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup>
-    <LibraryPath>$(winclientlib)\openssl\openssl-1.0.1e\openssl-1.0.1e-vc12-x64-release;$(winclientlib)\zlib\zlib-vc12-x64-release;$(winclientlib)\boost\boost_1_61_0\lib64-msvc-12.0;$(winclientlib)\protobuf\protobuf-3.0\vc12-x64\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(winclientlib)\openssl\openssl-1.0.1e\openssl-1.0.1e-vc12-x64-release;$(winclientlib)\zlib\zlib-vc12-x64-release;$(winclientlib)\boost\boost_1_61_0\lib64-msvc-12.0;$(winclientlib)\protobuf\protobuf-3.0\vc12-x64\lib;$(winclientlib)\horizon\lib64;$(LibraryPath)</LibraryPath>
+    <ExecutablePath>$(winclientlib)\tools;$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(FxCopDir);$(PATH);</ExecutablePath>
   </PropertyGroup>
 </Project>

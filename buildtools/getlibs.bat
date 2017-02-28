@@ -10,7 +10,7 @@ REM getlibs.bat $(SolutionDir)$(Platform)\$(Configuration)
 REM make sure destination exists
 IF NOT EXIST %1 MD %1
 
-FOR %%X IN (libeay32.dll libeay32.pdb ssleay32.dll ssleay32.pdb zlib1.dll) DO (
+FOR %%X IN (libeay32.dll libeay32.pdb ssleay32.dll ssleay32.pdb zlib1.dll horizon-api.dll) DO (
    CALL :findlib %%X %1
    IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
 )
