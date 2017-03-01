@@ -455,6 +455,8 @@ static void receiveFiber(Socket::ptr listen, size_t &sent, int &sequence)
     }
 }
 
+// Disabled until frequently occuring deadlock on mac is investigated - SYNC-2070
+#ifndef OSX
 MORDOR_UNITTEST(Socket, sendReceiveForceAsync)
 {
     IOManager ioManager;
@@ -526,6 +528,7 @@ MORDOR_UNITTEST(Socket, sendReceiveForceAsync)
     ioManager.dispatch();
     MORDOR_TEST_ASSERT_EQUAL(++sequence, 20);
 }
+#endif
 
 static void closed(bool &remoteClosed)
 {
