@@ -516,12 +516,12 @@ ClientRequest::~ClientRequest()
 {
     cancel(true);
 #ifndef NDEBUG
-    MORDOR_ASSERT(m_conn);
+    MORDOR_NOTHROW_ASSERT(m_conn);
     boost::mutex::scoped_lock lock(m_conn->m_mutex);
-    MORDOR_ASSERT(std::find(m_conn->m_pendingRequests.begin(),
+    MORDOR_NOTHROW_ASSERT(std::find(m_conn->m_pendingRequests.begin(),
         m_conn->m_pendingRequests.end(),
         this) == m_conn->m_pendingRequests.end());
-    MORDOR_ASSERT(m_conn->m_waitingResponses.find(this) ==
+    MORDOR_NOTHROW_ASSERT(m_conn->m_waitingResponses.find(this) ==
         m_conn->m_waitingResponses.end());
 #endif
 }

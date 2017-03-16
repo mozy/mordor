@@ -85,10 +85,10 @@ PipeStream::~PipeStream()
     PipeStream::ptr otherStream = m_otherStream.lock();
     boost::mutex::scoped_lock lock(*m_mutex);
     if (otherStream) {
-        MORDOR_ASSERT(!otherStream->m_pendingReader);
-        MORDOR_ASSERT(!otherStream->m_pendingReaderScheduler);
-        MORDOR_ASSERT(!otherStream->m_pendingWriter);
-        MORDOR_ASSERT(!otherStream->m_pendingWriterScheduler);
+        MORDOR_NOTHROW_ASSERT(!otherStream->m_pendingReader);
+        MORDOR_NOTHROW_ASSERT(!otherStream->m_pendingReaderScheduler);
+        MORDOR_NOTHROW_ASSERT(!otherStream->m_pendingWriter);
+        MORDOR_NOTHROW_ASSERT(!otherStream->m_pendingWriterScheduler);
         if (!m_readBuffer.readAvailable())
             otherStream->m_otherClosed = (CloseType)(otherStream->m_otherClosed | READ);
         else
@@ -96,14 +96,14 @@ PipeStream::~PipeStream()
         otherStream->m_onRemoteClose();
     }
     if (m_pendingReader) {
-        MORDOR_ASSERT(m_pendingReaderScheduler);
+        MORDOR_NOTHROW_ASSERT(m_pendingReaderScheduler);
         MORDOR_LOG_DEBUG(g_log) << otherStream << " scheduling read";
         m_pendingReaderScheduler->schedule(m_pendingReader);
         m_pendingReader.reset();
         m_pendingReaderScheduler = NULL;
     }
     if (m_pendingWriter) {
-        MORDOR_ASSERT(m_pendingWriterScheduler);
+        MORDOR_NOTHROW_ASSERT(m_pendingWriterScheduler);
         MORDOR_LOG_DEBUG(g_log) << otherStream << " scheduling write";
         m_pendingWriterScheduler->schedule(m_pendingWriter);
         m_pendingWriter.reset();

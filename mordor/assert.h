@@ -44,14 +44,17 @@ private:
 #endif
 
 #define MORDOR_ASSERT(x) ((void)0)
+#define MORDOR_NOTHROW_ASSERT(x) ((void)0)
 #define MORDOR_VERIFY(x) ((void)(x))
+#define MORDOR_NOTHROW_VERIFY(x) ((void)(x))
 #define MORDOR_NOTREACHED() ::std::terminate();
 
 #else
 
 #define MORDOR_ASSERT(x)                                                        \
-    if (!(x)) {                                                                 \
-        MORDOR_LOG_FATAL(::Mordor::Log::root()) << "ASSERTION: " # x            \
+    while (!(x)) {                                                              \
+        MORDOR_LOG_FATAL(::Mordor::Log::root())                                 \
+            << "ASSERTION: " # x                                                \
             << "\nbacktrace:\n" << ::Mordor::to_string(::Mordor::backtrace());  \
         if (::Mordor::Assertion::throwOnAssertion)                              \
             MORDOR_THROW_EXCEPTION(::Mordor::Assertion(# x));                   \
@@ -60,7 +63,18 @@ private:
         ::std::terminate();                                                     \
     }
 
+#define MORDOR_NOTHROW_ASSERT(x)                                                \
+    while (!(x)) {                                                              \
+        MORDOR_LOG_FATAL(::Mordor::Log::root())                                 \
+            << "ASSERTION: " # x                                                \
+            << "\nbacktrace:\n" << ::Mordor::to_string(::Mordor::backtrace());  \
+        if (::Mordor::isDebuggerAttached())                                     \
+            ::Mordor::debugBreak();                                             \
+        ::std::terminate();                                                     \
+    }
+
 #define MORDOR_VERIFY(x) MORDOR_ASSERT(x)
+#define MORDOR_NOTHROW_VERIFY(x) MORDOR_NOTHROW_ASSERT(x)
 
 #define MORDOR_NOTREACHED()                                                     \
 {                                                                               \

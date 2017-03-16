@@ -12,8 +12,8 @@ FiberMutex::~FiberMutex()
 {
 #ifndef NDEBUG
     boost::mutex::scoped_lock scopeLock(m_mutex);
-    MORDOR_ASSERT(!m_owner);
-    MORDOR_ASSERT(m_waiters.empty());
+    MORDOR_NOTHROW_ASSERT(!m_owner);
+    MORDOR_NOTHROW_ASSERT(m_waiters.empty());
 #endif
 }
 
@@ -80,9 +80,9 @@ RecursiveFiberMutex::~RecursiveFiberMutex()
 {
 #ifndef NDEBUG
     boost::mutex::scoped_lock scopeLock(m_mutex);
-    MORDOR_ASSERT(!m_owner);
-    MORDOR_ASSERT(!m_recursion);
-    MORDOR_ASSERT(m_waiters.empty());
+    MORDOR_NOTHROW_ASSERT(!m_owner);
+    MORDOR_NOTHROW_ASSERT(!m_recursion);
+    MORDOR_NOTHROW_ASSERT(m_waiters.empty());
 #endif
 }
 
@@ -164,7 +164,7 @@ FiberSemaphore::~FiberSemaphore()
 {
 #ifndef NDEBUG
     boost::mutex::scoped_lock scopeLock(m_mutex);
-    MORDOR_ASSERT(m_waiters.empty());
+    MORDOR_NOTHROW_ASSERT(m_waiters.empty());
 #endif
 }
 
@@ -210,7 +210,7 @@ FiberCondition::~FiberCondition()
 {
 #ifndef NDEBUG
     boost::mutex::scoped_lock lock(m_mutex);
-    MORDOR_ASSERT(m_waiters.empty());
+    MORDOR_NOTHROW_ASSERT(m_waiters.empty());
 #endif
 }
 
@@ -289,7 +289,7 @@ FiberEvent::~FiberEvent()
 {
 #ifndef NDEBUG
     boost::mutex::scoped_lock lock(m_mutex);
-    MORDOR_ASSERT(m_waiters.empty());
+    MORDOR_NOTHROW_ASSERT(m_waiters.empty());
 #endif
 }
 

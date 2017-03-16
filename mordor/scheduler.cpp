@@ -39,7 +39,7 @@ Scheduler::Scheduler(size_t threads, bool useCaller, size_t batchSize)
 
 Scheduler::~Scheduler()
 {
-    MORDOR_ASSERT(m_stopping);
+    MORDOR_NOTHROW_ASSERT(m_stopping);
     if (getThis() == this) {
         t_scheduler = NULL;
     }

@@ -130,8 +130,8 @@ Fiber::~Fiber()
     atomicDecrement(g_cntFibers);
     if (!m_stack || m_stack == m_sp) {
         // Thread entry fiber
-        MORDOR_ASSERT(!m_dg);
-        MORDOR_ASSERT(m_state == EXEC);
+        MORDOR_NOTHROW_ASSERT(!m_dg);
+        MORDOR_NOTHROW_ASSERT(m_state == EXEC);
         Fiber *cur = t_fiber.get();
 
         // We're actually running on the fiber we're about to delete
@@ -140,8 +140,8 @@ Fiber::~Fiber()
             setThis(NULL);
 #ifdef NATIVE_WINDOWS_FIBERS
             if (m_stack) {
-                MORDOR_ASSERT(m_stack == m_sp);
-                MORDOR_ASSERT(m_stack == GetCurrentFiber());
+                MORDOR_NOTHROW_ASSERT(m_stack == m_sp);
+                MORDOR_NOTHROW_ASSERT(m_stack == GetCurrentFiber());
                 pConvertFiberToThread();
             }
 #endif
@@ -149,7 +149,7 @@ Fiber::~Fiber()
         // Otherwise, there's not a thread left to clean up
     } else {
         // Regular fiber
-        MORDOR_ASSERT(m_state == TERM || m_state == INIT || m_state == EXCEPT);
+        MORDOR_NOTHROW_ASSERT(m_state == TERM || m_state == INIT || m_state == EXCEPT);
         freeStack();
     }
 }

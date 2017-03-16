@@ -103,7 +103,7 @@ IOManager::AsyncState::AsyncState()
 IOManager::AsyncState::~AsyncState()
 {
     boost::mutex::scoped_lock lock(m_mutex);
-    MORDOR_ASSERT(!m_events);
+    MORDOR_NOTHROW_ASSERT(!m_events);
 }
 
 IOManager::AsyncState::EventContext &

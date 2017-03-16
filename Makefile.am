@@ -393,63 +393,41 @@ if HAVE_BOOST_PROGRAM_OPTIONS
 noinst_PROGRAMS += mordor/examples/wget
 endif
 
-mordor_examples_cat_SOURCES=mordor/examples/cat.cpp
-mordor_examples_cat_LDADD=mordor/libmordor.la	\
-	$(CORESERVICES_FRAMEWORK_LIBS)		\
-	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
-	$(SECURITY_FRAMEWORK_LIBS)		\
+mordor_examples_ld_add = \
+	mordor/libmordor.la	\
+	$(OPENSSL_LIBS) \
+	$(BOOST_SYSTEM_LIB) \
+	$(LZMA_LDFLAGS) $(LZMA_LIB)	\
+	$(CORESERVICES_FRAMEWORK_LIBS) \
+	$(COREFOUNDATION_FRAMEWORK_LIBS) \
+	$(SECURITY_FRAMEWORK_LIBS) \
 	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
 
+
+mordor_examples_cat_SOURCES=mordor/examples/cat.cpp
+mordor_examples_cat_LDADD=$(mordor_examples_ld_add)
 
 mordor_examples_echoserver_SOURCES=mordor/examples/echoserver.cpp
-mordor_examples_echoserver_LDADD=mordor/libmordor.la \
-	$(CORESERVICES_FRAMEWORK_LIBS)		\
-	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
-	$(SECURITY_FRAMEWORK_LIBS)		\
-	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+mordor_examples_echoserver_LDADD=$(mordor_examples_ld_add)
 
 mordor_examples_iombench_SOURCES=	\
 	mordor/examples/iombench.cpp	\
 	mordor/examples/netbench.cpp
-mordor_examples_iombench_LDADD=mordor/libmordor.la	\
-	$(CORESERVICES_FRAMEWORK_LIBS)		\
-	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
-	$(SECURITY_FRAMEWORK_LIBS)		\
-	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+mordor_examples_iombench_LDADD=$(mordor_examples_ld_add)
 
 
 mordor_examples_simpleappserver_SOURCES=mordor/examples/simpleappserver.cpp
-mordor_examples_simpleappserver_LDADD=mordor/libmordor.la	\
-	$(CORESERVICES_FRAMEWORK_LIBS)		\
-	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
-	$(SECURITY_FRAMEWORK_LIBS)		\
-	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+mordor_examples_simpleappserver_LDADD=$(mordor_examples_ld_add)
 
 mordor_examples_tunnel_SOURCES=mordor/examples/tunnel.cpp
-mordor_examples_tunnel_LDADD=mordor/libmordor.la	\
-	$(CORESERVICES_FRAMEWORK_LIBS)		\
-	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
-	$(SECURITY_FRAMEWORK_LIBS)		\
-	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+mordor_examples_tunnel_LDADD=$(mordor_examples_ld_add)
 
 mordor_examples_udpstats_SOURCES=mordor/examples/udpstats.cpp
-mordor_examples_udpstats_LDADD=mordor/libmordor.la	\
-	$(CORESERVICES_FRAMEWORK_LIBS)		\
-	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
-	$(SECURITY_FRAMEWORK_LIBS)		\
-	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+mordor_examples_udpstats_LDADD=$(mordor_examples_ld_add)
 
 mordor_examples_wget_SOURCES=mordor/examples/wget.cpp
-mordor_examples_wget_LDADD=mordor/libmordor.la $(BOOST_PROGRAM_OPTIONS_LIB)	\
-	$(CORESERVICES_FRAMEWORK_LIBS)		\
-	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
-	$(SECURITY_FRAMEWORK_LIBS)		\
-	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+mordor_examples_wget_LDADD=$(mordor_examples_ld_add) $(BOOST_PROGRAM_OPTIONS_LIB)
 
 mordor_examples_zipstreaming_SOURCES=mordor/examples/zipstreaming.cpp
-mordor_examples_zipstreaming_LDADD=mordor/libmordor.la	\
-	$(CORESERVICES_FRAMEWORK_LIBS)		\
-	$(COREFOUNDATION_FRAMEWORK_LIBS)	\
-	$(SECURITY_FRAMEWORK_LIBS)		\
-	$(SYSTEMCONFIGURATION_FRAMEWORK_LIBS)
+mordor_examples_zipstreaming_LDADD=$(mordor_examples_ld_add)
 

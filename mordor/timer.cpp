@@ -174,7 +174,7 @@ TimerManager::~TimerManager()
 {
 #ifndef NDEBUG
     boost::mutex::scoped_lock lock(m_mutex);
-    MORDOR_ASSERT(m_timers.empty());
+    MORDOR_NOTHROW_ASSERT(m_timers.empty());
 #endif
 }
 
