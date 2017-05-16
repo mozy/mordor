@@ -1,0 +1,26 @@
+#Enforce line ending conventions based on file extension
+
+# Enforce the line endings for linux/osx
+# files just in case they are edited 
+# with a bad editor on windows
+#Makefile.am text eol=lf
+#*.in text eol=lf
+#*.sh text eol=lf
+
+#For consistency in cmake
+CMakeLists.txt eol=lf
+*.cmake eol=lf
+
+#Windows specific files
+#*.bat text eol=crlf
+#*.cmd text eol=crlf
+#*.vcxproj text eol=crlf
+
+#todo - when code is a bit more stable we can start
+#to enforce it more widely
+##For source code we use linux endings
+##even on Windows
+#*.h text eol=lf
+#*.cpp text eol=lf
+#*.c text eol=lf
+#*.hpp text eol=lf
