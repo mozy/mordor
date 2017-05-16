@@ -4,6 +4,10 @@ TARGETS="mordor mordorprotobuf mordortest run_tests"
 ARCH=${arch:-"x86_64"}
 CONFIG=Debug
 
+if [[ "$1" == release ]] ; then
+    CONFIG=Release
+fi
+
 if [[ $ARCH == "amd64" ]] ; then
     ARCH=x86_64
 fi

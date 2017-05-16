@@ -43,6 +43,8 @@ missing
 mordor.xcodeproj/*.mode1v3
 mordor.xcodeproj/*.pbxuser
 mordor.xcodeproj/*.perspectivev3
+mordor.xcodeproj/project.xcworkspace/
+
 obj*
 stamp-h1
 Win32
