@@ -252,7 +252,7 @@ std::ostream &operator <<(std::ostream &os, error_t error)
     os << (DWORD)error;
     std::string result;
     char *desc;
-    DWORD numChars = FormatMessageA(
+    DWORD numChars = FormatMessage(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
