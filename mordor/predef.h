@@ -76,8 +76,12 @@ enum {
 #endif
 #endif
 
-#define stricmp strcasecmp
-#define strnicmp strncasecmp
+#ifndef stricmp
+#define stricmp(a,b) strcasecmp(a,b)
+#endif
+#ifndef strnicmp
+#define strnicmp(a,b,c) strncasecmp(a,b,c)
+#endif
 
 #endif
 
