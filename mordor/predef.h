@@ -29,7 +29,9 @@
 #define atoll _atoi64
 #define strtoll _strtoi64
 #define strtoull _strtoui64
+#if !defined(strnicmp)
 #define strnicmp _strnicmp
+#endif
 #define mkdir _mkdir
 #define snprintf _snprintf
 
