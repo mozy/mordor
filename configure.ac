@@ -73,7 +73,10 @@ AS_IF([test "x$with_protobuf" = xyes],
 	[PKG_CHECK_MODULES([PROTOBUF], [protobuf])],
 	[test "x$with_protobuf" = xcheck],
 	[PKG_CHECK_MODULES([PROTOBUF], [protobuf], [], [true])])
-AM_CONDITIONAL([HAVE_PROTOBUF], [test "x${PROTOBUF_CFLAGS}" != x])
+PKG_CHECK_MODULES([PROTOBUF], [protobuf],
+                  [AM_CONDITIONAL(HAVE_PROTOBUF, true)],
+                  [AM_CONDITIONAL(HAVE_PROTOBUF, false)])
+
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h])
