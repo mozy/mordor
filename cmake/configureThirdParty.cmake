@@ -166,11 +166,18 @@ macro(config_protobuf)
         determine_compiler_and_arch()
 
         include_directories(SYSTEM ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0/include)
-        set(PROTOBUF_LIBRARIES ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0/vc${VS_VERSION}-${ARCH}/lib/libprotobuf.lib)
+        set(PROTOBUF_BIN ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0/protoc.exe)
+
+        #Don't define on windows because there is a different debug lib
+        #Instead normally these are linked using a statement like #pragma comment(lib, "libprotobufd.lib")
+        #set(PROTOBUF_LIBRARIES ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0/vc${VS_VERSION}-${ARCH}/lib/libprotobuf.lib)
+        set(PROTOBUF_LIBRARIES_DIRECTORY ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0/vc${VS_VERSION}-${ARCH}/lib)
         set(PROTOBUF_FOUND ON)
     elseif(CMAKE_HOST_APPLE)
         include_directories (SYSTEM ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0.2/include)
         set(PROTOBUF_LIBRARIES ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0.2/lib/libprotobuf.a)
+        set(PROTOBUF_BIN ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0.2/bin/protoc)
+
         set(PROTOBUF_FOUND On)
     else()
         find_package(Protobuf)
