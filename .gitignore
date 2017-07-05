@@ -53,6 +53,7 @@ Debug
 Release
 *.pc
 xcuserdata
+.DS_Store
 tags
 test-results/
 /ipch/
