@@ -59,8 +59,8 @@ if [ $(uname) = 'Darwin' ]; then
     #OSX be default is very verbose
     VERBOSE_CMAKE_ARG=
 else
-    #Currently require cmake installed on the slave
-    #todo - add it to thirdparty-linux
+    : ${THIRDPARTY_LINUX=~/thirdparty-linux}
+	
     CMAKE_EXE=${THIRDPARTY_LINUX:?this must be set}/tools/cmake-3.7.1-Linux-x86_64/bin/cmake
 
     GENERATOR="Unix Makefiles"
