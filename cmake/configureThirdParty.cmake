@@ -125,6 +125,25 @@ macro(configure_boost version liblist)
 
 endmacro()
 
+#Configure header files like autotools macro AC_CONFIG_HEADERS on Linux
+#headerDir - auto generated header directory
+macro(configure_headers headerDir)
+    if(UNIX AND NOT APPLE)
+        if("${headerDir}" STREQUAL "")
+            message(FATAL_ERROR "configure_headers failure, directory put is emmpty")
+        endif()
+
+        include(CheckIncludeFiles)
+        check_include_files(iconv.h HAVE_ICONV)
+
+        set(CONFIG_HEADERS_DIR ${headerDir})
+        set(CONFIG_HEADERS on)
+
+        configure_file(${CONFIG_HEADERS_DIR}/cmakeconfig.h.in ${CONFIG_HEADERS_DIR}/autoconfig.h)
+        message(STATUS "Generated automatic configure file ${CONFIG_HEADERS_DIR}/autoconfig.h")
+    endif()
+endmacro()
+
 macro(config_zlib)
    if(MSVC)
       determine_compiler_and_arch()
@@ -185,15 +204,15 @@ macro(config_protobuf)
 
 endmacro()
 
-function(config_lzma)
+macro(config_lzma)
     if (MSVC)
         #Currently windows must find lzma headers to compile, but does not actually include lzma capability so no linking needed
         include_directories(SYSTEM ${THIRDPARTY_LIB_ROOT}/lzma/include)
     elseif(CMAKE_HOST_APPLE)
         include_directories(SYSTEM ${THIRDPARTY_LIB_ROOT}/xz/5.0.4/include)
 
-        set(LZMA_LIBRARIES ${THIRDPARTY_LIB_ROOT}/xz/5.0.4/lib/liblzma.a PARENT_SCOPE)
+        set(LZMA_LIBRARIES ${THIRDPARTY_LIB_ROOT}/xz/5.0.4/lib/liblzma.a)
     else()
         find_package(LibLZMA)
     endif()
-endfunction()
+endmacro()

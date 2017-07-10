@@ -81,8 +81,8 @@ endif()
 add_executable(${MORDOR_TEST_EXE_NAME} ${SRCS})
 
 target_link_libraries(${MORDOR_TEST_EXE_NAME} 
-    mordor
     mordortest
+    mordor
     ${OPENSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}

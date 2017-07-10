@@ -12,6 +12,14 @@ macro(setStandardDefines)
     #By default there is no variable for linux
     if(UNIX AND NOT APPLE)
         set(LINUX TRUE)
+
+        # Detect Linux distribution (if possible)
+        execute_process(COMMAND "/usr/bin/lsb_release" "-is"
+   	    TIMEOUT 4
+    	    OUTPUT_VARIABLE LINUX_DISTRO
+    	    ERROR_QUIET
+   	    OUTPUT_STRIP_TRAILING_WHITESPACE)
+        message(STATUS "Linux distro is: ${LINUX_DISTRO}")
     endif()
 endmacro()
 
@@ -65,12 +73,13 @@ macro(configureOutput)
     #E.g. /build/mordor/tests/run_tests and ./build/mordor/examples/echoserver
     #And because debug and release is a generate-time choice there is no Debug or Release
     #subdirectory (unless we choose force creation of Debug/Release subdirectories
-    #in build-cmake.sh or add it here)
+    #in build-cmake.sh or add it here).
     #For backward compatibilty we could continue to compile "in source" for
     #linux by generating directly in the source tree instead of creating a binary
     #directory.  But getting consistency will help higher level projects and scripts be
     #cross platform more easily
 
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 endmacro()
@@ -122,8 +131,12 @@ macro(add_osspecific_linking targetname)
             "-framework Security"
             )
     elseif(LINUX)
-        #centos may need krb5 also when static linking openssl
         target_link_libraries(${targetname} Threads::Threads rt dl)
+
+        #centos may need krb5 also when static linking openssl
+	if(${LINUX_DISTRO} STREQUAL "CentOS")
+            target_link_libraries(${targetname} krb5 k5crypto)
+        endif()
     endif()
 endmacro()
 
@@ -177,5 +190,3 @@ function(ragelmaker src_rl outputlist includedir)
         )
     set_source_files_properties(${rl_out} PROPERTIES GENERATED TRUE)
 endfunction(ragelmaker)
-
-

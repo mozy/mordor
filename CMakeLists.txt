@@ -46,7 +46,6 @@ message(STATUS "Thirdparty THIRDPARTY_LIB_ROOT = ${THIRDPARTY_LIB_ROOT}")
 configureOutput()
 message(STATUS "Output     CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 
-
 #
 # Global 3rd party configuration
 # These functions append to the global include directory list
@@ -64,6 +63,9 @@ configure_boost("1.61.0" boost_libs)
 config_lzma()
 config_zlib()
 config_ragel()
+
+#configure header file autoconfig.h on Linux
+configure_headers(${CMAKE_CURRENT_SOURCE_DIR})
 
 #Note: not calling config_protobuf() here because that is only needed by one library
 

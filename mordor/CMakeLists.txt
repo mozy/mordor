@@ -233,6 +233,12 @@ ragelmaker(http/http_parser.rl SRCS_RAGEL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/htt
 
 list(APPEND SRCS_RAGEL http/http_parser.rl)
 
+#configure header files
+if(CONFIG_HEADERS)
+    include_directories(${CONFIG_HEADERS_DIR})
+    add_definitions(-DHAVE_CONFIG_H)
+endif()
+
 add_library(mordor STATIC ${FULL_SRCS} ${SRCS_RAGEL} ${SRCS_RAGEL_OUTPUT})
 
 #Put .cpp and .h files together in IDE
