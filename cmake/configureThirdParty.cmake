@@ -185,7 +185,7 @@ macro(config_protobuf)
         determine_compiler_and_arch()
 
         include_directories(SYSTEM ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0/include)
-        set(PROTOBUF_BIN ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0/protoc.exe)
+        set(PROTOBUF_PROTOC_EXECUTABLE ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-3.0/protoc.exe)
 
         #Don't define on windows because there is a different debug lib
         #Instead normally these are linked using a statement like #pragma comment(lib, "libprotobufd.lib")
@@ -195,7 +195,7 @@ macro(config_protobuf)
     elseif(CMAKE_HOST_APPLE)
         include_directories (SYSTEM ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-2.5.0/include)
         set(PROTOBUF_LIBRARIES ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-2.5.0/lib/libprotobuf.a)
-        set(PROTOBUF_BIN ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-2.5.0/bin/protoc)
+        set(PROTOBUF_PROTOC_EXECUTABLE ${THIRDPARTY_LIB_ROOT}/protobuf/protobuf-2.5.0/bin/protoc)
 
         set(PROTOBUF_FOUND On)
     else()
@@ -211,7 +211,7 @@ macro(config_lzma)
     elseif(CMAKE_HOST_APPLE)
         include_directories(SYSTEM ${THIRDPARTY_LIB_ROOT}/xz/5.0.4/include)
 
-        set(LZMA_LIBRARIES ${THIRDPARTY_LIB_ROOT}/xz/5.0.4/lib/liblzma.a)
+        set(LIBLZMA_LIBRARIES ${THIRDPARTY_LIB_ROOT}/xz/5.0.4/lib/liblzma.a)
     else()
         find_package(LibLZMA)
     endif()

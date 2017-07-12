@@ -86,7 +86,7 @@ target_link_libraries(${MORDOR_TEST_EXE_NAME}
     ${OPENSSL_LIBRARIES}
     ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}
-    ${LZMA_LIBRARIES})
+    ${LIBLZMA_LIBRARIES})
 
 add_osspecific_linking(${MORDOR_TEST_EXE_NAME})
 
