@@ -134,8 +134,8 @@ macro(add_osspecific_linking targetname)
         target_link_libraries(${targetname} Threads::Threads rt dl)
 
         #centos may need krb5 also when static linking openssl
-	if(${LINUX_DISTRO} STREQUAL "CentOS")
-            target_link_libraries(${targetname} krb5 k5crypto)
+	    if(${LINUX_DISTRO} STREQUAL "CentOS")
+            target_link_libraries(${targetname} krb5 k5crypto z)
         endif()
     endif()
 endmacro()
