@@ -30,14 +30,29 @@ getThirdpartyRootFromXCode() {
 }
 
 COVERAGE_SETTING=OFF
-
 CONFIG=Release
-if [ "$1" = "debug" ]; then
-    CONFIG=Debug
-elif [ "$1" = "coverage" ]; then
-    CONFIG=Debug
-    COVERAGE_SETTING=ON
-fi
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        debug)
+            CONFIG=Debug
+            ;;
+        release)
+            CONFIG=Release
+            ;;
+        coverage)
+            CONFIG=Debug
+            COVERAGE_SETTING=ON
+            ;;
+        --)
+            shift
+            break
+            ;;
+    esac
+    shift
+done
+
+parallel_flag=
 
 if [ $(uname) = 'Darwin' ]; then
     if [ -z ${THIRDPARTY_LIB_ROOT+x} ]; then
@@ -74,6 +89,8 @@ else
     #By default the output is not verbose. Specifying this will show the compiler and
     #linking flags which is helpful for debugging build issues
     VERBOSE_CMAKE_ARG="-DCMAKE_RULE_MESSAGES:BOOL=OFF -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON"
+
+    parallel_flag=-j$(grep processor /proc/cpuinfo | wc -l)
 fi
 
 mkdir -p build
@@ -95,5 +112,5 @@ ${CMAKE_EXE} -G "${GENERATOR}" \
 popd
 
 #Equivalent on linux is to run "cd build ; make"
-${CMAKE_EXE} --build build ${BUILDTIME_CONFIG_ARG}
+${CMAKE_EXE} --build build ${BUILDTIME_CONFIG_ARG} -- ${parallel_flag} "$@"
 

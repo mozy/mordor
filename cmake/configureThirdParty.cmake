@@ -118,11 +118,21 @@ macro(configure_boost version liblist)
 
     find_package(Boost ${version} REQUIRED COMPONENTS ${${liblist}})
 
+    # Check if boost_locale is desired, and if so, include the icu dependency libs.
+    if (LINUX)
+      set(local_lib_var "${${liblist}}")
+      foreach(lib ${local_lib_var})
+        if(lib STREQUAL "locale")
+          set(Boost_LOCALE_LIBRARY ${Boost_LOCALE_LIBRARY} -licuuc -licudata -licui18n)
+          set(Boost_LIBRARIES ${Boost_LIBRARIES} -licuuc -licudata -licui18n)
+        endif()
+      endforeach()
+    endif()
+
     #The libraries that are not header-only would need to be listed, e.g.
     #and we reference ${Boost_LIBRARIES} in target_link_libraries
 
     include_directories (SYSTEM ${Boost_INCLUDE_DIR})
-
 endmacro()
 
 #Configure header files like autotools macro AC_CONFIG_HEADERS on Linux
