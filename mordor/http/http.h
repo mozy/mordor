@@ -155,25 +155,19 @@ struct Version
     }
     bool operator<(const Version& rhs) const
     {
-        if (major < rhs.major) return true;
-        return minor < rhs.minor;
+        return major < rhs.major || (major == rhs.major && minor < rhs.minor);
     }
     bool operator<=(const Version& rhs) const
     {
-        if (major > rhs.major) return false;
-        if (major < rhs.major) return true;
-        return minor <= rhs.minor;
+        return !(*this > rhs);
     }
     bool operator>(const Version& rhs) const
     {
-        if (major > rhs.major) return true;
-        return minor > rhs.minor;
+        return rhs < *this;
     }
     bool operator>=(const Version& rhs) const
     {
-        if (major < rhs.major) return false;
-        if (major > rhs.major) return true;
-        return minor >= rhs.minor;
+        return !(*this < rhs);
     }
 };
 

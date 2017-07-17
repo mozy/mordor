@@ -699,7 +699,8 @@ ServerRequest::commit()
 
     if (m_response.status.ver == Version()) {
         m_response.status.ver = m_request.requestLine.ver;
-        if (m_response.status.ver == Version())
+        // only support HTTP 1.0 and 1.1, default 1.1
+        if (m_response.status.ver != Version(1, 0))
             m_response.status.ver = Version(1, 1);
     }
     MORDOR_ASSERT(m_response.status.ver == Version(1, 0) ||

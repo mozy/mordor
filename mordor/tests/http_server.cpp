@@ -198,6 +198,18 @@ MORDOR_UNITTEST(HTTPServer, close10)
     MORDOR_TEST_ASSERT(response.general.connection.find("close") != response.general.connection.end());
 }
 
+MORDOR_UNITTEST(HTTPServer, notSupportHttpVersion)
+{
+    Response response;
+    doSingleRequest(
+        "GET / HTTP/2.0\r\n"
+        "\r\n",
+        response);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.ver, Version(1, 1));
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, HTTP_VERSION_NOT_SUPPORTED);
+    MORDOR_TEST_ASSERT(response.general.connection.find("close") != response.general.connection.end());
+}
+
 MORDOR_UNITTEST(HTTPServer, keepAlive10)
 {
     Response response;
