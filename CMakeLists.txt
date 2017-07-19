@@ -14,6 +14,8 @@ cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 #The examples are optional - this can be disabled when using cmake-gui or passing argument
 #on the command lines
 option(BUILD_EXAMPLES "Build mordor example programs" ON)
+option(BUILD_MORDOR_TESTS "Build mordor tests" ON)
+
 option(BUILD_COVERAGE "Build for code coverage" OFF)
 
 #

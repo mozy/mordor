@@ -246,10 +246,11 @@ add_library(mordor STATIC ${FULL_SRCS} ${SRCS_RAGEL} ${SRCS_RAGEL_OUTPUT})
 source_group("Source Files" FILES ${SRCS} ${SRCS_OSSPECIFIC})
 
 # Additional libraries and recursion
+    add_subdirectory(test)
 
-add_subdirectory(test)
-
-add_subdirectory(tests)
+if (BUILD_MORDOR_TESTS)
+    add_subdirectory(tests)
+endif()
 
 # Create mordorprotobuf library if protobuf found
 config_protobuf()

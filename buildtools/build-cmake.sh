@@ -9,7 +9,6 @@
 
 set -e
 
-
 #code reused from tethys kmipclient
 getThirdpartyRootFromXCode() {
     cmd=`/usr/libexec/PlistBuddy -c "Print :IDEApplicationwideBuildSettings:THIRDPARTY_LIB_ROOT" ~/Library/Preferences/com.apple.dt.Xcode.plist`
@@ -75,7 +74,7 @@ if [ $(uname) = 'Darwin' ]; then
     VERBOSE_CMAKE_ARG=
 else
     : ${THIRDPARTY_LINUX=~/thirdparty-linux}
-	
+
     CMAKE_EXE=${THIRDPARTY_LINUX:?this must be set}/tools/cmake-3.7.1-Linux-x86_64/bin/cmake
 
     GENERATOR="Unix Makefiles"
@@ -100,11 +99,14 @@ pushd build
 #it can be made optional or just let devs flush workspace when doing big changes.
 rm -f CMakeCache.txt
 
+if [ -z ${CMAKE_OPTIONS+x} ]; then
+    CMAKE_OPTIONS=
+fi
 
 echo Generating ${GENERATOR} project files using cmake
 ${CMAKE_EXE} -G "${GENERATOR}" \
    -DBUILD_COVERAGE=${COVERAGE_SETTING} \
-   -DBUILD_EXAMPLES=ON \
+   ${CMAKE_OPTIONS} \
    ${CONFIG_GEN_ARG} \
    ${VERBOSE_CMAKE_ARG} \
    ..
