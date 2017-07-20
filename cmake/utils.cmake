@@ -131,11 +131,11 @@ macro(add_osspecific_linking targetname)
             "-framework Security"
             )
     elseif(LINUX)
-        target_link_libraries(${targetname} Threads::Threads rt dl)
+        target_link_libraries(${targetname} Threads::Threads rt dl z)
 
         #centos may need krb5 also when static linking openssl
 	    if(${LINUX_DISTRO} STREQUAL "CentOS")
-            target_link_libraries(${targetname} krb5 k5crypto z)
+            target_link_libraries(${targetname} krb5 k5crypto)
         endif()
     endif()
 endmacro()
