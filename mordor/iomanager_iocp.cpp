@@ -381,6 +381,14 @@ IOManager::cancelEvent(HANDLE hFile, AsyncEvent *e)
             }
         } else if (error == ERROR_NOT_FOUND || error == ERROR_FILE_NOT_FOUND) {
             // Nothing to cancel
+        }
+        else if (error == ERROR_INVALID_HANDLE) {
+            // Nothing to do.
+            // Not sure why, but the socket is trying to reuse a closed handle.
+            // This problem is happening randomly, so this is just a workround for now.
+            // JIRA: KALYPSO-2563
+            MORDOR_LOG_DEBUG(g_log) << this << " cancelEvent(: " << hFile << ", "
+                << &e->overlapped << ") : " << lastError();
         } else {
             MORDOR_THROW_EXCEPTION_FROM_LAST_ERROR_API("CancelIoEx");
         }
