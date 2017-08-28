@@ -23,6 +23,8 @@ AC_PROG_MAKE_SET
 CHECK_RAGEL([mordor/uri.cpp], [6.0])
 AC_CHECK_PROG([PROTOC], [protoc], [protoc])
 
+AX_CHECK_COMPILE_FLAG([-std=gnu++14], [CXXFLAGS="$CXXFLAGS -std=gnu++14"])
+
 # Checks for libraries.
 AC_SEARCH_LIBS([pthread_create], [pthread])
 AC_SEARCH_LIBS([clock_gettime], [rt])
