@@ -75,7 +75,7 @@ if [ $(uname) = 'Darwin' ]; then
 else
     : ${THIRDPARTY_LINUX=~/thirdparty-linux}
 
-    CMAKE_EXE=${THIRDPARTY_LINUX:?this must be set}/tools/cmake-3.7.1-Linux-x86_64/bin/cmake
+    CMAKE_EXE=${THIRDPARTY_LINUX:?this must be set}/tools/cmake-3.8.2-Linux-x86_64/bin/cmake
 
     GENERATOR="Unix Makefiles"
 
