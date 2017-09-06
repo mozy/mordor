@@ -55,7 +55,7 @@ macro(configureOutput)
     #Although we set same settings the actual subdirectories will be
     #a bit difference as described below.
 
-    #Windows: 
+    #Windows:
     #By default the .lib and .exe files are output in Debug\Release subdirectories
     #of each source directory.
     #build32Or64.bat is responsible for setting the output directory based on the architecture
@@ -100,12 +100,21 @@ macro(setStandardCompilerSettings)
         #Only warnings that are never useful should be added here. In other cases they should be disabled
         #on a case by case basis on the settings for individual target or file
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4345 -wd4503")
+
+        # /Zi generates debug information in the .obj files.
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+        # Tell the linker to generate .pdb files for release builds (/DEBUG), but still remove unreferenced
+        # functions (/OPT:REF), and merge functions with identical assembly instructions (/OPT:ICF).
+        # Specifying /DEBUG automatically turns off the other (necessary) optimizations that are reenabled.
+        set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+        set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
     else()
-    if(LINUX)
+        if(LINUX)
             #prepare for linking to pthread
-        set(THREADS_PREFER_PTHREAD_FLAG ON)
-        find_package(Threads REQUIRED)
-    endif()
+            set(THREADS_PREFER_PTHREAD_FLAG ON)
+            find_package(Threads REQUIRED)
+        endif()
 
         #If code coverage option is enabled then debug build flags change
         if (BUILD_COVERAGE)
@@ -134,9 +143,11 @@ macro(add_osspecific_linking targetname)
         target_link_libraries(${targetname} Threads::Threads rt dl z)
 
         #centos may need krb5 also when static linking openssl
-	    if(${LINUX_DISTRO} STREQUAL "CentOS")
+        if(${LINUX_DISTRO} STREQUAL "CentOS")
             target_link_libraries(${targetname} krb5 k5crypto)
         endif()
+    elseif(MSVC)
+        set_property(TARGET ${targetname} APPEND PROPERTY LINK_FLAGS_RELEASE /DEBUG)
     endif()
 endmacro()
 
