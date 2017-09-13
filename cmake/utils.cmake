@@ -125,7 +125,6 @@ endmacro()
 macro(add_osspecific_linking targetname)
     if (CMAKE_HOST_APPLE)
         target_link_libraries(${targetname}
-            iconv
             "-framework CoreServices"
             "-framework CoreFoundation"
             "-framework SystemConfiguration"
