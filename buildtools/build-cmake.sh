@@ -32,7 +32,9 @@ COVERAGE_SETTING=OFF
 CONFIG=Release
 
 while [ $# -gt 0 ]; do
-    case "$1" in
+    arglowercase=`echo "$1" | tr '[:upper:]' '[:lower:]'`
+
+    case "$arglowercase" in
         debug)
             CONFIG=Debug
             ;;
