@@ -233,3 +233,28 @@ macro(config_lzma)
         find_package(LibLZMA)
     endif()
 endmacro()
+
+macro(config_libarchive version)
+
+    set(LIBARCHIVE_VERSION ${version})
+    set(LIBARCHIVE_ROOT ${THIRDPARTY_LIB_ROOT}/libarchive/libarchive-${LIBARCHIVE_VERSION})
+    set(LIBARCHIVE_INCLUDE_DIR ${LIBARCHIVE_ROOT}/include)
+
+    if (MSVC)
+        include_directories (SYSTEM ${LIBARCHIVE_INCLUDE_DIR})
+
+        determine_compiler_and_arch()
+
+        if (${ARCH} MATCHES "x64")
+            set(LIBARCHIVE_LIBRARIES ${LIBARCHIVE_ROOT}/lib64-msvc-${VS_VERSION}/archive_static.lib)
+        elseif (${ARCH} MATCHES "x86")
+            set(LIBARCHIVE_LIBRARIES ${LIBARCHIVE_ROOT}/lib-msvc-${VS_VERSION}/archive_static.lib)
+        endif()
+    elseif(CMAKE_HOST_APPLE)
+        include_directories (SYSTEM ${LIBARCHIVE_INCLUDE_DIR})
+
+        set(LIBARCHIVE_LIBRARIES ${LIBARCHIVE_ROOT}/lib/libarchive.a)
+    else()
+        find_package(LibArchive)
+    endif()
+endmacro()
