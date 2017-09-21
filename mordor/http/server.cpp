@@ -491,6 +491,7 @@ ServerRequest::doRequest()
                     << " parser complete: " << parser.complete();
                 m_requestState = ERROR;
                 m_conn->m_priorRequestClosed = m_requestNumber;
+                m_request.requestLine.method = "INVALID";
                 respondError(shared_from_this(), BAD_REQUEST, "Unable to parse request.", true);
                 return;
             }

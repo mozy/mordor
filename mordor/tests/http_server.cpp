@@ -186,6 +186,13 @@ MORDOR_UNITTEST(HTTPServer, badRequest)
     MORDOR_TEST_ASSERT_EQUAL(response.status.status, BAD_REQUEST);
 }
 
+MORDOR_UNITTEST(HTTPServer, parseError)
+{
+    Response response;
+    doSingleRequest("CONNECT / HTTP/1.0\r\n\r\n", response);
+    MORDOR_TEST_ASSERT_EQUAL(response.status.status, BAD_REQUEST);
+}
+
 MORDOR_UNITTEST(HTTPServer, close10)
 {
     Response response;
