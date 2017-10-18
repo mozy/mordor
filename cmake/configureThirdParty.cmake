@@ -246,10 +246,13 @@ macro(config_libarchive version)
         determine_compiler_and_arch()
 
         if (${ARCH} MATCHES "x64")
-            set(LIBARCHIVE_LIBRARIES ${LIBARCHIVE_ROOT}/lib64-msvc-${VS_VERSION}/archive_static.lib)
+            set(LIBARCHIVE_LIB_FOLDER ${LIBARCHIVE_ROOT}/lib64-msvc-${VS_VERSION})
         elseif (${ARCH} MATCHES "x86")
-            set(LIBARCHIVE_LIBRARIES ${LIBARCHIVE_ROOT}/lib-msvc-${VS_VERSION}/archive_static.lib)
+            set(LIBARCHIVE_LIB_FOLDER ${LIBARCHIVE_ROOT}/lib-msvc-${VS_VERSION})
         endif()
+        set(LIBARCHIVE_LIBRARIES ${LIBARCHIVE_LIB_FOLDER}/archive_static.lib)
+
+        copy_3rdparty_dll(archive_static.lib ${LIBARCHIVE_LIB_FOLDER})
     elseif(CMAKE_HOST_APPLE)
         include_directories (SYSTEM ${LIBARCHIVE_INCLUDE_DIR})
 
