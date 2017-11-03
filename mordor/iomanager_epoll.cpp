@@ -417,10 +417,13 @@ IOManager::idle()
         for(int i = 0; i < rc; ++i) {
             epoll_event &event = events[i];
             if (event.data.fd == m_tickleFds[0]) {
-                unsigned char dummy;
+                unsigned char dummy[256];
                 int rc2;
-                while((rc2 = read(m_tickleFds[0], &dummy, 1)) == 1) {
-                    MORDOR_LOG_VERBOSE(g_log) << this << " received tickle";
+                // every tickle write only 1 byte
+                // but it does not have to be read by 1 byte
+                // try to read more to save read() syscall
+                while((rc2 = read(m_tickleFds[0], dummy, 256)) > 0) {
+                    MORDOR_LOG_VERBOSE(g_log) << this << " received " << rc2 << " tickles";
                 }
                 MORDOR_VERIFY(rc2 < 0 && errno == EAGAIN);
                 continue;
