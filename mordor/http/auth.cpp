@@ -240,7 +240,7 @@ bool getCredentialsFromKeychain(const URI &uri, ClientRequest::ptr priorRequest,
     info.count = 1;
     info.tag = (UInt32 *)&tag;
     info.format = (UInt32 *)&format;
-    
+
     SecKeychainAttributeList *attrs = NULL;
     UInt32 passwordLength = 0;
     void *passwordBytes = NULL;
@@ -260,5 +260,5 @@ bool getCredentialsFromKeychain(const URI &uri, ClientRequest::ptr priorRequest,
     return true;
 }
 #endif
-	
+
 }}

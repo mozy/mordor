@@ -542,7 +542,7 @@ MORDOR_UNITTEST(Socket, eventOnRemoteShutdown)
     ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
     conns.connect->connect(conns.address);
     ioManager.dispatch();
-    
+
     bool remoteClosed = false;
     conns.accept->onRemoteClose(boost::bind(&closed, boost::ref(remoteClosed)));
     conns.connect->shutdown();
@@ -557,7 +557,7 @@ MORDOR_UNITTEST(Socket, eventOnRemoteReset)
     ioManager.schedule(boost::bind(&acceptOne, boost::ref(conns)));
     conns.connect->connect(conns.address);
     ioManager.dispatch();
-    
+
     bool remoteClosed = false;
     conns.accept->onRemoteClose(boost::bind(&closed, boost::ref(remoteClosed)));
     conns.connect.reset();

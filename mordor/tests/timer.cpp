@@ -145,7 +145,7 @@ MORDOR_UNITTEST(Timer, rollover)
     // two minutes before the apocalypse
     static unsigned long long clock = 0ULL - 120000000;
     TimerManager::setClock(boost::bind(&fakeClock, boost::ref(clock)));
-    
+
     int sequence = 0;
     TimerManager manager;
 
@@ -157,7 +157,7 @@ MORDOR_UNITTEST(Timer, rollover)
     manager.executeTimers();
     MORDOR_TEST_ASSERT_EQUAL(sequence, 0);  // timer hasn't fired yet
     MORDOR_TEST_ASSERT_EQUAL(manager.nextTimer(), 30000000ULL); // timer is still 30 seconds out
-    
+
     // now create a few more timers for good measure
     Timer::ptr timer2 = manager.registerTimer(15000000,     // pre-rollover
         boost::bind(&singleTimer, boost::ref(sequence), boost::ref(sequence)));

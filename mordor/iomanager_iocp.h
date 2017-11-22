@@ -78,7 +78,7 @@ public:
     // Windows system call on that handle that expects a OVERLAPPED structure
     // (e.g. ConnectEx, WSASend, ReadDirectoryChanges etc)
     // The IOManager will add context information to the AsyncEvent structure.
-    // The caller must then pass the AsyncEvent::overlapped member 
+    // The caller must then pass the AsyncEvent::overlapped member
     // as the lpOverlapped argument for the async IO call.
     // After making the async call the caller will normally call yieldTo() to stop
     // execution.  The IOManager will resume the caller fiber when the IO call completes.
@@ -115,7 +115,7 @@ public:
     // Cancel an Async IO call that has already been successfully launched.
     // If successfully the fiber that is waiting for the result
     // will be resumed and the AsyncEvent::overlapped will have the
-    // ERROR_OPERATION_ABORTED result.  
+    // ERROR_OPERATION_ABORTED result.
     void cancelEvent(HANDLE hFile, AsyncEvent *e);
 
     // #111932
@@ -126,7 +126,7 @@ public:
     // returned by PostQueuedCompletionStatus, possibly indicating the the IOCP queue is full.
     // Be careful when using this method as it is possible for the corresponding
     // GetQueuedCompletionStatusEx call in idle() to wait infinitely, which could cause deadlock if
-    // the PostQueuedCompletionStatus failure is ignored. (Sync makes use of many Timers which 
+    // the PostQueuedCompletionStatus failure is ignored. (Sync makes use of many Timers which
     // should ensure that GetQueuedCompletionStatusEx will not ever wait infinitely.)
     // Parameters
     //   count: The number of errors to allow
@@ -138,8 +138,8 @@ protected:
     void idle();
     void tickle();
 
-    // Call when a new timer is added that will be the next timer 
-    // to expire.  We have to tickle() the IOManager so that it can 
+    // Call when a new timer is added that will be the next timer
+    // to expire.  We have to tickle() the IOManager so that it can
     // adjust the timeout value in its blocking call to GetQueuedCompletionStatusEx
     // so that it doesn't miss the timer
     void onTimerInsertedAtFront() { tickle(); }

@@ -42,7 +42,7 @@ private:
         std::string &, std::string &, std::string &, std::string &, size_t)>
         m_getCredentialsDg, m_getProxyCredentialsDg;
 };
-	
+
 #ifdef OSX
 bool getCredentialsFromKeychain(const URI &uri,
     boost::shared_ptr<ClientRequest> priorRequest,

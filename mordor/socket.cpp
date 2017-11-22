@@ -1487,7 +1487,7 @@ Address::getInterfaceAddresses(int family)
     else if (error == ERROR_CALL_NOT_IMPLEMENTED ||
         NULL == addresses ||
         NULL == addresses->FirstUnicastAddress ||
-        addresses->FirstUnicastAddress->Length < sizeof(IP_ADAPTER_UNICAST_ADDRESS_LH)) 
+        addresses->FirstUnicastAddress->Length < sizeof(IP_ADAPTER_UNICAST_ADDRESS_LH))
     {   // Either doesn't exist, or doesn't include netmask info to construct broadcast addr
         // cleanup the old addresses
         if (addresses != NULL)
@@ -1515,7 +1515,7 @@ Address::getInterfaceAddresses(int family)
             }
             tries++;
         } while ((error == ERROR_BUFFER_OVERFLOW) && (tries < 3));
-        
+
         if (error)
         {
             free(addresses2);

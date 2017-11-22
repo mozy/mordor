@@ -21,7 +21,7 @@ public:
 
     // Currently this class only supports the Server side of a named pipe connection
     // It creates a new pipe based on the passed name argument.
-    // By default a byte-mode pipe is created (PIPE_TYPE_BYTE), but the pipeModeFlags 
+    // By default a byte-mode pipe is created (PIPE_TYPE_BYTE), but the pipeModeFlags
     // argument can be used to create a message-mode pipe.
     NamedPipeStream(const std::string &name, Flags flags = READWRITE, IOManager *ioManager = NULL, Scheduler *scheduler = NULL, DWORD pipeModeFlags = (DWORD)-1);
     NamedPipeStream(const std::wstring &name, Flags flags = READWRITE, IOManager *ioManager = NULL, Scheduler *scheduler = NULL, DWORD pipeModeFlags = (DWORD)-1);

@@ -101,7 +101,7 @@ using ::uint32_t;
 using ::uint64_t;
 #endif
 
-// compute with 96 bit intermediate result: (a*b)/c 
+// compute with 96 bit intermediate result: (a*b)/c
 uint64_t muldiv64(uint64_t a, uint32_t b, uint64_t c);
 
 }

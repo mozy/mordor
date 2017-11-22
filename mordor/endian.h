@@ -72,7 +72,7 @@ byteswap(T value)
 #if !defined(__BIG_ENDIAN__) && !defined(__LITTLE_ENDIAN__)
 #error Do not know the endianess of this architecture
 #endif
-    
+
 #ifdef __BIG_ENDIAN__
 #define MORDOR_BYTE_ORDER MORDOR_BIG_ENDIAN
 #else

@@ -177,7 +177,7 @@ MORDOR_UNITTEST(CryptoStream, badKeyIvSize)
     CryptoStream::ptr crypto;
 
     MORDOR_TEST_ASSERT_EXCEPTION(crypto.reset(new CryptoStream(
-        parent, EVP_aes_256_cbc(), keyString() + "bogus", ivString(), 
+        parent, EVP_aes_256_cbc(), keyString() + "bogus", ivString(),
         CryptoStream::WRITE)), OpenSSLException);
     MORDOR_TEST_ASSERT_EXCEPTION(crypto.reset(new CryptoStream(
         parent, EVP_aes_256_cbc(), keyString(), ivString() + "bogus",
@@ -275,7 +275,7 @@ MORDOR_UNITTEST(CryptoStream, inferDirection)
     MemoryStream::ptr parent(new MemoryStream);
     SingleplexStream::ptr sr(new SingleplexStream(parent, SingleplexStream::READ, false));
     SingleplexStream::ptr sw(new SingleplexStream(parent, SingleplexStream::WRITE, false));
-    
+
     CryptoStream csr(sr, EVP_aes_256_cbc(), keyString(), ivString());
     MORDOR_TEST_ASSERT(csr.supportsRead());
     MORDOR_TEST_ASSERT(!csr.supportsWrite());
