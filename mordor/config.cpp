@@ -110,7 +110,7 @@ Config::loadFromEnvironment()
         std::string value(toUtf8(equals + 1));
 #else
 #ifdef OSX
-	char **environ = *_NSGetEnviron();
+    char **environ = *_NSGetEnviron();
 #endif
     if (!environ)
         return;
