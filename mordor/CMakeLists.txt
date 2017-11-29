@@ -241,12 +241,13 @@ endif()
 
 add_library(mordor STATIC ${FULL_SRCS} ${SRCS_RAGEL} ${SRCS_RAGEL_OUTPUT})
 
+
 #Put .cpp and .h files together in IDE
 #Note: we could potentially group the http and stream files separately
 source_group("Source Files" FILES ${SRCS} ${SRCS_OSSPECIFIC})
 
 # Additional libraries and recursion
-    add_subdirectory(test)
+add_subdirectory(test)
 
 if (BUILD_MORDOR_TESTS)
     add_subdirectory(tests)
@@ -262,6 +263,15 @@ if (BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
+if (FORCE_REDEFINE_FILE_MACRO)
+    force_redefine_file_macro_for_sources(mordor)
+
+    if (PROTOBUF_FOUND)
+        force_redefine_file_macro_for_sources(mordorprotobuf)
+    endif()
+
+    add_definitions(-Wno-builtin-macro-redefined)
+endif()
 
 #TODO: the yaml, pq and pq/tests code is not currenlty compiled by cmake,
 #because those optional components are not used any client.
