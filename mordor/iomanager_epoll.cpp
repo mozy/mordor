@@ -168,8 +168,8 @@ IOManager::AsyncState::resetContext(EventContext &context)
     context.dg = NULL;
 }
 
-IOManager::IOManager(size_t threads, bool useCaller, bool autoStart)
-    : Scheduler(threads, useCaller),
+IOManager::IOManager(size_t threads, bool useCaller, bool autoStart, size_t batchSize)
+    : Scheduler(threads, useCaller, batchSize),
       m_pendingEventCount(0)
 {
     m_epfd = epoll_create(5000);

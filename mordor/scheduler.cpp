@@ -250,9 +250,8 @@ Scheduler::run()
     Fiber::ptr idleFiber(new Fiber(boost::bind(&Scheduler::idle, this)));
     MORDOR_LOG_VERBOSE(g_log) << this << " starting thread with idle fiber " << idleFiber;
     Fiber::ptr dgFiber;
-    // use a vector for O(1) .size()
-    std::vector<FiberAndThread> batch;
-    batch.reserve(m_batchSize);
+    // use a deque for O(1) .size() and pop_front()
+    std::deque<FiberAndThread> batch;
     bool isActive = false;
     while (true) {
         MORDOR_ASSERT(batch.empty());
@@ -361,10 +360,10 @@ Scheduler::run()
         }
 
         while (!batch.empty()) {
-            FiberAndThread& ft = batch.back();
+            FiberAndThread& ft = batch.front();
             Fiber::ptr f = ft.fiber;
             boost::function<void ()> dg = ft.dg;
-            batch.pop_back();
+            batch.pop_front();
 
             try {
                 if (f && f->state() != Fiber::TERM) {
