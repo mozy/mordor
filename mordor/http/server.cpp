@@ -864,8 +864,16 @@ ServerRequest::requestDone()
             cancel();
             throw std::runtime_error("Error parsing trailer");
         }
-        MORDOR_ASSERT(parser.complete());
-        MORDOR_LOG_DEBUG(g_log) << m_context << " " << m_requestTrailer;
+        // it is possible that the TrailerParser is not error but not complete
+        // if there is nothing to read from the stream
+        // according to https://tools.ietf.org/html/rfc7230#section-4.1.2
+        // chunked trailer is optional
+        if (parser.complete()) {
+            MORDOR_LOG_DEBUG(g_log) << m_context << " " << m_requestTrailer;
+        } else if (!m_request.general.trailer.empty()) {
+            MORDOR_LOG_WARNING(g_log) << m_context
+                << " request has non empty trailer header but no trailer part";
+        }
     }
     m_conn->requestComplete(this);
 }
