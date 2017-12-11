@@ -74,6 +74,7 @@ public:
     /// other attrs
     void setAttribute(const std::string& key, const std::string& value);
     std::string getAttribute(const std::string& key) const;
+    const std::map<std::string, std::string> & getAttributes() const;
 
     /// Gets stream for writing file to tar archive entry
     /// @note Only one TarEntry stream can be accessed at any one time from a

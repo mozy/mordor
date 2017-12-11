@@ -447,6 +447,11 @@ TarEntry::getAttribute(const std::string& key) const {
     return it == m_attrs.end() ? std::string() : it->second;
 }
 
+const std::map<std::string, std::string> &
+TarEntry::getAttributes() const {
+    return m_attrs;
+}
+
 std::ostream& operator <<(std::ostream& os, const TarEntry& entry)
 {
     const static int width = 10;
