@@ -95,7 +95,7 @@ if "%winclientlib%" == "" (
 )
 
 REM Cmake is installed to winclientlib
-SET CMAKE_FULLPATH=%winclientlib%\tools\cmake-3.7.1-win64-x64\bin\cmake
+SET CMAKE_FULLPATH=%winclientlib%\tools\cmake-3.8.0-win64-x64\bin\cmake
 
 ECHO %MSBUILD_TARGET%ing %PROJECT% %PLATFORM% %CONFIG%
 
