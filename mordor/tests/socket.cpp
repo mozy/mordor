@@ -126,7 +126,7 @@ static void testShutdownException(bool send, bool shutdown, bool otherEnd)
                 while (true) {
                     MORDOR_TEST_ASSERT_EQUAL(conns.connect->send("abc", 3), 3u);
                 }
-            } catch (Exception) {
+            } catch (const Exception&) {
             }
         } else {
             MORDOR_TEST_ASSERT_EXCEPTION(conns.connect->send("abc", 3), Exception);
@@ -167,11 +167,11 @@ MORDOR_UNITTEST(Socket, sendAfterCloseOtherEnd)
     try {
         testShutdownException<BrokenPipeException>(true, false, true);
         // Could also be ConnectionReset on BSDs
-    } catch (ConnectionResetException)
+    } catch (const ConnectionResetException&)
     {}
 #ifdef OSX
     // EPROTOTYPE may be thrown out on mac os 10
-    catch (WrongProtocolTypeException)
+    catch (const WrongProtocolTypeException&)
     {}
 #endif
 #endif

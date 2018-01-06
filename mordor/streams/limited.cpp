@@ -69,7 +69,7 @@ LimitedStream::size()
     }
     try {
         return (std::min)(m_size, parent()->size());
-    } catch (std::runtime_error) {
+    } catch (const std::runtime_error&) {
         return m_size;
     }
 }

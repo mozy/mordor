@@ -278,7 +278,7 @@ size_t ZlibStream::doInflateForWrite(const Buffer &buffer, size_t length)
                 inflateEnd(&m_strm);
                 try {
                     flushBuffer();
-                } catch (std::runtime_error) {
+                } catch (const std::runtime_error&) {
                     // Swallow it
                 }
                 return result;
@@ -332,7 +332,7 @@ size_t ZlibStream::doDeflateForWrite(const Buffer &buffer, size_t length)
                 m_outBuffer.produce(outbuf.iov_len - m_strm.avail_out);
                 try {
                     flushBuffer();
-                } catch (std::runtime_error) {
+                } catch (const std::runtime_error&) {
                     // Swallow it
                 }
                 return result;

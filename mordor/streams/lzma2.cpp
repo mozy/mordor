@@ -174,7 +174,7 @@ LZMAStream::write(const Buffer &buffer, size_t length)
         m_outBuffer.produce(outbuf.iov_len - m_strm.avail_out);
         try {
             flushBuffer();
-        } catch (std::runtime_error) {
+        } catch (const std::runtime_error&) {
             // Swallow it
         }
         return result;
